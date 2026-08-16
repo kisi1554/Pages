@@ -18,6 +18,11 @@
     btnBack: $('btn-back'),
     btnVoice: $('btn-voice'),
     btnMap: $('btn-map'),
+    btnWords: $('btn-words'),
+    wordPanel: $('word-panel'),
+    wordList: $('word-list'),
+    wordCount: $('word-count'),
+    levelBtns: $('level-btns'),
     charName: $('talk-char-name'),
     lineName: $('talk-line-name'),
     train: $('train'),
@@ -37,6 +42,8 @@
     name: 'densha-talk:name',
     char: 'densha-talk:char',
     voice: 'densha-talk:voice',
+    level: 'densha-talk:level',
+    learned: 'densha-talk:learned',
   };
 
   function load(key, fallback) {
@@ -190,6 +197,7 @@
 
     setTalking(true);
     Speech.speak(texts, Brain.state.char.voice, () => setTalking(false));
+    saveLearned();
     startIdleTimer();
   }
 
@@ -229,6 +237,45 @@
       Speech.speak([text], Brain.state.char.voice, () => setTalking(false));
       startIdleTimer();
     }, 32000);
+  }
+
+  /* ==================================================================
+   * ことばちょう(おぼえた ことば)
+   * ================================================================== */
+
+  function saveLearned() {
+    const list = Brain.state.learned;
+    save(STORE.learned, JSON.stringify(list));
+    renderWords();
+  }
+
+  function renderWords() {
+    const entries = Brain.learnedWords();
+    el.wordCount.textContent = entries.length + ' / ' + WORDS.length;
+    el.wordList.innerHTML = '';
+    if (entries.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'word-empty';
+      p.textContent = 'まだ からっぽ。「ことばクイズ」や「きょうの ことば」で ふえていくよ!';
+      el.wordList.appendChild(p);
+      return;
+    }
+    entries
+      .slice()
+      .reverse()
+      .forEach((entry) => {
+        const b = document.createElement('button');
+        b.className = 'word-chip lv' + entry.lv;
+        b.innerHTML =
+          '<span class="word-w">' + entry.w + '</span>' +
+          '<span class="word-y">' + entry.y + '</span>';
+        b.addEventListener('click', () => {
+          addBubble(entry.w + 'って なに?', 'me');
+          const res = Brain.explainWord(entry.w);
+          if (res) setTimeout(() => handleReply(res), 200);
+        });
+        el.wordList.appendChild(b);
+      });
   }
 
   /* ==================================================================
@@ -353,6 +400,29 @@
     renderCharList();
     el.childName.value = load(STORE.name, '');
 
+    /* ことばの むずかしさ */
+    const level = load(STORE.level, '3');
+    Brain.setWordLevel(level);
+    Array.prototype.forEach.call(el.levelBtns.children, (b) => {
+      b.classList.toggle('is-on', b.dataset.level === String(level));
+      b.addEventListener('click', () => {
+        Brain.setWordLevel(b.dataset.level);
+        save(STORE.level, b.dataset.level);
+        Array.prototype.forEach.call(el.levelBtns.children, (o) => {
+          o.classList.toggle('is-on', o === b);
+        });
+      });
+    });
+
+    /* おぼえた ことばを よみこむ */
+    try {
+      const saved = JSON.parse(load(STORE.learned, '[]'));
+      if (Array.isArray(saved)) Brain.setLearned(saved);
+    } catch (e) {
+      /* こわれていたら からっぽで はじめる */
+    }
+    renderWords();
+
     const voiceOn = load(STORE.voice, '1') === '1';
     Speech.setVoiceEnabled(voiceOn);
     el.btnVoice.textContent = voiceOn ? '🔊' : '🔇';
@@ -364,6 +434,11 @@
       Speech.setVoiceEnabled(next);
       el.btnVoice.textContent = next ? '🔊' : '🔇';
       save(STORE.voice, next ? '1' : '0');
+    });
+
+    el.btnWords.addEventListener('click', () => {
+      el.wordPanel.classList.toggle('is-open');
+      el.log.scrollTop = el.log.scrollHeight;
     });
 
     el.btnMap.addEventListener('click', () => {

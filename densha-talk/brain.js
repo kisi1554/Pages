@@ -25,11 +25,16 @@ const Brain = (function () {
   const state = {
     char: CHARACTERS[0],
     childName: '',
-    mode: 'chat', // 'chat' | 'quiz' | 'shiritori'
+    mode: 'chat', // 'chat' | 'quiz' | 'shiritori' | 'guess'
     quiz: null,
     shiritori: null,
     lastStation: null,
     lastLine: null,
+    lastSay: [],
+    guess: null,
+    wordQuiz: null,
+    wordLevel: 3, // 1=やさしい 2=ふつう 3=ぜんぶ
+    learned: [],  // おぼえた ことば(app.js が ほぞんする)
     turns: 0,
     recent: {}, // おなじ せりふを つづけて 言わないため
   };
@@ -67,6 +72,67 @@ const Brain = (function () {
     return LINE_BY_ID[state.char.lineId];
   }
 
+  function randomOf(list) {
+    return list[Math.floor(Math.random() * list.length)];
+  }
+
+  /* そのキャラの 口ぐせ(talk.js の CHAR_LINES)を とりだす */
+  function charLines(kind) {
+    const set = CHAR_LINES[state.char.id] || {};
+    return set[kind] || [];
+  }
+
+  /* いまの じかんを 子ども向けに */
+  function nowWords() {
+    const d = new Date();
+    const h = d.getHours();
+    const m = d.getMinutes();
+    const ampm = h < 12 ? 'ごぜん' : 'ごご';
+    const h12 = h % 12 === 0 ? 12 : h % 12;
+    return ampm + ' ' + h12 + 'じ' + (m > 0 ? ' ' + m + 'ふん' : '');
+  }
+
+  /*
+   * セリフの中の しるし を、いまの キャラや じょうきょうに おきかえる。
+   *   %ME %LINE %CHAR %ST %ST2 %NAME %AGE %TIME (＋ extra で わたした ぶん)
+   */
+  function fill(text, extra) {
+    let out = String(text || '');
+    if (out.indexOf('%') < 0) return out;
+
+    const line = myLine();
+    const st1 = randomOf(line.stations).name;
+    let st2 = randomOf(line.stations).name;
+    if (st2 === st1) st2 = line.stations[(line.stations.length - 1) - line.stations.findIndex((s) => s.name === st1)].name;
+
+    const opened = LINE_OPENED[line.id];
+    const age = opened ? new Date().getFullYear() - opened + 'さいくらい' : 'ないしょ';
+
+    const table = Object.assign(
+      {
+        '%ME': state.char.me,
+        '%LINE': line.name,
+        '%CHAR': state.char.name,
+        '%ST2': st2,
+        '%ST': st1,
+        '%NAME': state.childName ? state.childName + 'くん' : 'きみ',
+        '%AGE': age,
+        '%TIME': nowWords(),
+      },
+      extra || {}
+    );
+
+    /* ながい しるしから さきに おきかえる(%LINEN が %LINE に とられないように) */
+    Object.keys(table)
+      .sort((a, b) => b.length - a.length)
+      .forEach((key) => {
+        if (out.indexOf(key) < 0) return;
+        out = out.split(key).join(table[key]);
+      });
+    /* 「%NAME、」を つかった文で なまえが ないときの、よぶんな くうはくを ととのえる */
+    return out.replace(/\s+/g, ' ').trim();
+  }
+
   function reply(say, extra) {
     const out = Object.assign(
       {
@@ -78,7 +144,9 @@ const Brain = (function () {
       },
       extra || {}
     );
+    out.say = out.say.map((t) => fill(t));
     if (!out.chips) out.chips = suggestChips();
+    state.lastSay = out.say;
     return out;
   }
 
@@ -205,14 +273,81 @@ const Brain = (function () {
     はいいろ: ['はいいろ', 'ぎん', 'グレー', 'ぐれー', 'しるばー'],
   };
 
-  function randomOf(list) {
-    return list[Math.floor(Math.random() * list.length)];
-  }
+  /* STATION_TALK に せつめいの ある駅(なぞなぞクイズに つかう) */
+  const TALKED_STATIONS = Object.keys(STATION_TALK).filter((n) => STATION_INDEX[n]);
 
   function makeQuiz() {
-    const kinds = ['neighbor', 'color', 'whichline', 'terminal', 'count'];
+    const kinds = [
+      'neighbor',
+      'color',
+      'whichline',
+      'terminal',
+      'count',
+      'order',
+      'company',
+      'motif',
+    ];
     const kind = randomOf(kinds);
     const line = Math.random() < 0.6 ? myLine() : randomOf(LINES);
+
+    if (kind === 'order') {
+      const a = randomOf(line.stations);
+      let b = randomOf(line.stations);
+      let guard = 0;
+      while (b.name === a.name && guard < 20) {
+        b = randomOf(line.stations);
+        guard += 1;
+      }
+      const first = a.index < b.index ? a : b;
+      return {
+        kind,
+        question:
+          '🚦 クイズ! ' +
+          line.name +
+          'を ' +
+          line.stations[0].name +
+          'から じゅんばんに いくと、' +
+          a.name +
+          'と ' +
+          b.name +
+          '、さきに つくのは どっち?',
+        answers: [first.name],
+        hint: 'ヒント! 「' + stationYomi(first.name).charAt(0) + '」から はじまる ほうだよ',
+        say: () => first.name + 'の ほうが さきに つくんだ',
+        focusLine: line.id,
+        focusStation: first.name,
+      };
+    }
+
+    if (kind === 'company') {
+      return {
+        kind,
+        question: '🏢 クイズ! ' + line.name + 'は どこの かいしゃの でんしゃでしょう?',
+        answers: [line.company],
+        accept: (COMPANY_WORDS[line.company] || []).concat([line.company]),
+        hint: 'ヒント! 「' + line.company.charAt(0) + '」から はじまる かいしゃ だよ',
+        say: () => line.name + 'は ' + line.company + 'の でんしゃ',
+        focusLine: line.id,
+      };
+    }
+
+    if (kind === 'motif' && TALKED_STATIONS.length > 0) {
+      const name = randomOf(TALKED_STATIONS);
+      return {
+        kind,
+        question: '🕵️ なぞなぞ! 「' + STATION_TALK[name] + '」 これは どこの えきでしょう?',
+        answers: [name],
+        hint:
+          'ヒント! ' +
+          linesOf(name)[0].name +
+          'の えきで、「' +
+          stationYomi(name).charAt(0) +
+          '」から はじまるよ',
+        say: (a) => (a || name) + ' だよ',
+        focusLine: linesOf(name)[0].id,
+        focusStation: name,
+      };
+    }
 
     if (kind === 'neighbor') {
       const idx = 1 + Math.floor(Math.random() * (line.stations.length - 2));
@@ -224,7 +359,7 @@ const Brain = (function () {
           '🚃 クイズだよ! ' + line.name + 'で、' + st.name + 'の となりの えきは どこでしょう?',
         answers: [n.prev, n.next].filter(Boolean),
         hint: 'ヒント! 「' + stationYomi(n.next || n.prev).charAt(0) + '」から はじまる えきだよ',
-        say: (a) => 'せいかい! ' + st.name + 'の となりは ' + a + ' だよ',
+        say: (a) => st.name + 'の となりは ' + a + ' だよ',
         focusLine: line.id,
         focusStation: st.name,
       };
@@ -238,7 +373,7 @@ const Brain = (function () {
         answers: [color],
         accept: COLOR_WORDS[color] || [color],
         hint: 'ヒント! 「' + color.charAt(0) + '」から はじまる いろ だよ',
-        say: () => 'せいかい! ' + line.name + 'は ' + color + ' なんだ',
+        say: () => line.name + 'は ' + color + ' なんだ',
         focusLine: line.id,
       };
     }
@@ -260,7 +395,7 @@ const Brain = (function () {
         answers: answerLines.map((l) => l.name),
         acceptLines: answerLines.map((l) => l.id),
         hint: 'ヒント! いろは ' + LINE_COLOR_NAME[answerLines[0].id] + ' の でんしゃだよ',
-        say: (a) => 'せいかい! ' + st.name + 'は ' + a + ' の えきだよ',
+        say: (a) => st.name + 'は ' + a + ' の えきだよ',
         focusLine: line.id,
         focusStation: st.name,
       };
@@ -274,7 +409,7 @@ const Brain = (function () {
         question: '🏁 クイズ! ' + line.name + 'の はしっこの えきは どこでしょう?',
         answers: [first, last],
         hint: 'ヒント! ひとつは 「' + stationYomi(last).charAt(0) + '」から はじまるよ',
-        say: (a) => 'せいかい! ' + line.name + 'は ' + first + 'から ' + last + 'までだよ',
+        say: (a) => line.name + 'は ' + first + 'から ' + last + 'までだよ',
         focusLine: line.id,
       };
     }
@@ -287,7 +422,7 @@ const Brain = (function () {
       answers: [String(num)],
       number: num,
       hint: 'ヒント! ' + (num - 3) + 'こ から ' + (num + 3) + 'こ の あいだ だよ',
-      say: () => 'せいかい! ' + line.name + 'は ' + num + 'えき あるんだ',
+      say: () => line.name + 'は ' + num + 'えき あるんだ',
       focusLine: line.id,
     };
   }
@@ -355,7 +490,7 @@ const Brain = (function () {
       state.mode = 'chat';
       const done = q.say(answered || q.answers[0]);
       state.quiz = null;
-      return reply([pick(['ピンポーン! 🎉', 'あたり! 🎉', 'すごい! 🎉'], 'ok'), done], {
+      return reply([pick(PRAISE_ON_CORRECT, 'ok'), done], {
         face: 'wow',
         chips: [
           chip('もう1もん! 🚃', 'クイズ だして'),
@@ -367,14 +502,14 @@ const Brain = (function () {
 
     if (!q.hinted) {
       q.hinted = true;
-      return reply([pick(['ざんねーん!', 'おしい!', 'ちがうよ〜'], 'ng'), q.hint], {
+      return reply([pick(CHEER_ON_WRONG, 'ng'), q.hint], {
         face: 'think',
       });
     }
     state.mode = 'chat';
     const ans = q.answers[0];
     state.quiz = null;
-    return reply(['こたえは ' + ans + ' でした! よく がんばったね'], {
+    return reply(['こたえは ' + ans + ' でした! ' + pick(CHEER_AFTER, 'after')], {
       face: 'happy',
       chips: [chip('もういっかい クイズ', 'クイズ だして'), chip('おはなし する', 'おしゃべり しよう')],
     });
@@ -519,120 +654,240 @@ const Brain = (function () {
   }
 
   /* ------------------------------------------------------------------
-   * でんしゃの ふしぎ(なんで? に こたえる)
+   * ことば(ごいりょく)
+   *   - いみを きかれたら こたえる
+   *   - 子どもが むずかしい ことばを つかったら ほめて、いみを たしかめる
+   *   - 「ことばクイズ」で 3たくの もんだいを だす
+   *   - はなした ことばは おぼえて、ことばちょうに たまっていく
    * ------------------------------------------------------------------ */
 
-  const WONDERS = [
-    {
-      keys: ['うごく', 'はしる', 'すすむ'],
-      say: [
-        'でんしゃはね、うえの でんせんから でんきを もらって モーターを まわして はしってるんだ',
-        'やねの うえの ぱんたぐらふ、みたことある? あれが でんきを うけとる うでなんだよ',
-      ],
-    },
-    {
-      keys: ['ぱんたぐらふ', 'でんせん', 'でんき'],
-      say: ['やねの うえの ひしがたの うでが ぱんたぐらふ。でんせんに ぴたっと くっついて でんきを もらうんだ'],
-    },
-    {
-      keys: ['せんろ', 'レール', 'れーる'],
-      say: [
-        'レールは 2ほんで 1くみ。でんしゃの くるまには でっぱりが あって、そこから おちないように なってるんだよ',
-      ],
-    },
-    {
-      keys: ['ふみきり'],
-      say: ['ふみきりは でんしゃが くる まえに カンカン なって、みんなを まもってくれてるんだ。ぜったい わたっちゃ だめだよ'],
-    },
-    {
-      keys: ['しんごう'],
-      say: ['せんろの しんごうは、まえの でんしゃと ぶつからないように いろで おしえてくれるんだ。あかは とまれ だよ'],
-    },
-    {
-      keys: ['うんてんし', 'しゃしょう'],
-      say: ['うんてんしさんは、まえを よーく みて てを さして あんぜんを たしかめてるよ。「かくにん よし!」って ね'],
-    },
-    {
-      keys: ['ちかてつ', 'じめんのした', 'トンネル', 'とんねる'],
-      say: [
-        'ちかてつは じめんの したに ながい トンネルを ほって つくるんだ',
-        'いちばん ふるい ちかてつは ぎんざせん。100ねんくらい まえから はしってるんだよ',
-      ],
-    },
-    {
-      keys: ['しんかんせん', 'はやい'],
-      say: ['しんかんせんは 1じかんに 300キロも はしるんだ。とうきょうから おおさかまで 2じかんちょっと だよ'],
-    },
-    {
-      keys: ['きっぷ', 'ICカード', 'すいか', 'ぱすも'],
-      say: ['きっぷや カードを ピッと すると、どこから のったか きかいが おぼえてくれるんだ'],
-    },
-    {
-      keys: ['とまる', 'ブレーキ', 'ぶれーき'],
-      say: ['でんしゃは とまるのに とっても ながい きょりが いるの。だから ホームの きいろい せんの うちがわで まつんだよ'],
-    },
-    {
-      keys: ['ねる', 'よる', 'しゅうでん'],
-      say: ['よるに なると でんしゃは しゃりょうきちに かえって ねるんだ。あさまで ぴかぴかに そうじ してもらうんだよ'],
-    },
+  /* おぼえた ことば(かきかたの ならび)。app.js が ほぞんする */
+  function learnWord(entry) {
+    if (!entry) return;
+    if (state.learned.indexOf(entry.w) < 0) state.learned.push(entry.w);
+  }
+
+  function wordSentence(entry) {
+    learnWord(entry);
+    return [
+      '📕 「' + entry.w + '」(' + entry.y + ')は、' + entry.m + ' って いみだよ',
+      pick(['つかいかた: ', 'たとえば: ', 'こんなふうに つかうよ: '], 'usage') + entry.e,
+    ];
+  }
+
+  /* ときどき 会話の おまけに つける「きょうの ことば」 */
+  function wordSeed() {
+    const entry = randomOf(wordsAtLevel(state.wordLevel));
+    learnWord(entry);
+    return (
+      '📕 ことばの おまけ! 「' + entry.w + '」は 「' + entry.m + '」って いみ。' + entry.e
+    );
+  }
+
+  /* --- ことばクイズ --- */
+
+  function shuffle(list) {
+    const out = list.slice();
+    for (let i = out.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = out[i];
+      out[i] = out[j];
+      out[j] = tmp;
+    }
+    return out;
+  }
+
+  const NUMBER_WORDS = [
+    ['1', 'いち', 'ひとつ', '①', 'いちばん'],
+    ['2', 'に', 'ふたつ', '②', 'にばん'],
+    ['3', 'さん', 'みっつ', '③', 'さんばん'],
   ];
+
+  function startWordQuiz() {
+    const pool = wordsAtLevel(state.wordLevel);
+    const entry = randomOf(pool);
+    const others = shuffle(pool.filter((e) => e.w !== entry.w)).slice(0, 2);
+    /* 「いみを あてる」と「ことばを あてる」の 2しゅるい */
+    const kind = Math.random() < 0.6 ? 'mean' : 'word';
+    const choices = shuffle(
+      kind === 'mean'
+        ? [entry.m].concat(others.map((e) => e.m))
+        : [entry.w].concat(others.map((e) => e.w))
+    );
+    const answerAt = choices.indexOf(kind === 'mean' ? entry.m : entry.w);
+    state.wordQuiz = { entry, kind, choices, answerAt };
+    state.mode = 'wordquiz';
+
+    const question =
+      kind === 'mean'
+        ? '📕 ことばクイズ! 「' + entry.w + '」(' + entry.y + ')は どういう いみでしょう?'
+        : '📕 ことばクイズ! 「' + entry.m + '」 これを なんて いうでしょう?';
+
+    return reply(
+      [question].concat(choices.map((c, i) => '①②③'.charAt(i) + ' ' + c)),
+      {
+        face: 'think',
+        /* いみの もんだいは 文が ながいので、ボタンは みじかく する */
+        chips: choices
+          .map((c, i) =>
+            chip('①②③'.charAt(i) + ' ' + (c.length > 10 ? c.slice(0, 9) + '…' : c), String(i + 1))
+          )
+          .concat([chip('わからない 💡', 'わからない')]),
+      }
+    );
+  }
+
+  function judgeWordQuiz(raw, norm) {
+    const q = state.wordQuiz;
+
+    if (has(norm, ['やめ', 'もういい', 'おしまい'])) {
+      state.mode = 'chat';
+      state.wordQuiz = null;
+      return reply(['オッケー! ことばクイズは おしまい'], { face: 'happy' });
+    }
+
+    let chosen = -1;
+    NUMBER_WORDS.forEach((words, i) => {
+      if (chosen < 0 && words.some((w) => norm === normalize(w) || raw.indexOf(w) === 0)) chosen = i;
+    });
+    if (chosen < 0) {
+      q.choices.forEach((c, i) => {
+        if (chosen < 0 && normalize(c).indexOf(norm) === 0 && norm.length >= 3) chosen = i;
+      });
+    }
+
+    if (has(norm, ['わからない', 'わかんない', 'ひんと', 'おしえて'])) {
+      state.mode = 'chat';
+      state.wordQuiz = null;
+      return reply(
+        ['こたえは ' + '①②③'.charAt(q.answerAt) + ' だよ'].concat(wordSentence(q.entry)),
+        { face: 'happy', chips: wordChips() }
+      );
+    }
+
+    if (chosen === q.answerAt) {
+      state.mode = 'chat';
+      state.wordQuiz = null;
+      return reply(
+        [pick(PRAISE_ON_CORRECT, 'ok')].concat(wordSentence(q.entry)).concat([
+          'この ことば、つかって みてね!',
+        ]),
+        { face: 'wow', chips: wordChips() }
+      );
+    }
+
+    if (chosen >= 0) {
+      state.mode = 'chat';
+      state.wordQuiz = null;
+      return reply(
+        [pick(CHEER_ON_WRONG, 'ng')].concat(wordSentence(q.entry)).concat([pick(CHEER_AFTER, 'after')]),
+        { face: 'think', chips: wordChips() }
+      );
+    }
+
+    return reply(['①②③の どれかで こたえてね! 「1」って いっても いいよ'], { face: 'think' });
+  }
+
+  function wordChips() {
+    return [
+      chip('もう1もん ことばクイズ 📕', 'ことばクイズ'),
+      chip('きょうの ことば 📕', 'きょうの ことば'),
+      chip('えきの はなし 🚉', 'えきの はなし して'),
+    ];
+  }
 
   /* ------------------------------------------------------------------
-   * ふだんの はなしの タネ
+   * あそび: えきあて(3つの ヒントで 駅を あてる)
    * ------------------------------------------------------------------ */
 
-  const TOPICS = [
-    {
-      keys: ['しんかんせん', 'のぞみ', 'はやぶさ', 'はやて', 'こだま', 'ひかり'],
-      say: [
-        'しんかんせんは かっこいいよね! はなが とがってるのは、トンネルで ドンって ならないためなんだ',
-        'とうきょうえきの ホームで まってると、いろんな しんかんせんが みられるよ',
-      ],
-    },
-    {
-      keys: ['ロマンスカー', 'とっきゅう'],
-      say: ['とっきゅうは いちばん まえの せきから せんろが みえるんだよ。すわれたら ラッキー!'],
-    },
-    {
-      keys: ['うんてんし', 'しゃしょう', 'なりたい', 'えきいん'],
-      say: [
-        'うんてんしさん、かっこいいよね!',
-        'まいにち たくさんの ひとを あんぜんに はこぶ、すごい おしごとなんだ',
-        'きみなら どの ろせんの うんてんしさんに なりたい?',
-      ],
-    },
-    {
-      keys: ['のった', 'のってきた', 'のってた', 'のりました'],
-      say: ['いいなあ! どんな でんしゃだった? いろは なにいろ?'],
-    },
-    {
-      keys: ['ようちえん', 'ほいくえん', 'がっこう', 'こうえん'],
-      say: ['そうなんだ! たのしかった?', 'その かえりに でんしゃ みえた?'],
-    },
-    {
-      keys: ['おなかすいた', 'たべたい', 'おやつ', 'ごはん'],
-      say: [
-        'おなか すいたね。えきの ホームで たべる そばも おいしいんだよ',
-        'えきの なかに おいしい おみせが ある えき、しってる?',
-      ],
-    },
-    {
-      keys: ['ぱぱ', 'まま', 'おとうさん', 'おかあさん', 'おじいちゃん', 'おばあちゃん', 'いもうと', 'おにいちゃん'],
-      say: ['そうなんだ! かぞくで でんしゃに のったら たのしいよね', 'こんど いっしょに どこか いきたいね'],
-    },
-    {
-      keys: ['けんか', 'いじわる', 'たたかれた', 'なかまはずれ'],
-      say: [
-        'そっか…… けんかしちゃったんだね。かなしかったね',
-        'でんしゃもね、おなじ せんろを つかうときは じゅんばんを まもって なかよく はしってるんだ',
-        'あしたは 「ごめんね」って いえるかな?',
-      ],
-    },
-    {
-      keys: ['ねむれない', 'ねる', 'おふとん'],
-      say: ['でんしゃも よるは しゃりょうきちで ねてるよ。おやすみの じゅんび しようね'],
-    },
-  ];
+  function guessHint(g, step) {
+    const name = g.name;
+    const yomi = stationYomi(name);
+    return fill(GUESS_HINT_STYLES[step], {
+      '%LINEN': g.line.name,
+      '%MOTIF': stationMotif(name),
+      '%HEAD': yomi.charAt(0),
+      '%LEN': String(yomi.length),
+    });
+  }
+
+  function startGuess() {
+    const line = Math.random() < 0.7 ? myLine() : randomOf(LINES);
+    const st = randomOf(line.stations);
+    state.guess = { name: st.name, line, step: 0 };
+    state.mode = 'guess';
+    return reply(
+      ['えきあて クイズ! %MEが だす ヒントで、どの えきか あててね 🕵️', guessHint(state.guess, 0)],
+      {
+        face: 'think',
+        focusLine: line.id,
+        focusStation: null,
+        chips: [chip('つぎの ヒント 💡', 'ヒント'), chip('こうさん', 'こうさん')],
+      }
+    );
+  }
+
+  function endGuess(sayList, extra) {
+    const name = state.guess ? state.guess.name : '';
+    state.mode = 'chat';
+    state.guess = null;
+    state.lastStation = name;
+    return reply(
+      sayList,
+      Object.assign(
+        {
+          focusStation: name,
+          chips: [
+            chip('もういっかい えきあて 🕵️', 'えきあて'),
+            chip('クイズ だして 🚃', 'クイズ だして'),
+            chip('おはなし する', 'おしゃべり しよう'),
+          ],
+        },
+        extra || {}
+      )
+    );
+  }
+
+  function judgeGuess(raw, norm) {
+    const g = state.guess;
+
+    if (has(norm, ['こうさん', 'わからない', 'わかんない', 'やめ', 'おしえて', 'もういい'])) {
+      return endGuess(['こたえは 「' + g.name + '」 でした!'].concat(stationSentence(g.name).slice(1, 2)), {
+        face: 'happy',
+      });
+    }
+    if (has(norm, ['ひんと', 'ヒント', 'つぎ'])) {
+      g.step += 1;
+      if (g.step >= GUESS_HINT_STYLES.length) {
+        return endGuess(['ヒントは もう ないんだ〜。こたえは 「' + g.name + '」 でした!'], {
+          face: 'wow',
+        });
+      }
+      return reply([guessHint(g, g.step)], { face: 'think' });
+    }
+
+    const found = findStations(raw);
+    if (found.indexOf(g.name) >= 0) {
+      return endGuess(
+        [pick(PRAISE_ON_CORRECT, 'ok'), 'こたえは 「' + g.name + '」! よく わかったね'],
+        { face: 'wow' }
+      );
+    }
+    if (found.length > 0) {
+      g.step += 1;
+      if (g.step >= GUESS_HINT_STYLES.length) {
+        return endGuess([found[0] + 'じゃ ないんだ〜。こたえは 「' + g.name + '」 でした!'], {
+          face: 'happy',
+        });
+      }
+      return reply([pick(CHEER_ON_WRONG, 'ng') + ' ' + found[0] + 'じゃ ないんだ', guessHint(g, g.step)], {
+        face: 'think',
+      });
+    }
+    return reply(['うーん、それは えきの なまえかな? ヒントが ほしければ 「ヒント」って いってね'], {
+      face: 'think',
+    });
+  }
 
   /* ------------------------------------------------------------------
    * チップ(タップで はなせる ボタン)
@@ -642,18 +897,46 @@ const Brain = (function () {
     return { label, send: send || label };
   }
 
+  /* いつでも つかえる ボタンの もと。まいかい 少しずつ ちがう ものが 出る */
+  const CHIP_POOL = [
+    ['クイズ だして 🚃', 'クイズ だして'],
+    ['しりとり しよ 🔤', 'えきめい しりとり'],
+    ['えきあて クイズ 🕵️', 'えきあて'],
+    ['のりかえ おしえて 🔀', 'のりかえが おおい えきは どこ?'],
+    ['でんしゃの ふしぎ ❓', 'でんしゃは なんで うごくの?'],
+    ['ふみきりって なに? 🚧', 'なんで ふみきりが あるの?'],
+    ['ちかてつの ひみつ 🕳️', 'なんで ちかてつは じめんの したに あるの?'],
+    ['しんかんせんの はなし 🚄', 'しんかんせんの はなし して'],
+    ['うんてんしさんの はなし 👨‍✈️', 'うんてんしさんって どんな おしごと?'],
+    ['なんさい? 🎂', 'なんさい?'],
+    ['いま なんじ? 🕒', 'いま なんじ?'],
+    ['うたって 🎵', 'うたって'],
+    ['ものまね して 📢', 'ものまね して'],
+    ['じまん きかせて ✨', 'じまん きかせて'],
+    ['きょうの できごと 💬', 'きょう ようちえんに いったよ'],
+    ['ことばクイズ 📕', 'ことばクイズ'],
+    ['きょうの ことば 📕', 'きょうの ことば'],
+  ];
+
   function suggestChips() {
     const out = [];
     if (state.lastStation) {
       out.push(chip(state.lastStation + 'の となりは?', state.lastStation + 'の となりの えきは?'));
+      out.push(chip(state.lastStation + 'まで いきたい', state.lastStation + 'まで いきたい'));
     }
     const line = state.lastLine || myLine();
     out.push(chip(line.name + 'って どんな せん?', line.name + 'って どんな でんしゃ?'));
-    out.push(chip('クイズ だして 🚃', 'クイズ だして'));
-    out.push(chip('しりとり しよ 🔤', 'えきめい しりとり'));
-    out.push(chip('のりかえ おしえて 🔀', 'のりかえが おおい えきは どこ?'));
-    out.push(chip('でんしゃの ふしぎ ❓', 'でんしゃは なんで うごくの?'));
-    return out.slice(0, 6);
+
+    /* のこりは プールから ランダムに。まえと おなじ ならびに ならないように */
+    const shuffled = CHIP_POOL.slice();
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = shuffled[i];
+      shuffled[i] = shuffled[j];
+      shuffled[j] = tmp;
+    }
+    shuffled.slice(0, 6).forEach((c) => out.push(chip(c[0], c[1])));
+    return out.slice(0, 7);
   }
 
   /* ------------------------------------------------------------------
@@ -661,18 +944,16 @@ const Brain = (function () {
    * ------------------------------------------------------------------ */
 
   function backQuestion() {
-    const line = myLine();
-    return pick(
-      [
-        'きみは どの えきが すき?',
-        'きょうは でんしゃに のった?',
-        state.char.me + 'は ' + line.name + 'が だいすき! きみの すきな ろせんは?',
-        'いちばん かっこいいと おもう でんしゃ、なに?',
-        'どこか いってみたい えき、ある?',
-        'ちかてつと しんかんせん、どっちが すき?',
-      ],
-      'back'
-    );
+    return pick(BACK_QUESTIONS, 'back');
+  }
+
+  function nudge() {
+    return pick(NUDGES, 'nudge');
+  }
+
+  /* あいづち。キャラの 口ぐせと 共通のを まぜる */
+  function aizuchi() {
+    return pick(charLines('aizuchi').concat(COMMON_AIZUCHI), 'aizuchi');
   }
 
   /* ------------------------------------------------------------------
@@ -685,12 +966,24 @@ const Brain = (function () {
     state.turns += 1;
 
     if (!text) {
-      return reply(['もしもし? きこえてるよ。なんでも はなしてね'], { face: 'think' });
+      return reply(
+        [pick(['もしもし? きこえてるよ。なんでも はなしてね', 'あれ? もういちど いってみて!'], 'empty')],
+        { face: 'think' }
+      );
     }
 
     /* --- あそびの とちゅう --- */
     if (state.mode === 'quiz' && state.quiz) return judgeQuiz(text, norm);
     if (state.mode === 'shiritori' && state.shiritori) return judgeShiritori(text, norm);
+    if (state.mode === 'guess' && state.guess) return judgeGuess(text, norm);
+    if (state.mode === 'wordquiz' && state.wordQuiz) return judgeWordQuiz(text, norm);
+
+    /* --- もういちど いって --- */
+    if (has(norm, ['もういちど', 'もういっかい いって', 'なんていった', 'きこえなかった', 'もっかい いって'])) {
+      if (state.lastSay && state.lastSay.length > 0) {
+        return reply(state.lastSay.slice(), { face: 'happy' });
+      }
+    }
 
     /* --- ことばの中の 駅と路線 --- */
     const stations = findStations(text);
@@ -700,46 +993,34 @@ const Brain = (function () {
 
     /* --- あそびの スタート --- */
     if (has(norm, ['しりとり'])) return startShiritori();
+    if (has(norm, ['えきあて', 'あてっこ', 'あててみて', 'どこでしょう'])) return startGuess();
+    if (has(norm, ['ことばくいず', 'ことばあそび', 'ことばの くいず', 'ごい'])) return startWordQuiz();
+    if (has(norm, ['きょうのことば', 'ことばおしえて', 'あたらしいことば', 'むずかしいことば'])) {
+      const seed = randomOf(wordsAtLevel(state.wordLevel));
+      return reply(wordSentence(seed).concat(['この ことば、つかって みてね!']), {
+        face: 'wow',
+        chips: wordChips(),
+      });
+    }
+    if (has(norm, ['なぞなぞ'])) return Math.random() < 0.5 ? startGuess() : startWordQuiz();
     if (has(norm, ['くいず', 'もんだい', 'クイズ'])) return startQuiz();
 
     /* --- あいさつ・おわかれ --- */
     if (has(norm, ['ばいばい', 'さようなら', 'またね', 'おやすみ', 'じゃあね'])) {
       return reply(
-        [
-          callName(true) + 'きょうは はなせて たのしかった!',
-          'また えきで あおうね。いってらっしゃい! 👋',
-        ],
+        [callName(true) + 'きょうは はなせて たのしかった!', pick(charLines('bye'), 'bye')],
         { face: 'happy' }
       );
     }
     if (has(norm, ['こんにちは', 'おはよう', 'こんばんは', 'はろー', 'やっほ', 'もしもし'])) {
-      return reply(
-        [
-          pick(['やっほー! 🚃', 'こんにちは! 🚃', 'おーい! こっちだよ 🚃'], 'hi') +
-            ' ' +
-            callName(),
-          backQuestion(),
-        ],
-        { face: 'happy' }
-      );
+      return reply([callName() + pick(charLines('hello'), 'hi'), backQuestion()], {
+        face: 'happy',
+      });
     }
 
     /* --- ありがとう・ほめことば --- */
-    if (has(norm, ['ありがとう', 'ありがと', 'すごい', 'かっこいい', 'かわいい', 'だいすき', 'すきだよ'])) {
-      return reply(
-        [
-          pick(
-            [
-              'えへへ、ありがとう! うれしいなあ 😊',
-              'そんなこと いわれたら、はやく はしっちゃう! 💨',
-              'ありがとう! ' + state.char.me + 'も きみが だいすき!',
-            ],
-            'thanks'
-          ),
-          backQuestion(),
-        ],
-        { face: 'wow' }
-      );
+    if (has(norm, ['ありがとう', 'ありがと', 'かっこいい', 'かわいい', 'だいすき', 'すきだよ', 'えらい'])) {
+      return reply([pick(charLines('praise'), 'thanks'), backQuestion()], { face: 'wow' });
     }
 
     /* --- なまえ --- */
@@ -752,6 +1033,7 @@ const Brain = (function () {
         [
           state.char.hello,
           line2.name + 'を まいにち はしってるよ。' + state.char.quirk + 'なんだ',
+          pick(charLines('brag'), 'brag'),
           state.childName ? '' : 'きみの なまえは なに?',
         ],
         { face: 'happy' }
@@ -759,18 +1041,29 @@ const Brain = (function () {
     }
 
     /* --- きもち --- */
-    if (has(norm, ['たのしい', 'うれしい', 'やった', 'できた'])) {
+    if (has(norm, ['たのしい', 'うれしい', 'やった'])) {
       return reply(
-        [callName() + 'いいね! ' + state.char.me + 'まで うれしく なっちゃった 🎉', backQuestion()],
+        [
+          callName() +
+            pick(
+              [
+                'いいね! %MEまで うれしく なっちゃった 🎉',
+                'わあ、よかったね! %MEも うれしい!',
+                'たのしいのが いちばん! 🎉',
+              ],
+              'glad'
+            ),
+          backQuestion(),
+        ],
         { face: 'wow' }
       );
     }
     if (has(norm, ['かなしい', 'さみしい', 'ないた', 'いやだ', 'つまんない', 'おこられた'])) {
       return reply(
         [
-          'そっか…… そういう ひも あるよね。',
-          state.char.me + 'は ずっと ここに いるから、いっぱい はなしてね',
-          'げんきが でるように、' + myLine().stations[0].name + 'まで いっしょに はしろうか?',
+          pick(['そっか…… そういう ひも あるよね', 'かなしかったね。よく はなしてくれたね'], 'sad'),
+          pick(charLines('cheer'), 'cheer'),
+          '%MEは ずっと ここに いるから、いっぱい はなしてね',
         ],
         { face: 'think' }
       );
@@ -782,9 +1075,23 @@ const Brain = (function () {
       );
     }
     if (has(norm, ['こわい', 'びっくり'])) {
-      return reply(['だいじょうぶ、' + state.char.me + 'が となりに いるよ。ゆっくり いこう'], {
-        face: 'think',
-      });
+      return reply(
+        [
+          pick(
+            [
+              'だいじょうぶ、%MEが となりに いるよ。ゆっくり いこう',
+              'こわかったね。%MEが まもってあげる!',
+            ],
+            'fear'
+          ),
+        ],
+        { face: 'think' }
+      );
+    }
+
+    /* --- じまん きかせて --- */
+    if (has(norm, ['じまん', 'ひみつおしえて', 'とくいなこと'])) {
+      return reply([pick(charLines('brag'), 'brag'), backQuestion()], { face: 'wow' });
     }
 
     /* --- あそびかた --- */
@@ -794,8 +1101,9 @@ const Brain = (function () {
           state.char.me + 'と できること だよ!',
           '① えきの なまえを いうと、その えきの おはなしを するよ',
           '② 「しぶやから よこはままで」って きくと、いきかたを おしえるよ',
-          '③ 「クイズ だして」「しりとり しよ」で あそべるよ',
+          '③ 「クイズ だして」「しりとり」「えきあて」で あそべるよ',
           '④ 「でんしゃは なんで うごくの?」も きいてみて!',
+          '⑤ ききのがしたら 「もういちど いって」で くりかえすよ',
         ],
         { face: 'happy' }
       );
@@ -859,7 +1167,10 @@ const Brain = (function () {
       if (!target) {
         return reply(['どの えきの となりかな? えきの なまえを おしえて!'], { face: 'think' });
       }
-      const useLine = line || linesOf(target)[0];
+      /* きかれた路線 → じぶんの路線 → その駅の さいしょの路線 の じゅんで えらぶ */
+      const onLines = linesOf(target);
+      const useLine =
+        line || onLines.find((l) => l.id === state.char.lineId) || onLines[0];
       const n = neighborsOn(target, useLine);
       const out = [];
       if (n.prev && n.next) {
@@ -922,6 +1233,17 @@ const Brain = (function () {
       );
     }
 
+    /* --- ことばの いみを きかれた --- */
+    if (has(norm, ['どういういみ', 'いみは', 'いみおしえて', 'ってなに', 'ってなぁに', 'なにそれ', 'ってどういうこと', 'しらない'])) {
+      const asked = findWordEntry(text);
+      if (asked) {
+        return reply(wordSentence(asked).concat([pick(['つかえたら かっこいいよ!', 'おぼえられそう?'], 'wtail')]), {
+          face: 'happy',
+          chips: wordChips(),
+        });
+      }
+    }
+
     /* --- でんしゃの ふしぎ --- */
     if (has(norm, ['なんで', 'どうして', 'なぜ', 'ふしぎ'])) {
       const hit = WONDERS.find((w) => w.keys.some((k) => norm.indexOf(normalize(k)) >= 0));
@@ -973,37 +1295,44 @@ const Brain = (function () {
 
     /* --- はい / いいえ --- */
     if (has(norm, ['うん', 'そう', 'はい', 'いいよ', 'やりたい'])) {
-      return reply([pick(['うんうん!', 'そうなんだ!', 'いいね!'], 'yes'), backQuestion()], {
-        face: 'happy',
-      });
+      return reply([aizuchi(), backQuestion()], { face: 'happy' });
     }
     if (has(norm, ['ううん', 'いや', 'ちがう', 'いいえ'])) {
-      return reply(['そっか! じゃあ べつの はなし しよう。' + backQuestion()], { face: 'think' });
+      return reply(
+        [
+          pick(['そっか! じゃあ べつの はなし しよう', 'なるほど。じゃあ これは どう?'], 'no'),
+          backQuestion(),
+        ],
+        { face: 'think' }
+      );
+    }
+
+    /* --- むずかしい ことばを つかえた! --- */
+    const usedWord = findWordEntry(text);
+    if (usedWord && usedWord.lv >= 2) {
+      learnWord(usedWord);
+      return reply(
+        [
+          pick(
+            [
+              'おお! 「' + usedWord.w + '」なんて むずかしい ことば、よく しってるね!',
+              '「' + usedWord.w + '」が つかえるなんて すごい!',
+              'いま 「' + usedWord.w + '」って いったね。かっこいい ことばだ!',
+            ],
+            'usedword'
+          ),
+          '「' + usedWord.w + '」は 「' + usedWord.m + '」って いみ だったね',
+          backQuestion(),
+        ],
+        { face: 'wow', chips: wordChips() }
+      );
     }
 
     /* --- どれにも あてはまらない --- */
-    return reply(
-      [
-        pick(
-          [
-            'ふむふむ、そうなんだ!',
-            'へえ〜! おしえてくれて ありがとう',
-            'なるほどね〜',
-            'そうなんだ! おもしろいね',
-          ],
-          'aizuchi'
-        ),
-        pick(
-          [
-            backQuestion(),
-            'えきの なまえを いってくれたら、その えきの おはなしを するよ!',
-            '「クイズ だして」って いうと クイズ するよ',
-          ],
-          'nudge'
-        ),
-      ],
-      { face: 'think' }
-    );
+    /* ときどき「きょうの ことば」を おまけで つける */
+    const tail = Math.random() < 0.65 ? backQuestion() : nudge();
+    const extra = Math.random() < 0.25 ? wordSeed() : '';
+    return reply([aizuchi(), extra, tail], { face: 'think' });
   }
 
   /* ------------------------------------------------------------------
@@ -1022,24 +1351,46 @@ const Brain = (function () {
       state.lastLine = LINE_BY_ID[c.lineId];
       state.lastStation = null;
     },
+    setWordLevel(level) {
+      const n = parseInt(level, 10);
+      state.wordLevel = n >= 1 && n <= 3 ? n : 3;
+    },
+    setLearned(list) {
+      state.learned = Array.isArray(list) ? list.slice() : [];
+    },
+    learnedWords() {
+      return state.learned.map((w) => WORD_BY_KEY[w]).filter(Boolean);
+    },
+    explainWord(key) {
+      const entry = WORD_BY_KEY[key];
+      if (!entry) return null;
+      return reply(wordSentence(entry), { face: 'happy', chips: wordChips() });
+    },
     setChildName(name) {
       state.childName = String(name || '').slice(0, 8);
     },
     greeting() {
       const line = myLine();
       const st = line.stations;
-      return {
-        say: [
-          state.char.hello,
-          (state.childName ? state.childName + 'くん、' : '') +
-            'きょうは なにを はなそうか?',
+      /* 3つめは まいかい ちがう「つかみ」に する */
+      const opener = pick(
+        [
           line.name + 'は ' + st[0].name + 'から ' + st[st.length - 1].name + 'まで、' + st.length + 'えき あるよ',
+          pick(charLines('brag'), 'brag'),
+          '%LINEの いろは ' + LINE_COLOR_NAME[line.id] + '。おぼえておいてね',
+          'きょうも ' + st[0].name + 'から はしってきたよ!',
+          backQuestion(),
         ],
-        chips: suggestChips(),
-        face: 'happy',
-        focusLine: line.id,
-        focusStation: null,
-      };
+        'opener'
+      );
+      return reply(
+        [
+          state.char.hello,
+          (state.childName ? state.childName + 'くん、' : '') + 'きょうは なにを はなそうか?',
+          opener,
+        ],
+        { face: 'happy', focusLine: line.id, focusStation: null }
+      );
     },
     respond,
     suggestChips,
