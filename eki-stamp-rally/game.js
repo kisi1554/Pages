@@ -20,6 +20,8 @@ const state = {
   sinceQuiz: 0,   // さんすうえき まで あと何駅か
   math: null,     // いま出している さんすうの問題
   transferTo: null, // のりかえ先(かくにん中)
+  mapLine: null,    // いま見ている 路線図
+  mapStart: null,   // 路線図から あそびはじめる駅(かくにん中)
 };
 
 // 何駅すすむごとに さんすうえきを 入れるか
@@ -600,6 +602,196 @@ function useHint() {
   }
 }
 
+/* ========================== 路線図 ========================== */
+
+function renderMapList() {
+  const wrap = $('map-list');
+  wrap.innerHTML = '';
+
+  const intro = document.createElement('p');
+  intro.className = 'map-card-note';
+  intro.textContent = '駅にはってある 路線図が 見られるよ。えらんでね。';
+  wrap.appendChild(intro);
+
+  MAP_LINE_IDS.forEach((id) => {
+    const line = LINE_BY_ID[id];
+    if (!line) return;
+
+    const total = lineUniqueCount(line);
+    const got = lineCollected(line);
+
+    const card = document.createElement('button');
+    card.className = 'line-card';
+    card.style.setProperty('--c', line.color);
+
+    const symbol = document.createElement('div');
+    symbol.className = 'line-symbol';
+    symbol.textContent = line.symbol;
+
+    const info = document.createElement('div');
+    info.className = 'line-info';
+
+    const name = document.createElement('div');
+    name.className = 'line-name';
+    name.textContent = line.name;
+
+    const note = document.createElement('div');
+    note.className = 'line-note';
+    note.textContent = `${line.company} ・ ${line.stations.length}えき`;
+
+    const meter = document.createElement('div');
+    meter.className = 'line-meter';
+    const bar = document.createElement('i');
+    bar.style.width = `${Math.round((got / total) * 100)}%`;
+    meter.appendChild(bar);
+
+    info.appendChild(name);
+    info.appendChild(note);
+    info.appendChild(meter);
+
+    const count = document.createElement('div');
+    count.className = 'line-count';
+    count.innerHTML = '🗺️<small>ひらく</small>';
+
+    card.appendChild(symbol);
+    card.appendChild(info);
+    card.appendChild(count);
+    card.addEventListener('click', () => {
+      SoundEngine.seTap();
+      showMap(line);
+    });
+    wrap.appendChild(card);
+  });
+
+  const more = document.createElement('p');
+  more.className = 'map-card-note';
+  more.style.marginTop = '18px';
+  more.textContent = 'ほかの路線の 路線図も これから ふやしていきます。';
+  wrap.appendChild(more);
+}
+
+function showMap(line) {
+  state.mapLine = line;
+
+  document.documentElement.style.setProperty('--line-color', line.color);
+  $('map-line-name').textContent = line.name;
+  $('map-bar').style.background = line.color;
+  $('map-bar').classList.toggle('on-light', isLightColor(line.color));
+  $('map-count').textContent = `${lineCollected(line)} / ${lineUniqueCount(line)}`;
+
+  const track = $('map-track');
+  track.innerHTML = '';
+  track.style.setProperty('--c', line.color);
+
+  const hereIndex = state.save.progress[line.id] || 0;
+
+  line.stations.forEach((st, i) => {
+    const col = document.createElement('button');
+    col.className = 'map-station';
+    if (st.name.length >= 8) col.classList.add('small');
+    if (i === hereIndex) col.classList.add('here');
+
+    // 駅名は 1文字ずつ たてに つみあげる
+    //(CSSの たて書きは 漢字が出ない環境があるので つかわない)
+    const name = document.createElement('div');
+    name.className = 'map-name';
+    Array.prototype.forEach.call(st.name, (ch) => {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      // のばす音は よこむきの文字なので まわす
+      if (ch === 'ー' || ch === '－' || ch === '—') s.className = 'rot';
+      name.appendChild(s);
+    });
+
+    const cell = document.createElement('div');
+    cell.className = 'map-dot-cell';
+
+    const transfers = transfersFor(st.name, line.id);
+    const dot = document.createElement('div');
+    dot.className = 'map-dot';
+    if (state.save.collected[st.name]) dot.classList.add('got');
+    if (transfers.length > 0) dot.classList.add('junction');
+    cell.appendChild(dot);
+
+    // のりかえ路線を いろの まるで しめす
+    const trWrap = document.createElement('div');
+    trWrap.className = 'map-transfers';
+    transfers.slice(0, 4).forEach((t) => {
+      const mark = document.createElement('i');
+      mark.className = 'map-tr';
+      mark.style.background = t.line.color;
+      mark.title = t.line.name;
+      trWrap.appendChild(mark);
+    });
+    if (transfers.length > 4) {
+      const more = document.createElement('span');
+      more.className = 'map-tr-more';
+      more.textContent = `+${transfers.length - 4}`;
+      trWrap.appendChild(more);
+    }
+
+    col.appendChild(name);
+    col.appendChild(cell);
+    col.appendChild(trWrap);
+    col.addEventListener('click', () => askMapStart(line, i));
+    track.appendChild(col);
+  });
+
+  $('mapstart-overlay').classList.remove('is-active');
+  showScreen('screen-map');
+
+  // いま すすんでいる駅が 見えるように よこスクロール
+  window.requestAnimationFrame(() => {
+    const scroller = $('map-scroll');
+    const here = track.querySelector('.map-station.here');
+    if (here) {
+      scroller.scrollLeft = here.offsetLeft - scroller.clientWidth / 2 + here.clientWidth / 2;
+    }
+  });
+}
+
+function askMapStart(line, index) {
+  const station = line.stations[index];
+  SoundEngine.seTap();
+  SoundEngine.speak(station.yomi);
+  state.mapStart = { line, index };
+
+  const ask = $('mapstart-ask');
+  ask.style.setProperty('--c', line.ink);
+  ask.innerHTML = '';
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'ta-line';
+  nameEl.textContent = station.name;
+
+  const yomiEl = document.createElement('span');
+  yomiEl.className = 'ta-station';
+  yomiEl.textContent = `${station.yomi} ・ ${line.name}`;
+
+  ask.appendChild(nameEl);
+  ask.appendChild(document.createTextNode('から あそぶ?'));
+  ask.appendChild(yomiEl);
+
+  $('mapstart-overlay').classList.add('is-active');
+}
+
+function doMapStart() {
+  const s = state.mapStart;
+  if (!s) return;
+  state.mapStart = null;
+  $('mapstart-overlay').classList.remove('is-active');
+  state.save.progress[s.line.id] = s.index;
+  persist();
+  startLine(s.line);
+}
+
+function cancelMapStart() {
+  state.mapStart = null;
+  SoundEngine.seTap();
+  SoundEngine.stopSpeak();
+  $('mapstart-overlay').classList.remove('is-active');
+}
+
 /* ======================= さんすうえき ======================= */
 
 const NUM_WORDS = [
@@ -926,6 +1118,20 @@ function init() {
     showScreen('screen-lines');
   });
 
+  $('btn-open-maps').addEventListener('click', () => {
+    SoundEngine.seTap();
+    renderMapList();
+    showScreen('screen-maps');
+  });
+
+  $('btn-map-play').addEventListener('click', () => {
+    SoundEngine.seTap();
+    startLine(state.mapLine);
+  });
+
+  $('btn-mapstart-go').addEventListener('click', doMapStart);
+  $('btn-mapstart-cancel').addEventListener('click', cancelMapStart);
+
   $('btn-open-book').addEventListener('click', () => {
     SoundEngine.seTap();
     renderBook();
@@ -939,6 +1145,7 @@ function init() {
       const target = btn.dataset.back;
       if (target === 'screen-title') refreshTitle();
       if (target === 'screen-lines') renderLineList();
+      if (target === 'screen-maps') renderMapList();
       showScreen(target);
     });
   });
