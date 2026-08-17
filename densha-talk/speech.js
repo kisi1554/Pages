@@ -32,10 +32,20 @@ const Speech = (function () {
     window.speechSynthesis.onvoiceschanged = pickVoice;
   }
 
-  /* よみあげの じゃまに なる きごう・絵文字を とる */
+  /*
+   * よみあげ用に 文を ととのえる。
+   *
+   * だいじなのは 「侮る(あなどる)」のような ふりがな。
+   * そのまま よませると「あなどる あなどる」と 2かい きこえて しまうので、
+   * ふりがなが ついている ところは 「よみ」だけを のこす。
+   * かんじの よみまちがい(雑色 など)も、これで おきなく なる。
+   */
+  const FURIGANA = /[「『]?([^\s「」『』()（）]{1,12})[」』]?[（(]([ぁ-んァ-ヴー・]{1,20})[)）]/g;
+
   function forSpeech(text) {
     return String(text)
       .replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{2B00}-\u{2BFF}]/gu, ' ')
+      .replace(FURIGANA, (whole, word, yomi) => yomi)
       .replace(/[「」『』()()]/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();

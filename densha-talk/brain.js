@@ -167,7 +167,8 @@ const Brain = (function () {
     const motif = stationMotif(name);
     const parts = [];
 
-    parts.push(motif + ' 「' + name + '」は 「' + yomi + '」って よむ えきだよ');
+    /* ふりがなの かたちに そろえておくと、よみあげが「よみ」だけに なる */
+    parts.push(motif + ' 「' + name + '」(' + yomi + ')って よむ えきだよ');
 
     if (STATION_TALK[name]) {
       parts.push(STATION_TALK[name]);
@@ -273,6 +274,64 @@ const Brain = (function () {
     はいいろ: ['はいいろ', 'ぎん', 'グレー', 'ぐれー', 'しるばー'],
   };
 
+  /*
+   * 3たくを つくる。
+   * correct = せいかい、pool = はずれの もとに なる ならび。
+   * せいかいと おなじ ものは のぞいて、シャッフルして かえす。
+   */
+  function makeChoices(correct, pool, fallback) {
+    const wrong = [];
+    const seen = { };
+    seen[correct] = true;
+    let bag = pool.slice();
+    let guard = 0;
+    while (wrong.length < 2 && guard < 300) {
+      guard += 1;
+      /* えらべる ものが たりない ろせん(3えきだけ など)は、ほかの えきから おぎなう */
+      if (guard > 150 && fallback && fallback.length > 0) bag = fallback;
+      const v = randomOf(bag);
+      if (!v || seen[v]) continue;
+      seen[v] = true;
+      wrong.push(v);
+    }
+    const all = [correct].concat(wrong);
+    for (let i = all.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const tmp = all[i];
+      all[i] = all[j];
+      all[j] = tmp;
+    }
+    return all;
+  }
+
+  const MARKS = '①②③';
+
+  /* 3たくを ふきだしと ボタンの りょうほうに */
+  function choiceLines(choices) {
+    return choices.map((c, i) => MARKS.charAt(i) + ' ' + c);
+  }
+
+  function choiceChips(choices, extra) {
+    const short = (c) => (c.length > 10 ? c.slice(0, 9) + '…' : c);
+    return choices
+      .map((c, i) => chip(MARKS.charAt(i) + ' ' + short(c), String(i + 1)))
+      .concat(extra || []);
+  }
+
+  /* 「1」「に」「③」などで えらばれた ばんごうを かえす(なければ -1) */
+  function chosenNumber(raw, norm, count) {
+    const table = [
+      ['1', 'いち', 'ひとつ', '①', 'いちばん', 'ばんいち'],
+      ['2', 'に', 'ふたつ', '②', 'にばん'],
+      ['3', 'さん', 'みっつ', '③', 'さんばん'],
+    ];
+    for (let i = 0; i < Math.min(count, 3); i += 1) {
+      const words = table[i];
+      if (words.some((w) => norm === normalize(w) || raw.trim() === w)) return i;
+    }
+    return -1;
+  }
+
   /* STATION_TALK に せつめいの ある駅(なぞなぞクイズに つかう) */
   const TALKED_STATIONS = Object.keys(STATION_TALK).filter((n) => STATION_INDEX[n]);
 
@@ -312,6 +371,7 @@ const Brain = (function () {
           b.name +
           '、さきに つくのは どっち?',
         answers: [first.name],
+        choices: Math.random() < 0.5 ? [a.name, b.name] : [b.name, a.name],
         hint: 'ヒント! 「' + stationYomi(first.name).charAt(0) + '」から はじまる ほうだよ',
         say: () => first.name + 'の ほうが さきに つくんだ',
         focusLine: line.id,
@@ -324,6 +384,7 @@ const Brain = (function () {
         kind,
         question: '🏢 クイズ! ' + line.name + 'は どこの かいしゃの でんしゃでしょう?',
         answers: [line.company],
+        choices: makeChoices(line.company, LINES.map((l) => l.company)),
         accept: (COMPANY_WORDS[line.company] || []).concat([line.company]),
         hint: 'ヒント! 「' + line.company.charAt(0) + '」から はじまる かいしゃ だよ',
         say: () => line.name + 'は ' + line.company + 'の でんしゃ',
@@ -337,6 +398,11 @@ const Brain = (function () {
         kind,
         question: '🕵️ なぞなぞ! 「' + STATION_TALK[name] + '」 これは どこの えきでしょう?',
         answers: [name],
+        choices: makeChoices(
+          name,
+          linesOf(name)[0].stations.map((st) => st.name),
+          ALL_STATIONS.map((st) => st.name)
+        ),
         hint:
           'ヒント! ' +
           linesOf(name)[0].name +
@@ -358,6 +424,13 @@ const Brain = (function () {
         question:
           '🚃 クイズだよ! ' + line.name + 'で、' + st.name + 'の となりの えきは どこでしょう?',
         answers: [n.prev, n.next].filter(Boolean),
+        choices: makeChoices(
+          n.next || n.prev,
+          line.stations
+            .filter((s2) => s2.name !== st.name && s2.name !== n.prev && s2.name !== n.next)
+            .map((s2) => s2.name),
+          ALL_STATIONS.map((s2) => s2.name)
+        ),
         hint: 'ヒント! 「' + stationYomi(n.next || n.prev).charAt(0) + '」から はじまる えきだよ',
         say: (a) => st.name + 'の となりは ' + a + ' だよ',
         focusLine: line.id,
@@ -371,6 +444,7 @@ const Brain = (function () {
         kind,
         question: '🎨 クイズ! ' + line.name + 'は なにいろの でんしゃでしょう?',
         answers: [color],
+        choices: makeChoices(color, LINES.map((l) => LINE_COLOR_NAME[l.id])),
         accept: COLOR_WORDS[color] || [color],
         hint: 'ヒント! 「' + color.charAt(0) + '」から はじまる いろ だよ',
         say: () => line.name + 'は ' + color + ' なんだ',
@@ -393,6 +467,7 @@ const Brain = (function () {
         kind,
         question: '🤔 クイズ! ' + st.name + 'は なにせんの えきでしょう?',
         answers: answerLines.map((l) => l.name),
+        choices: makeChoices(answerLines[0].name, LINES.map((l) => l.name)),
         acceptLines: answerLines.map((l) => l.id),
         hint: 'ヒント! いろは ' + LINE_COLOR_NAME[answerLines[0].id] + ' の でんしゃだよ',
         say: (a) => st.name + 'は ' + a + ' の えきだよ',
@@ -408,6 +483,11 @@ const Brain = (function () {
         kind,
         question: '🏁 クイズ! ' + line.name + 'の はしっこの えきは どこでしょう?',
         answers: [first, last],
+        choices: makeChoices(
+          last,
+          line.stations.slice(1, -1).map((st2) => st2.name),
+          ALL_STATIONS.map((st2) => st2.name)
+        ),
         hint: 'ヒント! ひとつは 「' + stationYomi(last).charAt(0) + '」から はじまるよ',
         say: (a) => line.name + 'は ' + first + 'から ' + last + 'までだよ',
         focusLine: line.id,
@@ -420,6 +500,10 @@ const Brain = (function () {
       kind: 'count',
       question: '🔢 クイズ! ' + line.name + 'には、えきが いくつ あるでしょう?',
       answers: [String(num)],
+      choices: makeChoices(
+        num + 'えき',
+        [num + 3, num - 3, num + 6, num - 6, num + 9].filter((v) => v > 0).map((v) => v + 'えき')
+      ),
       number: num,
       hint: 'ヒント! ' + (num - 3) + 'こ から ' + (num + 3) + 'こ の あいだ だよ',
       say: () => line.name + 'は ' + num + 'えき あるんだ',
@@ -434,8 +518,19 @@ const Brain = (function () {
     return out;
   }
 
-  function judgeQuiz(raw, norm) {
+  function judgeQuiz(rawInput, normInput) {
     const q = state.quiz;
+    let raw = rawInput;
+    let norm = normInput;
+
+    /* ①②③ の ばんごうで こたえたら、その せんたくしを こたえと して あつかう */
+    if (q.choices && q.choices.length > 0) {
+      const at = chosenNumber(raw, norm, q.choices.length);
+      if (at >= 0) {
+        raw = q.choices[at];
+        norm = normalize(raw);
+      }
+    }
 
     /* とちゅうで べつの あそびに いきたく なったとき */
     if (has(norm, ['しりとり'])) {
@@ -446,7 +541,10 @@ const Brain = (function () {
     if (has(norm, ['わからない', 'わかんない', 'ヒント', 'ひんと', 'おしえて'])) {
       if (!q.hinted) {
         q.hinted = true;
-        return reply([q.hint, 'もういちど かんがえて みよう!'], { face: 'think' });
+        return reply(
+          [q.hint, 'もういちど かんがえて みよう!'].concat(choiceLines(q.choices || [])),
+          { face: 'think', chips: choiceChips(q.choices || [], [chip('こたえを おしえて', 'わからない')]) }
+        );
       }
       state.mode = 'chat';
       const ans = q.answers[0];
@@ -502,8 +600,9 @@ const Brain = (function () {
 
     if (!q.hinted) {
       q.hinted = true;
-      return reply([pick(CHEER_ON_WRONG, 'ng'), q.hint], {
+      return reply([pick(CHEER_ON_WRONG, 'ng'), q.hint].concat(choiceLines(q.choices || [])), {
         face: 'think',
+        chips: choiceChips(q.choices || [], [chip('こたえを おしえて', 'わからない')]),
       });
     }
     state.mode = 'chat';
@@ -521,9 +620,10 @@ const Brain = (function () {
     state.mode = 'quiz';
     if (q.focusLine) state.lastLine = LINE_BY_ID[q.focusLine];
     if (q.focusStation) state.lastStation = q.focusStation;
-    return reply([q.question], {
+    const choices = q.choices || [];
+    return reply([q.question].concat(choiceLines(choices)), {
       face: 'think',
-      chips: [chip('わからない 💡', 'ヒント'), chip('クイズ やめる', 'やめる')],
+      chips: choiceChips(choices, [chip('わからない 💡', 'ヒント'), chip('やめる', 'やめる')]),
     });
   }
 
@@ -554,18 +654,33 @@ const Brain = (function () {
     state.mode = 'shiritori';
     const start = randomOf(myLine().stations);
     state.shiritori = { used: [start.name], need: lastKana(start.yomi) };
+    state.shiritori.choices = shiritoriChoices(state.shiritori.need, state.shiritori.used);
     return reply(
       [
         'えきめい しりとり しよう! 「ん」が ついたら おしまい だよ',
         'じゃあ ' + state.char.me + 'から。「' + start.name + '」(' + start.yomi + ')!',
-        '「' + state.shiritori.need + '」から はじまる えき、いえるかな?',
-      ],
+        '「' + state.shiritori.need + '」から はじまる えきは どれ?',
+      ].concat(choiceLines(state.shiritori.choices)),
       {
         face: 'wow',
         focusStation: start.name,
-        chips: [chip('ヒント ちょうだい', 'ヒント'), chip('しりとり やめる', 'やめる')],
+        chips: choiceChips(state.shiritori.choices, [
+          chip('ヒント 💡', 'ヒント'),
+          chip('やめる', 'やめる'),
+        ]),
       }
     );
+  }
+
+  /* 「need」から はじまる えき 1つ と、そうでない えき 2つ で 3たくを つくる */
+  function shiritoriChoices(need, used) {
+    const good = shiritoriCandidates(need, used);
+    if (good.length === 0) return [];
+    const right = randomOf(good).name;
+    const wrongPool = ALL_STATIONS.filter(
+      (st) => firstKana(st.yomi) !== need && used.indexOf(st.name) < 0
+    ).map((st) => st.name);
+    return makeChoices(right, wrongPool, wrongPool);
   }
 
   function shiritoriCandidates(kana, used) {
@@ -574,8 +689,28 @@ const Brain = (function () {
     );
   }
 
-  function judgeShiritori(raw, norm) {
+  function judgeShiritori(rawInput, normInput) {
     const sh = state.shiritori;
+    let raw = rawInput;
+    let norm = normInput;
+
+    /* ①②③ で えらんだら、その えきめいを いったことに する */
+    if (sh.choices && sh.choices.length > 0) {
+      const at = chosenNumber(raw, norm, sh.choices.length);
+      if (at >= 0) {
+        raw = sh.choices[at];
+        norm = normalize(raw);
+      }
+    }
+
+    /* いまの もんだいを、3たく つきで だしなおす */
+    function askAgain(lines, face) {
+      sh.choices = shiritoriChoices(sh.need, sh.used);
+      return reply(lines.concat(choiceLines(sh.choices)), {
+        face: face || 'think',
+        chips: choiceChips(sh.choices, [chip('ヒント 💡', 'ヒント'), chip('やめる', 'やめる')]),
+      });
+    }
 
     if (has(norm, ['くいず', 'もんだい'])) {
       state.shiritori = null;
@@ -605,18 +740,16 @@ const Brain = (function () {
     const st = found.length > 0 ? found[0] : null;
 
     if (!st) {
-      return reply(['うーん、それは えきの なまえかな? 「' + sh.need + '」から はじまる えきを おしえて!'], {
-        face: 'think',
-      });
+      return askAgain(['うーん、それは えきの なまえかな? 「' + sh.need + '」から はじまる えきは どれ?']);
     }
     if (sh.used.indexOf(st) >= 0) {
-      return reply([st + 'は もう でたよ! べつの えきを かんがえてみて'], { face: 'think' });
+      return askAgain([st + 'は もう でたよ! べつの えきを えらんでみて']);
     }
     const yomi = stationYomi(st);
     if (firstKana(yomi) !== sh.need) {
-      return reply([
+      return askAgain([
         st + 'は 「' + firstKana(yomi) + '」から はじまるね。ほしいのは 「' + sh.need + '」だよ!',
-      ], { face: 'think' });
+      ]);
     }
 
     sh.used.push(st);
@@ -643,13 +776,26 @@ const Brain = (function () {
     sh.used.push(mine.name);
     sh.need = lastKana(mine.yomi);
     state.lastStation = mine.name;
+    sh.choices = shiritoriChoices(sh.need, sh.used);
+    if (sh.choices.length === 0) {
+      state.mode = 'chat';
+      state.shiritori = null;
+      return reply([st + '! じょうずだね', 'あれれ、つづきが おもいつかない! ひきわけだね'], {
+        face: 'think',
+        focusStation: mine.name,
+      });
+    }
     return reply(
       [
         'いいね! ' + st + '(' + yomi + ')',
         state.char.me + 'は 「' + mine.name + '」(' + mine.yomi + ')!',
-        'つぎは 「' + sh.need + '」だよ',
-      ],
-      { face: 'happy', focusStation: mine.name }
+        'つぎは 「' + sh.need + '」から はじまる えき。どれ?',
+      ].concat(choiceLines(sh.choices)),
+      {
+        face: 'happy',
+        focusStation: mine.name,
+        chips: choiceChips(sh.choices, [chip('ヒント 💡', 'ヒント'), chip('やめる', 'やめる')]),
+      }
     );
   }
 
@@ -1279,8 +1425,16 @@ const Brain = (function () {
       );
     }
 
-    /* --- 路線の はなし --- */
-    if (line && (has(norm, ['どんな', 'おしえて', 'って']) || stations.length === 0)) {
+    /*
+     * --- 路線の はなし ---
+     * 「みなとみらい」「大井町」のように 駅名と 路線名が おなじ ときは、
+     * 「せん」と いって いなければ 駅の はなしを ゆうせんする。
+     */
+    if (
+      line &&
+      (stations.length === 0 || text.indexOf('線') >= 0 || norm.indexOf('せん') >= 0) &&
+      (has(norm, ['どんな', 'おしえて', 'って']) || stations.length === 0)
+    ) {
       return reply(lineSentence(line), { face: 'happy', focusLine: line.id });
     }
 

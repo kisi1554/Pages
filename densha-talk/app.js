@@ -63,6 +63,8 @@
   }
 
   let mapLineId = null;
+  let pending = [];        // じゅんばんに だす とちゅうの セリフ
+  let pendingTimers = [];
   let idleTimer = null;
   let idleCount = 0;
 
@@ -142,6 +144,9 @@
   function backToTitle() {
     Speech.stopSpeak();
     Speech.stopListen();
+    pendingTimers.forEach(clearTimeout);
+    pendingTimers = [];
+    pending = [];
     clearTimeout(idleTimer);
     el.screenTalk.classList.remove('is-active');
     el.screenTitle.classList.add('is-active');
@@ -187,12 +192,19 @@
     else if (res.focusStation) highlightStation(res.focusStation);
     if (res.openMap) el.mapPanel.classList.add('is-open');
 
+    /* まだ だしきって いない セリフが あれば、さきに ぜんぶ だす */
+    flushBubbles();
     const texts = res.say.filter((t) => t && t.length > 0);
-    texts.forEach((t, i) => {
-      setTimeout(() => {
-        addBubble(t, 'char');
-        Speech.sfx.pop();
-      }, i * 520);
+    pending = texts.map((t) => ({ text: t, shown: false }));
+    pending.forEach((item, i) => {
+      pendingTimers.push(
+        setTimeout(() => {
+          if (item.shown) return;
+          item.shown = true;
+          addBubble(item.text, 'char');
+          Speech.sfx.pop();
+        }, i * 520)
+      );
     });
 
     setTalking(true);
@@ -201,9 +213,22 @@
     startIdleTimer();
   }
 
+  /* とちゅうの セリフを いますぐ ぜんぶ ふきだしに する(じゅんばんが まざらないように) */
+  function flushBubbles() {
+    pendingTimers.forEach(clearTimeout);
+    pendingTimers = [];
+    pending.forEach((item) => {
+      if (item.shown) return;
+      item.shown = true;
+      addBubble(item.text, 'char');
+    });
+    pending = [];
+  }
+
   function sendText(text, label) {
     const body = String(text || '').trim();
     if (!body) return;
+    flushBubbles();
     clearTimeout(idleTimer);
     idleCount = 0;
     Speech.stopSpeak();
