@@ -27,6 +27,8 @@
     lineName: $('talk-line-name'),
     train: $('train'),
     trainDest: $('train-dest'),
+    trainHat: $('train-hat'),
+    trainAura: $('train-aura'),
     mapPanel: $('map-panel'),
     mapLines: $('map-lines'),
     mapStrip: $('map-strip'),
@@ -74,11 +76,12 @@
 
   function miniTrain(char) {
     return (
-      '<span class="mini-train" style="--c:' +
+      '<span class="mini-train" data-char="' + char.id + '" style="--c:' +
       char.color +
       ';--ink:' +
       char.ink +
       '">' +
+      '<span class="mini-hat">' + (char.hat || '') + '</span>' +
       '<span class="mini-face">' +
       char.face +
       '</span></span>'
@@ -131,6 +134,12 @@
     el.charName.textContent = char.name;
     el.lineName.textContent = line.name;
     el.trainDest.textContent = line.name;
+    /* キャラごとの みため(CSSが data-char を みて かおや かざりを かえる) */
+    el.train.dataset.char = char.id;
+    el.trainHat.textContent = char.hat || '';
+    Array.prototype.forEach.call(el.trainAura.children, (sp) => {
+      sp.textContent = char.aura || '';
+    });
     el.log.innerHTML = '';
 
     el.screenTitle.classList.remove('is-active');
@@ -163,9 +172,40 @@
     return div;
   }
 
-  function setFace(mood) {
-    el.train.classList.remove('is-happy', 'is-think', 'is-wow');
-    el.train.classList.add('is-' + (mood || 'happy'));
+  /* つかえる ひょうじょう。CSSの .is-〜 と そろえる */
+  const FACES = [
+    'happy', 'think', 'wow',
+    'wink', 'love', 'shock', 'sleepy', 'angry', 'tehe', 'dizzy', 'proud',
+  ];
+  /*
+   * ときどき ちらっと みせる おまけの かお。
+   * 「むっ」「ガーン」は わけも なく でると こわいので、
+   * ばめんに あわせた ときだけ つかう(ここには いれない)。
+   */
+  const GAG_FACES = ['wink', 'love', 'dizzy', 'tehe', 'sleepy', 'proud'];
+
+  let baseFace = 'happy';
+  let gagTimer = null;
+
+  function setFace(mood, temporary) {
+    const next = FACES.indexOf(mood) >= 0 ? mood : 'happy';
+    FACES.forEach((f) => el.train.classList.remove('is-' + f));
+    el.train.classList.add('is-' + next);
+    if (!temporary) {
+      baseFace = next;
+      clearTimeout(gagTimer);
+    }
+  }
+
+  /* しばらく べつの かおに して、じかんが たったら もどす */
+  function gagFace(mood, ms) {
+    clearTimeout(gagTimer);
+    setFace(mood, true);
+    gagTimer = setTimeout(() => setFace(baseFace, true), ms || 1900);
+  }
+
+  function randomFace() {
+    return GAG_FACES[Math.floor(Math.random() * GAG_FACES.length)];
   }
 
   function setTalking(on) {
@@ -208,7 +248,11 @@
     });
 
     setTalking(true);
-    Speech.speak(texts, Brain.state.char.voice, () => setTalking(false));
+    Speech.speak(texts, Brain.state.char.voice, () => {
+      setTalking(false);
+      /* はなしおわった あと、ときどき ちらっと ちがう かおを する */
+      if (Math.random() < 0.28) setTimeout(() => gagFace(randomFace()), 500);
+    });
     saveLearned();
     startIdleTimer();
   }
@@ -256,7 +300,9 @@
         return;
       }
       idleCount += 1;
-      const text = IDLE_LINES[(idleCount - 1) % IDLE_LINES.length];
+      /* 2かいに 1かいは、ことばを ひとつ おしえる */
+      const text =
+        idleCount % 2 === 0 ? Brain.wordTip() : IDLE_LINES[(idleCount - 1) % IDLE_LINES.length];
       addBubble(text, 'char');
       setTalking(true);
       Speech.speak([text], Brain.state.char.voice, () => setTalking(false));
@@ -470,6 +516,16 @@
       el.mapPanel.classList.toggle('is-open');
       el.log.scrollTop = el.log.scrollHeight;
       Speech.unlock();
+    });
+
+    /* キャラを タップすると かおが かわる */
+    el.train.addEventListener('click', () => {
+      Speech.unlock();
+      Speech.sfx.pop();
+      el.train.classList.remove('is-poked');
+      void el.train.offsetWidth;
+      el.train.classList.add('is-poked');
+      gagFace(randomFace(), 1600);
     });
 
     el.btnMic.addEventListener('click', toggleMic);

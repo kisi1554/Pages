@@ -663,6 +663,8 @@ const COMPANY_WORDS = {
 const CHARACTERS = [
   {
     id: 'yamanoten',
+    hat: '🔁',
+    aura: '💫',
     name: 'やまのてん',
     lineId: 'yamanote',
     emoji: '🟢',
@@ -678,6 +680,8 @@ const CHARACTERS = [
   },
   {
     id: 'toyoko',
+    hat: '🎧',
+    aura: '✨',
     name: 'とうよこくん',
     lineId: 'tokyu-toyoko',
     emoji: '🔴',
@@ -693,6 +697,8 @@ const CHARACTERS = [
   },
   {
     id: 'ginjiro',
+    hat: '🎩',
+    aura: '🕰️',
     name: 'ぎんじろう',
     lineId: 'metro-ginza',
     emoji: '🟠',
@@ -708,6 +714,8 @@ const CHARACTERS = [
   },
   {
     id: 'maruko',
+    hat: '🎀',
+    aura: '💬',
     name: 'まるこ',
     lineId: 'metro-marunouchi',
     emoji: '🔺',
@@ -723,6 +731,8 @@ const CHARACTERS = [
   },
   {
     id: 'roman',
+    hat: '👑',
+    aura: '✨',
     name: 'ろまんちゃん',
     lineId: 'odakyu-odawara',
     emoji: '🔵',
@@ -738,6 +748,8 @@ const CHARACTERS = [
   },
   {
     id: 'burukun',
+    hat: '⛑️',
+    aura: '🔦',
     name: 'ぶるくん',
     lineId: 'yokohama-blue',
     emoji: '🔷',
@@ -753,6 +765,8 @@ const CHARACTERS = [
   },
   {
     id: 'mimi',
+    hat: '🎡',
+    aura: '🌊',
     name: 'みらいちゃん',
     lineId: 'minatomirai',
     emoji: '🔷',
@@ -768,6 +782,8 @@ const CHARACTERS = [
   },
   {
     id: 'rinkai',
+    hat: '🐟',
+    aura: '🫧',
     name: 'りんかくん',
     lineId: 'rinkai',
     emoji: '🟦',
@@ -783,6 +799,8 @@ const CHARACTERS = [
   },
   {
     id: 'keikyu',
+    hat: '🔥',
+    aura: '💨',
     name: 'けいきゅん',
     lineId: 'keikyu-main',
     emoji: '🟥',
@@ -798,6 +816,8 @@ const CHARACTERS = [
   },
   {
     id: 'sotetsu',
+    hat: '⚓',
+    aura: '💙',
     name: 'そうちゃん',
     lineId: 'sotetsu-main',
     emoji: '🔹',
@@ -813,6 +833,8 @@ const CHARACTERS = [
   },
   {
     id: 'denchan',
+    hat: '🌿',
+    aura: '💤',
     name: 'でんちゃん',
     lineId: 'tokyu-denentoshi',
     emoji: '🟩',

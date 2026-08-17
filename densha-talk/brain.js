@@ -34,6 +34,7 @@ const Brain = (function () {
     guess: null,
     wordQuiz: null,
     wordLevel: 3, // 1=やさしい 2=ふつう 3=ぜんぶ
+    sinceWord: 0, // ことばの おまけを だしてから なんターン たったか
     learned: [],  // おぼえた ことば(app.js が ほぞんする)
     turns: 0,
     recent: {}, // おなじ せりふを つづけて 言わないため
@@ -589,7 +590,7 @@ const Brain = (function () {
       const done = q.say(answered || q.answers[0]);
       state.quiz = null;
       return reply([pick(PRAISE_ON_CORRECT, 'ok'), done], {
-        face: 'wow',
+        face: 'proud',
         chips: [
           chip('もう1もん! 🚃', 'クイズ だして'),
           chip('しりとり しよ', 'えきめい しりとり'),
@@ -609,7 +610,7 @@ const Brain = (function () {
     const ans = q.answers[0];
     state.quiz = null;
     return reply(['こたえは ' + ans + ' でした! ' + pick(CHEER_AFTER, 'after')], {
-      face: 'happy',
+      face: 'shock',
       chips: [chip('もういっかい クイズ', 'クイズ だして'), chip('おはなし する', 'おしゃべり しよう')],
     });
   }
@@ -758,7 +759,7 @@ const Brain = (function () {
       state.shiritori = null;
       return reply(
         [st + '(' + yomi + ')! ……あっ、「ん」で おわっちゃった!', 'また しりとり やろうね'],
-        { face: 'wow', focusStation: st, chips: [chip('もういっかい しりとり', 'しりとり')] }
+        { face: 'shock', focusStation: st, chips: [chip('もういっかい しりとり', 'しりとり')] }
       );
     }
 
@@ -1016,7 +1017,7 @@ const Brain = (function () {
     if (found.indexOf(g.name) >= 0) {
       return endGuess(
         [pick(PRAISE_ON_CORRECT, 'ok'), 'こたえは 「' + g.name + '」! よく わかったね'],
-        { face: 'wow' }
+        { face: 'proud' }
       );
     }
     if (found.length > 0) {
@@ -1062,6 +1063,7 @@ const Brain = (function () {
     ['きょうの できごと 💬', 'きょう ようちえんに いったよ'],
     ['ことばクイズ 📕', 'ことばクイズ'],
     ['きょうの ことば 📕', 'きょうの ことば'],
+    ['ことばの いみ しりたい 📕', 'きょうの ことば'],
   ];
 
   function suggestChips() {
@@ -1106,7 +1108,7 @@ const Brain = (function () {
    * ほんたい
    * ------------------------------------------------------------------ */
 
-  function respond(raw) {
+  function respondCore(raw) {
     const text = String(raw || '').trim();
     const norm = normalize(text);
     state.turns += 1;
@@ -1155,7 +1157,7 @@ const Brain = (function () {
     if (has(norm, ['ばいばい', 'さようなら', 'またね', 'おやすみ', 'じゃあね'])) {
       return reply(
         [callName(true) + 'きょうは はなせて たのしかった!', pick(charLines('bye'), 'bye')],
-        { face: 'happy' }
+        { face: 'wink' }
       );
     }
     if (has(norm, ['こんにちは', 'おはよう', 'こんばんは', 'はろー', 'やっほ', 'もしもし'])) {
@@ -1166,7 +1168,10 @@ const Brain = (function () {
 
     /* --- ありがとう・ほめことば --- */
     if (has(norm, ['ありがとう', 'ありがと', 'かっこいい', 'かわいい', 'だいすき', 'すきだよ', 'えらい'])) {
-      return reply([pick(charLines('praise'), 'thanks'), backQuestion()], { face: 'wow' });
+      const loved = has(norm, ['だいすき', 'すきだよ', 'かわいい']);
+      return reply([pick(charLines('praise'), 'thanks'), backQuestion()], {
+        face: loved ? 'love' : 'tehe',
+      });
     }
 
     /* --- なまえ --- */
@@ -1217,7 +1222,7 @@ const Brain = (function () {
     if (has(norm, ['つかれた', 'ねむい', 'ねむたい'])) {
       return reply(
         ['つかれたね。でんしゃも よるは しゃりょうきちで ぐっすり ねるんだよ', 'ゆっくり やすんでね 😴'],
-        { face: 'think' }
+        { face: 'sleepy' }
       );
     }
     if (has(norm, ['こわい', 'びっくり'])) {
@@ -1231,13 +1236,13 @@ const Brain = (function () {
             'fear'
           ),
         ],
-        { face: 'think' }
+        { face: 'shock' }
       );
     }
 
     /* --- じまん きかせて --- */
     if (has(norm, ['じまん', 'ひみつおしえて', 'とくいなこと'])) {
-      return reply([pick(charLines('brag'), 'brag'), backQuestion()], { face: 'wow' });
+      return reply([pick(charLines('brag'), 'brag'), backQuestion()], { face: 'proud' });
     }
 
     /* --- あそびかた --- */
@@ -1393,7 +1398,7 @@ const Brain = (function () {
     /* --- でんしゃの ふしぎ --- */
     if (has(norm, ['なんで', 'どうして', 'なぜ', 'ふしぎ'])) {
       const hit = WONDERS.find((w) => w.keys.some((k) => norm.indexOf(normalize(k)) >= 0));
-      if (hit) return reply(hit.say.concat(['ほかにも しりたいこと ある?']), { face: 'wow' });
+      if (hit) return reply(hit.say.concat(['ほかにも しりたいこと ある?']), { face: 'proud' });
       const any = randomOf(WONDERS);
       return reply(
         ['うーん、むずかしい しつもんだね!', 'かわりに でんしゃの ひみつを ひとつ。'].concat(any.say),
@@ -1490,6 +1495,42 @@ const Brain = (function () {
   }
 
   /* ------------------------------------------------------------------
+   * ことばの おまけ を ときどき まぜる
+   *
+   * でんしゃの はなしが しゅやくなので、だしすぎない。
+   *  - あそびの とちゅう(クイズ・しりとり・えきあて)には まぜない
+   *  - もう ことばの はなしを している ときは まぜない
+   *  - へんじが ながい ときは まぜない
+   *  - まえに だしてから 3ターン いじょう あけて、そのうえで 6わりくらい
+   * だいたい 4〜6ターンに 1かい くらい 出る。
+   * ------------------------------------------------------------------ */
+
+  function maybeWordSeed(res) {
+    if (!res || !res.say) return res;
+    if (state.mode !== 'chat') return res;
+
+    /* すでに ことばの はなし なら、かぞえなおすだけ */
+    if (res.say.some((t) => t.indexOf('📕') >= 0)) {
+      state.sinceWord = 0;
+      return res;
+    }
+
+    state.sinceWord += 1;
+    if (state.sinceWord < 4) return res;
+    if (res.say.length > 3) return res;
+    if (Math.random() > 0.6) return res;
+
+    state.sinceWord = 0;
+    res.say = res.say.concat([fill(wordSeed())]);
+    state.lastSay = res.say;
+    return res;
+  }
+
+  function respond(raw) {
+    return maybeWordSeed(respondCore(raw));
+  }
+
+  /* ------------------------------------------------------------------
    * そとから つかう
    * ------------------------------------------------------------------ */
 
@@ -1515,6 +1556,9 @@ const Brain = (function () {
     learnedWords() {
       return state.learned.map((w) => WORD_BY_KEY[w]).filter(Boolean);
     },
+    wordTip() {
+      return fill(wordSeed());
+    },
     explainWord(key) {
       const entry = WORD_BY_KEY[key];
       if (!entry) return null;
@@ -1534,6 +1578,7 @@ const Brain = (function () {
           '%LINEの いろは ' + LINE_COLOR_NAME[line.id] + '。おぼえておいてね',
           'きょうも ' + st[0].name + 'から はしってきたよ!',
           backQuestion(),
+          wordSeed(),
         ],
         'opener'
       );
