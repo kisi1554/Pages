@@ -22,6 +22,7 @@ const state = {
   transferTo: null, // のりかえ先(かくにん中)
   mapLine: null,    // いま見ている 路線図
   mapStart: null,   // 路線図から あそびはじめる駅(かくにん中)
+  gate: null,       // おうちのかた かくにん(2けたの たし算)
 };
 
 // 何駅すすむごとに さんすうえきを 入れるか
@@ -297,7 +298,7 @@ function startLine(line) {
 
   showScreen('screen-rally');
   showStation();
-  SoundEngine.speak(`${line.name}、しゅっぱつ!`, { rate: 0.9 });
+  SoundEngine.speak(`${line.yomi}、しゅっぱつ!`, { rate: 0.9 });
 }
 
 function renderRail() {
@@ -441,7 +442,7 @@ function askTransfer(targetLine, index, station) {
   ask.appendChild(where);
 
   $('transfer-overlay').classList.add('is-active');
-  SoundEngine.speak(`${targetLine.name}に のりかえますか?`, { rate: 0.9 });
+  SoundEngine.speak(`${targetLine.yomi}に のりかえますか?`, { rate: 0.9 });
 }
 
 function doTransfer() {
@@ -604,6 +605,13 @@ function useHint() {
 
 /* ========================== 路線図 ========================== */
 
+// 駅名のたて書きが 152px におさまる文字の大きさ
+// (1文字あたり だいたい フォントサイズ×1.05 + すきま1px つかう)
+function mapNameFontSize(length) {
+  const fit = Math.floor((148 / Math.max(1, length) - 1) / 1.05);
+  return Math.max(8, Math.min(15, fit));
+}
+
 function renderMapList() {
   const wrap = $('map-list');
   wrap.innerHTML = '';
@@ -613,10 +621,19 @@ function renderMapList() {
   intro.textContent = '駅にはってある 路線図が 見られるよ。えらんでね。';
   wrap.appendChild(intro);
 
-  MAP_LINE_IDS.forEach((id) => {
-    const line = LINE_BY_ID[id];
-    if (!line) return;
+  const hasMap = {};
+  MAP_LINE_IDS.forEach((id) => { hasMap[id] = true; });
 
+  COMPANIES.forEach((company) => {
+    const lines = company.lines.filter((line) => hasMap[line.id]);
+    if (lines.length === 0) return;
+
+    const head = document.createElement('div');
+    head.className = 'company-head';
+    head.textContent = company.name;
+    wrap.appendChild(head);
+
+    lines.forEach((line) => {
     const total = lineUniqueCount(line);
     const got = lineCollected(line);
 
@@ -661,13 +678,8 @@ function renderMapList() {
       showMap(line);
     });
     wrap.appendChild(card);
+    });
   });
-
-  const more = document.createElement('p');
-  more.className = 'map-card-note';
-  more.style.marginTop = '18px';
-  more.textContent = 'ほかの路線の 路線図も これから ふやしていきます。';
-  wrap.appendChild(more);
 }
 
 function showMap(line) {
@@ -688,13 +700,14 @@ function showMap(line) {
   line.stations.forEach((st, i) => {
     const col = document.createElement('button');
     col.className = 'map-station';
-    if (st.name.length >= 8) col.classList.add('small');
     if (i === hereIndex) col.classList.add('here');
 
     // 駅名は 1文字ずつ たてに つみあげる
     //(CSSの たて書きは 漢字が出ない環境があるので つかわない)
     const name = document.createElement('div');
     name.className = 'map-name';
+    // 長い駅名でも 152px に おさまるように 文字を小さくする
+    name.style.fontSize = `${mapNameFontSize(st.name.length)}px`;
     Array.prototype.forEach.call(st.name, (ch) => {
       const s = document.createElement('span');
       s.textContent = ch;
@@ -844,6 +857,11 @@ const MATH_TEMPLATES = [
   }),
 ];
 
+// さんすうの文で つかう「◯◯えきから」の駅(すこし前の駅)
+function from0(line) {
+  return line.stations[Math.max(0, state.stationIndex - MATH_INTERVAL)];
+}
+
 function makeMathQuestion() {
   const max = mathMax();
   const a = randInt(1, Math.min(9, max - 1));
@@ -851,13 +869,18 @@ function makeMathQuestion() {
   const answer = a + b;
 
   const line = state.line;
-  const from = line.stations[Math.max(0, state.stationIndex - MATH_INTERVAL)];
-  const ctx = {
-    fromName: from ? from.name : line.stations[0].name,
-    stationName: line.stations[Math.max(0, state.stationIndex - 1)].name,
-  };
+  const from = from0(line);
+  const prev = line.stations[Math.max(0, state.stationIndex - 1)];
+  const ctx = { fromName: from.name, stationName: prev.name };
 
   const tpl = MATH_TEMPLATES[Math.floor(Math.random() * MATH_TEMPLATES.length)](a, b, ctx);
+
+  // 読み上げは 駅名を かなに した文にする
+  //(漢字のままだと 音声合成が よみまちがえることがある)
+  const speech = tpl.text
+    .split('\n').join(' ')
+    .split(ctx.fromName).join(from.yomi)
+    .split(ctx.stationName).join(prev.yomi);
 
   // まちがいの選択肢は 答えの まわりの数から
   const picked = {};
@@ -874,7 +897,10 @@ function makeMathQuestion() {
     }
   }
 
-  return { a, b, answer, icon: tpl.icon, unit: tpl.unit, text: tpl.text, choices: shuffle(choices) };
+  return {
+    a, b, answer, icon: tpl.icon, unit: tpl.unit, text: tpl.text, speech,
+    choices: shuffle(choices),
+  };
 }
 
 function showMathQuiz() {
@@ -915,7 +941,7 @@ function showMathQuiz() {
 
   $('math-overlay').classList.remove('is-active');
   showScreen('screen-math');
-  SoundEngine.speak(q.text.replace('\n', ' '), { rate: 0.88 });
+  SoundEngine.speak(q.speech, { rate: 0.88 });
 }
 
 function countAloud() {
@@ -1001,7 +1027,7 @@ function finishLine() {
 
   showScreen('screen-clear');
   SoundEngine.seFanfare();
-  SoundEngine.speak(`${line.name}、ぜんぶ よめました。すごい!`, { rate: 0.9 });
+  SoundEngine.speak(`${line.yomi}、ぜんぶ よめました。すごい!`, { rate: 0.9 });
 }
 
 /* ======================= スタンプ帳 ======================= */
@@ -1066,6 +1092,95 @@ function renderBook() {
     page.appendChild(grid);
     body.appendChild(page);
   });
+}
+
+/* ================= おうちのかた かくにん(2けたの たし算) ================= */
+/*
+ * さんすうえきの入/切 と BGMの切りかえは、子どもが かってに いじらないように
+ * 2けたどうしの たし算に 正解しないと できないようにする。
+ */
+
+function newGateQuestion() {
+  const a = randInt(13, 89);
+  const b = randInt(13, 89);
+  state.gate.a = a;
+  state.gate.b = b;
+  state.gate.answer = a + b;
+  state.gate.input = '';
+  $('gate-q').textContent = `${a} ＋ ${b} ＝ ?`;
+  $('gate-answer').textContent = '';
+}
+
+function askAdultGate(action, label) {
+  state.gate = { action };
+  $('gate-note').textContent = label
+    ? `${label}を かえるには こたえてね`
+    : 'この せっていを かえるには こたえてね';
+  newGateQuestion();
+  $('gate').classList.add('is-active');
+}
+
+function gateType(key) {
+  const g = state.gate;
+  if (!g) return;
+  if (key === 'del') {
+    g.input = g.input.slice(0, -1);
+  } else if (g.input.length < 3) {
+    g.input += key;
+  }
+  $('gate-answer').textContent = g.input;
+}
+
+function gateSubmit() {
+  const g = state.gate;
+  if (!g || g.input === '') return;
+
+  if (parseInt(g.input, 10) === g.answer) {
+    const action = g.action;
+    state.gate = null;
+    $('gate').classList.remove('is-active');
+    SoundEngine.seCorrect();
+    if (typeof action === 'function') action();
+    return;
+  }
+
+  SoundEngine.seWrong();
+  const el = $('gate-answer');
+  el.classList.add('shake');
+  window.setTimeout(() => {
+    el.classList.remove('shake');
+    newGateQuestion();
+  }, 420);
+}
+
+function gateCancel() {
+  state.gate = null;
+  $('gate').classList.remove('is-active');
+  SoundEngine.seTap();
+}
+
+function buildGatePad() {
+  const pad = $('gate-pad');
+  pad.innerHTML = '';
+  ['1', '2', '3', '4', '5', '6', '7', '8', '9'].forEach((n) => {
+    const b = document.createElement('button');
+    b.className = 'gate-key';
+    b.textContent = n;
+    b.addEventListener('click', () => gateType(n));
+    pad.appendChild(b);
+  });
+
+  const zero = document.createElement('button');
+  zero.className = 'gate-key wide';
+  zero.textContent = '0';
+  zero.addEventListener('click', () => gateType('0'));
+  pad.appendChild(zero);
+
+  const del = document.createElement('button');
+  del.className = 'gate-key';
+  del.textContent = '⌫';
+  del.addEventListener('click', () => gateType('del'));
+  pad.appendChild(del);
 }
 
 /* ======================= 音のスイッチ ======================= */
@@ -1154,6 +1269,17 @@ function init() {
   $('btn-hint').addEventListener('click', useHint);
   $('btn-skip').addEventListener('click', skipStation);
 
+  buildGatePad();
+  $('gate-ok').addEventListener('click', gateSubmit);
+  $('gate-cancel').addEventListener('click', gateCancel);
+  document.addEventListener('keydown', (ev) => {
+    if (!state.gate) return;
+    if (ev.key >= '0' && ev.key <= '9') gateType(ev.key);
+    else if (ev.key === 'Backspace') gateType('del');
+    else if (ev.key === 'Enter') gateSubmit();
+    else if (ev.key === 'Escape') gateCancel();
+  });
+
   $('btn-transfer-go').addEventListener('click', doTransfer);
   $('btn-transfer-cancel').addEventListener('click', cancelTransfer);
 
@@ -1184,22 +1310,26 @@ function init() {
   });
 
   $('btn-bgm').addEventListener('click', () => {
-    state.save.settings.bgm = !state.save.settings.bgm;
-    SoundEngine.setBgmEnabled(state.save.settings.bgm);
-    persist();
-    refreshSoundDock();
+    askAdultGate(() => {
+      state.save.settings.bgm = !state.save.settings.bgm;
+      SoundEngine.setBgmEnabled(state.save.settings.bgm);
+      persist();
+      refreshSoundDock();
+    }, 'BGM');
   });
 
   $('btn-bgm-next').addEventListener('click', () => {
-    SoundEngine.unlock();
-    if (!state.save.settings.bgm) {
-      state.save.settings.bgm = true;
-      SoundEngine.setBgmEnabled(true);
-      persist();
-      refreshSoundDock();
-      return;
-    }
-    SoundEngine.nextTrack();
+    askAdultGate(() => {
+      SoundEngine.unlock();
+      if (!state.save.settings.bgm) {
+        state.save.settings.bgm = true;
+        SoundEngine.setBgmEnabled(true);
+        persist();
+        refreshSoundDock();
+        return;
+      }
+      SoundEngine.nextTrack();
+    }, 'BGMのきりかえ');
   });
 
   $('btn-voice').addEventListener('click', () => {
@@ -1211,13 +1341,14 @@ function init() {
   });
 
   $('btn-math').addEventListener('click', () => {
-    state.save.settings.math = !state.save.settings.math;
-    persist();
-    refreshSoundDock();
-    SoundEngine.seTap();
-    SoundEngine.speak(
-      state.save.settings.math ? 'さんすうえきに とまるよ' : 'さんすうえきは おやすみ'
-    );
+    askAdultGate(() => {
+      state.save.settings.math = !state.save.settings.math;
+      persist();
+      refreshSoundDock();
+      SoundEngine.speak(
+        state.save.settings.math ? 'さんすうえきに とまるよ' : 'さんすうえきは おやすみ'
+      );
+    }, 'さんすうえき');
   });
 
   $('btn-se').addEventListener('click', () => {

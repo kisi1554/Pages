@@ -11,6 +11,7 @@ const RAW_LINES = [
   {
     id: 'yamanote',
     name: '山手線',
+    yomi: 'やまのてせん',
     company: 'JR東日本',
     color: '#9acd32',
     ink: '#4f7a06',
@@ -52,6 +53,7 @@ const RAW_LINES = [
   {
     id: 'keihin-tohoku',
     name: '京浜東北・根岸線',
+    yomi: 'けいひんとうほく ねぎしせん',
     company: 'JR東日本',
     color: '#00b2e5',
     ink: '#00688c',
@@ -112,6 +114,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-toyoko',
     name: '東横線',
+    yomi: 'とうよこせん',
     company: '東急電鉄',
     color: '#e6003e',
     ink: '#8c0025',
@@ -144,6 +147,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-meguro',
     name: '目黒線',
+    yomi: 'めぐろせん',
     company: '東急電鉄',
     color: '#009cd2',
     ink: '#00637f',
@@ -168,6 +172,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-denentoshi',
     name: '田園都市線',
+    yomi: 'でんえんとしせん',
     company: '東急電鉄',
     color: '#20a288',
     ink: '#136354',
@@ -206,11 +211,12 @@ const RAW_LINES = [
   {
     id: 'tokyu-oimachi',
     name: '大井町線',
+    yomi: 'おおいまちせん',
     company: '東急電鉄',
     color: '#f18b21',
     ink: '#9c5405',
     symbol: 'OM',
-    note: '大井町から二子玉川まで オレンジの電車',
+    note: '大井町から溝の口まで オレンジの電車',
     stations: [
       ['大井町', 'おおいまち'],
       ['下神明', 'しもしんめい'],
@@ -227,11 +233,15 @@ const RAW_LINES = [
       ['等々力', 'とどろき'],
       ['上野毛', 'かみのげ'],
       ['二子玉川', 'ふたこたまがわ'],
+      ['二子新地', 'ふたこしんち'],
+      ['高津', 'たかつ'],
+      ['溝の口', 'みぞのくち'],
     ],
   },
   {
     id: 'tokyu-ikegami',
     name: '池上線',
+    yomi: 'いけがみせん',
     company: '東急電鉄',
     color: '#ec6d81',
     ink: '#9c2f42',
@@ -258,6 +268,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-tamagawa',
     name: '東急多摩川線',
+    yomi: 'とうきゅうたまがわせん',
     company: '東急電鉄',
     color: '#b62367',
     ink: '#711140',
@@ -276,6 +287,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-setagaya',
     name: '世田谷線',
+    yomi: 'せたがやせん',
     company: '東急電鉄',
     color: '#fcd900',
     ink: '#8a7500',
@@ -297,6 +309,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-shinyokohama',
     name: '東急新横浜線',
+    yomi: 'とうきゅうしんよこはません',
     company: '東急電鉄',
     color: '#008cd6',
     ink: '#005a8a',
@@ -311,6 +324,7 @@ const RAW_LINES = [
   {
     id: 'tokyu-kodomonokuni',
     name: 'こどもの国線',
+    yomi: 'こどものくにせん',
     company: '東急電鉄',
     color: '#8fc31f',
     ink: '#557612',
@@ -327,6 +341,7 @@ const RAW_LINES = [
   {
     id: 'yokohama-blue',
     name: 'ブルーライン',
+    yomi: 'ブルーライン',
     company: '横浜市営地下鉄',
     color: '#0067c0',
     ink: '#00427a',
@@ -370,6 +385,7 @@ const RAW_LINES = [
   {
     id: 'yokohama-green',
     name: 'グリーンライン',
+    yomi: 'グリーンライン',
     company: '横浜市営地下鉄',
     color: '#00a95f',
     ink: '#006b3c',
@@ -393,6 +409,7 @@ const RAW_LINES = [
   {
     id: 'sotetsu-main',
     name: '相鉄本線',
+    yomi: 'そうてつほんせん',
     company: '相模鉄道',
     color: '#0071bc',
     ink: '#004876',
@@ -422,6 +439,7 @@ const RAW_LINES = [
   {
     id: 'sotetsu-izumino',
     name: 'いずみ野線',
+    yomi: 'いずみのせん',
     company: '相模鉄道',
     color: '#4bb03f',
     ink: '#2b6c23',
@@ -441,6 +459,7 @@ const RAW_LINES = [
   {
     id: 'sotetsu-shinyokohama',
     name: '相鉄新横浜線',
+    yomi: 'そうてつしんよこはません',
     company: '相模鉄道',
     color: '#8f57a8',
     ink: '#5c3370',
@@ -457,6 +476,7 @@ const RAW_LINES = [
   {
     id: 'odakyu-odawara',
     name: '小田原線',
+    yomi: 'おだわらせん',
     company: '小田急電鉄',
     color: '#0068b7',
     ink: '#00436f',
@@ -515,6 +535,7 @@ const RAW_LINES = [
   {
     id: 'odakyu-enoshima',
     name: '江ノ島線',
+    yomi: 'えのしません',
     company: '小田急電鉄',
     color: '#00a0e9',
     ink: '#006a9a',
@@ -543,6 +564,7 @@ const RAW_LINES = [
   {
     id: 'odakyu-tama',
     name: '多摩線',
+    yomi: 'たません',
     company: '小田急電鉄',
     color: '#8bc540',
     ink: '#537a20',
@@ -564,6 +586,7 @@ const RAW_LINES = [
   {
     id: 'metro-ginza',
     name: '銀座線',
+    yomi: 'ぎんざせん',
     company: '東京メトロ',
     color: '#ff9500',
     ink: '#a05e00',
@@ -594,6 +617,7 @@ const RAW_LINES = [
   {
     id: 'metro-marunouchi',
     name: '丸ノ内線',
+    yomi: 'まるのうちせん',
     company: '東京メトロ',
     color: '#f62e36',
     ink: '#9c1216',
@@ -630,6 +654,7 @@ const RAW_LINES = [
   {
     id: 'metro-marunouchi-honancho',
     name: '丸ノ内線 方南町支線',
+    yomi: 'まるのうちせん ほうなんちょうしせん',
     company: '東京メトロ',
     color: '#f62e36',
     ink: '#9c1216',
@@ -645,6 +670,7 @@ const RAW_LINES = [
   {
     id: 'metro-hibiya',
     name: '日比谷線',
+    yomi: 'ひびやせん',
     company: '東京メトロ',
     color: '#b5b5ac',
     ink: '#6b6b62',
@@ -678,6 +704,7 @@ const RAW_LINES = [
   {
     id: 'metro-tozai',
     name: '東西線',
+    yomi: 'とうざいせん',
     company: '東京メトロ',
     color: '#009bbf',
     ink: '#00647c',
@@ -712,6 +739,7 @@ const RAW_LINES = [
   {
     id: 'metro-chiyoda',
     name: '千代田線',
+    yomi: 'ちよだせん',
     company: '東京メトロ',
     color: '#00bb85',
     ink: '#007854',
@@ -743,6 +771,7 @@ const RAW_LINES = [
   {
     id: 'metro-yurakucho',
     name: '有楽町線',
+    yomi: 'ゆうらくちょうせん',
     company: '東京メトロ',
     color: '#c1a470',
     ink: '#7a6540',
@@ -778,6 +807,7 @@ const RAW_LINES = [
   {
     id: 'metro-hanzomon',
     name: '半蔵門線',
+    yomi: 'はんぞうもんせん',
     company: '東京メトロ',
     color: '#8f76d6',
     ink: '#5c4a94',
@@ -803,6 +833,7 @@ const RAW_LINES = [
   {
     id: 'metro-namboku',
     name: '南北線',
+    yomi: 'なんぼくせん',
     company: '東京メトロ',
     color: '#00ac9b',
     ink: '#006f64',
@@ -833,6 +864,7 @@ const RAW_LINES = [
   {
     id: 'metro-fukutoshin',
     name: '副都心線',
+    yomi: 'ふくとしんせん',
     company: '東京メトロ',
     color: '#9c5e31',
     ink: '#653c1e',
@@ -862,6 +894,7 @@ const RAW_LINES = [
   {
     id: 'jr-tokaido',
     name: '東海道線',
+    yomi: 'とうかいどうせん',
     company: 'JR東日本',
     color: '#f68b1e',
     ink: '#96550a',
@@ -894,6 +927,7 @@ const RAW_LINES = [
   {
     id: 'jr-ueno-tokyo',
     name: '上野東京ライン',
+    yomi: 'うえのとうきょうライン',
     company: 'JR東日本',
     color: '#17a2b8',
     ink: '#0b6472',
@@ -928,6 +962,7 @@ const RAW_LINES = [
   {
     id: 'jr-shonan-shinjuku',
     name: '湘南新宿ライン',
+    yomi: 'しょうなんしんじゅくライン',
     company: 'JR東日本',
     color: '#d1004b',
     ink: '#82002f',
@@ -961,6 +996,7 @@ const RAW_LINES = [
   {
     id: 'jr-takasaki',
     name: '高崎線',
+    yomi: 'たかさきせん',
     company: 'JR東日本',
     color: '#d4a017',
     ink: '#84630a',
@@ -996,6 +1032,7 @@ const RAW_LINES = [
   {
     id: 'jr-utsunomiya',
     name: '宇都宮線',
+    yomi: 'うつのみやせん',
     company: 'JR東日本',
     color: '#4caf50',
     ink: '#2c6b2f',
@@ -1040,6 +1077,7 @@ const RAW_LINES = [
   {
     id: 'jr-joban',
     name: '常磐線',
+    yomi: 'じょうばんせん',
     company: 'JR東日本',
     color: '#00a0a0',
     ink: '#006464',
@@ -1067,6 +1105,7 @@ const RAW_LINES = [
   {
     id: 'jr-keiyo',
     name: '京葉線',
+    yomi: 'けいようせん',
     company: 'JR東日本',
     color: '#c9252c',
     ink: '#7d1519',
@@ -1097,6 +1136,7 @@ const RAW_LINES = [
   {
     id: 'jr-chuo-sobu',
     name: '中央・総武線',
+    yomi: 'ちゅうおう そうぶせん',
     company: 'JR東日本',
     color: '#ffd400',
     ink: '#8a7300',
@@ -1147,6 +1187,7 @@ const RAW_LINES = [
   {
     id: 'jr-yokosuka',
     name: '横須賀線',
+    yomi: 'よこすかせん',
     company: 'JR東日本',
     color: '#0d5aa7',
     ink: '#063a6d',
@@ -1178,6 +1219,7 @@ const RAW_LINES = [
   {
     id: 'jr-yokohama',
     name: '横浜線',
+    yomi: 'よこはません',
     company: 'JR東日本',
     color: '#7fc142',
     ink: '#4a7a1c',
@@ -1185,7 +1227,7 @@ const RAW_LINES = [
     note: '東神奈川から八王子まで きみどりの電車',
     stations: [
       ['東神奈川', 'ひがしかながわ'],
-      ['大口', 'おおくち'],
+      ['大口', 'おおぐち'],
       ['菊名', 'きくな'],
       ['新横浜', 'しんよこはま'],
       ['小机', 'こづくえ'],
@@ -1209,13 +1251,37 @@ const RAW_LINES = [
 
   /* ============================== 新幹線 ============================== */
   {
-    id: 'shinkansen-tokaido',
-    name: '東海道新幹線',
+    id: 'shinkansen-nozomi',
+    name: '新幹線のぞみ',
+    yomi: 'しんかんせん のぞみ',
     company: 'JR東海',
     color: '#0b318f',
     ink: '#071f5c',
     symbol: '🚄',
-    note: '東京から新大阪まで のぞみ・ひかり・こだま',
+    note: '東京から博多まで 大きな駅だけに とまる いちばん はやい新幹線',
+    stations: [
+      ['東京', 'とうきょう'],
+      ['品川', 'しながわ'],
+      ['新横浜', 'しんよこはま'],
+      ['名古屋', 'なごや'],
+      ['京都', 'きょうと'],
+      ['新大阪', 'しんおおさか'],
+      ['新神戸', 'しんこうべ'],
+      ['岡山', 'おかやま'],
+      ['広島', 'ひろしま'],
+      ['小倉', 'こくら'],
+      ['博多', 'はかた'],
+    ],
+  },
+  {
+    id: 'shinkansen-tokaido',
+    name: '新幹線こだま',
+    yomi: 'しんかんせん こだま',
+    company: 'JR東海',
+    color: '#5b9bd5',
+    ink: '#2a5f8f',
+    symbol: '🚄',
+    note: '東京から新大阪まで ぜんぶの駅に とまる新幹線',
     stations: [
       ['東京', 'とうきょう'],
       ['品川', 'しながわ'],
@@ -1239,6 +1305,7 @@ const RAW_LINES = [
   {
     id: 'shinkansen-tohoku',
     name: '東北新幹線',
+    yomi: 'とうほくしんかんせん',
     company: 'JR東日本',
     color: '#00a650',
     ink: '#006931',
@@ -1273,6 +1340,7 @@ const RAW_LINES = [
   {
     id: 'shinkansen-joetsu',
     name: '上越新幹線',
+    yomi: 'じょうえつしんかんせん',
     company: 'JR東日本',
     color: '#e95098',
     ink: '#96285c',
@@ -1296,6 +1364,7 @@ const RAW_LINES = [
   {
     id: 'shinkansen-hokuriku',
     name: '北陸新幹線',
+    yomi: 'ほくりくしんかんせん',
     company: 'JR東日本',
     color: '#b5985a',
     ink: '#715c2f',
@@ -1333,6 +1402,7 @@ const RAW_LINES = [
   {
     id: 'keio-main',
     name: '京王線',
+    yomi: 'けいおうせん',
     company: '京王電鉄',
     color: '#dd0077',
     ink: '#8a004a',
@@ -1376,6 +1446,7 @@ const RAW_LINES = [
   {
     id: 'keikyu-main',
     name: '京急本線',
+    yomi: 'けいきゅうほんせん',
     company: '京浜急行電鉄',
     color: '#e2211c',
     ink: '#8e1310',
@@ -1437,6 +1508,7 @@ const RAW_LINES = [
   {
     id: 'rinkai',
     name: 'りんかい線',
+    yomi: 'りんかいせん',
     company: '東京臨海高速鉄道',
     color: '#00629b',
     ink: '#003f66',
@@ -1456,6 +1528,7 @@ const RAW_LINES = [
   {
     id: 'minatomirai',
     name: 'みなとみらい線',
+    yomi: 'みなとみらいせん',
     company: '横浜高速鉄道',
     color: '#1a4b9c',
     ink: '#102f63',
@@ -1473,6 +1546,7 @@ const RAW_LINES = [
   {
     id: 'tsukuba-express',
     name: 'つくばエクスプレス',
+    yomi: 'つくばエクスプレス',
     company: '首都圏新都市鉄道',
     color: '#005baf',
     ink: '#003a70',
@@ -1639,6 +1713,11 @@ const OTHER_TRANSFERS = {
   名古屋: ['JR東海道線', '名鉄名古屋本線', '近鉄名古屋線', '名古屋市営地下鉄'],
   京都: ['JR東海道線', '近鉄京都線', '京都市営地下鉄'],
   新大阪: ['JR東海道線', 'おおさか東線', '大阪メトロ御堂筋線'],
+  新神戸: ['神戸市営地下鉄'],
+  岡山: ['JR山陽線', '瀬戸大橋線', '岡山電気軌道'],
+  広島: ['JR山陽線', '広島電鉄'],
+  小倉: ['JR鹿児島線', 'JR日豊線', '北九州モノレール'],
+  博多: ['JR鹿児島線', '福岡市営地下鉄'],
   熊谷: ['秩父鉄道'],
   高崎: ['JR八高線', '上信電鉄'],
   小山: ['JR両毛線', 'JR水戸線'],
@@ -1877,6 +1956,11 @@ const STATION_MOTIFS = {
   米原: '❄️',
   京都: '⛩️',
   新大阪: '🐙',
+  新神戸: '🐄',
+  岡山: '🍑',
+  広島: '🥞',
+  小倉: '🏯',
+  博多: '🌶️',
   宇都宮: '🥟',
   那須塩原: '🐄',
   新白河: '🏞️',
@@ -2065,6 +2149,7 @@ function motifFor(name) {
 const LINES = RAW_LINES.map((line) => ({
   id: line.id,
   name: line.name,
+  yomi: line.yomi,
   company: line.company,
   color: line.color,
   ink: line.ink,
@@ -2117,10 +2202,9 @@ const TOTAL_STATION_COUNT = ALL_STATIONS.length;
 
 /*
  * 路線図が見られる路線。
- * 駅の数が多いので すこしずつ ふやしていく。ここに路線idを足すだけで
- * 「ろせんず」のメニューに ならぶ。
+ * 路線図の中身は 駅データから じどうで作るので、収録している路線は ぜんぶ 見られる。
  */
-const MAP_LINE_IDS = ['yokohama-blue', 'keihin-tohoku'];
+const MAP_LINE_IDS = LINES.map((line) => line.id);
 
 /*
  * のりかえ表
