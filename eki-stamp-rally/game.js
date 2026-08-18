@@ -560,15 +560,48 @@ function goNextStation() {
     return;
   }
   state.stationIndex = next;
-
-  // 何駅かごとに「さんすうえき」に とまる
   state.sinceQuiz += 1;
-  if (state.save.settings.math && state.sinceQuiz >= MATH_INTERVAL) {
-    state.sinceQuiz = 0;
-    showMathQuiz();
-    return;
-  }
-  showStation();
+
+  // 発車メロディを鳴らして 電車を つぎの駅まで はしらせる
+  runTrain(() => {
+    // 何駅かごとに「さんすうえき」に とまる
+    if (state.save.settings.math && state.sinceQuiz >= MATH_INTERVAL) {
+      state.sinceQuiz = 0;
+      showMathQuiz();
+      return;
+    }
+    showStation();
+  });
+}
+
+/* ================== 電車が つぎの駅へ はしる ================== */
+
+const TRAIN_RUN_MS = 1450;
+
+function runTrain(done) {
+  const el = $('train-run');
+  const cars = $('tr-cars');
+
+  // アニメーションを さいしょから やりなおす
+  cars.style.animation = 'none';
+  void cars.offsetWidth;
+  cars.style.animation = '';
+
+  el.classList.add('is-active');
+  SoundEngine.playDeparture(state.line.id, TRAIN_RUN_MS / 1000 - 0.35);
+
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    window.clearTimeout(timer);
+    el.removeEventListener('pointerdown', finish);
+    el.classList.remove('is-active');
+    done();
+  };
+
+  const timer = window.setTimeout(finish, TRAIN_RUN_MS);
+  el.addEventListener('pointerdown', finish);   // タップで とばせる
 }
 
 function skipStation() {

@@ -726,6 +726,111 @@ const SoundEngine = (function createAudio() {
     });
   }
 
+
+  /* ------- 発車メロディ(このアプリのオリジナル)と 走行音 ------- */
+
+  // メジャースケール(ルートからの半音)。やさしい ひびきになる
+  const JINGLE_SCALE = [0, 2, 4, 5, 7, 9, 11, 12, 14, 16, 17, 19, 21];
+
+  /*
+   * 1曲 = [音の高さ(スケールの何番目), 長さ] のならび。
+   * 長さ 1 = 0.16秒。どれも 1.2〜1.6秒くらいで おわる。
+   */
+  const JINGLES = [
+    { root: 3,  notes: [[4, 1], [7, 1], [9, 2], [7, 1], [4, 1], [2, 3]] },
+    { root: 5,  notes: [[7, 1], [9, 1], [11, 1], [9, 1], [7, 2], [4, 3]] },
+    { root: 0,  notes: [[0, 1], [4, 1], [7, 2], [9, 1], [7, 1], [4, 2], [0, 2]] },
+    { root: 7,  notes: [[9, 1], [7, 1], [4, 1], [7, 1], [9, 2], [11, 3]] },
+    { root: -2, notes: [[7, 1], [4, 1], [0, 2], [4, 1], [7, 1], [9, 3]] },
+    { root: 2,  notes: [[4, 1], [4, 1], [7, 1], [9, 1], [11, 2], [9, 1], [7, 2]] },
+    { root: -4, notes: [[0, 2], [2, 1], [4, 1], [7, 2], [4, 1], [2, 1], [0, 2]] },
+    { root: 5,  notes: [[11, 1], [9, 1], [7, 2], [9, 1], [11, 1], [12, 3]] },
+    { root: 0,  notes: [[7, 1], [9, 1], [12, 2], [11, 1], [9, 1], [7, 3]] },
+    { root: 8,  notes: [[4, 1], [7, 2], [4, 1], [2, 1], [4, 2], [7, 2]] },
+    { root: -5, notes: [[2, 1], [4, 1], [7, 1], [9, 1], [7, 1], [4, 1], [2, 3]] },
+    { root: 3,  notes: [[9, 1], [11, 1], [12, 1], [11, 1], [9, 2], [7, 3]] },
+    { root: -2, notes: [[4, 2], [7, 1], [9, 1], [11, 2], [12, 3]] },
+    { root: 7,  notes: [[0, 1], [7, 1], [4, 1], [9, 1], [7, 2], [4, 2]] },
+    { root: 1,  notes: [[7, 1], [11, 1], [9, 1], [7, 1], [4, 2], [7, 3]] },
+    { root: -7, notes: [[4, 1], [2, 1], [4, 1], [7, 1], [9, 2], [7, 1], [4, 2]] },
+  ];
+
+  // ベルっぽい音(マリンバ + すず)
+  function bell(time, hz, dur, level) {
+    [[1, 1], [2, 0.34], [3.01, 0.16], [4.7, 0.07]].forEach(([mul, amp]) => {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = hz * mul;
+      g.gain.setValueAtTime(0.0001, time);
+      g.gain.exponentialRampToValueAtTime(level * amp, time + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + dur);
+      osc.connect(g);
+      g.connect(seBus);
+      osc.start(time);
+      osc.stop(time + dur + 0.05);
+    });
+  }
+
+  // ガタン ゴトン(レールのつなぎ目)
+  function clatter(time, level) {
+    [0, 0.075].forEach((offset, i) => {
+      const src = ctx.createBufferSource();
+      src.buffer = noiseBuffer(0.09);
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = i === 0 ? 900 : 640;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(level * (i === 0 ? 1 : 0.75), time + offset);
+      g.gain.exponentialRampToValueAtTime(0.0001, time + offset + 0.085);
+      src.connect(lp);
+      lp.connect(g);
+      g.connect(seBus);
+      src.start(time + offset);
+      src.stop(time + offset + 0.09);
+    });
+  }
+
+  // はしる音(ホワイトノイズの かぜ + ガタンゴトン)
+  function playRunning(seconds, startAt) {
+    const t0 = (startAt || ctx.currentTime);
+
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(seconds + 0.2);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(500, t0);
+    bp.frequency.linearRampToValueAtTime(1500, t0 + seconds * 0.5);
+    bp.frequency.linearRampToValueAtTime(400, t0 + seconds);
+    bp.Q.value = 0.8;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.linearRampToValueAtTime(0.16, t0 + seconds * 0.35);
+    g.gain.linearRampToValueAtTime(0.0001, t0 + seconds);
+    src.connect(bp);
+    bp.connect(g);
+    g.connect(seBus);
+    src.start(t0);
+    src.stop(t0 + seconds + 0.1);
+
+    for (let t = 0.05; t < seconds - 0.1; t += 0.26) {
+      clatter(t0 + t, 0.3);
+    }
+  }
+
+  // 発車! 路線ごとに きまった メロディが 鳴る
+  function playDeparture(lineId, runSeconds) {
+    if (!seOn || !ensureCtx()) return;
+    const jingle = JINGLES[hashString(lineId || '') % JINGLES.length];
+    let t = ctx.currentTime + 0.02;
+    jingle.notes.forEach(([deg, len]) => {
+      const hz = 440 * Math.pow(2, (jingle.root + JINGLE_SCALE[deg % JINGLE_SCALE.length]) / 12);
+      bell(t, hz, 0.16 * len + 0.35, 0.3);
+      t += 0.16 * len;
+    });
+    playRunning(runSeconds || 1.1, ctx.currentTime + 0.42);
+  }
+
   /* ------- 読み上げ ------- */
 
   let jaVoice = null;
@@ -790,6 +895,9 @@ const SoundEngine = (function createAudio() {
     seStamp,
     seTap,
     seFanfare,
+    playDeparture,
+    jingleCount: () => JINGLES.length,
+    jingleIndexFor: (lineId) => hashString(lineId || '') % JINGLES.length,
     speak,
     stopSpeak,
   };
