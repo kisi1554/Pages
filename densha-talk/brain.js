@@ -1332,6 +1332,7 @@ const Brain = (function () {
     ['しりとり しよ 🔤', 'えきめい しりとり'],
     ['えきあて クイズ 🕵️', 'えきあて'],
     ['しゃしょうさん ごっこ 🎫', 'しゃしょうさん ごっこ'],
+    ['ほかの でんしゃ よんで 📣', 'ほかの でんしゃ よんで'],
     ['のりかえ おしえて 🔀', 'のりかえが おおい えきは どこ?'],
     ['でんしゃの ふしぎ ❓', 'でんしゃは なんで うごくの?'],
     ['ふみきりって なに? 🚧', 'なんで ふみきりが あるの?'],
@@ -1357,6 +1358,9 @@ const Brain = (function () {
     }
     const line = state.lastLine || myLine();
     out.push(chip(line.name + 'って どんな せん?', line.name + 'って どんな でんしゃ?'));
+
+    /* しばらく なかまが きていないなら、よぶ ボタンを かならず だす */
+    if (state.sinceCameo >= 6) out.push(chip('ほかの でんしゃ よんで 📣', 'ほかの でんしゃ よんで'));
 
     /* のこりは プールから ランダムに。まえと おなじ ならびに ならないように */
     const shuffled = CHIP_POOL.slice();
@@ -1443,6 +1447,25 @@ const Brain = (function () {
     const line = findLine(text);
     if (line) state.lastLine = line;
     if (stations.length > 0) state.lastStation = stations[0];
+
+    /* --- ほかの でんしゃを よぶ --- */
+    if (has(norm, ['ほかのでんしゃ', 'みんなあつまれ', 'だれかきて', 'ともだちよんで', 'よんで', 'よんできて'])) {
+      const out = reply(
+        [
+          pick(
+            [
+              'よーし、よんでみるね! おーい! だれか いる〜?',
+              'まかせて! おーい、あそびに おいでよ〜!',
+              'ちょっと まってて。……おーい!',
+            ],
+            'callfriend'
+          ),
+        ],
+        { face: 'wow' }
+      );
+      out.forceCameo = true;
+      return out;
+    }
 
     /* --- あそびの スタート --- */
     if (has(norm, ['しりとり'])) return startShiritori();
@@ -1561,6 +1584,7 @@ const Brain = (function () {
           '③ 「クイズ だして」「しりとり」「えきあて」「しゃしょうさん ごっこ」で あそべるよ',
           '④ 「でんしゃは なんで うごくの?」も きいてみて!',
           '⑤ ききのがしたら 「もういちど いって」で くりかえすよ',
+          '⑥ 「ほかの でんしゃ よんで」で なかまが あそびに くるよ',
         ],
         { face: 'happy' }
       );
@@ -1820,6 +1844,8 @@ const Brain = (function () {
     if (state.mode !== 'chat') return res;
     /* 「もしかして この えき?」と きいている とちゅうは じゃましない */
     if (state.didYouMean) return res;
+    /* なかまを よんで いる とちゅうにも わりこまない */
+    if (res.forceCameo) return res;
 
     /* すでに ことばの はなし なら、かぞえなおすだけ */
     if (res.say.some((t) => t.indexOf('📕') >= 0)) {
@@ -1849,11 +1875,18 @@ const Brain = (function () {
    */
   function maybeCameo(res) {
     if (!res || !res.say) return res;
-    if (state.mode !== 'chat' || state.didYouMean) return res;
-    state.sinceCameo += 1;
-    if (state.sinceCameo < 8) return res;
-    if (res.say.length > 3) return res;
-    if (Math.random() > 0.12) return res;
+    const forced = !!res.forceCameo;
+    if (!forced) {
+      if (state.mode !== 'chat' || state.didYouMean) return res;
+      state.sinceCameo += 1;
+      /* まえの らんにゅうから すこし あける */
+      if (state.sinceCameo < 4) return res;
+      /* へんじが ながすぎる ときは やめる(ただし ずっと 出て いなければ だす) */
+      if (res.say.length > 4 && state.sinceCameo < 12) return res;
+      /* 12ターン 出て いなければ かならず だす。それまでは 3わりくらい */
+      if (state.sinceCameo < 12 && Math.random() > 0.3) return res;
+    }
+    delete res.forceCameo;
 
     const others = CHARACTERS.filter((c) => c.id !== state.char.id);
     if (others.length === 0) return res;
