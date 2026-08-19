@@ -578,9 +578,90 @@ function goNextStation() {
 
 const TRAIN_RUN_MS = 1450;
 
+// 路線にあわせた 電車を くみたてる(銀色 + 路線カラーの帯 など)
+function buildTrainCars(line) {
+  const spec = trainSpecFor(line);
+  const wrap = $('tr-cars');
+  wrap.className = `tr-cars kind-${spec.kind}`;
+  wrap.style.setProperty('--body', spec.body);
+  wrap.style.setProperty('--band', spec.band);
+  wrap.style.setProperty('--band2', spec.band2 || 'transparent');
+  wrap.innerHTML = '';
+
+  const cars = spec.kind === 'tram' ? 1 : 3;
+  for (let i = 0; i < cars; i += 1) {
+    const car = document.createElement('div');
+    // すすむ方向は 右なので、いちばん右が 先頭車
+    car.className = 'tr-car' + (i === cars - 1 ? ' head' : '');
+    const w1 = document.createElement('i');
+    const w2 = document.createElement('i');
+    w1.className = 'w';
+    w2.className = 'w';
+    car.appendChild(w1);
+    car.appendChild(w2);
+    if (i === cars - 1) {
+      const face = document.createElement('div');
+      face.className = 'face';
+      car.appendChild(face);
+    }
+    wrap.appendChild(car);
+  }
+}
+
+/* 走っているあいだに ながれる けいさんと 漢字 */
+
+function makeFlowItems() {
+  const items = [];
+
+  // たし算 と ひき算 を ひとつずつ(こたえも いっしょに 出す)
+  const a = randInt(1, 9);
+  const b = randInt(1, Math.min(9, 10 - a));
+  items.push({ kind: 'calc', main: `${a} ＋ ${b} ＝ ${a + b}` });
+
+  const c = randInt(3, 10);
+  const d = randInt(1, c - 1);
+  items.push({ kind: 'calc', main: `${c} − ${d} ＝ ${c - d}` });
+
+  // 小1・小2の漢字を ふたつ
+  shuffle(FLOW_KANJI).slice(0, 2).forEach(([ch, yomi]) => {
+    items.push({ kind: 'kanji', main: ch, sub: yomi });
+  });
+
+  return shuffle(items);
+}
+
+function fillFlowCards() {
+  const wrap = $('tr-flow');
+  wrap.innerHTML = '';
+  const tops = shuffle([26, 36, 46, 56]);
+
+  makeFlowItems().forEach((item, i) => {
+    const card = document.createElement('div');
+    card.className = `tr-flow-card ${item.kind}`;
+    card.style.top = `${tops[i]}%`;
+    card.style.animationDelay = `${i * 0.3}s`;
+
+    const main = document.createElement('div');
+    main.className = 'fc-main';
+    main.textContent = item.main;
+    card.appendChild(main);
+
+    if (item.sub) {
+      const sub = document.createElement('div');
+      sub.className = 'fc-sub';
+      sub.textContent = item.sub;
+      card.appendChild(sub);
+    }
+    wrap.appendChild(card);
+  });
+}
+
 function runTrain(done) {
   const el = $('train-run');
   const cars = $('tr-cars');
+
+  buildTrainCars(state.line);
+  fillFlowCards();
 
   // アニメーションを さいしょから やりなおす
   cars.style.animation = 'none';
