@@ -29,6 +29,10 @@
     trainDest: $('train-dest'),
     trainHat: $('train-hat'),
     trainAura: $('train-aura'),
+    stage: $('stage'),
+    guestWrap: $('guest-wrap'),
+    guestTrain: $('guest-train'),
+    guestPop: $('guest-pop'),
     mapPanel: $('map-panel'),
     mapLines: $('map-lines'),
     mapStrip: $('map-strip'),
@@ -79,11 +83,13 @@
    * おはなし がめんと まったく おなじ かたちを つかって、
    * まわりの わくごと ちいさく している(みための ずれが おきない)。
    */
-  function miniTrain(char) {
+  /*
+   * でんしゃ 1りょうの 中身。
+   * カードの ちいさい でんしゃと、らんにゅうしてくる でんしゃの
+   * りょうほうで つかう(おはなし がめんの 本体と おなじ かたち)。
+   */
+  function trainParts(char) {
     return (
-      '<span class="mini-wrap"><span class="mini-stage">' +
-      '<span class="train is-happy" data-char="' + char.id + '"' +
-      ' style="--char-color:' + char.color + ';--char-ink:' + char.ink + '">' +
       '<span class="train-hat">' + (char.hat || '') + '</span>' +
       '<span class="train-panta"></span>' +
       '<span class="train-roof"></span>' +
@@ -96,7 +102,16 @@
       '</span>' +
       '<span class="train-lights"><span></span><span></span></span>' +
       '</span>' +
-      '<span class="train-skirt"></span>' +
+      '<span class="train-skirt"></span>'
+    );
+  }
+
+  function miniTrain(char) {
+    return (
+      '<span class="mini-wrap"><span class="mini-stage">' +
+      '<span class="train is-happy" data-char="' + char.id + '"' +
+      ' style="--char-color:' + char.color + ';--char-ink:' + char.ink + '">' +
+      trainParts(char) +
       '</span></span></span>'
     );
   }
@@ -166,6 +181,8 @@
   function backToTitle() {
     Speech.stopSpeak();
     Speech.stopListen();
+    clearGuestTimers();
+    hideGuest();
     pendingTimers.forEach(clearTimeout);
     pendingTimers = [];
     pending = [];
@@ -279,6 +296,17 @@
       );
     });
 
+    /* らんにゅうする子が いれば、その セリフが でる ときに よこから でてくる */
+    clearGuestTimers();
+    const firstGuest = pending.findIndex((it) => it.by);
+    if (firstGuest >= 0) {
+      const guestId = pending[firstGuest].by;
+      guestTimers.push(setTimeout(() => showGuest(guestId), firstGuest * 520));
+      guestTimers.push(
+        setTimeout(hideGuest, (pending.length - 1) * 520 + 3200)
+      );
+    }
+
     setTalking(true);
     const voiced = pending.map((it) => ({
       text: it.text,
@@ -309,6 +337,8 @@
     const body = String(text || '').trim();
     if (!body) return;
     flushBubbles();
+    clearGuestTimers();
+    if (el.guestWrap.classList.contains('is-in')) hideGuest();
     clearTimeout(idleTimer);
     idleCount = 0;
     Speech.stopSpeak();
@@ -344,6 +374,46 @@
       Speech.speak([text], Brain.state.char.voice, () => setTalking(false));
       startIdleTimer();
     }, 32000);
+  }
+
+  /* ==================================================================
+   * らんにゅうしてきた キャラを がめんに だす
+   *  よこから すべりこんで きて、いまの キャラは すこし よこに どく。
+   * ================================================================== */
+
+  let guestTimers = [];
+  let guestHideTimer = null;
+
+  function showGuest(charId) {
+    const guest = CHAR_BY_ID[charId];
+    if (!guest) return;
+    clearTimeout(guestHideTimer);
+    el.guestTrain.dataset.char = guest.id;
+    el.guestTrain.style.setProperty('--char-color', guest.color);
+    el.guestTrain.style.setProperty('--char-ink', guest.ink);
+    el.guestTrain.innerHTML = trainParts(guest);
+    el.guestPop.textContent = guest.aura || '💨';
+    el.guestWrap.hidden = false;
+    void el.guestWrap.offsetWidth; /* いちど えがいてから うごかす */
+    el.guestWrap.classList.add('is-in');
+    el.stage.classList.add('has-guest');
+    Speech.sfx.depart();
+    /* びっくりした かおを する */
+    gagFace('shock', 1800);
+  }
+
+  function hideGuest() {
+    clearTimeout(guestHideTimer);
+    el.guestWrap.classList.remove('is-in');
+    el.stage.classList.remove('has-guest');
+    guestHideTimer = setTimeout(() => {
+      el.guestWrap.hidden = true;
+    }, 600);
+  }
+
+  function clearGuestTimers() {
+    guestTimers.forEach(clearTimeout);
+    guestTimers = [];
   }
 
   /* ==================================================================
