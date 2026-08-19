@@ -258,6 +258,92 @@ function findStations(text) {
   return hits.map((h) => h.name);
 }
 
+/* ==================================================================
+ * 4b. にている 駅を さがす(ききまちがいの たすけ)
+ *
+ * おんせいにんしきは 子どもの こえを よく まちがえる。
+ * 「ひよし」が「ひよ市」に なったり、「しぶや」が「しぶ屋」に なったり。
+ * そこで、ぴったり あう 駅が なかった ときに
+ * 「もしかして この えき?」と 3つ ならべて えらべるように する。
+ * ================================================================== */
+
+/* 2つの ことばの ちがいの おおきさ(レーベンシュタイン距離)。
+   limit より おおきく なったら、そこで やめる(はやくするため) */
+function kanaDistance(a, b, limit) {
+  const la = a.length;
+  const lb = b.length;
+  if (Math.abs(la - lb) > limit) return limit + 1;
+  if (la === 0) return lb;
+  if (lb === 0) return la;
+
+  let prev = [];
+  let cur = [];
+  for (let j = 0; j <= lb; j += 1) prev[j] = j;
+
+  for (let i = 1; i <= la; i += 1) {
+    cur[0] = i;
+    let best = i;
+    for (let j = 1; j <= lb; j += 1) {
+      const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      cur[j] = Math.min(cur[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost);
+      if (cur[j] < best) best = cur[j];
+    }
+    if (best > limit) return limit + 1;
+    const swap = prev;
+    prev = cur;
+    cur = swap;
+  }
+  return prev[lb];
+}
+
+/* 駅名の まわりに つきやすい ことばを おとす */
+const QUERY_NOISE = [
+  'ってどんなえき', 'ってどんなとこ', 'っていうえき', 'にいきたい', 'までいきたい',
+  'のとなり', 'ってどこ', 'ってなに', 'にいった', 'にのった', 'しりたい',
+  'えき', 'って', 'だよ', 'かな', 'です', 'たぶん', 'たしか',
+];
+
+function cleanQuery(text) {
+  let q = normalize(text);
+  QUERY_NOISE.forEach((w) => {
+    q = q.split(w).join('');
+  });
+  return q;
+}
+
+/*
+ * にている 駅を、にている 順に かえす。
+ *   max   … いくつまで かえすか
+ *   limit … どのくらい ちがっても ゆるすか(1〜3)
+ * ぴったり おなじ 駅は のぞく(それは findStations で みつかるから)。
+ */
+function similarStations(text, max, limit) {
+  const q = cleanQuery(text);
+  const lim = limit || 2;
+  if (q.length < 2 || q.length > 12) return [];
+
+  const hits = [];
+  ALL_STATIONS.forEach((st) => {
+    const yomi = normalize(st.yomi);
+    const name = normalize(st.name);
+    if (q === yomi || q === name) return;
+    const d = Math.min(kanaDistance(q, yomi, lim), kanaDistance(q, name, lim));
+    if (d > lim) return;
+    /* みじかい ことばで ちがいが おおきいのは、ぐうぜん にただけ */
+    if (d / Math.max(q.length, 2) > 0.6) return;
+    hits.push({ name: st.name, d, head: yomi.charAt(0) === q.charAt(0) ? 0 : 1 });
+  });
+
+  /* ちがいが すくない順 → 1もじめが おなじ ものを さきに */
+  hits.sort((a, b) => a.d - b.d || a.head - b.head);
+
+  const out = [];
+  hits.forEach((h) => {
+    if (out.length < (max || 3) && out.indexOf(h.name) < 0) out.push(h.name);
+  });
+  return out;
+}
+
 function findLine(text) {
   const norm = normalize(text);
   const raw = String(text || '');

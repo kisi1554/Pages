@@ -85,8 +85,10 @@ const Speech = (function () {
   }
 
   /*
-   * texts: よみあげる ぶんの はいれつ
-   * voice: { pitch, rate } キャラごとの こえ
+   * texts: よみあげる ぶんの はいれつ。
+   *        「{ text, voice }」を いれると、その ぶんだけ こえを かえられる
+   *        (ほかの キャラが らんにゅうした とき に つかう)
+   * voice: { pitch, rate } いつもの キャラの こえ
    * onDone: ぜんぶ よみおわったら よばれる(マイクを もどす ため)
    */
   function speak(texts, voice, onDone) {
@@ -97,11 +99,15 @@ const Speech = (function () {
     }
     const list = Array.isArray(texts) ? texts : [texts];
     const v = voice || {};
-    list.forEach((t) => {
+    /* 1つずつ ちがう こえに できる({ text, voice } を わたした とき) */
+    list.forEach((item) => {
+      const isObj = item && typeof item === 'object';
+      const body = isObj ? item.text : item;
+      const own = (isObj && item.voice) || v;
       speakState.queue.push({
-        text: t,
-        pitch: v.pitch || 1.2,
-        rate: v.rate || 0.95,
+        text: body,
+        pitch: own.pitch || 1.2,
+        rate: own.rate || 0.95,
       });
     });
     speakState.onDone = onDone || null;

@@ -25,7 +25,7 @@ const Brain = (function () {
   const state = {
     char: CHARACTERS[0],
     childName: '',
-    mode: 'chat', // 'chat' | 'quiz' | 'shiritori' | 'guess'
+    mode: 'chat', // 'chat' | 'quiz' | 'shiritori' | 'guess' | 'wordquiz' | 'shasho'
     quiz: null,
     shiritori: null,
     lastStation: null,
@@ -33,6 +33,9 @@ const Brain = (function () {
     lastSay: [],
     guess: null,
     wordQuiz: null,
+    didYouMean: null, // 「もしかして」で ならべた 駅の こうほ
+    shasho: null,     // しゃしょうさん ごっこ の じょうたい
+    sinceCameo: 0,    // ほかの キャラが らんにゅうしてから なんターン たったか
     wordLevel: 3, // 1=やさしい 2=ふつう 3=ぜんぶ
     sinceWord: 0, // ことばの おまけを だしてから なんターン たったか
     learned: [],  // おぼえた ことば(app.js が ほぞんする)
@@ -741,6 +744,17 @@ const Brain = (function () {
     const st = found.length > 0 ? found[0] : null;
 
     if (!st) {
+      const near = playCandidates(raw);
+      if (near.length > 0) {
+        sh.choices = near;
+        return reply(
+          ['🤔 ごめん、うまく きこえなかった! もしかして この えき?'].concat(choiceLines(near)),
+          {
+            face: 'think',
+            chips: choiceChips(near, [chip('ヒント 💡', 'ヒント'), chip('やめる', 'やめる')]),
+          }
+        );
+      }
       return askAgain(['うーん、それは えきの なまえかな? 「' + sh.need + '」から はじまる えきは どれ?']);
     }
     if (sh.used.indexOf(st) >= 0) {
@@ -944,6 +958,180 @@ const Brain = (function () {
   }
 
   /* ------------------------------------------------------------------
+   * あそび: しゃしょうさん ごっこ
+   *
+   * 子どもが しゃしょうさんに なって、車内アナウンスを いう。
+   * キャラが おきゃくさんの かわりに きいて、ほめたり なおしたり する。
+   * こえで いうのが いちばん たのしいが、3たくの ボタンでも あそべる。
+   * ------------------------------------------------------------------ */
+
+  const SHASHO_STEPS = 5;
+
+  /* いまの ばめんに あわせて、つぎの おだいを つくる */
+  function makeShashoMission(s2) {
+    const line = s2.line;
+    const here = line.stations[s2.index];
+    const next = line.stations[s2.index + 1];
+    const kinds = ['next'];
+    if (linesOf(here.name).length >= 2) kinds.push('transfer');
+    if (s2.step >= 1) kinds.push('door', 'thanks');
+
+    const kind = randomOf(kinds);
+
+    if (kind === 'door') {
+      return {
+        kind,
+        ask: '🚪 ' + here.name + 'に つきました! ドアの あんないを おねがい!',
+        model: 'ドアが しまります。ごちゅうい ください',
+        keys: ['どあ', 'しまり', 'しめ', 'ちゅうい'],
+        choices: [
+          'ドアが しまります',
+          'まもなく はっしゃです',
+          'こんにちは',
+        ],
+        answerAt: 0,
+      };
+    }
+    if (kind === 'thanks') {
+      return {
+        kind,
+        ask: '🙇 おきゃくさんに ごあいさつを おねがい!',
+        model: 'ごじょうしゃ ありがとうございます',
+        keys: ['ありがと', 'ごじょうしゃ', 'ようこそ'],
+        choices: [
+          'ごじょうしゃ ありがとうございます',
+          'つぎは しゅうてんです',
+          'ドアが あきます',
+        ],
+        answerAt: 0,
+      };
+    }
+    if (kind === 'transfer') {
+      const other = linesOf(here.name).find((l) => l.id !== line.id);
+      return {
+        kind,
+        ask: '🔀 ' + here.name + 'は のりかえの えき! なにせんに のりかえられるか あんないして!',
+        model: other.name + 'は おのりかえです',
+        keys: [normalize(other.name)],
+        lineId: other.id,
+        choices: makeChoices(other.name, LINES.map((l) => l.name)),
+        focus: here.name,
+      };
+    }
+    /* next: つぎの えきの あんない */
+    return {
+      kind: 'next',
+      ask: '📢 つぎの えきを あんないして! 「つぎは ○○です」って いってみよう',
+      model: 'つぎは ' + next.name + 'です',
+      station: next.name,
+      choices: makeChoices(
+        next.name,
+        line.stations.filter((st) => st.name !== next.name).map((st) => st.name),
+        ALL_STATIONS.map((st) => st.name)
+      ),
+    };
+  }
+
+  function shashoAsk(head) {
+    const s2 = state.shasho;
+    const m = s2.mission;
+    const lines = [];
+    if (head) lines.push(head);
+    lines.push(m.ask);
+    return reply(lines.concat(choiceLines(m.choices)), {
+      face: 'happy',
+      focusLine: s2.line.id,
+      focusStation: m.focus || m.station || s2.line.stations[s2.index].name,
+      chips: choiceChips(m.choices, [chip('わからない 💡', 'ヒント'), chip('やめる', 'やめる')]),
+    });
+  }
+
+  function startShasho() {
+    const line = myLine();
+    const start = Math.floor(Math.random() * Math.max(1, line.stations.length - SHASHO_STEPS - 1));
+    state.shasho = { line, index: start, step: 0, mission: null };
+    state.shasho.mission = makeShashoMission(state.shasho);
+    state.mode = 'shasho';
+    return shashoAsk(
+      pick(SHASHO_START, 'shasho') +
+        ' いまは ' +
+        line.name +
+        'の ' +
+        line.stations[start].name +
+        'だよ'
+    );
+  }
+
+  /* こたえが あっているか みる */
+  function shashoCorrect(m, raw, norm) {
+    if (m.station) return findStations(raw).indexOf(m.station) >= 0 || raw.indexOf(m.station) >= 0;
+    if (m.lineId) {
+      const l = findLine(raw);
+      return !!l && l.id === m.lineId;
+    }
+    return (m.keys || []).some((k) => norm.indexOf(normalize(k)) >= 0);
+  }
+
+  function judgeShasho(rawInput, normInput) {
+    const s2 = state.shasho;
+    const m = s2.mission;
+    let raw = rawInput;
+    let norm = normInput;
+
+    /* ①②③ で えらんだら、その ことばを いったことに する */
+    const at = chosenNumber(raw, norm, m.choices.length);
+    if (at >= 0) {
+      raw = m.choices[at];
+      norm = normalize(raw);
+    }
+
+    if (has(norm, ['やめ', 'もういい', 'おしまい'])) {
+      state.mode = 'chat';
+      state.shasho = null;
+      return reply(['しゃしょうさん、おつかれさま! また やろうね 🎫'], { face: 'happy' });
+    }
+
+    if (has(norm, ['わからない', 'わかんない', 'ひんと', 'おしえて'])) {
+      return shashoAsk('こう いうんだよ →「' + m.model + '」');
+    }
+
+    if (shashoCorrect(m, raw, norm)) {
+      s2.step += 1;
+      /* つぎの えきへ すすむ */
+      if ((m.kind === 'next' || m.kind === 'door') && s2.index < s2.line.stations.length - 2) {
+        s2.index += 1;
+      }
+
+      if (s2.step >= SHASHO_STEPS) {
+        state.mode = 'chat';
+        state.shasho = null;
+        return reply([pick(SHASHO_PRAISE, 'sp')].concat(SHASHO_FINISH), {
+          face: 'proud',
+          chips: [
+            chip('もういっかい しゃしょうさん 🎫', 'しゃしょうさん ごっこ'),
+            chip('おはなし する', 'おしゃべり しよう'),
+          ],
+        });
+      }
+      s2.mission = makeShashoMission(s2);
+      return shashoAsk(
+        pick(SHASHO_PRAISE, 'sp') + ' (' + s2.step + ' / ' + SHASHO_STEPS + ')'
+      );
+    }
+
+    /*
+     * ちがったとき。
+     * ボタンで えらんだのなら ただの まちがい。
+     * こえで いって 駅名が ひとつも とれなかった ときだけ、
+     * ききまちがいと して あつかう。
+     */
+    if (m.station && at < 0 && findStations(raw).length === 0 && playCandidates(raw).length > 0) {
+      return shashoAsk('🤔 ごめん、うまく きこえなかった! こう いってみて →「' + m.model + '」');
+    }
+    return shashoAsk(pick(SHASHO_RETRY, 'sr'));
+  }
+
+  /* ------------------------------------------------------------------
    * あそび: えきあて(3つの ヒントで 駅を あてる)
    * ------------------------------------------------------------------ */
 
@@ -995,8 +1183,19 @@ const Brain = (function () {
     );
   }
 
-  function judgeGuess(raw, norm) {
+  function judgeGuess(rawInput, normInput) {
     const g = state.guess;
+    let raw = rawInput;
+    let norm = normInput;
+
+    /* 「もしかして」で ならべた こうほを ①②③で えらんだとき */
+    if (g.choices && g.choices.length > 0) {
+      const at = chosenNumber(raw, norm, g.choices.length);
+      if (at >= 0) {
+        raw = g.choices[at];
+        norm = normalize(raw);
+      }
+    }
 
     if (has(norm, ['こうさん', 'わからない', 'わかんない', 'やめ', 'おしえて', 'もういい'])) {
       return endGuess(['こたえは 「' + g.name + '」 でした!'].concat(stationSentence(g.name).slice(1, 2)), {
@@ -1031,9 +1230,92 @@ const Brain = (function () {
         face: 'think',
       });
     }
+    const near = playCandidates(raw);
+    if (near.length > 0) {
+      g.choices = near;
+      return reply(
+        ['🤔 ごめん、うまく きこえなかった! もしかして この えき?'].concat(choiceLines(near)),
+        {
+          face: 'think',
+          chips: choiceChips(near, [chip('つぎの ヒント 💡', 'ヒント'), chip('こうさん', 'こうさん')]),
+        }
+      );
+    }
     return reply(['うーん、それは えきの なまえかな? ヒントが ほしければ 「ヒント」って いってね'], {
       face: 'think',
     });
+  }
+
+  /* ------------------------------------------------------------------
+   * ききまちがいの たすけ 「もしかして この えき?」
+   *
+   * おんせいにんしきは 子どもの こえを よく まちがえる。
+   * ぴったり あう 駅が なかった ときに、にている 駅を 3つ ならべて
+   * ①②③で えらべるように する。
+   * ------------------------------------------------------------------ */
+
+  /* おしゃべりの ことばを 駅と まちがえないための みはり */
+  const NOT_STATION_TAIL = 'いるたねよか';
+
+  function looksLikeStationTry(text) {
+    const q = cleanQuery(text);
+    if (q.length < 3 || q.length > 10) return false;
+    if (NOT_STATION_TAIL.indexOf(q.charAt(q.length - 1)) >= 0) return false;
+    return true;
+  }
+
+  /*
+   * おしゃべりの とちゅう(あそび中でない)ときの こうほ。
+   * まず きびしく(ちがい1もじまで)さがして、ひとつでも あれば
+   * 「駅の なまえを いおうと している」と みなして、
+   * もうすこし ゆるく(2もじまで)さがして 3つまで ならべる。
+   */
+  function chatCandidates(text) {
+    if (!looksLikeStationTry(text)) return [];
+    const strict = similarStations(text, 3, 1);
+    if (strict.length === 0) return [];
+    if (strict.length >= 3) return strict;
+    const loose = similarStations(text, 4, 2);
+    const out = strict.slice();
+    loose.forEach((n) => {
+      if (out.length < 3 && out.indexOf(n) < 0) out.push(n);
+    });
+    return out;
+  }
+
+  /* あそびの とちゅうは 駅を いう ばめんなので、もうすこし ゆるく さがす */
+  function playCandidates(text) {
+    return similarStations(text, 3, 2);
+  }
+
+  function askDidYouMean(candidates, head) {
+    state.didYouMean = candidates.slice();
+    const many = candidates.length > 1;
+    const ask =
+      head ||
+      (many
+        ? pick(
+            [
+              '🤔 ごめん、うまく きこえなかった! もしかして この どれか?',
+              '🤔 うーん、こう きこえたけど…… もしかして この えき?',
+              '🤔 ちょっと きこえにくかった! この どれか かな?',
+            ],
+            'dym'
+          )
+        : pick(
+            [
+              '🤔 もしかして 「' + candidates[0] + '」の こと?',
+              '🤔 ごめん、ちょっと きこえにくかった。「' + candidates[0] + '」かな?',
+            ],
+            'dym1'
+          ));
+    return reply(
+      [ask].concat(choiceLines(candidates)),
+      {
+        face: 'think',
+        chips: choiceChips(candidates, [chip('どれも ちがう', 'ちがう')]),
+      }
+    );
   }
 
   /* ------------------------------------------------------------------
@@ -1049,6 +1331,7 @@ const Brain = (function () {
     ['クイズ だして 🚃', 'クイズ だして'],
     ['しりとり しよ 🔤', 'えきめい しりとり'],
     ['えきあて クイズ 🕵️', 'えきあて'],
+    ['しゃしょうさん ごっこ 🎫', 'しゃしょうさん ごっこ'],
     ['のりかえ おしえて 🔀', 'のりかえが おおい えきは どこ?'],
     ['でんしゃの ふしぎ ❓', 'でんしゃは なんで うごくの?'],
     ['ふみきりって なに? 🚧', 'なんで ふみきりが あるの?'],
@@ -1120,11 +1403,33 @@ const Brain = (function () {
       );
     }
 
+    /* --- 「もしかして この えき?」の へんじ --- */
+    if (state.didYouMean && state.didYouMean.length > 0) {
+      const picked = chosenNumber(text, norm, state.didYouMean.length);
+      const list = state.didYouMean;
+      state.didYouMean = null;
+      if (picked >= 0) {
+        state.lastStation = list[picked];
+        return reply(
+          ['そうか、' + list[picked] + 'だね!'].concat(stationSentence(list[picked])),
+          { face: 'wow', focusStation: list[picked] }
+        );
+      }
+      if (has(norm, ['ちがう', 'ううん', 'いや', 'ない'])) {
+        return reply(
+          ['そっかー、ごめんね。もういちど ゆっくり いってみて!', 'したの ボタンからでも えらべるよ'],
+          { face: 'think' }
+        );
+      }
+      /* ばんごうでも「ちがう」でも なければ、ふつうの おはなしとして つづける */
+    }
+
     /* --- あそびの とちゅう --- */
     if (state.mode === 'quiz' && state.quiz) return judgeQuiz(text, norm);
     if (state.mode === 'shiritori' && state.shiritori) return judgeShiritori(text, norm);
     if (state.mode === 'guess' && state.guess) return judgeGuess(text, norm);
     if (state.mode === 'wordquiz' && state.wordQuiz) return judgeWordQuiz(text, norm);
+    if (state.mode === 'shasho' && state.shasho) return judgeShasho(text, norm);
 
     /* --- もういちど いって --- */
     if (has(norm, ['もういちど', 'もういっかい いって', 'なんていった', 'きこえなかった', 'もっかい いって'])) {
@@ -1141,6 +1446,7 @@ const Brain = (function () {
 
     /* --- あそびの スタート --- */
     if (has(norm, ['しりとり'])) return startShiritori();
+    if (has(norm, ['しゃしょう', 'あなうんす', 'ごっこ', 'うんてんしごっこ'])) return startShasho();
     if (has(norm, ['えきあて', 'あてっこ', 'あててみて', 'どこでしょう'])) return startGuess();
     if (has(norm, ['ことばくいず', 'ことばあそび', 'ことばの くいず', 'ごい'])) return startWordQuiz();
     if (has(norm, ['きょうのことば', 'ことばおしえて', 'あたらしいことば', 'むずかしいことば'])) {
@@ -1252,7 +1558,7 @@ const Brain = (function () {
           state.char.me + 'と できること だよ!',
           '① えきの なまえを いうと、その えきの おはなしを するよ',
           '② 「しぶやから よこはままで」って きくと、いきかたを おしえるよ',
-          '③ 「クイズ だして」「しりとり」「えきあて」で あそべるよ',
+          '③ 「クイズ だして」「しりとり」「えきあて」「しゃしょうさん ごっこ」で あそべるよ',
           '④ 「でんしゃは なんで うごくの?」も きいてみて!',
           '⑤ ききのがしたら 「もういちど いって」で くりかえすよ',
         ],
@@ -1487,6 +1793,10 @@ const Brain = (function () {
       );
     }
 
+    /* --- ききまちがい かもしれない --- */
+    const maybe = chatCandidates(text);
+    if (maybe.length > 0) return askDidYouMean(maybe);
+
     /* --- どれにも あてはまらない --- */
     /* ときどき「きょうの ことば」を おまけで つける */
     const tail = Math.random() < 0.65 ? backQuestion() : nudge();
@@ -1508,6 +1818,8 @@ const Brain = (function () {
   function maybeWordSeed(res) {
     if (!res || !res.say) return res;
     if (state.mode !== 'chat') return res;
+    /* 「もしかして この えき?」と きいている とちゅうは じゃましない */
+    if (state.didYouMean) return res;
 
     /* すでに ことばの はなし なら、かぞえなおすだけ */
     if (res.say.some((t) => t.indexOf('📕') >= 0)) {
@@ -1526,8 +1838,43 @@ const Brain = (function () {
     return res;
   }
 
+  /*
+   * ときどき ほかの キャラが よこから 口を はさむ。
+   *  - おしゃべり中(あそび中でない)だけ
+   *  - まえの らんにゅうから 8ターン いじょう あけて、そのうえで 1わり
+   *  - へんじが ながい ときは しない
+   * say の うしろに「らんにゅうの ひとこと」と「ツッコミ」を たす。
+   * だれが しゃべっているかは speakers に いれて、app.js が
+   * ふきだしの いろと こえを かえる。
+   */
+  function maybeCameo(res) {
+    if (!res || !res.say) return res;
+    if (state.mode !== 'chat' || state.didYouMean) return res;
+    state.sinceCameo += 1;
+    if (state.sinceCameo < 8) return res;
+    if (res.say.length > 3) return res;
+    if (Math.random() > 0.12) return res;
+
+    const others = CHARACTERS.filter((c) => c.id !== state.char.id);
+    if (others.length === 0) return res;
+    const guest = randomOf(others);
+    const mainChar = state.char;
+
+    /* らんにゅうした子の ことばは、その子の 一人称・路線で つくる */
+    state.char = guest;
+    const intro = fill(pick(CAMEO_INTROS, 'cameo'), { '%MAIN': mainChar.name });
+    state.char = mainChar;
+    const back = fill(pick(CAMEO_REACTIONS, 'cameoback'), { '%WHO': guest.name });
+
+    state.sinceCameo = 0;
+    res.speakers = res.say.map(() => null).concat([guest.id, null]);
+    res.say = res.say.concat([intro, back]);
+    state.lastSay = res.say;
+    return res;
+  }
+
   function respond(raw) {
-    return maybeWordSeed(respondCore(raw));
+    return maybeCameo(maybeWordSeed(respondCore(raw)));
   }
 
   /* ------------------------------------------------------------------
@@ -1543,6 +1890,8 @@ const Brain = (function () {
       state.mode = 'chat';
       state.quiz = null;
       state.shiritori = null;
+      state.didYouMean = null;
+      state.shasho = null;
       state.lastLine = LINE_BY_ID[c.lineId];
       state.lastStation = null;
     },

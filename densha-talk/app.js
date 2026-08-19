@@ -74,17 +74,30 @@
    * キャラえらび
    * ================================================================== */
 
+  /*
+   * カードに だす ちいさい でんしゃ。
+   * おはなし がめんと まったく おなじ かたちを つかって、
+   * まわりの わくごと ちいさく している(みための ずれが おきない)。
+   */
   function miniTrain(char) {
     return (
-      '<span class="mini-train" data-char="' + char.id + '" style="--c:' +
-      char.color +
-      ';--ink:' +
-      char.ink +
-      '">' +
-      '<span class="mini-hat">' + (char.hat || '') + '</span>' +
-      '<span class="mini-face">' +
-      char.face +
-      '</span></span>'
+      '<span class="mini-wrap"><span class="mini-stage">' +
+      '<span class="train is-happy" data-char="' + char.id + '"' +
+      ' style="--char-color:' + char.color + ';--char-ink:' + char.ink + '">' +
+      '<span class="train-hat">' + (char.hat || '') + '</span>' +
+      '<span class="train-panta"></span>' +
+      '<span class="train-roof"></span>' +
+      '<span class="train-body">' +
+      '<span class="train-face">' +
+      '<span class="brow brow-l"></span><span class="brow brow-r"></span>' +
+      '<span class="eye eye-l"><i></i></span><span class="eye eye-r"><i></i></span>' +
+      '<span class="cheek cheek-l"></span><span class="cheek cheek-r"></span>' +
+      '<span class="mouth"><span class="tooth"></span></span>' +
+      '</span>' +
+      '<span class="train-lights"><span></span><span></span></span>' +
+      '</span>' +
+      '<span class="train-skirt"></span>' +
+      '</span></span></span>'
     );
   }
 
@@ -163,10 +176,23 @@
 
   /* ------------------------------ ふきだし ------------------------------ */
 
-  function addBubble(text, who) {
+  /* charId を わたすと、その キャラの いろの ふきだし(らんにゅう)に なる */
+  function addBubble(text, who, charId) {
     const div = document.createElement('div');
     div.className = 'bubble bubble-' + who;
-    div.textContent = text;
+    const guest = charId ? CHAR_BY_ID[charId] : null;
+    if (guest) {
+      div.classList.add('bubble-cameo');
+      div.style.setProperty('--char-color', guest.color);
+      div.style.setProperty('--char-ink', guest.ink);
+      const who2 = document.createElement('span');
+      who2.className = 'bubble-who';
+      who2.textContent = (guest.hat || '🚃') + ' ' + guest.name;
+      div.appendChild(who2);
+      div.appendChild(document.createTextNode(text));
+    } else {
+      div.textContent = text;
+    }
     el.log.appendChild(div);
     el.log.scrollTop = el.log.scrollHeight;
     return div;
@@ -234,21 +260,31 @@
 
     /* まだ だしきって いない セリフが あれば、さきに ぜんぶ だす */
     flushBubbles();
-    const texts = res.say.filter((t) => t && t.length > 0);
-    pending = texts.map((t) => ({ text: t, shown: false }));
+    /* speakers に キャラ名が はいって いる ぶんは、その子が しゃべる */
+    pending = res.say
+      .map((t, i) => ({
+        text: t,
+        by: (res.speakers && res.speakers[i]) || null,
+        shown: false,
+      }))
+      .filter((it) => it.text && it.text.length > 0);
     pending.forEach((item, i) => {
       pendingTimers.push(
         setTimeout(() => {
           if (item.shown) return;
           item.shown = true;
-          addBubble(item.text, 'char');
+          addBubble(item.text, 'char', item.by);
           Speech.sfx.pop();
         }, i * 520)
       );
     });
 
     setTalking(true);
-    Speech.speak(texts, Brain.state.char.voice, () => {
+    const voiced = pending.map((it) => ({
+      text: it.text,
+      voice: it.by && CHAR_BY_ID[it.by] ? CHAR_BY_ID[it.by].voice : null,
+    }));
+    Speech.speak(voiced, Brain.state.char.voice, () => {
       setTalking(false);
       /* はなしおわった あと、ときどき ちらっと ちがう かおを する */
       if (Math.random() < 0.28) setTimeout(() => gagFace(randomFace()), 500);
@@ -264,7 +300,7 @@
     pending.forEach((item) => {
       if (item.shown) return;
       item.shown = true;
-      addBubble(item.text, 'char');
+      addBubble(item.text, 'char', item.by);
     });
     pending = [];
   }
