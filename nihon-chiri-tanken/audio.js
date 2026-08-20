@@ -500,10 +500,19 @@ const SoundEngine = (function createAudio() {
     window.speechSynthesis.onvoiceschanged = pickVoice;
   }
 
+  /*
+   * opts:
+   *   rate / pitch : こえの はやさ・たかさ(キャラごと)
+   *   onStart      : しゃべりはじめ(口パクの スタートに つかう)
+   *   onDone       : しゃべりおわり / よみあげオフの ときも 1回 よばれる
+   */
   function speak(text, opts) {
-    if (!voiceOn) return;
-    if (!window.speechSynthesis) return;
     const o = opts || {};
+    const done = typeof o.onDone === 'function' ? o.onDone : null;
+    if (!voiceOn || !window.speechSynthesis) {
+      if (done) done();
+      return;
+    }
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP';
@@ -512,6 +521,11 @@ const SoundEngine = (function createAudio() {
     u.rate = o.rate || 0.85;
     u.pitch = o.pitch || 1.15;
     u.volume = 1;
+    if (typeof o.onStart === 'function') u.onstart = o.onStart;
+    if (done) {
+      u.onend = done;
+      u.onerror = done;
+    }
     window.speechSynthesis.speak(u);
   }
 

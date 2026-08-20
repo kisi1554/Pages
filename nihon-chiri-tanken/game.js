@@ -105,10 +105,43 @@ function prefLevel(code) {
  * せっていが 「おまかせ」なら、モードごとの あんないやくが 出てくる。
  */
 
-function trainIcon(char, cls, face) {
-  return '<span class="train-ic ' + (cls || '') + '" style="--c:' + char.color
-    + ';--ink:' + char.ink + '"><span class="ti-face">'
-    + (face || char.face) + '</span></span>';
+/*
+ * でんしゃトーク本体の 電車キャラを そのまま つかう。
+ *   パンタグラフ・屋根・行先表示・顔(目・口)・前照灯・スカート の 一式。
+ *   mood: 'happy' | 'think' | 'wow'  (でんしゃトークの is-happy/is-think/is-wow と 同じ)
+ *   dest: 行先表示に 出す 文字(省略時は 路線名)
+ */
+function trainIcon(char, cls, mood, dest) {
+  return '<span class="train-ic ' + (cls || '') + '" data-char="' + char.id
+    + '" style="--c:' + char.color + ';--ink:' + char.ink + '">'
+    + '<span class="ti-panta"></span>'
+    + '<span class="ti-roof"></span>'
+    + '<span class="ti-body">'
+    + '<span class="ti-dest">' + (dest || char.line) + '</span>'
+    + '<span class="ti-face ' + (mood ? 'is-' + mood : 'is-happy') + '">'
+    + '<span class="ti-eye ti-eye-l"><i></i></span>'
+    + '<span class="ti-eye ti-eye-r"><i></i></span>'
+    + '<span class="ti-mouth"></span>'
+    + '</span>'
+    + '<span class="ti-lights"><i></i><i></i></span>'
+    + '</span>'
+    + '<span class="ti-skirt"></span>'
+    + '</span>';
+}
+
+// トークちゅうの 口パクを 始める/止める(要素は trainIcon が つくった ものを 渡す)
+function trainTalk(el, on) {
+  if (!el) return;
+  el.classList.toggle('is-talking', !!on);
+}
+
+// 表情を 変える('happy' | 'think' | 'wow')
+function trainMood(el, mood) {
+  if (!el) return;
+  const face = el.querySelector('.ti-face');
+  if (!face) return;
+  face.classList.remove('is-happy', 'is-think', 'is-wow');
+  face.classList.add('is-' + (mood || 'happy'));
 }
 
 const Buddy = (function createBuddy() {
@@ -132,8 +165,16 @@ const Buddy = (function createBuddy() {
     return rest[Math.floor(Math.random() * rest.length)];
   }
 
-  function speak(char, text) {
-    SoundEngine.speak(text, char.voice);
+  // opts.talkEl : しゃべっている あいだ 口パクさせる 電車の DOM要素(train-ic)
+  function speak(char, text, opts) {
+    const o = opts || {};
+    const talkEl = o.talkEl || null;
+    const params = Object.assign({}, char.voice);
+    if (talkEl) {
+      params.onStart = () => trainTalk(talkEl, true);
+      params.onDone = () => trainTalk(talkEl, false);
+    }
+    SoundEngine.speak(text, params);
   }
 
   return { current: current, line: line, other: other, speak: speak };
@@ -1061,20 +1102,25 @@ const Quiz = (function createQuiz() {
     Screens.go('quiz');
     elWrap.appendChild(MapView.hostEl());
     next();
-    // あいぼうの あいさつ
-    showPop(char.modeIntro, char.face, 3400);
-    Buddy.speak(char, char.modeIntro);
+    // あいぼうの あいさつ(しゃべりながら 口パク)
+    showPop(char.modeIntro, 'happy', 3400, char, false, true);
   }
 
-  // 地図の 上に あいぼうの セリフを 出す
-  function showPop(text, face, dur, who, high) {
+  // 地図の 上に あいぼうの セリフを 出す(でんしゃトーク本体の 電車を 表示)
+  //   mood : 'happy' | 'think' | 'wow'
+  //   speakToo : true なら こえでも 読み上げて、口パクさせる
+  function showPop(text, mood, dur, who, high, speakToo) {
     const c = who || char;
-    elPop.innerHTML = trainIcon(c, 'lg is-hop', face || c.face)
+    elPop.innerHTML = trainIcon(c, 'lg is-hop', mood || 'happy')
       + '<div class="pop-bubble" style="--ink:' + c.ink + '">' + text + '</div>';
     elPop.classList.add('is-on');
     elPop.classList.toggle('is-high', !!high);
     window.clearTimeout(popTimer);
     popTimer = window.setTimeout(() => { elPop.classList.remove('is-on'); }, dur || 2600);
+    if (speakToo) {
+      const talkEl = elPop.querySelector('.train-ic');
+      Buddy.speak(c, text.replace(/<br>/g, '。'), { talkEl: talkEl });
+    }
   }
 
   function hidePop() {
@@ -1082,11 +1128,11 @@ const Quiz = (function createQuiz() {
     elPop.classList.remove('is-on');
   }
 
-  // あいぼうの セリフを 出して、こえでも 言う
-  function charLine(key, face, dur) {
+  // あいぼうの セリフを 出して、こえでも 言う('think' の 表情で)
+  function charLine(key, mood, dur) {
     const text = Buddy.line(char, key);
     if (!text) return '';
-    showPop(text, face, dur);
+    showPop(text, mood, dur, char, false, true);
     return text;
   }
 
@@ -1113,7 +1159,7 @@ const Quiz = (function createQuiz() {
 
     hidePop();
     char = Buddy.current(mode.id);
-    elChar.innerHTML = trainIcon(char);
+    elChar.innerHTML = trainIcon(char, '', 'happy');
 
     q = mode.make();
     elText.innerHTML = (q.emoji || '❓') + ' ' + q.text;
@@ -1124,7 +1170,10 @@ const Quiz = (function createQuiz() {
   }
 
   function speakQuestion() {
-    if (q.speak) Buddy.speak(char, q.speak);
+    if (q.speak) {
+      const talkEl = elChar.querySelector('.train-ic');
+      Buddy.speak(char, q.speak, { talkEl: talkEl });
+    }
   }
 
   function renderAnswers() {
@@ -1177,13 +1226,13 @@ const Quiz = (function createQuiz() {
     // あいぼうの ひとこと(正解 / とばした / まちがえて おわった)
     const key = ok ? (q.kind === 'tapMulti' ? 'clear' : 'ok') : (skipped ? 'skip' : 'ng');
     const said = Buddy.line(char, key);
-    const face = ok ? char.faceOk : char.faceNg;
+    const mood = ok ? 'wow' : (skipped ? 'happy' : 'think');
 
     hidePop();
     const box = document.createElement('div');
     box.className = 'explain';
     box.innerHTML =
-      '<div class="ex-head">' + trainIcon(char, 'sm' + (ok ? ' is-hop' : ''), face)
+      '<div class="ex-head">' + trainIcon(char, 'sm' + (ok ? ' is-hop' : ''), mood)
         + '<span class="ex-say">' + said + '</span></div>' +
       '<div class="ex-stamp">' + (ok ? '🎉' : skipped ? '👀' : '💡') + '</div>' +
       '<div class="ex-title">' + q.explain.title + '</div>' +
@@ -1193,7 +1242,8 @@ const Quiz = (function createQuiz() {
     elWrap.appendChild(box);
 
     if (ok) SoundEngine.seStamp();
-    Buddy.speak(char, said + '。' + q.explain.title);
+    const exTalkEl = box.querySelector('.train-ic');
+    Buddy.speak(char, said + '。' + q.explain.title, { talkEl: exTalkEl });
 
     // たまに ほかの キャラが よこから ひとこと 言いにくる
     if (ok && Math.random() < 0.3) {
@@ -1201,8 +1251,7 @@ const Quiz = (function createQuiz() {
       window.setTimeout(() => {
         if (!answered) return;
         const cut = Buddy.line(guest, 'cutIn');
-        showPop(cut, guest.face, 3000, guest, true);
-        Buddy.speak(guest, cut);
+        showPop(cut, 'happy', 3000, guest, true, true);
       }, 2200);
     }
   }
@@ -1219,7 +1268,7 @@ const Quiz = (function createQuiz() {
       btn.classList.add('is-ng', 'is-gone');
       SoundEngine.seWrong();
       judge(false);
-      charLine('ng', char.faceNg, 2000);
+      charLine('ng', 'think', 2000);
       window.setTimeout(() => btn.classList.remove('is-ng'), 400);
       const left = Array.from(elAnswers.querySelectorAll('.choice')).filter((b) => !b.classList.contains('is-gone'));
       if (left.length === 1) {
@@ -1244,7 +1293,7 @@ const Quiz = (function createQuiz() {
         Store.addWrong(hit.code);
         SoundEngine.seWrong();
         judge(false);
-        charLine('ng', char.faceNg, 2000);
+        charLine('ng', 'think', 2000);
         window.setTimeout(() => {
           if (!answered) MapView.setPref(hit.code, '');
         }, 700);
@@ -1270,7 +1319,7 @@ const Quiz = (function createQuiz() {
         MapView.setPref(hit.code, 'is-ng');
         Store.addWrong(hit.code);
         SoundEngine.seWrong();
-        charLine('ng', char.faceNg, 1800);
+        charLine('ng', 'think', 1800);
         window.setTimeout(() => {
           if (found.indexOf(hit.code) < 0) MapView.setPref(hit.code, '');
         }, 600);
@@ -1288,7 +1337,7 @@ const Quiz = (function createQuiz() {
         MapView.geoClass(hit.index, 'is-ng');
         SoundEngine.seWrong();
         judge(false);
-        charLine('ng', char.faceNg, 2000);
+        charLine('ng', 'think', 2000);
         window.setTimeout(() => {
           if (!answered) MapView.geoClass(hit.index, '');
         }, 700);
@@ -1299,8 +1348,7 @@ const Quiz = (function createQuiz() {
   // ヒントは 「あいぼうの ヒントのセリフ + じっさいの ヒント」で 出す
   function hintSay(text) {
     const lead = Buddy.line(char, 'hint');
-    showPop(lead + '<br>' + text, char.face, 3200);
-    Buddy.speak(char, lead + '。' + text);
+    showPop(lead + '<br>' + text, 'think', 3200, char, false, true);
   }
 
   function hint() {
@@ -1513,9 +1561,12 @@ const Card = (function createCard() {
 
     const speakText = prefKana(code) + '。けんちょうしょざいちは ' + info.capital.kana + '。'
       + region.kana + '。' + info.fact + ' ' + voice.t;
-    document.getElementById('cardSpeak').addEventListener('click', () => Buddy.speak(vc, speakText));
+    const cardTalkEl = body.querySelector('.card-voice .train-ic');
+    document.getElementById('cardSpeak').addEventListener('click', () => {
+      Buddy.speak(vc, speakText, { talkEl: cardTalkEl });
+    });
     document.getElementById('cardClose').addEventListener('click', close);
-    Buddy.speak(vc, prefKana(code));
+    Buddy.speak(vc, prefKana(code), { talkEl: cardTalkEl });
   }
 
   return { open: open, close: close };
@@ -1607,26 +1658,32 @@ const Browse = (function createBrowse() {
       + '<button class="btn" id="ibSpeak">🔊 よみあげ</button>'
       + (lv > 0 ? '<button class="btn btn-sub" id="ibCard">📔 カードを見る</button>' : '')
       + '</div>';
+    const prefTalkEl = info.querySelector('.ib-guide .train-ic');
     document.getElementById('ibSpeak').addEventListener('click', () => {
       Buddy.speak(vc, prefKana(code) + '。けんちょうしょざいちは ' + i.capital.kana + '。'
-        + i.fact + ' ' + voice.t);
+        + i.fact + ' ' + voice.t, { talkEl: prefTalkEl });
     });
     const cardBtn = document.getElementById('ibCard');
     if (cardBtn) cardBtn.addEventListener('click', () => Card.open(code));
-    Buddy.speak(vc, prefKana(code));
+    Buddy.speak(vc, prefKana(code), { talkEl: prefTalkEl });
     apply();
   }
 
   function showGeo(index) {
     const g = GEO[index];
     selected = null;
+    const guide = GUIDE_CHAR;
     info.innerHTML =
       '<div class="ib-title">' + GEO_CATS[g.cat].emoji + ' ' + ruby(g.name, g.kana) + '</div>'
       + '<div class="ib-sub">' + GEO_CATS[g.cat].label + '　/　' + g.prefs.map((c) => shortName(c)).join('・') + '</div>'
-      + '<div class="ib-rows"><div class="ib-row">' + g.note + '</div></div>'
+      + '<div class="ib-guide" style="--ink:' + guide.ink + '">' + trainIcon(guide, 'sm')
+      + '<span class="ibg-text">' + g.note + '</span></div>'
       + '<div class="ib-btns"><button class="btn" id="ibSpeak">🔊 よみあげ</button></div>';
-    document.getElementById('ibSpeak').addEventListener('click', () => SoundEngine.speak(g.kana + '。' + g.note));
-    SoundEngine.speak(g.kana);
+    const geoTalkEl = info.querySelector('.ib-guide .train-ic');
+    document.getElementById('ibSpeak').addEventListener('click', () => {
+      Buddy.speak(guide, g.kana + '。' + g.note, { talkEl: geoTalkEl });
+    });
+    Buddy.speak(guide, g.kana, { talkEl: geoTalkEl });
     MapView.clearPrefs();
     MapView.paintRegions(state.regions);
     g.prefs.forEach((c) => MapView.setPref(c, 'is-mark'));
@@ -1636,14 +1693,18 @@ const Browse = (function createBrowse() {
   function showSk(index) {
     const l = SHINKANSEN[index];
     selected = null;
+    const guide = CHAR_BY_MODE.shinkansen || GUIDE_CHAR;
     info.innerHTML =
       '<div class="ib-title">🚄 ' + ruby(l.name, l.kana) + '</div>'
       + '<div class="ib-sub">通る 都道府県: ' + l.prefs.map((c) => shortName(c)).join('・') + '</div>'
-      + '<div class="ib-rows"><div class="ib-row">' + l.note + '</div>'
-      + '<div class="ib-row">おもな駅: ' + l.stations.map((s) => s.name).join('・') + '</div></div>'
+      + '<div class="ib-guide" style="--ink:' + guide.ink + '">' + trainIcon(guide, 'sm')
+      + '<span class="ibg-text">' + l.note + '　おもな駅: ' + l.stations.map((s) => s.name).join('・') + '</span></div>'
       + '<div class="ib-btns"><button class="btn" id="ibSpeak">🔊 よみあげ</button></div>';
-    document.getElementById('ibSpeak').addEventListener('click', () => SoundEngine.speak(l.kana + '。' + l.note));
-    SoundEngine.speak(l.kana);
+    const skTalkEl = info.querySelector('.ib-guide .train-ic');
+    document.getElementById('ibSpeak').addEventListener('click', () => {
+      Buddy.speak(guide, l.kana + '。' + l.note, { talkEl: skTalkEl });
+    });
+    Buddy.speak(guide, l.kana, { talkEl: skTalkEl });
     MapView.clearPrefs();
     MapView.paintRegions(state.regions);
     l.prefs.forEach((c) => MapView.setPref(c, 'is-mark'));
@@ -1666,11 +1727,11 @@ const Browse = (function createBrowse() {
     selected = null;
     const guide = GUIDE_CHAR;
     info.innerHTML = '<div class="ib-guide" style="--ink:' + guide.ink + '">'
-      + trainIcon(guide, 'lg')
+      + trainIcon(guide, 'lg', 'happy')
       + '<span class="ibg-text"><b>' + guide.name + '</b>「' + guide.hello + '」<br>'
       + '県や 地形を タップすると せつめいが 出るよ。'
       + '上の ボタンで 地形や 新幹線を かさねて 見られるんだ!</span></div>';
-    Buddy.speak(guide, guide.hello);
+    Buddy.speak(guide, guide.hello, { talkEl: info.querySelector('.ib-guide .train-ic') });
     syncBar();
     apply();
   }
@@ -1710,7 +1771,7 @@ const Title = (function createTitle() {
         SoundEngine.seTap();
         refresh();
         const c = Buddy.current(null);
-        Buddy.speak(c, c.hello);
+        Buddy.speak(c, c.hello, { talkEl: say.querySelector('.train-ic') });
       });
     });
   }
@@ -1750,7 +1811,7 @@ const Title = (function createTitle() {
     buildMenu();
 
     const c = Buddy.current(null);
-    say.innerHTML = trainIcon(c, 'sm') + '<span>' + c.hello + '</span>';
+    say.innerHTML = trainIcon(c, 'sm', 'happy') + '<span>' + c.hello + '</span>';
 
     grid.querySelectorAll('[data-mode]').forEach((b) => {
       const st = Store.modeStat(b.dataset.mode);
