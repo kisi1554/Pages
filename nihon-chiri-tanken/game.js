@@ -784,7 +784,7 @@ function makeCapitalQ() {
       award: [code],
       explain: {
         title: prefName(code) + ' → ' + cap.name,
-        note: PREF_INFO[code].fact,
+        note: cap.name + 'は ' + cap.note,
       },
       setup() {
         MapView.setPref(code, 'is-target');
@@ -808,7 +808,7 @@ function makeCapitalQ() {
     award: [code],
     explain: {
       title: cap.name + ' → ' + prefName(code),
-      note: PREF_INFO[code].fact,
+      note: cap.note,
     },
     onDone() {
       MapView.renderCaps([code]);
@@ -1519,7 +1519,8 @@ const Card = (function createCard() {
 
     html += '<div class="card-rows">';
     html += '<div class="card-row"><div class="cr-key">県庁所在地</div><div class="cr-val"><b>'
-      + ruby(info.capital.name, info.capital.kana) + '</b></div></div>';
+      + ruby(info.capital.name, info.capital.kana)
+      + '</b><br><span style="color:#6b7a90;font-size:12.5px">' + info.capital.note + '</span></div></div>';
     html += '<div class="card-row"><div class="cr-key">気候</div><div class="cr-val">'
       + ruby(climate.name, climate.kana) + '<br><span style="color:#6b7a90;font-size:12.5px">' + climate.note + '</span></div></div>';
     if (geos.length) {
@@ -1560,7 +1561,7 @@ const Card = (function createCard() {
     modal.classList.add('is-on');
 
     const speakText = prefKana(code) + '。けんちょうしょざいちは ' + info.capital.kana + '。'
-      + region.kana + '。' + info.fact + ' ' + voice.t;
+      + info.capital.note + ' ' + region.kana + '。' + info.fact + ' ' + voice.t;
     const cardTalkEl = body.querySelector('.card-voice .train-ic');
     document.getElementById('cardSpeak').addEventListener('click', () => {
       Buddy.speak(vc, speakText, { talkEl: cardTalkEl });
@@ -1650,7 +1651,8 @@ const Browse = (function createBrowse() {
         + region.name + '</span></div>'
       + '<div class="ib-sub">県庁所在地 ' + ruby(i.capital.name, i.capital.kana)
         + '　/　' + i.climate_label + '</div>'
-      + '<div class="ib-rows"><div class="ib-row">' + i.fact + '</div>'
+      + '<div class="ib-rows"><div class="ib-row">🏛️ ' + i.capital.name + 'は ' + i.capital.note + '</div>'
+      + '<div class="ib-row">' + i.fact + '</div>'
       + '<div class="ib-row">めいぶつ: ' + i.famous.map((f) => f.e + f.name).join('　') + '</div></div>'
       + '<div class="ib-guide" style="--ink:' + vc.ink + '">' + trainIcon(vc, 'sm')
       + '<span class="ibg-text">' + voice.t + '</span></div>'
@@ -1661,7 +1663,7 @@ const Browse = (function createBrowse() {
     const prefTalkEl = info.querySelector('.ib-guide .train-ic');
     document.getElementById('ibSpeak').addEventListener('click', () => {
       Buddy.speak(vc, prefKana(code) + '。けんちょうしょざいちは ' + i.capital.kana + '。'
-        + i.fact + ' ' + voice.t, { talkEl: prefTalkEl });
+        + i.capital.note + ' ' + i.fact + ' ' + voice.t, { talkEl: prefTalkEl });
     });
     const cardBtn = document.getElementById('ibCard');
     if (cardBtn) cardBtn.addEventListener('click', () => Card.open(code));

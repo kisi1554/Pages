@@ -49,7 +49,7 @@ const CLIMATES = {
 
 const PREF_INFO = {
   1: {
-    capital: { name: '札幌市', kana: 'さっぽろし', lon: 141.35, lat: 43.06 },
+    capital: { name: '札幌市', kana: 'さっぽろし', lon: 141.35, lat: 43.06, note: 'さっぽろ雪まつりの 大きな 雪像と、時計台で 有名。' },
     region: 'hokkaido', climate: 'hokkaido', climateQ: true,
     fact: '日本で いちばん 広い 都道府県。日本の 面積の 5分の1 ちかくを ひとりで しめている。',
     famous: [
@@ -59,7 +59,7 @@ const PREF_INFO = {
     ],
   },
   2: {
-    capital: { name: '青森市', kana: 'あおもりし', lon: 140.74, lat: 40.82 },
+    capital: { name: '青森市', kana: 'あおもりし', lon: 140.74, lat: 40.82, note: 'ねぶた祭りの まちで、大きな 灯篭の 山車が 練りあるく。' },
     region: 'tohoku', climate: 'nihonkai',
     fact: '本州の いちばん 北。ねぶた祭りで 有名。三内丸山いせきも ここ。',
     famous: [
@@ -69,7 +69,7 @@ const PREF_INFO = {
     ],
   },
   3: {
-    capital: { name: '盛岡市', kana: 'もりおかし', lon: 141.15, lat: 39.70 },
+    capital: { name: '盛岡市', kana: 'もりおかし', lon: 141.15, lat: 39.70, note: 'わんこそばと、石割桜(石を われて 生えた 桜)で 有名。' },
     region: 'tohoku', climate: 'taiheiyo',
     fact: '本州で いちばん 広い 県。海岸は ぎざぎざの リアス海岸。',
     famous: [
@@ -79,7 +79,7 @@ const PREF_INFO = {
     ],
   },
   4: {
-    capital: { name: '仙台市', kana: 'せんだいし', lon: 140.87, lat: 38.27 },
+    capital: { name: '仙台市', kana: 'せんだいし', lon: 140.87, lat: 38.27, note: '牛タンと 七夕まつりで 有名。伊達政宗が きずいた 城下町。' },
     region: 'tohoku', climate: 'taiheiyo',
     fact: '東北地方の 中心。仙台は 東北で いちばん 人が おおい 都市。',
     famous: [
@@ -89,7 +89,7 @@ const PREF_INFO = {
     ],
   },
   5: {
-    capital: { name: '秋田市', kana: 'あきたし', lon: 140.10, lat: 39.72 },
+    capital: { name: '秋田市', kana: 'あきたし', lon: 140.10, lat: 39.72, note: '竿燈まつり(長い さおに ちょうちんを ぶらさげる 祭り)で 有名。' },
     region: 'tohoku', climate: 'nihonkai', climateQ: true,
     fact: '冬の 雪が とても おおい。日本で いちばん 深い 田沢湖が ある。',
     famous: [
@@ -99,7 +99,7 @@ const PREF_INFO = {
     ],
   },
   6: {
-    capital: { name: '山形市', kana: 'やまがたし', lon: 140.36, lat: 38.24 },
+    capital: { name: '山形市', kana: 'やまがたし', lon: 140.36, lat: 38.24, note: '山寺(立石寺)と 花笠まつりで 有名。' },
     region: 'tohoku', climate: 'nihonkai',
     fact: '最上川が 県を たてに 流れる。まわりを 山に かこまれた 盆地が おおい。',
     famous: [
@@ -109,7 +109,7 @@ const PREF_INFO = {
     ],
   },
   7: {
-    capital: { name: '福島市', kana: 'ふくしまし', lon: 140.47, lat: 37.75 },
+    capital: { name: '福島市', kana: 'ふくしまし', lon: 140.47, lat: 37.75, note: '春に 一面 花で うまる 「花見山」で 有名。' },
     region: 'tohoku', climate: 'taiheiyo',
     fact: '東北地方で いちばん 南。海がわ・中どおり・山がわで 気候が ちがう。',
     famous: [
@@ -119,7 +119,7 @@ const PREF_INFO = {
     ],
   },
   8: {
-    capital: { name: '水戸市', kana: 'みとし', lon: 140.45, lat: 36.34 },
+    capital: { name: '水戸市', kana: 'みとし', lon: 140.45, lat: 36.34, note: '偕楽園の 梅と、水戸黄門の まちとして 有名。' },
     region: 'kanto', climate: 'taiheiyo',
     fact: '日本で 2ばんめに 大きい 湖、霞ヶ浦が ある。畑作が とても さかん。',
     famous: [
@@ -129,7 +129,7 @@ const PREF_INFO = {
     ],
   },
   9: {
-    capital: { name: '宇都宮市', kana: 'うつのみやし', lon: 139.88, lat: 36.57 },
+    capital: { name: '宇都宮市', kana: 'うつのみやし', lon: 139.88, lat: 36.57, note: 'ぎょうざの まちとして 有名。' },
     region: 'kanto', climate: 'nairiku',
     fact: '海の ない 県。日光には たくさんの 世界いさんが ある。',
     famous: [
@@ -139,7 +139,7 @@ const PREF_INFO = {
     ],
   },
   10: {
-    capital: { name: '前橋市', kana: 'まえばしし', lon: 139.06, lat: 36.39 },
+    capital: { name: '前橋市', kana: 'まえばしし', lon: 139.06, lat: 36.39, note: '生糸(絹の もと)づくりで さかえた まち。' },
     region: 'kanto', climate: 'nairiku',
     fact: '海の ない 県。冬に 「からっ風」と よばれる つよい 風が ふく。',
     famous: [
@@ -149,7 +149,7 @@ const PREF_INFO = {
     ],
   },
   11: {
-    capital: { name: 'さいたま市', kana: 'さいたまし', lon: 139.65, lat: 35.86 },
+    capital: { name: 'さいたま市', kana: 'さいたまし', lon: 139.65, lat: 35.86, note: '大宮盆栽村と、氷川神社で 有名。' },
     region: 'kanto', climate: 'nairiku',
     fact: '海の ない 県。東京の となりで、東京へ 通う 人が とても おおい。',
     famous: [
@@ -159,7 +159,7 @@ const PREF_INFO = {
     ],
   },
   12: {
-    capital: { name: '千葉市', kana: 'ちばし', lon: 140.12, lat: 35.61 },
+    capital: { name: '千葉市', kana: 'ちばし', lon: 140.12, lat: 35.61, note: '千葉ポートタワーが ある 港町。' },
     region: 'kanto', climate: 'taiheiyo', climateQ: true,
     fact: '三方を 海に かこまれた 房総半島。成田国際空港の げんかん口。',
     famous: [
@@ -169,7 +169,7 @@ const PREF_INFO = {
     ],
   },
   13: {
-    capital: { name: '東京(新宿区)', kana: 'とうきょう しんじゅくく', lon: 139.69, lat: 35.69 },
+    capital: { name: '東京(新宿区)', kana: 'とうきょう しんじゅくく', lon: 139.69, lat: 35.69, note: '国会議事堂や 新宿の 高層ビル街、渋谷など、日本の 中心。' },
     region: 'kanto', climate: 'taiheiyo',
     fact: '日本の 首都。人口が 日本一 おおい。伊豆諸島や 小笠原諸島も 東京都。',
     famous: [
@@ -179,7 +179,7 @@ const PREF_INFO = {
     ],
   },
   14: {
-    capital: { name: '横浜市', kana: 'よこはまし', lon: 139.64, lat: 35.45 },
+    capital: { name: '横浜市', kana: 'よこはまし', lon: 139.64, lat: 35.45, note: '中華街と みなとみらいの 夜景で 有名。' },
     region: 'kanto', climate: 'taiheiyo',
     fact: '横浜市は 市の 人口が 日本一。京浜工業地帯の 中心。',
     famous: [
@@ -189,7 +189,7 @@ const PREF_INFO = {
     ],
   },
   15: {
-    capital: { name: '新潟市', kana: 'にいがたし', lon: 139.02, lat: 37.90 },
+    capital: { name: '新潟市', kana: 'にいがたし', lon: 139.02, lat: 37.90, note: '大きな 万代橋と、日本酒づくりで 有名。' },
     region: 'chubu', climate: 'nihonkai', climateQ: true,
     fact: '日本で いちばん 長い 信濃川の 河口。冬の 雪が とても おおい。',
     famous: [
@@ -199,7 +199,7 @@ const PREF_INFO = {
     ],
   },
   16: {
-    capital: { name: '富山市', kana: 'とやまし', lon: 137.21, lat: 36.70 },
+    capital: { name: '富山市', kana: 'とやまし', lon: 137.21, lat: 36.70, note: '路面電車と、むかしからの 「くすり売り」で 有名。' },
     region: 'chubu', climate: 'nihonkai', climateQ: true,
     fact: '富山湾と 立山連峰(北アルプス)に はさまれた 県。水力発電が さかん。',
     famous: [
@@ -209,7 +209,7 @@ const PREF_INFO = {
     ],
   },
   17: {
-    capital: { name: '金沢市', kana: 'かなざわし', lon: 136.63, lat: 36.59 },
+    capital: { name: '金沢市', kana: 'かなざわし', lon: 136.63, lat: 36.59, note: '兼六園と 金沢城、近江町市場で 有名。' },
     region: 'chubu', climate: 'nihonkai', climateQ: true,
     fact: '日本海に ながく つき出した 能登半島が ある。伝統工芸が とても さかん。',
     famous: [
@@ -219,7 +219,7 @@ const PREF_INFO = {
     ],
   },
   18: {
-    capital: { name: '福井市', kana: 'ふくいし', lon: 136.22, lat: 36.07 },
+    capital: { name: '福井市', kana: 'ふくいし', lon: 136.22, lat: 36.07, note: 'きょうりゅうの まちとして PRしている。一乗谷朝倉氏いせきも ある。' },
     region: 'chubu', climate: 'nihonkai',
     fact: '若狭湾は ぎざぎざの リアス海岸。きょうりゅうの 化石が たくさん 見つかる。',
     famous: [
@@ -229,7 +229,7 @@ const PREF_INFO = {
     ],
   },
   19: {
-    capital: { name: '甲府市', kana: 'こうふし', lon: 138.57, lat: 35.66 },
+    capital: { name: '甲府市', kana: 'こうふし', lon: 138.57, lat: 35.66, note: '武田信玄の 城下町。舞鶴城公園が ある。' },
     region: 'chubu', climate: 'nairiku', climateQ: true,
     fact: '海の ない 県。まわりを 山に かこまれた 甲府盆地で くだものを つくる。',
     famous: [
@@ -239,7 +239,7 @@ const PREF_INFO = {
     ],
   },
   20: {
-    capital: { name: '長野市', kana: 'ながのし', lon: 138.18, lat: 36.65 },
+    capital: { name: '長野市', kana: 'ながのし', lon: 138.18, lat: 36.65, note: '1400年の れきしを もつ 善光寺で 有名。' },
     region: 'chubu', climate: 'nairiku', climateQ: true,
     fact: '海の ない 県。8つの 県と となりあう、日本一 となりが おおい 県。',
     famous: [
@@ -249,7 +249,7 @@ const PREF_INFO = {
     ],
   },
   21: {
-    capital: { name: '岐阜市', kana: 'ぎふし', lon: 136.72, lat: 35.39 },
+    capital: { name: '岐阜市', kana: 'ぎふし', lon: 136.72, lat: 35.39, note: '岐阜城が そびえる 金華山と、長良川の 鵜飼いで 有名。' },
     region: 'chubu', climate: 'nairiku', climateQ: true,
     fact: '海の ない 県。北は 飛騨の 高い 山、南は 濃尾平野。',
     famous: [
@@ -259,7 +259,7 @@ const PREF_INFO = {
     ],
   },
   22: {
-    capital: { name: '静岡市', kana: 'しずおかし', lon: 138.38, lat: 34.98 },
+    capital: { name: '静岡市', kana: 'しずおかし', lon: 138.38, lat: 34.98, note: '駿府城あとと、お茶の 生産で 有名。' },
     region: 'chubu', climate: 'taiheiyo',
     fact: '日本で いちばん 深い 駿河湾。富士山の ふもとから 伊豆半島まで ながい 県。',
     famous: [
@@ -269,7 +269,7 @@ const PREF_INFO = {
     ],
   },
   23: {
-    capital: { name: '名古屋市', kana: 'なごやし', lon: 136.91, lat: 35.18 },
+    capital: { name: '名古屋市', kana: 'なごやし', lon: 136.91, lat: 35.18, note: '名古屋城と、きしめん・みそカツで 有名。' },
     region: 'chubu', climate: 'taiheiyo',
     fact: '中京工業地帯の 中心。工業の 生産額が 日本一 おおい 県。',
     famous: [
@@ -279,7 +279,7 @@ const PREF_INFO = {
     ],
   },
   24: {
-    capital: { name: '津市', kana: 'つし', lon: 136.51, lat: 34.73 },
+    capital: { name: '津市', kana: 'つし', lon: 136.51, lat: 34.73, note: '津観音と、藤堂高虎が きずいた 津城で 有名。' },
     region: 'kinki', climate: 'taiheiyo',
     fact: '伊勢神宮が ある 県。志摩半島の リアス海岸で 真珠を そだてる。',
     famous: [
@@ -289,7 +289,7 @@ const PREF_INFO = {
     ],
   },
   25: {
-    capital: { name: '大津市', kana: 'おおつし', lon: 135.87, lat: 35.00 },
+    capital: { name: '大津市', kana: 'おおつし', lon: 135.87, lat: 35.00, note: '琵琶湖疏水と、三井寺で 有名。' },
     region: 'kinki', climate: 'nairiku',
     fact: '海の ない 県。日本一 大きい 湖、琵琶湖が 県の 6分の1を しめる。',
     famous: [
@@ -299,7 +299,7 @@ const PREF_INFO = {
     ],
   },
   26: {
-    capital: { name: '京都市', kana: 'きょうとし', lon: 135.76, lat: 35.02 },
+    capital: { name: '京都市', kana: 'きょうとし', lon: 135.76, lat: 35.02, note: '清水寺・金閣寺など、世界いさんの お寺・神社が たくさん ある。' },
     region: 'kinki', climate: 'nairiku',
     fact: '1000年 以上 みやこだった まち。北は 日本海にも 面している。',
     famous: [
@@ -309,7 +309,7 @@ const PREF_INFO = {
     ],
   },
   27: {
-    capital: { name: '大阪市', kana: 'おおさかし', lon: 135.50, lat: 34.69 },
+    capital: { name: '大阪市', kana: 'おおさかし', lon: 135.50, lat: 34.69, note: '大阪城と たこ焼きで 有名。' },
     region: 'kinki', climate: 'setouchi',
     fact: '西日本の 中心。阪神工業地帯の 中心で、むかしは 「天下の台所」と よばれた。',
     famous: [
@@ -319,7 +319,7 @@ const PREF_INFO = {
     ],
   },
   28: {
-    capital: { name: '神戸市', kana: 'こうべし', lon: 135.18, lat: 34.69 },
+    capital: { name: '神戸市', kana: 'こうべし', lon: 135.18, lat: 34.69, note: '異人館の ならぶ まちなみと、神戸港で 有名。' },
     region: 'kinki', climate: 'setouchi',
     fact: '日本海と 瀬戸内海の 両方に 面する。淡路島も 兵庫県。',
     famous: [
@@ -329,7 +329,7 @@ const PREF_INFO = {
     ],
   },
   29: {
-    capital: { name: '奈良市', kana: 'ならし', lon: 135.83, lat: 34.69 },
+    capital: { name: '奈良市', kana: 'ならし', lon: 135.83, lat: 34.69, note: '東大寺の大仏と、奈良公園の しかで 有名。' },
     region: 'kinki', climate: 'nairiku',
     fact: '海の ない 県。日本で いちばん 古い みやこ、平城京が あった。',
     famous: [
@@ -339,7 +339,7 @@ const PREF_INFO = {
     ],
   },
   30: {
-    capital: { name: '和歌山市', kana: 'わかやまし', lon: 135.17, lat: 34.23 },
+    capital: { name: '和歌山市', kana: 'わかやまし', lon: 135.17, lat: 34.23, note: '和歌山城と、和歌山ラーメンで 有名。' },
     region: 'kinki', climate: 'taiheiyo',
     fact: '紀伊半島の 南がわ。雨が とても おおく、山に 森が ひろがる。',
     famous: [
@@ -349,7 +349,7 @@ const PREF_INFO = {
     ],
   },
   31: {
-    capital: { name: '鳥取市', kana: 'とっとりし', lon: 134.24, lat: 35.50 },
+    capital: { name: '鳥取市', kana: 'とっとりし', lon: 134.24, lat: 35.50, note: '鳥取砂丘の げんかん口の まち。' },
     region: 'chugoku', climate: 'nihonkai',
     fact: '日本で いちばん 人口が 少ない 県。大きな 砂丘が ある。',
     famous: [
@@ -359,7 +359,7 @@ const PREF_INFO = {
     ],
   },
   32: {
-    capital: { name: '松江市', kana: 'まつえし', lon: 133.05, lat: 35.47 },
+    capital: { name: '松江市', kana: 'まつえし', lon: 133.05, lat: 35.47, note: '国宝の 松江城と、宍道湖の 夕日で 有名。' },
     region: 'chugoku', climate: 'nihonkai',
     fact: '出雲大社が ある 「神話の国」。世界いさんの 石見銀山も ここ。',
     famous: [
@@ -369,7 +369,7 @@ const PREF_INFO = {
     ],
   },
   33: {
-    capital: { name: '岡山市', kana: 'おかやまし', lon: 133.93, lat: 34.66 },
+    capital: { name: '岡山市', kana: 'おかやまし', lon: 133.93, lat: 34.66, note: '岡山城(烏城)と 後楽園、桃太郎でんせつで 有名。' },
     region: 'chugoku', climate: 'setouchi', climateQ: true,
     fact: '雨が 少なく 「晴れの国」と よばれる。瀬戸大橋で 四国と つながる。',
     famous: [
@@ -379,7 +379,7 @@ const PREF_INFO = {
     ],
   },
   34: {
-    capital: { name: '広島市', kana: 'ひろしまし', lon: 132.46, lat: 34.40 },
+    capital: { name: '広島市', kana: 'ひろしまし', lon: 132.46, lat: 34.40, note: '原爆ドームと 平和記念公園、お好み焼きで 有名。' },
     region: 'chugoku', climate: 'setouchi', climateQ: true,
     fact: '中国地方の 中心。原爆ドームと 厳島神社、2つの 世界いさんが ある。',
     famous: [
@@ -389,7 +389,7 @@ const PREF_INFO = {
     ],
   },
   35: {
-    capital: { name: '山口市', kana: 'やまぐちし', lon: 131.47, lat: 34.19 },
+    capital: { name: '山口市', kana: 'やまぐちし', lon: 131.47, lat: 34.19, note: '国宝の 瑠璃光寺 五重塔で 有名。' },
     region: 'chugoku', climate: 'setouchi',
     fact: '本州の いちばん 西。関門海峡を トンネルと 橋で 九州と つないでいる。',
     famous: [
@@ -399,7 +399,7 @@ const PREF_INFO = {
     ],
   },
   36: {
-    capital: { name: '徳島市', kana: 'とくしまし', lon: 134.56, lat: 34.07 },
+    capital: { name: '徳島市', kana: 'とくしまし', lon: 134.56, lat: 34.07, note: '阿波おどりの まちとして 有名。' },
     region: 'shikoku', climate: 'taiheiyo',
     fact: '吉野川が 県を よこに 流れる。鳴門海峡の うずしおで 有名。',
     famous: [
@@ -409,7 +409,7 @@ const PREF_INFO = {
     ],
   },
   37: {
-    capital: { name: '高松市', kana: 'たかまつし', lon: 134.04, lat: 34.34 },
+    capital: { name: '高松市', kana: 'たかまつし', lon: 134.04, lat: 34.34, note: 'さぬきうどんと 栗林公園で 有名。' },
     region: 'shikoku', climate: 'setouchi', climateQ: true,
     fact: '日本で いちばん 面積が 小さい 県。雨が 少ないので ため池が とても おおい。',
     famous: [
@@ -419,7 +419,7 @@ const PREF_INFO = {
     ],
   },
   38: {
-    capital: { name: '松山市', kana: 'まつやまし', lon: 132.77, lat: 33.84 },
+    capital: { name: '松山市', kana: 'まつやまし', lon: 132.77, lat: 33.84, note: '道後温泉と 松山城で 有名。夏目漱石の 小説「坊っちゃん」の ぶたいでも ある。' },
     region: 'shikoku', climate: 'setouchi',
     fact: '瀬戸内海に たくさんの 島が うかぶ。しまなみ海道で 広島と つながる。',
     famous: [
@@ -429,7 +429,7 @@ const PREF_INFO = {
     ],
   },
   39: {
-    capital: { name: '高知市', kana: 'こうちし', lon: 133.53, lat: 33.56 },
+    capital: { name: '高知市', kana: 'こうちし', lon: 133.53, lat: 33.56, note: '桂浜(坂本龍馬の ぞうが 立つ)と、よさこい祭りで 有名。' },
     region: 'shikoku', climate: 'taiheiyo', climateQ: true,
     fact: '雨が とても おおい 県。日本さいごの 清流 四万十川が 流れる。',
     famous: [
@@ -439,7 +439,7 @@ const PREF_INFO = {
     ],
   },
   40: {
-    capital: { name: '福岡市', kana: 'ふくおかし', lon: 130.42, lat: 33.61 },
+    capital: { name: '福岡市', kana: 'ふくおかし', lon: 130.42, lat: 33.61, note: '博多ラーメンと 屋台で 有名。福岡タワーも ある。' },
     region: 'kyushu', climate: 'nihonkai',
     fact: '九州地方の 中心。むかしから 大陸との 行き来の まど口だった。',
     famous: [
@@ -449,7 +449,7 @@ const PREF_INFO = {
     ],
   },
   41: {
-    capital: { name: '佐賀市', kana: 'さがし', lon: 130.30, lat: 33.25 },
+    capital: { name: '佐賀市', kana: 'さがし', lon: 130.30, lat: 33.25, note: '佐賀城あとと、秋の バルーンフェスタで 有名。' },
     region: 'kyushu', climate: 'nihonkai',
     fact: '九州で いちばん 面積が 小さい 県。有明海の ひがたで のりを そだてる。',
     famous: [
@@ -459,7 +459,7 @@ const PREF_INFO = {
     ],
   },
   42: {
-    capital: { name: '長崎市', kana: 'ながさきし', lon: 129.87, lat: 32.74 },
+    capital: { name: '長崎市', kana: 'ながさきし', lon: 129.87, lat: 32.74, note: '出島・中華街・グラバー園と、稲佐山からの 夜景で 有名。' },
     region: 'kyushu', climate: 'taiheiyo',
     fact: '島の数が 日本一 おおい 県。江戸時代、出島だけが 外国との まど口だった。',
     famous: [
@@ -469,7 +469,7 @@ const PREF_INFO = {
     ],
   },
   43: {
-    capital: { name: '熊本市', kana: 'くまもとし', lon: 130.71, lat: 32.79 },
+    capital: { name: '熊本市', kana: 'くまもとし', lon: 130.71, lat: 32.79, note: '熊本城と、からしれんこんで 有名。' },
     region: 'kyushu', climate: 'taiheiyo',
     fact: '世界でも 大きな カルデラを もつ 阿蘇山が ある。地下水が ゆたか。',
     famous: [
@@ -479,7 +479,7 @@ const PREF_INFO = {
     ],
   },
   44: {
-    capital: { name: '大分市', kana: 'おおいたし', lon: 131.61, lat: 33.24 },
+    capital: { name: '大分市', kana: 'おおいたし', lon: 131.61, lat: 33.24, note: '高崎山で 野生の さるが 見られる。' },
     region: 'kyushu', climate: 'taiheiyo',
     fact: '温泉の わき出る 量と 数が 日本一。別府・湯布院が 有名。',
     famous: [
@@ -489,7 +489,7 @@ const PREF_INFO = {
     ],
   },
   45: {
-    capital: { name: '宮崎市', kana: 'みやざきし', lon: 131.42, lat: 31.91 },
+    capital: { name: '宮崎市', kana: 'みやざきし', lon: 131.42, lat: 31.91, note: '青島(鬼の洗濯板)と、フェニックスの 並木で 有名。' },
     region: 'kyushu', climate: 'taiheiyo', climateQ: true,
     fact: '日ざしが つよく あたたかい。ビニールハウスの 野菜づくりが さかん。',
     famous: [
@@ -499,7 +499,7 @@ const PREF_INFO = {
     ],
   },
   46: {
-    capital: { name: '鹿児島市', kana: 'かごしまし', lon: 130.56, lat: 31.56 },
+    capital: { name: '鹿児島市', kana: 'かごしまし', lon: 130.56, lat: 31.56, note: '市街地の すぐ 近くに、いまも けむりを 出す 桜島が ある。' },
     region: 'kyushu', climate: 'taiheiyo',
     fact: 'いまも けむりを 出す 桜島が ある。南北に ながく 島が つづく。',
     famous: [
@@ -509,7 +509,7 @@ const PREF_INFO = {
     ],
   },
   47: {
-    capital: { name: '那覇市', kana: 'なはし', lon: 127.68, lat: 26.21 },
+    capital: { name: '那覇市', kana: 'なはし', lon: 127.68, lat: 26.21, note: '首里城と 国際通りで 有名。' },
     region: 'kyushu', climate: 'nansei', climateQ: true,
     fact: 'いちばん 南で いちばん 西の 県。一年じゅう あたたかく、さんごしょうの 海が ひろがる。',
     famous: [
