@@ -576,7 +576,8 @@ function goNextStation() {
 
 /* ================== 電車が つぎの駅へ はしる ================== */
 
-const TRAIN_RUN_MS = 1450;
+// 電車が つぎの駅に つくまでの 時間(ゆっくり走って、けいさんと漢字を よむ 時間をとる)
+const TRAIN_RUN_MS = 4350;
 
 // 路線にあわせた 電車を くみたてる(銀色 + 路線カラーの帯 など)
 function buildTrainCars(line) {
@@ -613,39 +614,54 @@ function buildTrainCars(line) {
 function makeFlowItems() {
   const items = [];
 
-  // たし算 と ひき算 を ひとつずつ(こたえも いっしょに 出す)
-  const a = randInt(1, 9);
-  const b = randInt(1, Math.min(9, 10 - a));
-  items.push({ kind: 'calc', main: `${a} ＋ ${b} ＝ ${a + b}` });
+  // 漢字は 1回に ひとつだけ。おなじ字でも つかいかたが まいかい かわる
+  const [ch, uses] = FLOW_KANJI[Math.floor(Math.random() * FLOW_KANJI.length)];
+  const [word, yomi] = uses[Math.floor(Math.random() * uses.length)];
+  items.push({ kind: 'kanji', main: ch, word, sub: yomi });
 
-  const c = randInt(3, 10);
-  const d = randInt(1, c - 1);
-  items.push({ kind: 'calc', main: `${c} − ${d} ＝ ${c - d}` });
+  // たし算を ふたつ(こたえも いっしょに 出す)
+  const seen = {};
+  while (items.length < 3) {
+    const a = randInt(1, 9);
+    const b = randInt(1, Math.min(9, 10 - a));
+    const text = `${a} ＋ ${b} ＝ ${a + b}`;
+    if (seen[text]) continue;
+    seen[text] = true;
+    items.push({ kind: 'calc', main: text });
+  }
 
-  // 小1・小2の漢字を ふたつ
-  shuffle(FLOW_KANJI).slice(0, 2).forEach(([ch, yomi]) => {
-    items.push({ kind: 'kanji', main: ch, sub: yomi });
-  });
-
-  return shuffle(items);
+  return items;
 }
 
 function fillFlowCards() {
   const wrap = $('tr-flow');
   wrap.innerHTML = '';
-  const tops = shuffle([26, 36, 46, 56]);
+
+  // 1枚ずつ 間をあけて ながす(かさならないように)。
+  // 電車が はしっている時間ぶん、ゆったり ならべる
+  const tops = shuffle([32, 44, 56]);
+  const totalSec = TRAIN_RUN_MS / 1000;
+  const gap = (totalSec - 0.3) / 3;
+  const delays = [0.15, 0.15 + gap, 0.15 + gap * 2];
 
   makeFlowItems().forEach((item, i) => {
     const card = document.createElement('div');
     card.className = `tr-flow-card ${item.kind}`;
     card.style.top = `${tops[i]}%`;
-    card.style.animationDelay = `${i * 0.3}s`;
+    card.style.animationDelay = `${delays[i]}s`;
 
     const main = document.createElement('div');
     main.className = 'fc-main';
     main.textContent = item.main;
     card.appendChild(main);
 
+    // 漢字は「つかいかた」の ことばと よみも いっしょに
+    if (item.word) {
+      const word = document.createElement('div');
+      word.className = 'fc-word';
+      word.textContent = item.word;
+      card.appendChild(word);
+    }
     if (item.sub) {
       const sub = document.createElement('div');
       sub.className = 'fc-sub';
