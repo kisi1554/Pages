@@ -1,0 +1,1137 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>でんしゃトーク ほしぞらのたんけん</title>
+<meta name="description" content="でんしゃトークのなかまたちが、ほしぞらとちきゅうをたんけんする よみきかせ えほん(おんせいつき)。">
+<style>
+  :root{
+    --ink:#fff8ed;
+    --accent:#ffd166;
+    --bg1:#070b1c;
+    --bg2:#141b3d;
+    --card:#141a33;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    min-height:100svh;
+    background:radial-gradient(ellipse at 50% -10%, #1b2a57 0%, var(--bg1) 55%, #04060f 100%);
+    color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","Yu Gothic",-apple-system,BlinkMacSystemFont,"Helvetica Neue",sans-serif;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:18px 12px 28px;
+  }
+  header{ text-align:center; margin-bottom:14px; }
+  header h1{
+    margin:0; font-size:clamp(20px,3.6vw,30px); letter-spacing:.02em;
+    color:var(--accent); text-shadow:0 2px 10px rgba(255,209,102,.25);
+  }
+  header p{ margin:4px 0 0; font-size:clamp(12px,2vw,14px); color:#cadcfc; opacity:.9; }
+
+  .book{
+    width:100%;
+    max-width:980px;
+    container-type: inline-size;
+  }
+  .stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:1333/750;
+    border-radius:20px;
+    overflow:hidden;
+    background:#070b1c;
+    box-shadow:0 18px 50px rgba(0,0,0,.55), 0 0 0 1px rgba(255,255,255,.06) inset;
+  }
+  .stage svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+  .stage svg text{ user-select:none; }
+
+  .fade-in{ animation:fadeIn .45s ease both; }
+  @keyframes fadeIn{ from{opacity:0; transform:scale(.985);} to{opacity:1; transform:scale(1);} }
+
+  .controls{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    margin-top:14px;
+    flex-wrap:wrap;
+  }
+  .navGroup{ display:flex; align-items:center; gap:10px; }
+  .audioGroup{ display:flex; align-items:center; gap:8px; }
+
+  button{
+    font-family:inherit;
+    border:none;
+    cursor:pointer;
+    border-radius:999px;
+    padding:10px 18px;
+    font-size:15px;
+    font-weight:700;
+    color:#241b4e;
+    background:var(--accent);
+    box-shadow:0 4px 14px rgba(255,209,102,.25);
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  button:active{ transform:scale(.95); }
+  button:disabled{ opacity:.35; cursor:default; transform:none; }
+  button.ghost{
+    background:rgba(255,255,255,.08);
+    color:var(--ink);
+    box-shadow:none;
+    border:1px solid rgba(255,255,255,.18);
+  }
+  button.ghost.active{
+    background:rgba(255,209,102,.18);
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+  .pageInfo{
+    font-size:15px; font-weight:700; color:var(--ink);
+    min-width:64px; text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+
+  .dots{
+    display:flex; flex-wrap:wrap; gap:6px; justify-content:center;
+    margin-top:14px; max-width:100%;
+  }
+  .dot{
+    width:9px; height:9px; border-radius:50%;
+    background:rgba(255,255,255,.22);
+    border:none; padding:0; cursor:pointer;
+  }
+  .dot.current{ background:var(--accent); box-shadow:0 0 0 3px rgba(255,209,102,.25); }
+
+  .hint{
+    margin-top:10px; font-size:12px; color:#9fb0d9; text-align:center; max-width:640px;
+    line-height:1.7;
+  }
+  .speakBadge{
+    display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; color:var(--accent);
+    opacity:0; transition:opacity .2s ease;
+  }
+  .speakBadge.on{ opacity:1; }
+  .speakBadge .dotpulse{
+    width:8px;height:8px;border-radius:50%;background:var(--accent);
+    animation:pulse 1s infinite ease-in-out;
+  }
+  @keyframes pulse{ 0%,100%{transform:scale(.6);opacity:.5;} 50%{transform:scale(1);opacity:1;} }
+
+  footer{ margin-top:22px; font-size:11px; color:#9fb0d9; opacity:.7; text-align:center; }
+  footer a{ color:#cadcfc; }
+
+  @media (max-width:520px){
+    button{ padding:9px 14px; font-size:13px; }
+    .dots{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="book">
+  <header>
+    <h1>でんしゃトーク ほしぞらのたんけん</h1>
+    <p>ちきゅうと おほしさまの えほん — おんせいよみあげ つき</p>
+  </header>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="controls">
+    <div class="navGroup">
+      <button id="prevBtn" class="ghost" aria-label="まえのページ">◀ まえ</button>
+      <div class="pageInfo"><span id="pageNum">1</span> / <span id="pageTotal">30</span></div>
+      <button id="nextBtn">つぎ ▶</button>
+    </div>
+    <div class="audioGroup">
+      <span class="speakBadge" id="speakBadge"><span class="dotpulse"></span>よみあげちゅう…</span>
+      <button id="speakBtn" class="ghost" aria-label="このページをよみあげる">🔊 きく</button>
+      <button id="autoBtn" class="ghost active" aria-label="じどうよみあげ">🔁 じどう:ON</button>
+    </div>
+  </div>
+
+  <div class="dots" id="dots"></div>
+
+  <p class="hint">
+    ← → キーや がめんのボタンで ページを めくれます。「🔊 きく」で もういちど よみあげます。
+    はじめて おんせいを ながすには、いちど がめんを タップしてください(iPhone/iPad)。
+  </p>
+
+  <footer>
+    でんしゃトークの なかまたちが とうじょうする よみきかせ えほんです。おんせいは たんまつの
+    よみあげきのう(Web Speech API)を つかっていて、どこにも つうしんしません。<br>
+    <a href="../densha-talk/">🚃 でんしゃトーク(おしゃべりアプリ)へ もどる</a>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+/* ==================================================================
+ * 0. キャラクター設定 (densha-talk/knowledge.js の CHARACTERS に準拠)
+ * ================================================================== */
+const CH = {
+  roman:      { name:"ろまんちゃん",   color:"#0068B7", ink:"#00457A", hat:"👑" },
+  yamanoten:  { name:"やまのてん",     color:"#9ACD32", ink:"#4F7A06", hat:"🔁" },
+  ginjiro:    { name:"ぎんじろう",     color:"#FF9500", ink:"#A35C00", hat:"🎩" },
+  maruko:     { name:"まるこ",         color:"#F62E36", ink:"#A3151B", hat:"🎀" },
+  keikyu:     { name:"けいきゅん",     color:"#E5171F", ink:"#9B0D13", hat:"🔥" },
+  tokaido:    { name:"とうかいくん",   color:"#F68B1E", ink:"#A15A08", hat:"🏖️" },
+  uenotokyo:  { name:"うえとうくん",   color:"#6A5ACD", ink:"#3D2F7A", hat:"🌉" },
+};
+const CAST = [CH.roman, CH.yamanoten, CH.ginjiro, CH.maruko, CH.keikyu, CH.tokaido, CH.uenotokyo];
+
+const VB_W = 1333, VB_H = 750;
+
+/* ==================================================================
+ * 1. 汎用ユーティリティ
+ * ================================================================== */
+function esc(t){ return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function seeded(seed){
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return function(){ s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
+}
+
+let uid = 0;
+function nextId(prefix){ return prefix + (uid++); }
+
+/* 星空 / 夜明けの背景 */
+function bgRect(kind){
+  const gid = kind === "dawn" ? "dawnGrad" : "nightGrad";
+  return `<rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="url(#${gid})"/>`;
+}
+
+function starfield(seed, count, opts){
+  opts = opts || {};
+  const yMin = opts.yMin !== undefined ? opts.yMin : 0;
+  const yMax = opts.yMax !== undefined ? opts.yMax : VB_H;
+  const r = seeded(seed);
+  let s = "";
+  for (let i = 0; i < count; i++){
+    const x = r() * VB_W;
+    const y = yMin + r() * (yMax - yMin);
+    if (r() > 0.9){
+      const fs = 14 + r() * 10;
+      s += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="${fs.toFixed(1)}" fill="#fff6de" text-anchor="middle" opacity="${(0.75+r()*0.25).toFixed(2)}">★</text>`;
+    } else {
+      const rr = 1.6 + r() * 2.6;
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}" fill="#fff6de" opacity="${(0.45+r()*0.5).toFixed(2)}"/>`;
+    }
+  }
+  return s;
+}
+
+/* 光る惑星・月(グロー付き円) */
+function glowDef(defs, color, opacity){
+  const id = nextId("glow");
+  defs.push(`<radialGradient id="${id}" cx="50%" cy="50%" r="50%">
+    <stop offset="55%" stop-color="${color}" stop-opacity="${opacity!==undefined?opacity:0.55}"/>
+    <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+  </radialGradient>`);
+  return id;
+}
+function planet(defs, cx, cy, r, color, opts){
+  opts = opts || {};
+  let s = "";
+  if (opts.glow !== false){
+    const gid = glowDef(defs, opts.glowColor || color, opts.glowOpacity);
+    const gr = r * 1.55;
+    s += `<circle cx="${cx}" cy="${cy}" r="${gr}" fill="url(#${gid})"/>`;
+  }
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${color}"/>`;
+  return s;
+}
+
+/* 電車キャラクター */
+function trainChar(cx, feetY, scale, ch, opts){
+  opts = opts || {};
+  const bodyW = scale * 115, bodyH = scale * 82;
+  const bx = cx - bodyW / 2;
+  const by = feetY - bodyH - scale * 22;
+  const wheelR = scale * 15;
+  let s = "";
+
+  s += `<ellipse cx="${cx}" cy="${(feetY+3).toFixed(1)}" rx="${(bodyW*0.45).toFixed(1)}" ry="${(scale*7).toFixed(1)}" fill="#000" opacity="0.22"/>`;
+  s += `<circle cx="${(bx+bodyW*0.16).toFixed(1)}" cy="${(by+bodyH-wheelR*0.4).toFixed(1)}" r="${wheelR.toFixed(1)}" fill="#2b2b2b"/>`;
+  s += `<circle cx="${(bx+bodyW*0.84).toFixed(1)}" cy="${(by+bodyH-wheelR*0.4).toFixed(1)}" r="${wheelR.toFixed(1)}" fill="#2b2b2b"/>`;
+
+  s += `<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bodyW.toFixed(1)}" height="${bodyH.toFixed(1)}" rx="${(scale*12).toFixed(1)}" fill="${ch.color}" stroke="${ch.ink}" stroke-width="2.2"/>`;
+
+  const plateW = bodyW * 0.72, plateH = bodyH * 0.56;
+  const px = cx - plateW / 2, py = by + bodyH * 0.14;
+  s += `<rect x="${px.toFixed(1)}" y="${py.toFixed(1)}" width="${plateW.toFixed(1)}" height="${plateH.toFixed(1)}" rx="${(scale*9).toFixed(1)}" fill="#fff8ed" stroke="${ch.ink}" stroke-width="1.4"/>`;
+
+  const eyeY = py + plateH * 0.44;
+  const eyeGap = plateW * 0.26;
+  const eyeR = scale * 8.5;
+  if (opts.sleepy){
+    [cx-eyeGap, cx+eyeGap].forEach(ex=>{
+      s += `<line x1="${(ex-eyeR).toFixed(1)}" y1="${eyeY.toFixed(1)}" x2="${(ex+eyeR).toFixed(1)}" y2="${eyeY.toFixed(1)}" stroke="${ch.ink}" stroke-width="3" stroke-linecap="round"/>`;
+    });
+  } else if (opts.star){
+    [cx-eyeGap, cx+eyeGap].forEach(ex=>{
+      s += `<text x="${ex.toFixed(1)}" y="${(eyeY+eyeR*0.75).toFixed(1)}" font-size="${(eyeR*2.3).toFixed(1)}" text-anchor="middle" fill="#ffc94a">★</text>`;
+    });
+  } else {
+    [cx-eyeGap, cx+eyeGap].forEach(ex=>{
+      s += `<circle cx="${ex.toFixed(1)}" cy="${eyeY.toFixed(1)}" r="${eyeR.toFixed(1)}" fill="#2b2b2b"/>`;
+      s += `<circle cx="${(ex-eyeR*0.35).toFixed(1)}" cy="${(eyeY-eyeR*0.32).toFixed(1)}" r="${(eyeR*0.32).toFixed(1)}" fill="#fff"/>`;
+    });
+  }
+  const cheekR = scale * 5.5;
+  [cx-eyeGap*1.6, cx+eyeGap*1.6].forEach(cxk=>{
+    s += `<circle cx="${cxk.toFixed(1)}" cy="${(eyeY+scale*6).toFixed(1)}" r="${cheekR.toFixed(1)}" fill="#ffb6a0" opacity="0.55"/>`;
+  });
+
+  const mouthY = py + plateH * 0.76;
+  s += `<text x="${cx.toFixed(1)}" y="${mouthY.toFixed(1)}" font-size="${(scale*20).toFixed(1)}" text-anchor="middle" fill="${ch.ink}">${opts.mouth || "⌣"}</text>`;
+
+  s += `<text x="${cx.toFixed(1)}" y="${(by-scale*10).toFixed(1)}" font-size="${(scale*28).toFixed(1)}" text-anchor="middle">${ch.hat}</text>`;
+
+  if (opts.label !== false){
+    s += `<text x="${cx.toFixed(1)}" y="${(feetY+scale*24).toFixed(1)}" font-size="15" text-anchor="middle" fill="#fff8ed" font-weight="700">${esc(ch.name)}</text>`;
+  }
+  return s;
+}
+
+/* ふきだし */
+function bubble(x, y, w, h, text, ink, opts){
+  opts = opts || {};
+  ink = ink || "#2b2b2b";
+  const lines = text.split("\n");
+  const fontSize = opts.fontSize || 22;
+  let s = "";
+  const tailBaseX = x + w * (opts.tailPos !== undefined ? opts.tailPos : 0.18);
+  s += `<polygon points="${(tailBaseX-13).toFixed(1)},${(y+h-1).toFixed(1)} ${(tailBaseX+19).toFixed(1)},${(y+h-1).toFixed(1)} ${(tailBaseX-3).toFixed(1)},${(y+h+26).toFixed(1)}" fill="#fff" stroke="${ink}" stroke-width="2"/>`;
+  s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="14" fill="#fff" stroke="${ink}" stroke-width="2.2"/>`;
+  const lh = fontSize * 1.3;
+  const startY = y + h/2 - (lines.length-1)*lh/2 + fontSize*0.35;
+  s += `<text x="${(x+w/2).toFixed(1)}" y="${startY.toFixed(1)}" font-size="${fontSize}" text-anchor="middle" fill="#2b2b2b" font-weight="600">`;
+  lines.forEach((line,i)=>{ s += `<tspan x="${(x+w/2).toFixed(1)}" dy="${i===0?0:lh}">${esc(line)}</tspan>`; });
+  s += `</text>`;
+  return s;
+}
+
+/* キャプション(下部の本文おびボックス) */
+function captionBox(text, opts){
+  opts = opts || {};
+  const y = opts.y !== undefined ? opts.y : 600;
+  const h = opts.h || 115;
+  const lines = text.split("\n");
+  const fontSize = opts.fontSize || 25;
+  let s = `<rect x="40" y="${y}" width="${VB_W-80}" height="${h}" rx="16" fill="#0a0f2e" fill-opacity="0.8" stroke="#ffd166" stroke-opacity="0.55" stroke-width="1.6"/>`;
+  const lh = fontSize * 1.42;
+  const startY = y + h/2 - (lines.length-1)*lh/2 + fontSize*0.36;
+  s += `<text x="72" y="${startY.toFixed(1)}" font-size="${fontSize}" fill="#fff8ed">`;
+  lines.forEach((line,i)=>{ s += `<tspan x="72" dy="${i===0?0:lh}">${esc(line)}</tspan>`; });
+  s += `</text>`;
+  return s;
+}
+
+/* 月の満ち欠け(円を重ねてかたちをつくる) */
+function moonPhase(cx, cy, r, phase){
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#1B2A57" stroke="#F1EAD6" stroke-width="2.4"/>`;
+  if (phase === 0){
+    s += `<circle cx="${cx}" cy="${cy}" r="${r-6}" fill="#F1EAD6"/>`;
+  } else if (phase === 1){
+    s += `<circle cx="${cx}" cy="${cy}" r="${r-6}" fill="#F1EAD6"/>`;
+    s += `<rect x="${cx-r-4}" y="${cy-r-4}" width="${r+4}" height="${r*2+8}" fill="#1B2A57"/>`;
+  } else if (phase === 2){
+    s += `<circle cx="${cx}" cy="${cy}" r="${r-6}" fill="#F1EAD6"/>`;
+    s += `<circle cx="${cx-r*1.15}" cy="${cy}" r="${r}" fill="#1B2A57"/>`;
+  }
+  return s;
+}
+
+/* 昼夜のちきゅう(グラデーションでなめらかに) */
+function earthDayNight(defs, cx, cy, r){
+  const id = nextId("dn");
+  defs.push(`<linearGradient id="${id}" x1="0%" y1="0%" x2="100%" y2="0%">
+    <stop offset="0%" stop-color="#16234F"/>
+    <stop offset="40%" stop-color="#16234F"/>
+    <stop offset="60%" stop-color="#FFD166"/>
+    <stop offset="100%" stop-color="#FFD166"/>
+  </linearGradient>`);
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r+16}" fill="#FFD166" opacity="0.12"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${id})"/>`;
+  return s;
+}
+
+/* 大陸 */
+function continents(cx, cy, spots){
+  let s = "";
+  spots.forEach(([dx,dy,w,h])=>{
+    s += `<ellipse cx="${(cx+dx).toFixed(1)}" cy="${(cy+dy).toFixed(1)}" rx="${(w/2).toFixed(1)}" ry="${(h/2).toFixed(1)}" fill="#27AE60"/>`;
+  });
+  return s;
+}
+
+/* 木星(バンドをクリップして描く) */
+function jupiterPlanet(defs, cx, cy, r){
+  const clipId = nextId("clip");
+  defs.push(`<clipPath id="${clipId}"><circle cx="${cx}" cy="${cy}" r="${r}"/></clipPath>`);
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r+16}" fill="#FFDDA8" opacity="0.16"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#E8C39E"/>`;
+  const bands = [["#D9A868",-0.62],["#F1DDBB",-0.28],["#C98A4E",0.05],["#F1DDBB",0.38],["#D9A868",0.68]];
+  s += `<g clip-path="url(#${clipId})">`;
+  bands.forEach(([color,t])=>{
+    s += `<ellipse cx="${cx}" cy="${(cy+t*r).toFixed(1)}" rx="${r}" ry="${(r*0.14).toFixed(1)}" fill="${color}" opacity="0.85"/>`;
+  });
+  s += `</g>`;
+  return s;
+}
+
+/* 土星 */
+function saturnPlanet(cx, cy, r){
+  let s = `<ellipse cx="${cx}" cy="${cy}" rx="${(r*1.9).toFixed(1)}" ry="${(r*0.62).toFixed(1)}" fill="none" stroke="#E8C97A" stroke-width="15" opacity="0.9" transform="rotate(-16 ${cx} ${cy})"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r+12}" fill="#FFE8B0" opacity="0.16"/>`;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#E8D3A0"/>`;
+  return s;
+}
+
+/* 太陽(とげとげ光線) */
+function sunBurst(defs, cx, cy, r){
+  const gid = glowDef(defs, "#FFD166", 0.6);
+  let s = `<circle cx="${cx}" cy="${cy}" r="${r*1.7}" fill="url(#${gid})"/>`;
+  let pts = "";
+  const n = 16;
+  for (let i=0;i<n;i++){
+    const a = (i/n) * Math.PI * 2;
+    const a2 = a + Math.PI/n;
+    const ox = cx + Math.cos(a)*(r*1.28), oy = cy + Math.sin(a)*(r*1.28);
+    const b1x = cx + Math.cos(a-0.09)*r, b1y = cy + Math.sin(a-0.09)*r;
+    const b2x = cx + Math.cos(a+0.09)*r, b2y = cy + Math.sin(a+0.09)*r;
+    pts += `<polygon points="${b1x.toFixed(1)},${b1y.toFixed(1)} ${ox.toFixed(1)},${oy.toFixed(1)} ${b2x.toFixed(1)},${b2y.toFixed(1)}" fill="#FFD166" opacity="0.85"/>`;
+  }
+  s += pts;
+  s += `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#FFB020"/>`;
+  return s;
+}
+
+/* 流れ星 */
+function shootingStar(cx, cy, len, ang){
+  const rad = ang * Math.PI / 180;
+  const tx = cx - Math.cos(rad)*len, ty = cy - Math.sin(rad)*len;
+  const perp = rad + Math.PI/2;
+  const wx = Math.cos(perp)*10, wy = Math.sin(perp)*10;
+  let s = `<polygon points="${(tx+wx).toFixed(1)},${(ty+wy).toFixed(1)} ${(tx-wx).toFixed(1)},${(ty-wy).toFixed(1)} ${cx.toFixed(1)},${cy.toFixed(1)}" fill="#FFD166" opacity="0.85"/>`;
+  s += `<text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" font-size="34" text-anchor="middle" fill="#FFF3C4">★</text>`;
+  return s;
+}
+
+/* 星座(点をつないだ点線) */
+function constellation(pts){
+  let s = "";
+  for (let i=0;i<pts.length-1;i++){
+    s += `<line x1="${pts[i][0]}" y1="${pts[i][1]}" x2="${pts[i+1][0]}" y2="${pts[i+1][1]}" stroke="#FFD166" stroke-width="2.6" stroke-dasharray="8 7"/>`;
+  }
+  pts.forEach(([x,y])=>{
+    s += `<text x="${x}" y="${y}" font-size="26" text-anchor="middle" fill="#FFD166">★</text>`;
+  });
+  return s;
+}
+
+function rowOf(cast, startX, y, gap, scale, opts){
+  let s = "";
+  cast.forEach((c,i)=>{ s += trainChar(startX + i*gap, y, scale, c, opts||{}); });
+  return s;
+}
+
+/* ==================================================================
+ * 2. ページの定義 (全30ページ)
+ * ================================================================== */
+const PAGES = [];
+
+function addPage(def){ PAGES.push(def); }
+
+/* ---- P1 表紙 ---- */
+addPage({
+  bg: "night",
+  narration: "でんしゃトーク、ほしぞらのたんけん。ちきゅうと おほしさまの えほんです。",
+  build(defs){
+    let s = starfield(101, 70);
+    s += planet(defs, 1180, 150, 82, "#F1EAD6", { glowColor:"#FFF3C4" });
+    s += `<circle cx="1155" cy="122" r="19" fill="#D8CFAF" opacity="0.4"/>`;
+    s += `<circle cx="1205" cy="168" r="12" fill="#D8CFAF" opacity="0.4"/>`;
+    s += `<text x="80" y="200" font-size="34" font-weight="700" fill="#FFD166">でんしゃトーク</text>`;
+    s += `<text x="80" y="280" font-size="58" font-weight="700" fill="#FFF8ED">ほしぞらのたんけん</text>`;
+    s += `<text x="82" y="330" font-size="21" font-style="italic" fill="#CADCFC">ちきゅうと おほしさまの えほん</text>`;
+    s += rowOf(CAST, 160, 655, 155, 0.85, {label:false});
+    s += `<text x="80" y="685" font-size="14" fill="#CADCFC">でんしゃトークの なかまたち</text>`;
+    return s;
+  }
+});
+
+/* ---- P2 ---- */
+addPage({
+  bg: "night",
+  narration: "よるになると、でんしゃたちは さいごの えきに あつまります。ひとばしの あいだ、みんなで そらを みあげました。",
+  build(defs){
+    let s = starfield(2, 60);
+    s += planet(defs, 160, 270, 62, "#F1EAD6", { glowColor:"#FFF3C4" });
+    s += `<rect x="0" y="570" width="${VB_W}" height="18" fill="#3A3F55"/>`;
+    s += rowOf(CAST, 210, 570, 160, 1.0);
+    s += captionBox("よるになると、でんしゃたちはさいごのえきにあつまります。ひとばしのあいだ、みんな\nでそらをみあげました。", {y:40, h:110});
+    return s;
+  }
+});
+
+/* ---- P3 ---- */
+addPage({
+  bg: "night",
+  narration: "ろまんちゃんが そらを みて いいました。あのほしまで いってみたいな。ひかっているかなあ。",
+  build(defs){
+    let s = starfield(3, 65);
+    s += trainChar(420, 540, 2.0, CH.roman, {mouth:"◡"});
+    s += bubble(560, 270, 320, 150, "あのほしまで\nいって みたいな", CH.roman.ink, {fontSize:22});
+    s += `<text x="930" y="165" font-size="34" fill="#FFD166">★</text>`;
+    s += captionBox("ろまんちゃんがそらをみていいました。「あのほしまで、いってみたいな。ひかってい\nるかなあ。」", {y:610, h:110});
+    return s;
+  }
+});
+
+/* ---- P4 ---- */
+addPage({
+  bg: "night",
+  narration: "じゃあ、みんなで いこう！ やまのてんが いいました。ぴかっと ひかる せんろが、そらに あらわれました。",
+  build(defs){
+    let s = starfield(4, 60);
+    for (let i=0;i<10;i++){
+      const t = i/9, x = 120+t*950, y = 620-t*400;
+      s += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="22" fill="#FFD166" text-anchor="middle">★</text>`;
+    }
+    s += trainChar(220, 650, 1.1, CH.yamanoten, {mouth:"⌣"});
+    s += trainChar(396, 650, 1.1, CH.roman);
+    s += trainChar(572, 650, 1.1, CH.ginjiro);
+    s += trainChar(748, 650, 1.1, CH.maruko);
+    s += bubble(120, 310, 230, 120, "じゃあ、\nみんなで いこう!", CH.yamanoten.ink, {fontSize:19});
+    s += captionBox("「じゃあ、みんなでいこう!」やまのてんがいいました。ぴかっとひかるせんろが、そら\nにあらわれました。", {y:40, h:110});
+    return s;
+  }
+});
+
+/* ---- P5 ---- */
+addPage({
+  bg: "night",
+  narration: "しゅっぱつしんこう。しゅ、しゅ、しゅっぽー。でんしゃたちは、そらへ のぼっていきます。",
+  build(defs){
+    let s = starfield(5, 70);
+    const positions = [[200,630],[330,530],[470,430],[610,330],[750,240],[890,160],[1020,100]];
+    CAST.forEach((c,i)=>{
+      const [x,y] = positions[i];
+      s += trainChar(x, y, 0.95, c, {label:false});
+      s += `<circle cx="${x-70}" cy="${y+2}" r="10" fill="none" stroke="#CADCFC" stroke-width="2" opacity="0.7"/>`;
+    });
+    s += captionBox("しゅっぱつしんこう! しゅしゅしゅっぽー! でんしゃたちは、そらへ のぼっていきます。", {y:605, h:115, fontSize:24});
+    return s;
+  }
+});
+
+/* ---- P6 ---- */
+addPage({
+  bg: "night",
+  narration: "どんどん たかく のぼると、したに まるい ほしが みえてきました。それが「ちきゅう」です。",
+  build(defs){
+    let s = starfield(6, 45, {yMax:320});
+    s += planet(defs, VB_W/2, 700, 230, "#2E86DE", { glowColor:"#5AA9FF" });
+    s += continents(VB_W/2, 700, [[-90,-60,110,70],[40,10,90,60],[-20,100,130,60],[110,-110,70,50]]);
+    s += rowOf(CAST.slice(0,4), 250, 260, 100, 0.7, {label:false});
+    s += captionBox("どんどんたかくのぼると、したにまるいほしがみえてきました。それが「ちきゅう」です。", {y:30, h:100, fontSize:24});
+    return s;
+  }
+});
+
+/* ---- P7 ---- */
+addPage({
+  bg: "night",
+  narration: "ちきゅうは あおくて、みずが いっぱい。みどりの ところは やまや もりです。きれいだね。",
+  build(defs){
+    let s = starfield(7, 40, {yMax:200});
+    s += planet(defs, 360, 360, 250, "#2E86DE", { glowColor:"#5AA9FF" });
+    s += continents(360, 360, [[-100,-90,130,80],[60,20,110,70],[-30,120,150,70],[120,-130,80,60]]);
+    s += trainChar(970, 590, 1.3, CH.roman, {label:false});
+    s += bubble(800, 260, 190, 100, "きれいだね", CH.roman.ink, {fontSize:22});
+    s += captionBox("ちきゅうはあおくて、みずがいっぱい。みどりのところはやまやもりです。「きれいだ\nね。」", {y:605, h:115});
+    return s;
+  }
+});
+
+/* ---- P8 ---- */
+addPage({
+  bg: "night",
+  narration: "やまのてんが ぐるっと まわると、ちきゅうも ゆっくり くるくる まわっている ことに きづきました。",
+  build(defs){
+    let s = starfield(8, 40, {yMax:200});
+    s += planet(defs, 870, 400, 210, "#2E86DE", { glowColor:"#5AA9FF" });
+    s += continents(870, 400, [[-80,-50,100,60],[50,30,90,50],[-10,90,110,50]]);
+    [-40,15,70].forEach(ang=>{
+      const rad = ang*Math.PI/180;
+      const x = 870+260*Math.cos(rad), y = 400+260*Math.sin(rad);
+      s += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="20" fill="#FFD166">✳</text>`;
+    });
+    s += trainChar(330, 570, 1.7, CH.yamanoten, {mouth:"⌣"});
+    s += captionBox("やまのてんがぐるっとまわると、ちきゅうもゆっくり くるくるまわっていることに きづ\nきました。", {y:30, h:100});
+    return s;
+  }
+});
+
+/* ---- P9 ---- */
+addPage({
+  bg: "night",
+  narration: "ちきゅうが まわると、ひると よるが かわりばんこに きます。ひかりが あたる ほうが ひる、はんたいが よるです。",
+  build(defs){
+    let s = earthDayNight(defs, VB_W/2, 385, 215);
+    s += continents(VB_W/2, 385, [[-90,-80,115,70],[55,15,100,60],[-25,105,135,60]]);
+    s += `<text x="${VB_W/2-190}" y="190" font-size="26" font-weight="700" fill="#FFF8ED">よる</text>`;
+    s += `<text x="${VB_W/2+50}" y="190" font-size="26" font-weight="700" fill="#6B4B00">ひる</text>`;
+    s += captionBox("ちきゅうがまわると、ひるとよるがかわりばんこにきます。ひかりがあたるほうがひる、\nはんたいがよるです。", {y:605, h:115});
+    return s;
+  }
+});
+
+/* ---- P10 ---- */
+addPage({
+  bg: "night",
+  narration: "つぎに みえてきたのは、まんまるい つき。ぎんじろうが「わしに まかせい」と はなしはじめました。",
+  build(defs){
+    let s = starfield(10, 50, {yMax:280});
+    s += planet(defs, 940, 320, 200, "#F1EAD6", { glowColor:"#FFF3C4" });
+    [[-70,-40,50],[50,50,40],[-20,80,30],[80,-70,35]].forEach(([dx,dy,r])=>{
+      s += `<circle cx="${940+dx}" cy="${320+dy}" r="${r}" fill="#D8CFAF"/>`;
+    });
+    s += trainChar(300, 600, 1.8, CH.ginjiro, {mouth:"⌣"});
+    s += bubble(460, 350, 210, 110, "わしに\nまかせい", CH.ginjiro.ink, {fontSize:20});
+    s += captionBox("つぎにみえてきたのは、まんまるいつき。ぎんじろうが「わしにまかせい」とはなしはじ\nめました。", {y:30, h:100});
+    return s;
+  }
+});
+
+/* ---- P11 ---- */
+addPage({
+  bg: "night",
+  narration: "つきには でこぼこの あなが たくさん あるんじゃ。むかしむかし、いんせきが ぶつかった あとじゃよ。",
+  build(defs){
+    let s = starfield(11, 30, {yMax:140});
+    s += planet(defs, 660, 350, 255, "#F1EAD6", { glow:false });
+    const r = seeded(11);
+    for (let i=0;i<14;i++){
+      const ang = r()*Math.PI*2, rr = r()*195;
+      const cx = 660+rr*Math.cos(ang), cy = 350+rr*Math.sin(ang);
+      if (Math.hypot(cx-660,cy-350) > 235) continue;
+      const cr = 10+r()*18;
+      s += `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${cr.toFixed(1)}" fill="#D8CFAF" stroke="#C4B896" stroke-width="1"/>`;
+    }
+    s += trainChar(1130, 640, 1.15, CH.ginjiro, {label:false});
+    s += captionBox("「つきにはでこぼこのあながたくさんあるんじゃ。むかしむかし、いんせきがぶつかっ\nたあとじゃよ。」", {y:605, h:115});
+    return s;
+  }
+});
+
+/* ---- P12 ---- */
+addPage({
+  bg: "night",
+  narration: "つきは かたちを かえながら、ちきゅうの まわりを まわっています。まるいひ、はんぶんのひ、みかづき、しんげつ。",
+  build(defs){
+    let s = starfield(12, 45, {yMax:200});
+    const labels = ["まんまるいひ","はんぶんのひ","みかづき","しんげつ"];
+    const cx0 = 260, gap = 280, cy = 370, r = 95;
+    labels.forEach((label,i)=>{
+      const cx = cx0 + i*gap;
+      s += moonPhase(cx, cy, r, i);
+      s += `<text x="${cx}" y="${cy+r+40}" font-size="19" text-anchor="middle" fill="#FFF8ED">${label}</text>`;
+    });
+    s += captionBox("つきはかたちをかえながら、ちきゅうのまわりをまわっています。まるいひ、はんぶん\nのひ、みかづき。", {y:605, h:115});
+    return s;
+  }
+});
+
+/* ---- P13 ---- */
+addPage({
+  bg: "night",
+  narration: "まるこが きょろきょろ。もっと おくに いってみたい！ と とびだしました。",
+  build(defs){
+    let s = starfield(13, 65);
+    s += trainChar(600, 560, 2.1, CH.maruko, {mouth:"◡"});
+    s += `<line x1="300" y1="500" x2="490" y2="500" stroke="#CADCFC" stroke-width="2.5" opacity="0.5" stroke-dasharray="4 6"/>`;
+    s += bubble(780, 260, 250, 150, "もっと\nおくに\nいってみたい!", CH.maruko.ink, {fontSize:20});
+    s += captionBox("まるこがきょろきょろ。「もっとおくにいってみたい!」ととびだしました。", {y:40, h:110, fontSize:24});
+    return s;
+  }
+});
+
+/* ---- P14 ---- */
+addPage({
+  bg: "night",
+  narration: "ちいさな ほし、すいせいが みえました。たいように いちばん ちかい ほしです。あつくて、はやく まわります。",
+  build(defs){
+    let s = starfield(14, 55);
+    s += planet(defs, 560, 370, 130, "#B9865A", { glowColor:"#FFB37A" });
+    for (let i=0;i<5;i++){
+      const ang = -30+i*15;
+      const rad = ang*Math.PI/180;
+      const x1 = 560+140*Math.cos(rad), y1 = 370+140*Math.sin(rad);
+      const x2 = 560+190*Math.cos(rad), y2 = 370+190*Math.sin(rad);
+      s += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#FFB37A" stroke-width="3" stroke-linecap="round"/>`;
+    }
+    s += `<text x="560" y="530" font-size="24" text-anchor="middle" font-weight="700" fill="#FFF8ED">すいせい</text>`;
+    s += rowOf(CAST.slice(0,3), 990, 660, 120, 0.85, {label:false});
+    s += captionBox("ちいさなほし、すいせいがみえました。たいようにいちばんちかいほしです。あつくて、\nはやくまわります。", {y:30, h:100});
+    return s;
+  }
+});
+
+/* ---- P15 ---- */
+addPage({
+  bg: "night",
+  narration: "よぞらで いちばん きらきら ひかる ほしが きんせいです。よいの みょうじょう とも よばれます。",
+  build(defs){
+    let s = starfield(15, 55);
+    s += planet(defs, 660, 370, 170, "#FDE9B0", { glowColor:"#FFF3C4" });
+    [-60,-20,20,60,100,140,180,220].forEach(ang=>{
+      const rad = ang*Math.PI/180;
+      const x = 660+250*Math.cos(rad), y = 370+250*Math.sin(rad);
+      s += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="18" text-anchor="middle" fill="#FFF3C4">✦</text>`;
+    });
+    s += `<text x="660" y="600" font-size="24" text-anchor="middle" font-weight="700" fill="#FFF8ED">きんせい</text>`;
+    s += trainChar(1060, 640, 1.1, CH.uenotokyo, {label:false});
+    s += captionBox("よぞらでいちばんきらきらひかるほしがきんせいです。「よいのみょうじょう」ともよば\nれます。", {y:605, h:115});
+    return s;
+  }
+});
+
+/* ---- P16 ---- */
+addPage({
+  bg: "night",
+  narration: "あかい ほし、かせいが みえてきました。おれの いろと おなじだ！ と けいきゅんが びゅーんと ちかづきます。",
+  build(defs){
+    let s = starfield(16, 55);
+    s += planet(defs, 860, 360, 170, "#C1440E", { glowColor:"#FF7A4A" });
+    s += `<text x="860" y="570" font-size="24" text-anchor="middle" font-weight="700" fill="#FFF8ED">かせい</text>`;
+    for (let i=0;i<4;i++){
+      s += `<polygon points="${200+i*35},${590+i*5} ${230+i*35},${590+i*5+9} ${200+i*35},${590+i*5+18}" fill="#FFB37A" opacity="${0.9-i*0.15}"/>`;
+    }
+    s += trainChar(360, 610, 1.6, CH.keikyu, {mouth:"○", label:false});
+    s += bubble(570, 175, 210, 145, "おれの\nいろと\nおなじだ!", CH.keikyu.ink, {fontSize:19});
+    s += captionBox("あかいほし、かせいがみえてきました。「おれのいろとおなじだ!」とけいきゅんがびゅ\nーんとちかづきます。", {y:615, h:110});
+    return s;
+  }
+});
+
+/* ---- P17 ---- */
+addPage({
+  bg: "night",
+  narration: "いわの かけらが たくさん とぶ しょうわくせいたいを、けいきゅんが びゅんびゅん よけながら はしります。",
+  build(defs){
+    let s = starfield(17, 40);
+    const r = seeded(99);
+    for (let i=0;i<18;i++){
+      const x = 100+r()*1100, y = 100+r()*460;
+      const rr = 8+r()*16;
+      s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${rr.toFixed(1)}" fill="#9C8F7A" stroke="#6E6350" stroke-width="1"/>`;
+    }
+    s += trainChar(640, 620, 1.5, CH.keikyu, {mouth:"○", label:false});
+    s += captionBox("いわのかけらがたくさんとぶ「しょうわくせいたい」を、けいきゅんがびゅんびゅんよけ\nながらはしります。", {y:640, h:85, fontSize:22});
+    return s;
+  }
+});
+
+/* ---- P18 ---- */
+addPage({
+  bg: "night",
+  narration: "いちばん おおきい ほし、もくせいが どーんと あらわれました。しまもようが すてきです。",
+  build(defs){
+    let s = starfield(18, 40, {yMax:150});
+    s += jupiterPlanet(defs, 660, 400, 270);
+    s += `<text x="660" y="780" font-size="26" text-anchor="middle" font-weight="700" fill="#FFF8ED">もくせい</text>`;
+    s += rowOf(CAST.slice(0,4), 100, 690, 95, 0.7, {label:false});
+    s += captionBox("いちばんおおきいほし、もくせいがどーんとあらわれました。しまもようがすてきです。", {y:25, h:95, fontSize:24});
+    return s;
+  }
+});
+
+/* ---- P19 ---- */
+addPage({
+  bg: "night",
+  narration: "わっかを もった どせいです。わあ、ぼうしみたい！ と みんなで よろこびました。",
+  build(defs){
+    let s = starfield(19, 45, {yMax:160});
+    s += saturnPlanet(660, 380, 160);
+    s += `<text x="660" y="620" font-size="24" text-anchor="middle" font-weight="700" fill="#FFF8ED">どせい</text>`;
+    s += trainChar(1050, 640, 1.1, CH.yamanoten, {mouth:"◡", label:false});
+    s += bubble(120, 320, 210, 120, "ぼうし\nみたい!", CH.yamanoten.ink, {fontSize:20});
+    s += captionBox("わっかをもったどせいです。「わあ、ぼうしみたい!」とみんなでよろこびました。", {y:650, h:75, fontSize:23});
+    return s;
+  }
+});
+
+/* ---- P20 ---- */
+addPage({
+  bg: "night",
+  narration: "とおくに あおい てんのうせいと かいおうせいが みえます。とても つめたくて、とおい ほしです。",
+  build(defs){
+    let s = starfield(20, 55);
+    s += planet(defs, 420, 360, 135, "#9FE0E0", { glowColor:"#C7F0F0" });
+    s += planet(defs, 900, 430, 155, "#3B5BDB", { glowColor:"#6B8CFF" });
+    s += `<text x="420" y="535" font-size="20" text-anchor="middle" font-weight="700" fill="#FFF8ED">てんのうせい</text>`;
+    s += `<text x="900" y="635" font-size="20" text-anchor="middle" font-weight="700" fill="#FFF8ED">かいおうせい</text>`;
+    s += trainChar(640, 670, 1.05, CH.roman, {label:false});
+    s += captionBox("とおくにあおいてんのうせいとかいおうせいがみえます。とてもつめたくて、とおいほ\nしです。", {y:35, h:100});
+    return s;
+  }
+});
+
+/* ---- P21 ---- */
+addPage({
+  bg: "night2",
+  narration: "その まわりに、まぶしい ひかりが みえました。たいようです。じぶんで ひかる「こうせい」なのです。",
+  build(defs){
+    let s = sunBurst(defs, VB_W/2, 380, 170);
+    s += `<text x="${VB_W/2}" y="620" font-size="26" text-anchor="middle" font-weight="700" fill="#FFF8ED">たいよう</text>`;
+    s += captionBox("そのまわりに、まぶしいひかりがみえました。たいようです。じぶんでひかる「こうせ\nい」なのです。", {y:35, h:100});
+    return s;
+  }
+});
+
+/* ---- P22 ---- */
+addPage({
+  bg: "night",
+  narration: "よるの そらの ほしも、みんな たいようの なかま。ちいさく みえるけど、ほんとは とても おおきいのです。",
+  build(defs){
+    let s = starfield(22, 90);
+    [[330,260,50],[750,200,65],[980,360,40],[560,460,35]].forEach(([x,y,r])=>{
+      const gid = glowDef(defs, "#FFD166", 0.5);
+      s += `<circle cx="${x}" cy="${y}" r="${r*1.8}" fill="url(#${gid})"/>`;
+      s += `<text x="${x}" y="${y+r*0.35}" font-size="${r}" text-anchor="middle" fill="#FFF3C4">★</text>`;
+    });
+    s += rowOf(CAST.slice(0,3), 220, 650, 110, 0.85, {label:false});
+    s += captionBox("よるのそらのほしも、みんなたいようのなかま。ちいさくみえるけど、ほんとはとても\nおおきいのです。", {y:30, h:105});
+    return s;
+  }
+});
+
+/* ---- P23 ---- */
+addPage({
+  bg: "night",
+  narration: "ろまんちゃんが ほしを つないで みました。あ、でんしゃの かたちだ！ あたらしい せいざの できあがり。",
+  build(defs){
+    let s = starfield(23, 75);
+    s += constellation([[300,220],[400,200],[500,230],[560,310],[500,390],[400,390],[320,330]]);
+    s += trainChar(1020, 590, 1.7, CH.roman, {mouth:"◡", label:false});
+    s += bubble(660, 460, 210, 150, "あ、\nでんしゃの\nかたちだ!", CH.roman.ink, {fontSize:19});
+    s += captionBox("ろまんちゃんがほしをつないでみました。「あ、でんしゃのかたちだ!」あたらしいせい\nざのできあがり。", {y:640, h:90, fontSize:22});
+    return s;
+  }
+});
+
+/* ---- P24 ---- */
+addPage({
+  bg: "night",
+  narration: "ひとつの ほしが すーっと ながれました。りゅうせいです！ みんなで おねがいごとを しました。",
+  build(defs){
+    let s = starfield(24, 60);
+    s += shootingStar(1000, 60, 260, 55);
+    s += `<text x="830" y="200" font-size="30" fill="#FFF3C4">★</text>`;
+    const positions = [170,310,450,590,730,870,1010];
+    CAST.forEach((c,i)=>{ s += trainChar(positions[i], 660, 0.85, c, {label:false}); });
+    s += captionBox("ひとつのほしがすーっとながれました。りゅうせいです! みんなでおねがいごとをしま\nした。", {y:355, h:190, fontSize:25});
+    return s;
+  }
+});
+
+/* ---- P25 ---- */
+addPage({
+  bg: "night",
+  narration: "うえとうくんが ひかる はしを つくりました。そろそろ、かえろう。",
+  build(defs){
+    let s = starfield(25, 55);
+    for (let i=0;i<12;i++){
+      const t = i/11, x = 150+t*1000, y = 360+Math.sin(t*Math.PI)*-160;
+      s += `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" font-size="18" text-anchor="middle" fill="#FFD166">★</text>`;
+    }
+    s += trainChar(660, 590, 1.9, CH.uenotokyo, {mouth:"⌣"});
+    s += bubble(840, 400, 220, 130, "そろそろ、\nかえろう", CH.uenotokyo.ink, {fontSize:21});
+    s += captionBox("うえとうくんがひかるはしをつくりました。「そろそろ、かえろう。」", {y:30, h:100, fontSize:25});
+    return s;
+  }
+});
+
+/* ---- P26 ---- */
+addPage({
+  bg: "night",
+  narration: "かえりみち、もういちど ちきゅうを みました。あたたかくて、いのちに あふれた、せかいで ひとつだけの ほしです。",
+  build(defs){
+    let s = starfield(26, 45, {yMax:300});
+    s += planet(defs, 460, 410, 260, "#2E86DE", { glowColor:"#5AA9FF" });
+    s += continents(460, 410, [[-100,-80,130,80],[60,20,110,70],[-30,120,150,70]]);
+    s += `<text x="735" y="165" font-size="30" text-anchor="middle" fill="#FF6B81">♡</text>`;
+    s += rowOf(CAST.slice(0,3), 930, 670, 110, 0.75, {label:false});
+    s += captionBox("かえりみち、もういちどちきゅうをみました。あたたかくて、いのちにあふれた、せか\nいでひとつだけのほしです。", {y:35, h:100});
+    return s;
+  }
+});
+
+/* ---- P27 ---- */
+addPage({
+  bg: "dawn",
+  narration: "しゅっしゅっぽっぽ、そらから おりていきます。とうかいくんの すきな あさやけの いろが みえてきました。",
+  build(defs){
+    let s = `<circle cx="${VB_W/2}" cy="770" r="320" fill="#FFD9A0"/>`;
+    s += starfield(27, 15, {yMax:220});
+    const positions = [[200,460],[400,410],[580,360],[760,320],[940,290],[1100,260],[1220,240]];
+    CAST.forEach((c,i)=>{ const [x,y]=positions[i]; s += trainChar(x,y,0.9,c,{label:false}); });
+    s += captionBox("しゅっしゅっぽっぽ、そらからおりていきます。とうかいくんのすきなあさやけのいろ\nがみえてきました。", {y:630, h:90, fontSize:22});
+    return s;
+  }
+});
+
+/* ---- P28 ---- */
+addPage({
+  bg: "dawn2",
+  narration: "さいごの えきに つきました。みんな ちょっぴり ねむいけど、にこにこ かおです。たのしかったね。",
+  build(defs){
+    let s = `<rect x="0" y="570" width="${VB_W}" height="18" fill="#3A3F55"/>`;
+    s += rowOf(CAST, 210, 570, 160, 1.0, {mouth:"⌣"});
+    s += captionBox("さいごのえきにつきました。みんなちょっぴりねむいけど、にこにこかおです。「たの\nしかったね。」", {y:40, h:110});
+    return s;
+  }
+});
+
+/* ---- P29 ---- */
+addPage({
+  bg: "night",
+  narration: "ろまんちゃんが いいました。またこんど、いっしょに ほしを みようね。おやすみなさい。",
+  build(defs){
+    let s = starfield(29, 60);
+    s += planet(defs, 1150, 150, 78, "#F1EAD6", { glowColor:"#FFF3C4" });
+    s += trainChar(420, 560, 2.1, CH.roman, {sleepy:true, mouth:"⌣"});
+    s += bubble(630, 300, 260, 200, "またこんど、\nいっしょに\nほしを\nみようね", CH.roman.ink, {fontSize:20});
+    s += `<text x="80" y="700" font-size="26" font-weight="700" font-style="italic" fill="#FFD166">おやすみなさい</text>`;
+    return s;
+  }
+});
+
+/* ---- P30 ---- */
+addPage({
+  bg: "night",
+  narration: "でんしゃトークの なかまたち。ろまんちゃん、やまのてん、ぎんじろう、まるこ、けいきゅん、とうかいくん、うえとうくん。また あそびに きてね。おしまい。",
+  build(defs){
+    let s = starfield(30, 50);
+    s += `<text x="70" y="80" font-size="30" font-weight="700" fill="#FFD166">でんしゃトークの なかまたち</text>`;
+    const infos = [
+      [CH.roman, "ほしをみるのがすきな ゆめみるや"],
+      [CH.yamanoten, "ぐるぐるまわるのがとくい"],
+      [CH.ginjiro, "ものしりなおじいさん"],
+      [CH.maruko, "おしゃべりがだいすき"],
+      [CH.keikyu, "とにかくはやいのがじまん"],
+      [CH.tokaido, "うみのけしきがすき"],
+      [CH.uenotokyo, "まちとまちをつなぐまとめやく"],
+    ];
+    const cols = 4, cardW = 285, cardH = 270, gapX = 15, gapY = 25;
+    const startX = 65, startY = 120;
+    infos.forEach(([c,trait], i)=>{
+      const col = i % cols, row = Math.floor(i/cols);
+      const cx = startX + col*(cardW+gapX), cy = startY + row*(cardH+gapY);
+      s += `<rect x="${cx}" y="${cy}" width="${cardW}" height="${cardH}" rx="12" fill="#0a0f2e" fill-opacity="0.85" stroke="${c.color}" stroke-width="2"/>`;
+      s += trainChar(cx+cardW/2, cy+195, 1.25, c, {label:false});
+      s += `<text x="${cx+cardW/2}" y="${cy+218}" font-size="17" text-anchor="middle" font-weight="700" fill="#FFF8ED">${esc(c.name)}</text>`;
+      s += `<text x="${cx+cardW/2}" y="${cy+245}" font-size="13" text-anchor="middle" fill="#CADCFC">${esc(trait)}</text>`;
+    });
+    s += `<text x="${VB_W-260}" y="${VB_H-35}" font-size="26" text-anchor="end" font-weight="700" font-style="italic" fill="#FFD166">おしまい</text>`;
+    return s;
+  }
+});
+
+/* ==================================================================
+ * 3. 背景グラデーション定義
+ * ================================================================== */
+const STATIC_DEFS = `
+  <linearGradient id="nightGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#070B24"/>
+    <stop offset="100%" stop-color="#1B2A57"/>
+  </linearGradient>
+  <linearGradient id="dawnGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#241B4E"/>
+    <stop offset="100%" stop-color="#F6A24C"/>
+  </linearGradient>
+`;
+/* night2(たいようのページ)は紺〜紫のグラデーション */
+const NIGHT2_GRAD = `
+  <linearGradient id="night2Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+    <stop offset="0%" stop-color="#070B24"/>
+    <stop offset="100%" stop-color="#3A2A6B"/>
+  </linearGradient>
+`;
+
+/* ==================================================================
+ * 4. 描画・ナビゲーション
+ * ================================================================== */
+const stageEl = document.getElementById("stage");
+const pageNumEl = document.getElementById("pageNum");
+const pageTotalEl = document.getElementById("pageTotal");
+const prevBtn = document.getElementById("prevBtn");
+const nextBtn = document.getElementById("nextBtn");
+const speakBtn = document.getElementById("speakBtn");
+const autoBtn = document.getElementById("autoBtn");
+const speakBadge = document.getElementById("speakBadge");
+const dotsEl = document.getElementById("dots");
+
+pageTotalEl.textContent = PAGES.length;
+
+let current = 0;
+let autoRead = true;
+try {
+  const savedAuto = localStorage.getItem("ehon-autoread");
+  if (savedAuto !== null) autoRead = savedAuto === "1";
+  const savedPage = parseInt(localStorage.getItem("ehon-page") || "0", 10);
+  if (savedPage >= 0 && savedPage < PAGES.length) current = savedPage;
+} catch(e){}
+
+function buildDots(){
+  dotsEl.innerHTML = "";
+  PAGES.forEach((_,i)=>{
+    const b = document.createElement("button");
+    b.className = "dot" + (i===current ? " current" : "");
+    b.setAttribute("aria-label", "ページ " + (i+1));
+    b.addEventListener("click", ()=> goTo(i));
+    dotsEl.appendChild(b);
+  });
+}
+
+function render(){
+  const page = PAGES[current];
+  const defs = [];
+  const bgKind = page.bg;
+  let bgSvg;
+  let defsExtra = "";
+  if (bgKind === "night2"){
+    defsExtra = NIGHT2_GRAD;
+    bgSvg = `<rect x="0" y="0" width="${VB_W}" height="${VB_H}" fill="url(#night2Grad)"/>`;
+  } else if (bgKind === "dawn" || bgKind === "dawn2"){
+    bgSvg = bgRect("dawn");
+  } else {
+    bgSvg = bgRect("night");
+  }
+  const content = page.build(defs);
+  const svg = `<svg viewBox="0 0 ${VB_W} ${VB_H}" xmlns="http://www.w3.org/2000/svg" font-family="'Hiragino Maru Gothic ProN','Yu Gothic','Hiragino Sans',sans-serif" class="fade-in">
+    <defs>${STATIC_DEFS}${defsExtra}${defs.join("")}</defs>
+    ${bgSvg}
+    ${content}
+  </svg>`;
+  stageEl.innerHTML = svg;
+
+  pageNumEl.textContent = current + 1;
+  prevBtn.disabled = current === 0;
+  nextBtn.disabled = current === PAGES.length - 1;
+  nextBtn.textContent = current === PAGES.length - 1 ? "おしまい" : "つぎ ▶";
+
+  [...dotsEl.children].forEach((d,i)=> d.classList.toggle("current", i===current));
+
+  try {
+    localStorage.setItem("ehon-page", String(current));
+  } catch(e){}
+
+  if (autoRead) speak(page.narration);
+}
+
+function goTo(i){
+  if (i < 0 || i >= PAGES.length) return;
+  current = i;
+  render();
+}
+function next(){ goTo(current+1); }
+function prev(){ goTo(current-1); }
+
+prevBtn.addEventListener("click", prev);
+nextBtn.addEventListener("click", next);
+
+window.addEventListener("keydown",(e)=>{
+  if (e.key === "ArrowRight" || e.key === " "){ e.preventDefault(); next(); }
+  else if (e.key === "ArrowLeft"){ e.preventDefault(); prev(); }
+});
+
+let touchStartX = null;
+stageEl.addEventListener("touchstart", (e)=>{ touchStartX = e.touches[0].clientX; }, {passive:true});
+stageEl.addEventListener("touchend", (e)=>{
+  if (touchStartX === null) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 40){ dx < 0 ? next() : prev(); }
+  touchStartX = null;
+}, {passive:true});
+
+/* ==================================================================
+ * 5. よみあげ (Web Speech API / 端末内で完結・通信なし)
+ * ================================================================== */
+const hasSpeech = "speechSynthesis" in window;
+let jaVoice = null;
+
+function pickVoice(){
+  if (!hasSpeech) return;
+  const voices = window.speechSynthesis.getVoices();
+  jaVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith("ja")) || null;
+}
+if (hasSpeech){
+  pickVoice();
+  window.speechSynthesis.onvoiceschanged = pickVoice;
+}
+
+function speak(text){
+  if (!hasSpeech) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "ja-JP";
+  if (jaVoice) u.voice = jaVoice;
+  u.rate = 0.95;
+  u.pitch = 1.05;
+  u.onstart = ()=> speakBadge.classList.add("on");
+  u.onend = ()=> speakBadge.classList.remove("on");
+  u.onerror = ()=> speakBadge.classList.remove("on");
+  window.speechSynthesis.speak(u);
+}
+
+speakBtn.addEventListener("click", ()=>{
+  speak(PAGES[current].narration);
+});
+if (!hasSpeech){
+  speakBtn.disabled = true;
+  speakBtn.textContent = "🔇 よみあげ非対応";
+  autoBtn.disabled = true;
+}
+
+autoBtn.addEventListener("click", ()=>{
+  autoRead = !autoRead;
+  autoBtn.textContent = "🔁 じどう:" + (autoRead ? "ON" : "OFF");
+  autoBtn.classList.toggle("active", autoRead);
+  try { localStorage.setItem("ehon-autoread", autoRead ? "1" : "0"); } catch(e){}
+  if (autoRead) speak(PAGES[current].narration);
+  else window.speechSynthesis && window.speechSynthesis.cancel();
+});
+autoBtn.textContent = "🔁 じどう:" + (autoRead ? "ON" : "OFF");
+autoBtn.classList.toggle("active", autoRead);
+
+/* iOS などは最初のタップで音声を解放しておく */
+let unlocked = false;
+function unlockAudio(){
+  if (unlocked || !hasSpeech) return;
+  unlocked = true;
+  const u = new SpeechSynthesisUtterance(" ");
+  u.volume = 0;
+  window.speechSynthesis.speak(u);
+}
+document.body.addEventListener("touchstart", unlockAudio, {once:true, passive:true});
+document.body.addEventListener("click", unlockAudio, {once:true});
+
+/* ==================================================================
+ * 6. 初期化
+ * ================================================================== */
+buildDots();
+render();
+</script>
+</body>
+</html>
