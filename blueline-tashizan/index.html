@@ -1,0 +1,1181 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0B78BE">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="description" content="横浜市営地下鉄ブルーラインの駅を数直線に見立てて、5歳から遊べるたし算アプリ">
+<title>ブルーライン たしざん</title>
+<style>
+:root{
+  --blue:#0B78BE;
+  --blue-d:#075E96;
+  --blue-l:#E4F1FA;
+  --blue-p:#9CCBE8;
+  --accent:#FF8A2B;
+  --accent-d:#D96C13;
+  --green:#12A05A;
+  --green-d:#0B7B43;
+  --ink:#123044;
+  --sub:#4B7590;
+  --paper:#FFFFFF;
+  --sp:84px;
+  --railH:180px;
+  --gap:8px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;height:100%;}
+body{
+  background:linear-gradient(180deg,#D7EBF8 0%,#EAF4FB 45%,#F6FBFD 100%);
+  color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN","Hiragino Sans","Yu Gothic UI","Yu Gothic","Noto Sans JP","Meiryo",sans-serif;
+  font-size:18px;
+  line-height:1.5;
+  font-weight:700;
+  -webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  touch-action:manipulation;
+  overflow:hidden;
+  overscroll-behavior:none;
+}
+button{font-family:inherit;font-weight:800;color:inherit;border:0;background:none;cursor:pointer;-webkit-tap-highlight-color:transparent;}
+ruby rt{font-size:.44em;font-weight:800;color:var(--sub);line-height:1.1;white-space:nowrap;}
+
+#app{
+  position:relative;width:100%;max-width:460px;margin:0 auto;
+  height:100vh;height:100dvh;overflow:hidden;
+  box-shadow:0 0 24px rgba(11,120,190,.10);
+}
+.screen{position:absolute;inset:0;display:none;flex-direction:column;padding:calc(8px + env(safe-area-inset-top)) 12px calc(10px + env(safe-area-inset-bottom));}
+.screen.on{display:flex;}
+
+/* ---------- 共通パーツ ---------- */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:6px;
+  min-height:56px;padding:8px 14px;border-radius:18px;
+  font-size:21px;color:#fff;background:var(--blue);white-space:nowrap;
+  box-shadow:0 5px 0 var(--blue-d);
+  transition:transform .08s ease,box-shadow .08s ease;
+}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--blue-d);}
+.btn[disabled]{opacity:.45;box-shadow:0 5px 0 rgba(0,0,0,.15);}
+.btn.orange{background:var(--accent);box-shadow:0 5px 0 var(--accent-d);}
+.btn.orange:active{box-shadow:0 1px 0 var(--accent-d);}
+.btn.green{background:var(--green);box-shadow:0 5px 0 var(--green-d);}
+.btn.green:active{box-shadow:0 1px 0 var(--green-d);}
+.btn.ghost{background:#fff;color:var(--blue);box-shadow:0 4px 0 #BFDCEF;}
+.btn.ghost:active{box-shadow:0 1px 0 #BFDCEF;}
+.btn.small{min-height:56px;font-size:18px;border-radius:16px;}
+.ovcard>.btn{width:100%;}
+
+/* 駅ナンバーの丸 */
+.numc{
+  display:inline-flex;flex-direction:column;align-items:center;justify-content:center;
+  width:52px;height:52px;border-radius:50%;
+  border:4px solid var(--blue);background:#fff;flex:none;line-height:1;
+}
+.numc i{font-style:normal;font-size:11px;font-weight:900;color:var(--blue);letter-spacing:.02em;}
+.numc b{font-size:22px;font-weight:900;color:var(--blue);}
+.numc.sm{width:42px;height:42px;border-width:3px;}
+.numc.sm i{font-size:9px;}
+.numc.sm b{font-size:17px;}
+.numc.lg{width:66px;height:66px;border-width:5px;}
+.numc.lg i{font-size:14px;}
+.numc.lg b{font-size:29px;}
+.numc.solid{background:var(--blue);}
+.numc.solid i,.numc.solid b{color:#fff;}
+
+/* 駅名標 */
+.plate{
+  display:flex;align-items:center;gap:10px;
+  background:#fff;border-radius:14px;padding:8px 12px;
+  border-bottom:6px solid var(--blue);
+  box-shadow:0 3px 10px rgba(11,120,190,.16);
+}
+.plate .pname{font-size:26px;font-weight:900;line-height:1.15;flex:1;text-align:center;letter-spacing:.01em;}
+.plate.big{padding:12px 14px;}
+.plate.big .pname{font-size:32px;}
+
+/* ---------- タイトル ---------- */
+#scTitle{align-items:stretch;gap:var(--gap);}
+.title-h{text-align:center;margin-top:4px;}
+.title-h h1{
+  margin:0;font-size:29px;font-weight:900;letter-spacing:0;color:var(--blue-d);
+  text-shadow:0 2px 0 #fff;
+}
+.title-h p{margin:2px 0 0;font-size:16px;color:var(--sub);}
+.title-run{
+  position:relative;height:86px;overflow:hidden;flex:none;
+  border-radius:16px;background:linear-gradient(180deg,#fff 0%,#EAF6FD 100%);
+  box-shadow:inset 0 0 0 2px #D5EAF7;
+}
+.title-run .tline{position:absolute;left:0;right:0;bottom:16px;height:7px;background:var(--blue-p);border-radius:4px;}
+.title-run .tdot{z-index:2;}
+.title-run .runner{z-index:3;}
+.title-run .tdot{position:absolute;bottom:11px;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid var(--blue);}
+.title-run .runner{position:absolute;bottom:14px;left:-110px;animation:runacross 8s linear infinite;animation-delay:-1.6s;}
+@keyframes runacross{from{transform:translateX(0)}to{transform:translateX(calc(460px + 120px))}}
+.lvcards{display:flex;flex-direction:column;gap:var(--gap);flex:1;justify-content:center;}
+.lvcard{
+  display:flex;align-items:center;gap:12px;text-align:left;
+  background:#fff;border-radius:20px;padding:12px 14px;min-height:92px;
+  box-shadow:0 5px 0 #C9E2F2;
+  transition:transform .08s ease,box-shadow .08s ease;
+}
+.lvcard:active{transform:translateY(4px);box-shadow:0 1px 0 #C9E2F2;}
+.lvcard .lvbadge{
+  width:62px;height:62px;border-radius:18px;flex:none;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;line-height:1;
+}
+.lvcard .lvbadge span{font-size:11px;font-weight:800;}
+.lvcard .lvbadge b{font-size:30px;font-weight:900;}
+.lvcard .lvtxt{flex:1;min-width:0;}
+.lvcard .lvtxt b{display:block;font-size:22px;font-weight:900;}
+.lvcard .lvtxt span{display:block;font-size:15px;color:var(--sub);font-weight:700;}
+.lvcard .lvrec{font-size:13px;color:var(--accent-d);font-weight:800;margin-top:2px;}
+.title-foot{display:flex;gap:var(--gap);flex:none;}
+.title-foot .btn{flex:1;}
+
+/* ---------- プレイ画面 ---------- */
+#scPlay{gap:6px;justify-content:space-between;}
+.phead{position:relative;flex:none;padding:2px 56px 0;text-align:center;}
+.iconbtn{
+  position:absolute;top:-2px;left:-6px;width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:#7EA6BF;background:rgba(255,255,255,.7);
+}
+.quizrow{display:flex;align-items:center;justify-content:center;gap:8px;}
+.quizname{font-size:23px;font-weight:900;line-height:1.1;}
+.quiztxt{font-size:21px;font-weight:900;margin-top:2px;}
+.quiztxt em{font-style:normal;font-size:32px;color:var(--accent-d);padding:0 2px;}
+.crow{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:none;padding:0 2px;}
+.count{display:flex;align-items:baseline;gap:8px;}
+.count .clabel{font-size:15px;color:var(--sub);font-weight:800;white-space:nowrap;}
+.count .cnum{font-size:34px;font-weight:900;color:var(--accent-d);line-height:1;min-width:28px;text-align:center;}
+.count .cunit{font-size:15px;color:var(--sub);font-weight:800;white-space:nowrap;}
+.dots{display:flex;gap:5px;align-items:center;}
+.dots i{width:9px;height:9px;border-radius:50%;background:#C6DEEE;display:block;}
+.dots i.done{background:var(--green);}
+.dots i.now{background:var(--accent);transform:scale(1.25);}
+
+/* 路線ビュー */
+.railview{
+  position:relative;flex:none;height:var(--railH);overflow:hidden;
+  border-radius:18px;background:linear-gradient(180deg,#FFFFFF 0%,#F0F8FD 100%);
+  box-shadow:inset 0 0 0 2px #DCEDF8;
+  touch-action:none;
+}
+.centerband{
+  position:absolute;top:60px;bottom:6px;left:50%;width:var(--sp);
+  transform:translateX(-50%);
+  background:linear-gradient(180deg,rgba(255,214,166,.55),rgba(255,214,166,.12));
+  border-radius:14px;pointer-events:none;
+}
+.strip{position:absolute;left:0;top:68px;height:112px;will-change:transform;}
+.railline{position:absolute;top:22px;height:8px;border-radius:5px;background:var(--blue-p);}
+.railprog{position:absolute;top:22px;height:8px;border-radius:5px;background:var(--accent);}
+.st{
+  position:absolute;top:0;width:var(--sp);transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:3px;padding:0;background:none;
+}
+.st .numc{width:44px;height:44px;border-width:3px;transition:transform .18s ease;}
+.st .numc i{font-size:9px;}
+.st .numc b{font-size:17px;}
+.st .stnm{font-size:11px;line-height:1.16;color:#39647F;font-weight:800;text-align:center;
+  width:100%;padding:0 4px;max-height:40px;overflow:hidden;word-break:break-all;letter-spacing:-.02em;}
+.st.cur .numc{background:var(--blue);transform:scale(1.1);}
+.st.cur .numc i,.st.cur .numc b{color:#fff;}
+.st.goal .numc{border-color:var(--accent);}
+.st.origin .numc{border-color:var(--accent);border-style:dashed;}
+.stepbadge{
+  position:absolute;top:26px;width:26px;height:26px;margin-left:-13px;border-radius:50%;
+  background:var(--accent);color:#fff;font-size:15px;font-weight:900;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 2px 4px rgba(0,0,0,.18);
+}
+.trainwrap{position:absolute;top:2px;left:50%;transform:translateX(-50%);z-index:5;pointer-events:none;}
+.trainwrap .pointdown{display:block;margin:-4px auto 0;width:0;height:0;
+  border-left:9px solid transparent;border-right:9px solid transparent;border-top:10px solid var(--blue-d);}
+.train{display:block;width:104px;height:57px;}
+.train.running{animation:bob .32s ease-in-out infinite;}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+
+.ctrl{display:flex;gap:8px;flex:none;}
+.ctrl .btn.back{flex:0 0 106px;background:#8FB2C7;box-shadow:0 5px 0 #6E93A9;font-size:17px;white-space:nowrap;padding:8px 4px;}
+.ctrl .btn.back:active{box-shadow:0 1px 0 #6E93A9;}
+.ctrl .btn.go{flex:1;min-height:64px;font-size:25px;white-space:nowrap;}
+.btn.oriru{min-height:62px;font-size:24px;flex:none;}
+.hintbar{
+  flex:none;text-align:center;font-size:16px;font-weight:800;color:var(--sub);
+  min-height:22px;line-height:22px;
+}
+.hintbar.warn{color:var(--accent-d);}
+
+/* ---------- きっぷ帳 ---------- */
+#scBook{gap:var(--gap);}
+.bhead{display:flex;align-items:center;gap:8px;flex:none;}
+.bhead h2{margin:0;font-size:24px;font-weight:900;flex:1;text-align:center;}
+.bhead .btn{font-size:17px;padding:8px 4px;}
+.booklist{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;display:flex;flex-direction:column;gap:10px;padding:2px;}
+.empty{text-align:center;color:var(--sub);font-size:17px;padding:28px 10px;line-height:1.9;}
+.ticket{
+  display:flex;align-items:center;gap:12px;background:#fff;border-radius:14px;padding:10px 12px;
+  border:3px dashed var(--blue-p);box-shadow:0 3px 8px rgba(11,120,190,.12);
+  text-align:left;border-left:8px solid var(--accent);
+}
+.ticket .tkr{flex:1;min-width:0;}
+.ticket .tkdest{font-size:23px;font-weight:900;line-height:1.2;}
+.ticket .tkdest span{font-size:16px;color:var(--sub);}
+.ticket .tksub{font-size:13px;color:var(--sub);font-weight:800;margin-top:2px;}
+
+/* ---------- オーバーレイ ---------- */
+.overlay{
+  position:absolute;inset:0;display:none;flex-direction:column;
+  align-items:center;justify-content:center;padding:16px;z-index:20;
+  background:rgba(9,58,90,.55);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);
+}
+.overlay.on{display:flex;}
+.ovcard{
+  width:100%;max-width:400px;background:#fff;border-radius:24px;padding:16px 14px;
+  box-shadow:0 10px 30px rgba(0,0,0,.28);text-align:center;
+  max-height:100%;overflow-y:auto;touch-action:pan-y;
+}
+.bravo{font-size:28px;font-weight:900;color:var(--green);margin-bottom:8px;}
+.bravo.clear{color:var(--accent-d);}
+.eq{display:flex;align-items:center;justify-content:center;gap:2px;margin:14px 0 6px;flex-wrap:nowrap;}
+.tk{
+  font-size:52px;font-weight:900;line-height:1;color:var(--blue-d);
+  opacity:0;transform:scale(.3);transition:opacity .18s ease,transform .22s cubic-bezier(.3,1.5,.5,1);
+}
+.tk.op{color:var(--sub);font-size:40px;padding:0 2px;}
+.tk.ans{color:var(--accent-d);}
+.tk.in{opacity:1;transform:scale(1);}
+.eqlabel{display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;color:var(--sub);font-weight:800;margin-bottom:12px;}
+.record{font-size:17px;color:var(--sub);margin:10px 0 4px;font-weight:800;}
+.ovrow{display:flex;gap:8px;margin-top:12px;}
+.ovrow .btn{font-size:18px;padding:8px 4px;}
+.ovrow .btn{flex:1;}
+.infoname{font-size:30px;font-weight:900;line-height:1.25;margin:8px 0 2px;}
+.infoyomi{font-size:15px;color:var(--sub);font-weight:800;}
+.infodesc{
+  text-align:left;font-size:18px;line-height:2.0;margin:12px 0 4px;font-weight:700;
+  background:var(--blue-l);border-radius:14px;padding:12px 14px;
+}
+.infodesc ruby rt{font-size:.5em;}
+
+/* 紙ふぶき */
+#confetti{position:absolute;inset:0;pointer-events:none;z-index:30;overflow:hidden;}
+.cfp{position:absolute;top:-24px;width:10px;height:16px;border-radius:2px;animation:fall linear forwards;}
+@keyframes fall{
+  0%{transform:translateY(0) rotate(0deg);opacity:1;}
+  100%{transform:translateY(115vh) rotate(720deg);opacity:.9;}
+}
+
+/* 縦に ながい 端末では 路線を 大きく */
+@media (min-height:790px){
+  :root{--railH:206px;}
+  .strip{top:86px;}
+  .centerband{top:78px;}
+  .train{width:118px;height:65px;}
+  .plate .pname{font-size:29px;}
+}
+/* 幅の狭い端末・低い端末 */
+@media (max-height:660px){
+  :root{--railH:158px;--gap:6px;}
+  .strip{top:56px;}
+  .centerband{top:48px;}
+  .title-run{height:64px;}
+  .lvcard{min-height:74px;}
+  .plate .pname{font-size:24px;}
+  .tk{font-size:44px;}
+}
+@media (max-height:600px){
+  :root{--railH:142px;--gap:4px;}
+  .strip{top:50px;height:100px;}
+  .centerband{top:44px;}
+  .train{width:82px;height:45px;}
+  .trainwrap .pointdown{border-top-width:8px;}
+  .numc.lg{width:52px;height:52px;border-width:4px;}
+  .numc.lg i{font-size:11px;}
+  .numc.lg b{font-size:22px;}
+  .quizname{font-size:20px;}
+  .quiztxt{font-size:18px;}
+  .quiztxt em{font-size:26px;}
+  .count .cnum{font-size:28px;}
+  .plate .pname{font-size:22px;}
+  .hintbar{display:none;}
+  .ctrl .btn.go{min-height:56px;font-size:22px;}
+  .btn.oriru{min-height:56px;font-size:21px;}
+  .title-h h1{font-size:25px;}
+  .title-run{height:62px;}
+  .lvcard{min-height:66px;}
+  .tk{font-size:38px;}
+}
+@media (max-width:349px){
+  .ctrl .btn.back{flex:0 0 92px;font-size:16px;}
+  .ctrl .btn.go{font-size:22px;}
+  .count .clabel,.count .cunit{font-size:13px;}
+  .count .cnum{font-size:28px;}
+  .dots{gap:4px;}
+  .dots i{width:7px;height:7px;}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .train.running{animation:none;}
+  .title-run .runner{animation:none;left:24px;}
+  .cfp{display:none;}
+  .btn,.lvcard{transition:none;}
+  .tk{transition:opacity .1s linear;transform:none;}
+  .tk.in{transform:none;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ============ タイトル ============ -->
+  <section class="screen on" id="scTitle">
+    <div class="title-h">
+      <h1>ブルーライン たしざん</h1>
+      <p>えきを かぞえて たしざん！</p>
+    </div>
+    <div class="title-run" id="titleRun">
+      <div class="tline"></div>
+      <div class="runner" id="titleRunner"></div>
+    </div>
+    <div class="lvcards" id="lvCards"></div>
+    <div class="title-foot">
+      <button class="btn ghost small" id="btnSound">おと</button>
+      <button class="btn green small" id="btnBook">きっぷ<ruby>帳<rt>ちょう</rt></ruby></button>
+    </div>
+  </section>
+
+  <!-- ============ プレイ ============ -->
+  <section class="screen" id="scPlay">
+    <header class="phead">
+      <button class="iconbtn" id="btnQuit" aria-label="タイトルにもどる">✕</button>
+      <div class="quizrow">
+        <span id="qNumc"></span>
+        <span class="quizname" id="qName"></span>
+      </div>
+      <div class="quiztxt">から <em id="qAdd">3</em> えき すすもう</div>
+    </header>
+
+    <div class="crow">
+      <div class="count">
+        <span class="clabel">すすんだ かず</span>
+        <span class="cnum" id="cNum">0</span>
+        <span class="cunit">えき</span>
+      </div>
+      <div class="dots" id="dots"></div>
+    </div>
+
+    <div class="railview" id="railview">
+      <div class="centerband"></div>
+      <div class="strip" id="strip">
+        <div class="railline" id="railline"></div>
+        <div class="railprog" id="railprog"></div>
+      </div>
+      <div class="trainwrap" id="trainwrap"></div>
+    </div>
+
+    <div class="plate" id="curPlate"></div>
+    <div class="hintbar" id="hint">ゆびで うごかしても すすめるよ</div>
+
+    <div class="ctrl">
+      <button class="btn back" id="btnBack">◀ もどる</button>
+      <button class="btn go" id="btnGo">▶ すすむ</button>
+    </div>
+    <button class="btn oriru orange" id="btnOriru">ここで おりる</button>
+  </section>
+
+  <!-- ============ きっぷ帳 ============ -->
+  <section class="screen" id="scBook">
+    <div class="bhead">
+      <button class="btn ghost small" id="btnBookBack" style="flex:0 0 96px">◀ もどる</button>
+      <h2>きっぷ<ruby>帳<rt>ちょう</rt></ruby></h2>
+      <span style="flex:0 0 96px"></span>
+    </div>
+    <div class="booklist" id="bookList"></div>
+    <button class="btn ghost small" id="btnClearTickets" style="flex:none;opacity:.8;font-size:15px;min-height:56px;">きっぷを ぜんぶ けす</button>
+  </section>
+
+  <!-- ============ オーバーレイ ============ -->
+  <div class="overlay" id="ovCorrect">
+    <div class="ovcard">
+      <div class="bravo">せいかい！</div>
+      <div class="plate big" id="cPlate"></div>
+      <div class="eq" id="cEq"></div>
+      <div class="eqlabel" id="cEqLabel"></div>
+      <button class="btn green" id="btnNext">つぎへ ▶</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovClear">
+    <div class="ovcard">
+      <div class="bravo clear" id="clearTitle">レベル1 クリア！</div>
+      <div id="clearTicket"></div>
+      <div class="record" id="clearRec"></div>
+      <div class="ovrow">
+        <button class="btn" id="btnAgain">もういちど</button>
+        <button class="btn ghost" id="btnToTitle">レベルを えらぶ</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="ovInfo">
+    <div class="ovcard">
+      <div style="display:flex;justify-content:center"><span id="iNumc"></span></div>
+      <div class="infoname" id="iName"></div>
+      <div class="infoyomi" id="iYomi"></div>
+      <div class="infodesc" id="iDesc"></div>
+      <div class="ovrow">
+        <button class="btn ghost" id="btnSpeak">🔊 もういちど</button>
+        <button class="btn" id="btnInfoClose">とじる</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="confetti"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* =========================================================
+   1. 駅データ  （B01 湘南台 〜 B32 あざみ野／番号が1ずつ増える連番）
+   ruby:false は もともと かな表記の駅（ふりがな不要）
+   desc の [[漢字|よみ]] は ルビ表示用の記法
+   ========================================================= */
+var STATIONS=[
+{n:1,name:'湘南台',yomi:'しょうなんだい',ruby:true,
+ desc:'ブルーラインの みなみの おわりの えきです。ここから きたの あざみ野まで、32この えきが 1つずつ ならんでいます。[[相鉄|そうてつ]]いずみ野線と [[小田急|おだきゅう]][[江ノ島線|えのしません]]にも のりかえでき、3つの [[路線|ろせん]]が あつまる にぎやかな えきです。'},
+{n:2,name:'下飯田',yomi:'しもいいだ',ruby:true,
+ desc:'よこはま市いずみ区の えきです。まわりには [[畑|はたけ]]や [[田|た]]んぼが のこっていて、のんびりした けしきが ひろがります。すこし あるくと [[相鉄|そうてつ]]いずみ野線の ゆめが丘えきに つきます。'},
+{n:3,name:'立場',yomi:'たてば',ruby:true,
+ desc:'いずみ区の まんなかに ある えきです。えきの うえには おみせや [[図書館|としょかん]]が あって、まいにち たくさんの 人が あつまります。むかし たびの 人が たちどまって やすんだ ばしょ、という 名まえの ゆらいが つたわっています。'},
+{n:4,name:'中田',yomi:'なかだ',ruby:true,
+ desc:'「なかた」ではなく「なかだ」と よみます。よみまちがえやすい えきです。しずかな [[住宅地|じゅうたくち]]の なかに あり、あさと ゆうがたは がっこうへ いく 人で にぎわいます。'},
+{n:5,name:'踊場',yomi:'おどりば',ruby:true,
+ desc:'むかし ねこたちが よるに あつまって おどった、という ふしぎな [[言|い]]いつたえが のこる えきです。えきの なかには ねこの もようや かざりが かくれています。おりたら さがしてみよう。'},
+{n:6,name:'戸塚',yomi:'とつか',ruby:true,
+ desc:'JRの [[東海道線|とうかいどうせん]]や [[横須賀線|よこすかせん]]に のりかえできる 大きな えきです。むかしは [[東海道|とうかいどう]]の [[宿場町|しゅくばまち]]「[[戸塚宿|とつかじゅく]]」として、あるいて たびを する 人が やすむ まちでした。'},
+{n:7,name:'舞岡',yomi:'まいおか',ruby:true,
+ desc:'あるいて いける ところに [[舞岡公園|まいおかこうえん]]が あります。田んぼや [[森|もり]]が のこっていて、はるは おたまじゃくし、なつは とんぼや ざりがにに 会えます。'},
+{n:8,name:'下永谷',yomi:'しもながや',ruby:true,
+ desc:'こうなん区の しずかな えきです。となりの [[上永谷|かみながや]]えきとの あいだで、ちかてつなのに 電車が 外に 出て、たかい ところを はしります。まどの そとが よく 見える たのしい くかんです。'},
+{n:9,name:'上永谷',yomi:'かみながや',ruby:true,
+ desc:'ブルーラインの 電車が やすむ [[車両基地|しゃりょうきち]]が ある えきです。ならんだ 電車を 見られるので、電車ずきに 大にんき。ホームは たかい ところに あって、そらが よく 見えます。'},
+{n:10,name:'港南中央',yomi:'こうなんちゅうおう',ruby:true,
+ desc:'こうなん区やくしょの すぐそばに ある えきです。まちの まんなかで、いろいろな ほうこうへ バスが 出ています。'},
+{n:11,name:'上大岡',yomi:'かみおおおか',ruby:true,
+ desc:'[[京急線|けいきゅうせん]]に のりかえできる、とても にぎやかな えきです。大きな デパートや えいがかんが あって、いつも 人で いっぱい。ブルーラインの なかでも つかう 人が とくに おおい えきです。'},
+{n:12,name:'弘明寺',yomi:'ぐみょうじ',ruby:true,
+ desc:'「ぐみょうじ」と よみます。よこはまで いちばん ふるい おてら「[[弘明寺|ぐみょうじ]]」が あり、そこへ つづく ながい [[商店街|しょうてんがい]]が にぎやかです。[[京急線|けいきゅうせん]]にも おなじ 名まえの えきが ありますが、すこし はなれた べつの えきです。'},
+{n:13,name:'蒔田',yomi:'まいた',ruby:true,
+ desc:'「まいた」と よみます。ちかくを [[大岡川|おおおかがわ]]が ながれていて、はるには かわぞいの さくらが とても きれいです。'},
+{n:14,name:'吉野町',yomi:'よしのちょう',ruby:true,
+ desc:'みなみ区の えきです。[[大岡川|おおおかがわ]]の ちかくで、ちいさな おみせや こうじょうが ならぶ、したまちの ふんいきが のこる まちです。'},
+{n:15,name:'阪東橋',yomi:'ばんどうばし',ruby:true,
+ desc:'ちかくに [[横浜橋通商店街|よこはまばしどおりしょうてんがい]]という ながい アーケードの [[商店街|しょうてんがい]]が あります。おいしい ものが たくさん うっていて、ゆうがたは 大にぎわいです。'},
+{n:16,name:'伊勢佐木長者町',yomi:'いせざきちょうじゃまち',ruby:true,
+ desc:'ブルーラインで いちばん 名まえの ながい えきです。イセザキモールという ながい [[商店街|しょうてんがい]]の そばで、[[横浜|よこはま]]スタジアムまでも あるいて いけます。'},
+{n:17,name:'関内',yomi:'かんない',ruby:true,
+ desc:'JR[[根岸線|ねぎしせん]]に のりかえできる えきです。[[横浜|よこはま]]スタジアムや [[中華街|ちゅうかがい]]が ちかくて、やきゅうの しあいの ひは たくさんの 人で あふれます。'},
+{n:18,name:'桜木町',yomi:'さくらぎちょう',ruby:true,
+ desc:'みなとみらいの いりぐちの えきです。ランドマークタワーや 大きな [[観覧車|かんらんしゃ]]が すぐ 目の まえ。じつは この あたりは、[[日本|にほん]]で いちばん さいしょに できた てつどうの えきが あった ばしょでもあります。'},
+{n:19,name:'高島町',yomi:'たかしまちょう',ruby:true,
+ desc:'むかし 2だいめの [[横浜|よこはま]]えきが あった あたりの えきです。いまは しずかな まちですが、てつどうの [[歴史|れきし]]が ねむる ばしょです。'},
+{n:20,name:'横浜',yomi:'よこはま',ruby:true,
+ desc:'[[神奈川県|かながわけん]]で いちばん 大きな えきです。JR、[[東急|とうきゅう]][[東横線|とうよこせん]]、[[京急|けいきゅう]]、[[相鉄|そうてつ]]、みなとみらい線など、たくさんの 電車が あつまり、まいにち ものすごい 人が のりかえます。'},
+{n:21,name:'三ツ沢下町',yomi:'みつざわしもちょう',ruby:true,
+ desc:'[[三ツ沢公園|みつざわこうえん]]の ふもとに ある えきです。この あたりは さかが おおくて、あるくと ちょっとした ぼうけんに なります。'},
+{n:22,name:'三ツ沢上町',yomi:'みつざわかみちょう',ruby:true,
+ desc:'サッカーの しあいが おこなわれる [[三ツ沢|みつざわ]]の [[球技場|きゅうぎじょう]]に いちばん ちかい えきです。しあいの ひは おうえんの こえが きこえてきます。'},
+{n:23,name:'片倉町',yomi:'かたくらちょう',ruby:true,
+ desc:'かながわ区の えきです。まわりは しずかな [[住宅地|じゅうたくち]]で、たかい ところから まちを 見わたせる さかが あります。'},
+{n:24,name:'岸根公園',yomi:'きしねこうえん',ruby:true,
+ desc:'えきの すぐそばに ひろい [[岸根公園|きしねこうえん]]が あります。しばふや 森が あって、おべんとうを もって あそびに いくのに ぴったりです。'},
+{n:25,name:'新横浜',yomi:'しんよこはま',ruby:true,
+ desc:'[[東海道新幹線|とうかいどうしんかんせん]]に のりかえできる えきです。のぞみや ひかりが とまり、[[大阪|おおさか]]や [[京都|きょうと]]へ 行けます。JR[[横浜線|よこはません]]、[[相鉄|そうてつ]]・[[東急|とうきゅう]]の [[新横浜線|しんよこはません]]にも のりかえでき、[[日産|にっさん]]スタジアムも ちかくです。'},
+{n:26,name:'北新横浜',yomi:'きたしんよこはま',ruby:true,
+ desc:'[[新横浜|しんよこはま]]の となりの えきです。ちかくに ブルーラインの 大きな [[車両基地|しゃりょうきち]]が あり、たくさんの 電車が ならんでいるのを 見られます。'},
+{n:27,name:'新羽',yomi:'にっぱ',ruby:true,
+ desc:'「にっぱ」と よみます。[[新羽車両基地|にっぱしゃりょうきち]]が ある えきで、電車たちの おうちの ような ばしょです。この あたりでは 電車が 外に 出て はしるので、けしきが よく 見えます。'},
+{n:28,name:'仲町台',yomi:'なかまちだい',ruby:true,
+ desc:'つづき区の えきです。ちかくには せせらぎの ある こうえんが あって、みずべを さんぽ できる きもちの いい まちです。'},
+{n:29,name:'センター南',yomi:'せんたーみなみ',ruby:false,
+ desc:'グリーンラインに のりかえできる えきです。大きな ショッピングモールが ならんでいて、いつも にぎやかです。'},
+{n:30,name:'センター北',yomi:'せんたーきた',ruby:false,
+ desc:'グリーンラインに のりかえできる えきです。大きな [[観覧車|かんらんしゃ]]の ある モールが 目じるし。センター南と センター北は、となりどうしの なかよしな えきです。'},
+{n:31,name:'中川',yomi:'なかがわ',ruby:true,
+ desc:'つづき区の しずかな えきです。まわりには こうえんや がっこうが おおく、あるいて さんぽ するのが きもちいい まちです。'},
+{n:32,name:'あざみ野',yomi:'あざみの',ruby:false,
+ desc:'ブルーラインの きたの おわりの えきです。[[東急|とうきゅう]][[田園都市線|でんえんとしせん]]に のりかえると しぶやまで 行けます。ここから みなみの 湘南台まで、32この えきが 1つずつ ならんでいます。'}
+];
+var LAST=STATIONS.length; /* 32 */
+
+/* =========================================================
+   2. レベル定義と 出題ロジック（あとから ふやせるように 分けてある）
+   ========================================================= */
+var QUESTIONS_PER_LEVEL=10;
+var LEVELS=[
+  {id:1,label:'レベル1',sub:'1・2・3 えき すすむ',min:1,max:3,color:'#2AA7E0'},
+  {id:2,label:'レベル2',sub:'4・5・6 えき すすむ',min:4,max:6,color:'#12A05A'},
+  {id:3,label:'レベル3',sub:'7・8・9 えき すすむ',min:7,max:9,color:'#FF8A2B'}
+];
+
+function randInt(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+
+/* 出題は ここだけを 見れば わかるように まとめている。
+   ・すすむ むきは 番号が ふえる ほうこう（あざみ野ゆき）に 固定
+   ・起点は B01〜B(32-たすかず)。ゴールが B32 を こえる 問題は つくらない
+   ・まえと おなじ 組みあわせ（起点・たすかず）は つづけて 出さない       */
+var QuestionMaker={
+  levelOf:function(id){
+    for(var i=0;i<LEVELS.length;i++){if(LEVELS[i].id===id)return LEVELS[i];}
+    return LEVELS[0];
+  },
+  make:function(levelId,prev){
+    var lv=this.levelOf(levelId),q=null,guard=0;
+    do{
+      var add=randInt(lv.min,lv.max);
+      var start=randInt(1,LAST-add);
+      q={start:start,add:add,goal:start+add};
+      guard++;
+    }while(prev&&q.start===prev.start&&q.add===prev.add&&guard<50);
+    return q;
+  }
+};
+
+/* =========================================================
+   3. ほぞん（localStorage / 個人情報は もたない）
+   ========================================================= */
+var PFX='blueline-tashizan.';
+function loadJSON(key,def){
+  try{
+    var raw=window.localStorage.getItem(PFX+key);
+    if(raw===null||raw===undefined)return def;
+    var v=JSON.parse(raw);
+    return (v===null||v===undefined)?def:v;
+  }catch(e){return def;}
+}
+function saveJSON(key,val){
+  try{window.localStorage.setItem(PFX+key,JSON.stringify(val));}catch(e){/* 保存できなくても遊べる */}
+}
+var soundOn=(loadJSON('sound',true)!==false);
+var stats=loadJSON('stats',{});      /* {"1":{play:0,clear:0,best:0}} */
+var tickets=loadJSON('tickets',[]);  /* [{lv,n,date}] */
+if(!stats||typeof stats!=='object')stats={};
+if(Object.prototype.toString.call(tickets)!=='[object Array]')tickets=[];
+function statOf(lv){
+  var k=String(lv);
+  if(!stats[k])stats[k]={play:0,clear:0,best:0};
+  return stats[k];
+}
+
+/* =========================================================
+   4. 音（Web Audio API で 合成。音声ファイルは つかわない）
+   ========================================================= */
+var AC=null;
+function ensureAudio(){
+  if(AC){
+    if(AC.state==='suspended'&&AC.resume){try{AC.resume()['catch'](function(){});}catch(e){}}
+    return AC;
+  }
+  var Ctor=window.AudioContext||window.webkitAudioContext;
+  if(!Ctor)return null;
+  try{AC=new Ctor();}catch(e){AC=null;}
+  return AC;
+}
+/* iOS たいさく：さいしょの タップで AudioContext を つくる／resume する */
+document.addEventListener('pointerdown',ensureAudio,{passive:true});
+
+function tone(freq,at,dur,type,vol){
+  var ac=ensureAudio();
+  if(!ac||!soundOn)return;
+  try{
+    var t0=ac.currentTime+at;
+    var osc=ac.createOscillator(),g=ac.createGain();
+    osc.type=type||'sine';
+    osc.frequency.setValueAtTime(freq,t0);
+    g.gain.setValueAtTime(0.0001,t0);
+    g.gain.exponentialRampToValueAtTime(vol||0.16,t0+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    osc.connect(g);g.connect(ac.destination);
+    osc.start(t0);osc.stop(t0+dur+0.03);
+  }catch(e){}
+}
+var SFX={
+  step:function(){ tone(330,0,0.07,'square',0.10); tone(247,0.07,0.09,'square',0.09); },
+  tick:function(){ tone(880,0,0.08,'triangle',0.12); },
+  tap:function(){  tone(660,0,0.05,'sine',0.08); },
+  correct:function(){
+    var s=[523.25,659.25,783.99,1046.5];
+    for(var i=0;i<s.length;i++)tone(s[i],i*0.11,0.22,'triangle',0.16);
+  },
+  soft:function(){ tone(392,0,0.24,'sine',0.12); tone(311.13,0.20,0.34,'sine',0.11); },
+  fanfare:function(){
+    var seq=[[523.25,0],[523.25,0.14],[659.25,0.28],[783.99,0.44],[1046.5,0.62],[783.99,0.82],[1046.5,0.96]];
+    for(var i=0;i<seq.length;i++)tone(seq[i][0],seq[i][1],0.28,'triangle',0.17);
+  }
+};
+
+/* 読みあげ（Web Speech API・つかえない ときは なにも しない） */
+function speak(text){
+  if(!soundOn)return;
+  if(!('speechSynthesis' in window)||typeof window.SpeechSynthesisUtterance!=='function')return;
+  try{
+    window.speechSynthesis.cancel();
+    var u=new window.SpeechSynthesisUtterance(text);
+    u.lang='ja-JP';u.rate=0.95;u.pitch=1.05;
+    window.speechSynthesis.speak(u);
+  }catch(e){}
+}
+function stopSpeak(){
+  if(!('speechSynthesis' in window))return;
+  try{window.speechSynthesis.cancel();}catch(e){}
+}
+
+/* =========================================================
+   5. こまかい ぶひん
+   ========================================================= */
+var $=function(id){return document.getElementById(id);};
+var REDUCE=(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches)||false;
+
+function ST(n){return STATIONS[n-1];}
+function pad2(n){return (n<10?'0':'')+n;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function rubyText(t){
+  return esc(t).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g,'<ruby>$1<rt>$2</rt></ruby>');
+}
+function plainText(t){
+  return String(t).replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g,'$1');
+}
+function numcHTML(n,cls,solid){
+  return '<span class="numc'+(cls?' '+cls:'')+(solid?' solid':'')+'"><i>B</i><b>'+pad2(n)+'</b></span>';
+}
+function nameHTML(n){
+  var s=ST(n);
+  return s.ruby?('<ruby>'+esc(s.name)+'<rt>'+esc(s.yomi)+'</rt></ruby>'):esc(s.name);
+}
+function plateHTML(n,big){
+  return numcHTML(n,'sm')+'<div class="pname">'+nameHTML(n)+'</div>'+numcHTML(n,'sm');
+}
+
+/* 電車（インラインSVG・画像ファイルは つかわない） */
+function trainSVG(cls){
+  return '<svg class="'+cls+'" viewBox="0 0 120 66" role="img" aria-label="でんしゃ">'+
+    '<ellipse cx="60" cy="62" rx="46" ry="4" fill="#0B78BE" opacity=".16"/>'+
+    '<rect x="8" y="6" width="104" height="44" rx="15" fill="#0B78BE"/>'+
+    '<rect x="8" y="6" width="104" height="14" rx="7" fill="#2A96D8"/>'+
+    '<rect x="10" y="40" width="100" height="7" rx="3.5" fill="#FFC24D"/>'+
+    '<rect x="16" y="13" width="88" height="26" rx="11" fill="#F2FAFF"/>'+
+    '<circle cx="74" cy="26" r="9.5" fill="#fff" stroke="#0B78BE" stroke-width="1.5"/>'+
+    '<circle cx="95" cy="26" r="9.5" fill="#fff" stroke="#0B78BE" stroke-width="1.5"/>'+
+    '<circle cx="77" cy="27" r="4.6" fill="#123044"/>'+
+    '<circle cx="98" cy="27" r="4.6" fill="#123044"/>'+
+    '<circle cx="78.6" cy="25.4" r="1.5" fill="#fff"/>'+
+    '<circle cx="99.6" cy="25.4" r="1.5" fill="#fff"/>'+
+    '<path d="M78 36 q8 7 16 0" stroke="#123044" stroke-width="2.6" fill="none" stroke-linecap="round"/>'+
+    '<rect x="22" y="18" width="17" height="16" rx="5" fill="#BFE3F7"/>'+
+    '<rect x="43" y="18" width="17" height="16" rx="5" fill="#BFE3F7"/>'+
+    '<circle cx="107" cy="44" r="4" fill="#FFF0A8" stroke="#E9C74A" stroke-width="1.5"/>'+
+    '<circle cx="34" cy="52" r="9" fill="#2C3E4C"/><circle cx="34" cy="52" r="3.6" fill="#B9CCD8"/>'+
+    '<circle cx="80" cy="52" r="9" fill="#2C3E4C"/><circle cx="80" cy="52" r="3.6" fill="#B9CCD8"/>'+
+    '</svg>';
+}
+
+/* =========================================================
+   6. 路線ビュー
+      うごかすのは「電車」。ただし カメラが 電車を いつも まんなかに
+      おいかけるので、見た目は 路線が ながれる。どちらの そうさ
+      （ボタン／ドラッグ）でも おなじ しくみを つかう。
+   ========================================================= */
+var railview=$('railview'),strip=$('strip'),railline=$('railline'),railprog=$('railprog'),trainwrap=$('trainwrap');
+var SP=84,stNodes=[],badgeNodes=[],curNode=null,originNode=null,goalNode=null;
+var rail={pos:0,min:0,max:LAST-1,dragging:false,startX:0,startPos:0,moved:0,downStation:0,lastRound:0};
+var runTimer=null;
+
+function buildRail(){
+  var frag=document.createDocumentFragment(),i,n,s,b;
+  for(i=0;i<LAST;i++){
+    n=i+1;s=ST(n);
+    b=document.createElement('button');
+    b.className='st';
+    b.type='button';
+    b.setAttribute('data-n',String(n));
+    b.setAttribute('aria-label',s.yomi+'えき　くわしく');
+    b.innerHTML=numcHTML(n)+'<span class="stnm"'+(s.yomi.length>=8?' style="font-size:10px"':'')+'>'+esc(s.yomi)+'</span>';
+    frag.appendChild(b);
+    stNodes.push(b);
+  }
+  strip.appendChild(frag);
+  trainwrap.innerHTML=trainSVG('train')+'<span class="pointdown"></span>';
+}
+
+function layoutRail(){
+  var w=railview.clientWidth||360;
+  SP=Math.max(70,Math.min(98,Math.round(w*0.225)));
+  railview.style.setProperty('--sp',SP+'px');
+  for(var i=0;i<stNodes.length;i++)stNodes[i].style.left=(i*SP)+'px';
+  strip.style.width=((LAST-1)*SP)+'px';
+  railline.style.left='0px';
+  railline.style.width=((LAST-1)*SP)+'px';
+  setPos(rail.pos,false);
+  drawProgress(rail.pos);
+}
+
+function setPos(p,smooth,ms){
+  rail.pos=p;
+  var centerX=(railview.clientWidth||360)/2;
+  strip.style.transition=smooth?('transform '+(ms||260)+'ms cubic-bezier(.25,.9,.3,1)'):'none';
+  strip.style.transform='translateX('+(centerX-p*SP)+'px)';
+  drawProgress(p);
+  runVisual();
+}
+function drawProgress(p){
+  var s=rail.min,len=Math.max(0,p-s);
+  railprog.style.left=(s*SP)+'px';
+  railprog.style.width=(len*SP)+'px';
+}
+function runVisual(){
+  var t=trainwrap.firstChild;
+  if(!t||REDUCE)return;
+  if(t.className&&t.className.baseVal!==undefined){
+    if(t.className.baseVal.indexOf('running')<0)t.setAttribute('class','train running');
+  }
+  if(runTimer)clearTimeout(runTimer);
+  runTimer=setTimeout(function(){
+    var tr=trainwrap.firstChild;
+    if(tr)tr.setAttribute('class','train');
+  },340);
+}
+function markStations(curN,originN,goalN){
+  if(curNode)curNode.classList.remove('cur');
+  curNode=stNodes[curN-1]||null;
+  if(curNode)curNode.classList.add('cur');
+  if(originNode)originNode.classList.remove('origin');
+  originNode=originN?stNodes[originN-1]:null;
+  if(originNode)originNode.classList.add('origin');
+  if(goalNode)goalNode.classList.remove('goal');
+  goalNode=goalN?stNodes[goalN-1]:null;
+  if(goalNode)goalNode.classList.add('goal');
+}
+function setBadges(count,startIdx){
+  var i,el;
+  while(badgeNodes.length>count){
+    el=badgeNodes.pop();
+    if(el.parentNode)el.parentNode.removeChild(el);
+  }
+  while(badgeNodes.length<count){
+    el=document.createElement('span');
+    el.className='stepbadge';
+    strip.appendChild(el);
+    badgeNodes.push(el);
+  }
+  for(i=0;i<badgeNodes.length;i++){
+    badgeNodes[i].style.left=((startIdx+i+0.5)*SP)+'px';
+    badgeNodes[i].textContent=String(i+1);
+  }
+}
+
+/* ---- ドラッグ（Pointer Events：タッチでも マウスでも おなじコード） ---- */
+function onDown(e){
+  ensureAudio();
+  if(game.busy)return;
+  var t=e.target,st=null;
+  while(t&&t!==railview){
+    if(t.className&&String(t.className).indexOf('st')===0){st=t;break;}
+    t=t.parentNode;
+  }
+  rail.downStation=st?parseInt(st.getAttribute('data-n'),10):0;
+  rail.dragging=true;
+  rail.startX=e.clientX;
+  rail.startPos=rail.pos;
+  rail.moved=0;
+  rail.lastRound=Math.round(rail.pos);
+  try{railview.setPointerCapture(e.pointerId);}catch(err){}
+}
+function onMove(e){
+  if(!rail.dragging)return;
+  var dx=e.clientX-rail.startX;
+  if(Math.abs(dx)>rail.moved)rail.moved=Math.abs(dx);
+  var p=rail.startPos-dx/SP;
+  if(p<rail.min)p=rail.min;
+  if(p>rail.max)p=rail.max;
+  setPos(p,false);
+  var r=Math.round(p);
+  if(r!==rail.lastRound){
+    rail.lastRound=r;
+    SFX.step();
+    game.cur=r+1;
+    refreshPlay();
+  }
+}
+function onUp(e){
+  if(!rail.dragging)return;
+  rail.dragging=false;
+  try{railview.releasePointerCapture(e.pointerId);}catch(err){}
+  if(rail.moved<8&&rail.downStation){
+    setPos(Math.round(rail.pos),true);          /* まんなかへ もどす */
+    openInfo(rail.downStation);
+    return;
+  }
+  var n=Math.round(rail.pos);                    /* かならず えきに スナップ */
+  if(n<rail.min)n=rail.min;
+  if(n>rail.max)n=rail.max;
+  game.cur=n+1;
+  setPos(n,true);
+  refreshPlay();
+}
+railview.addEventListener('pointerdown',onDown);
+railview.addEventListener('pointermove',onMove);
+railview.addEventListener('pointerup',onUp);
+railview.addEventListener('pointercancel',onUp);
+
+/* =========================================================
+   7. ゲーム本体
+   ========================================================= */
+var game={lv:1,qi:0,q:null,prev:null,cur:1,firstTry:true,perfect:0,busy:false};
+var timers=[];
+function later(fn,ms){var t=window.setTimeout(fn,ms);timers.push(t);return t;}
+function clearTimers(){for(var i=0;i<timers.length;i++)window.clearTimeout(timers[i]);timers=[];}
+
+function refreshPlay(){
+  var start=game.q?game.q.start:1;
+  var count=game.cur-start;
+  if(count<0)count=0;
+  $('cNum').textContent=String(count);
+  setBadges(count,start-1);
+  markStations(game.cur,start,goalNode?parseInt(goalNode.getAttribute('data-n'),10):0);
+  $('curPlate').innerHTML=plateHTML(game.cur);
+  $('btnBack').disabled=(game.cur<=start);
+  $('btnGo').disabled=(game.cur>=LAST);
+}
+
+function renderDots(){
+  var h='',i;
+  for(i=0;i<QUESTIONS_PER_LEVEL;i++){
+    h+='<i class="'+(i<game.qi?'done':(i===game.qi?'now':''))+'"></i>';
+  }
+  $('dots').innerHTML=h;
+}
+
+function newQuestion(){
+  clearTimers();
+  game.q=QuestionMaker.make(game.lv,game.prev);
+  game.prev=game.q;
+  game.firstTry=true;
+  game.busy=false;
+  game.cur=game.q.start;
+  rail.min=game.q.start-1;
+  $('qNumc').innerHTML=numcHTML(game.q.start,'lg',true);
+  $('qName').innerHTML=nameHTML(game.q.start);
+  $('qAdd').textContent=String(game.q.add);
+  $('hint').className='hintbar';
+  $('hint').textContent='ゆびで うごかしても すすめるよ';
+  renderDots();
+  markStations(game.q.start,game.q.start,0);
+  setPos(game.q.start-1,true,460);
+  refreshPlay();
+  speak(ST(game.q.start).yomi+'から、'+game.q.add+'えき すすもう');
+}
+
+function stepTrain(dir){
+  if(game.busy)return;
+  var start=game.q.start,n=game.cur+dir;
+  if(n<start||n>LAST)return;
+  game.cur=n;
+  setPos(n-1,true);          /* 連打されても 論理位置が さきに きまるので ズレない */
+  SFX.step();
+  refreshPlay();
+}
+
+function judge(){
+  if(game.busy||!game.q)return;
+  game.busy=true;
+  if(game.cur===game.q.goal)onCorrect();
+  else onWrong();
+}
+
+function onCorrect(){
+  if(game.firstTry)game.perfect++;
+  SFX.correct();
+  confetti();
+  var q=game.q;
+  $('cPlate').innerHTML=plateHTML(q.goal);
+  $('cEqLabel').innerHTML='<span>'+esc(ST(q.start).yomi)+'</span><span>＋'+q.add+'えき</span><span>→ '+esc(ST(q.goal).yomi)+'</span>';
+  var eq=$('cEq');
+  eq.innerHTML='<span class="tk">'+q.start+'</span><span class="tk op">+</span><span class="tk">'+q.add+
+               '</span><span class="tk op">=</span><span class="tk ans">'+q.goal+'</span>';
+  var toks=eq.getElementsByTagName('span');
+  var d=REDUCE?120:300;
+  for(var i=0;i<toks.length;i++){
+    (function(el,idx){later(function(){el.className=el.className+' in';if(idx<4)SFX.tick();},600+idx*d);})(toks[i],i);
+  }
+  later(function(){speak(ST(q.goal).yomi+'。'+q.start+'たす'+q.add+'は'+q.goal);},400);
+  show('ovCorrect',true);
+}
+
+function onWrong(){
+  game.firstTry=false;
+  SFX.soft();
+  var q=game.q,slow=REDUCE?420:760;
+  $('hint').className='hintbar warn';
+  $('hint').textContent='もういちど かぞえてみよう';
+  speak('もういちど かぞえてみよう');
+  /* いちど 起点に もどして、1えきずつ ゆっくり かぞえて 見せる */
+  later(function(){
+    game.cur=q.start;
+    setPos(q.start-1,true,520);
+    refreshPlay();
+  },700);
+  for(var k=1;k<=q.add;k++){
+    (function(kk){
+      later(function(){
+        game.cur=q.start+kk;
+        setPos(game.cur-1,true,Math.min(400,slow-120));
+        SFX.tick();
+        refreshPlay();
+        speak(String(kk));
+      },1300+kk*slow);
+    })(k);
+  }
+  later(function(){
+    markStations(q.goal,q.start,q.goal);
+    speak(q.start+'から'+q.add+'えきで、'+ST(q.goal).yomi);
+  },1300+(q.add+1)*slow);
+  later(function(){
+    game.cur=q.start;
+    setPos(q.start-1,true,520);
+    markStations(q.start,q.start,0);
+    refreshPlay();
+    $('hint').className='hintbar';
+    $('hint').textContent='もういちど やってみよう！';
+    game.busy=false;
+  },1300+(q.add+1)*slow+1600);
+}
+
+function nextAfterCorrect(){
+  show('ovCorrect',false);
+  clearTimers();
+  stopSpeak();
+  game.qi++;
+  if(game.qi>=QUESTIONS_PER_LEVEL)levelClear();
+  else newQuestion();
+}
+
+function levelClear(){
+  var st=statOf(game.lv);
+  st.clear++;
+  if(game.perfect>st.best)st.best=game.perfect;
+  saveJSON('stats',stats);
+  var d=new Date();
+  var ticket={lv:game.lv,n:game.q.goal,
+    date:d.getFullYear()+'.'+pad2(d.getMonth()+1)+'.'+pad2(d.getDate())};
+  tickets.unshift(ticket);
+  if(tickets.length>60)tickets.length=60;
+  saveJSON('tickets',tickets);
+  SFX.fanfare();
+  confetti(true);
+  $('clearTitle').textContent='レベル'+game.lv+' クリア！';
+  $('clearTicket').innerHTML=ticketHTML(ticket);
+  $('clearRec').textContent=QUESTIONS_PER_LEVEL+'もんちゅう '+game.perfect+'もん いっぱつ せいかい';
+  show('ovClear',true);
+  later(function(){speak(ST(game.q.goal).yomi+'ゆきの きねんきっぷを もらったよ');},700);
+  renderLevelCards();
+}
+
+/* =========================================================
+   8. 画面きりかえ・きっぷ帳・駅の せつめい・紙ふぶき
+   ========================================================= */
+function show(id,on){
+  var el=$(id);
+  if(!el)return;
+  if(on)el.classList.add('on');else el.classList.remove('on');
+}
+function screenTo(id){
+  var list=['scTitle','scPlay','scBook'],i;
+  for(i=0;i<list.length;i++)show(list[i],list[i]===id);
+  if(id==='scPlay')layoutRail();
+}
+
+function ticketHTML(t){
+  return '<div class="ticket">'+numcHTML(t.n,'sm')+
+    '<div class="tkr"><div class="tkdest">'+nameHTML(t.n)+' <span>ゆき</span></div>'+
+    '<div class="tksub">きねん きっぷ ／ レベル'+t.lv+' ／ '+esc(t.date)+'</div></div>'+
+    '<span style="font-size:26px">🎫</span></div>';
+}
+function renderBook(){
+  var box=$('bookList');
+  if(!tickets.length){
+    box.innerHTML='<div class="empty">まだ きっぷは ありません。<br>レベルを 1つ クリアすると<br>きっぷが 1まい もらえます。</div>';
+    return;
+  }
+  var h='',i;
+  for(i=0;i<tickets.length;i++)h+=ticketHTML(tickets[i]);
+  box.innerHTML=h;
+}
+
+function openInfo(n){
+  var s=ST(n);
+  $('iNumc').innerHTML=numcHTML(n,'lg');
+  $('iName').innerHTML=nameHTML(n);
+  $('iYomi').textContent=s.yomi+'えき';
+  $('iDesc').innerHTML=rubyText(s.desc);
+  $('ovInfo').setAttribute('data-n',String(n));
+  show('ovInfo',true);
+  SFX.tap();
+  speak(s.yomi+'えき。'+plainText(s.desc));
+}
+
+var CF_COLORS=['#0B78BE','#FF8A2B','#12A05A','#FFD24D','#E8547C','#7C5CE0'];
+function confetti(big){
+  if(REDUCE)return;
+  var box=$('confetti'),num=big?46:26,i,el;
+  for(i=0;i<num;i++){
+    el=document.createElement('span');
+    el.className='cfp';
+    el.style.left=(Math.random()*100)+'%';
+    el.style.background=CF_COLORS[i%CF_COLORS.length];
+    el.style.animationDuration=(1.1+Math.random()*0.9)+'s';
+    el.style.animationDelay=(Math.random()*0.4)+'s';
+    el.style.width=(7+Math.random()*7)+'px';
+    box.appendChild(el);
+  }
+  window.setTimeout(function(){box.innerHTML='';},2600);
+}
+
+/* =========================================================
+   9. タイトル画面
+   ========================================================= */
+function renderLevelCards(){
+  var box=$('lvCards'),h='',i,lv,st;
+  for(i=0;i<LEVELS.length;i++){
+    lv=LEVELS[i];st=statOf(lv.id);
+    h+='<button class="lvcard" type="button" data-lv="'+lv.id+'">'+
+       '<span class="lvbadge" style="background:'+lv.color+'"><span>レベル</span><b>'+lv.id+'</b></span>'+
+       '<span class="lvtxt"><b>+'+lv.min+' 〜 +'+lv.max+'</b><span>'+lv.sub+'</span>'+
+       (st.clear>0?'<span class="lvrec">クリア '+st.clear+'かい ／ さいこう '+st.best+'/'+QUESTIONS_PER_LEVEL+'</span>':'')+
+       '</span><span style="font-size:26px;color:'+lv.color+'">▶</span></button>';
+  }
+  box.innerHTML=h;
+}
+function updateSoundBtn(){
+  $('btnSound').textContent=soundOn?'🔊 おと ON':'🔇 おと OFF';
+}
+function buildTitleRunner(){
+  var run=$('titleRun'),i,d;
+  for(i=0;i<7;i++){
+    d=document.createElement('span');
+    d.className='tdot';
+    d.style.left=(6+i*14.5)+'%';
+    run.insertBefore(d,$('titleRunner'));
+  }
+  $('titleRunner').innerHTML=trainSVG('train');
+  var svg=$('titleRunner').firstChild;
+  if(svg){svg.style.width='78px';svg.style.height='43px';}
+}
+
+/* =========================================================
+   10. そうさの わりあて
+   ========================================================= */
+$('btnGo').addEventListener('click',function(){stepTrain(1);});
+$('btnBack').addEventListener('click',function(){stepTrain(-1);});
+$('btnOriru').addEventListener('click',function(){judge();});
+$('btnNext').addEventListener('click',function(){nextAfterCorrect();});
+$('btnQuit').addEventListener('click',function(){
+  clearTimers();stopSpeak();game.busy=false;
+  show('ovCorrect',false);show('ovClear',false);show('ovInfo',false);
+  screenTo('scTitle');
+});
+$('btnAgain').addEventListener('click',function(){
+  show('ovClear',false);stopSpeak();startLevel(game.lv);
+});
+$('btnToTitle').addEventListener('click',function(){
+  show('ovClear',false);stopSpeak();screenTo('scTitle');
+});
+$('btnBook').addEventListener('click',function(){
+  SFX.tap();renderBook();screenTo('scBook');
+});
+$('btnBookBack').addEventListener('click',function(){SFX.tap();screenTo('scTitle');});
+$('btnClearTickets').addEventListener('click',function(){
+  if(!tickets.length)return;
+  if(window.confirm('あつめた きっぷを ぜんぶ けします。よろしいですか？')){
+    tickets=[];saveJSON('tickets',tickets);renderBook();
+  }
+});
+$('btnSound').addEventListener('click',function(){
+  soundOn=!soundOn;
+  saveJSON('sound',soundOn);
+  updateSoundBtn();
+  if(soundOn)SFX.tap();else stopSpeak();
+});
+$('btnInfoClose').addEventListener('click',function(){
+  show('ovInfo',false);stopSpeak();
+});
+$('btnSpeak').addEventListener('click',function(){
+  var n=parseInt($('ovInfo').getAttribute('data-n'),10)||1;
+  var s=ST(n);
+  speak(s.yomi+'えき。'+plainText(s.desc));
+});
+$('ovInfo').addEventListener('click',function(e){
+  if(e.target===$('ovInfo')){show('ovInfo',false);stopSpeak();}
+});
+$('curPlate').addEventListener('click',function(){
+  if(game.busy)return;
+  openInfo(game.cur);
+});
+$('lvCards').addEventListener('click',function(e){
+  var t=e.target;
+  while(t&&t!==this){
+    if(t.getAttribute&&t.getAttribute('data-lv')){
+      SFX.tap();
+      startLevel(parseInt(t.getAttribute('data-lv'),10));
+      return;
+    }
+    t=t.parentNode;
+  }
+});
+
+function startLevel(lv){
+  clearTimers();stopSpeak();
+  game.lv=lv;game.qi=0;game.perfect=0;game.prev=null;game.busy=false;
+  var st=statOf(lv);st.play++;saveJSON('stats',stats);
+  screenTo('scPlay');
+  newQuestion();
+}
+
+/* 画面サイズが かわったら 並べなおす */
+var rzTimer=null;
+function onResize(){
+  if(rzTimer)window.clearTimeout(rzTimer);
+  rzTimer=window.setTimeout(function(){layoutRail();},120);
+}
+window.addEventListener('resize',onResize);
+window.addEventListener('orientationchange',onResize);
+
+/* =========================================================
+   11. スタート
+   ========================================================= */
+buildRail();
+buildTitleRunner();
+renderLevelCards();
+updateSoundBtn();
+layoutRail();
+markStations(1,0,0);
+$('curPlate').innerHTML=plateHTML(1);
+
+})();
+</script>
+</body>
+</html>
