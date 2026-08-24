@@ -1,55 +1,76 @@
 /* にっぽん一周すごろく — ゲーム本体
- * ビルド不要。index.html を開くだけで動く。
- * ルールの ぜんたいぞうは README.md を みてね。
+ * ビルド不要。index.html を開くだけで動く。ルールの全体像は README.md を見てね。
+ *
+ * 盤面は map-data.js（国土数値情報由来の実際の県境データ）の上に置く。
+ * 文章中の 漢字{よみ} は ruby() が ふりがな付きの HTML に変換する。
  */
 'use strict';
 
-/* ══════════════ ていすう ══════════════ */
+/* ══════════════ 定数 ══════════════ */
 
-const TURNS_PER_YEAR = 8;      // 1ねん = 8ターン（2ターンで 1きせつ）
-const TOTAL_YEARS    = 3;      // 3ねん あそんで しゅうりょう
+const TURNS_PER_YEAR = 8;      // 1年 = 8ターン（2ターンで 1季節）
+const TOTAL_YEARS    = 3;      // 3年 遊んで終了
 const START_MONEY    = 1000;
 const QUIZ_REWARD    = 150;
 const DEST_REWARD    = 800;
+const DEST_CONSOLE   = 250;    // 2番目以降に 目的地へ着いた人のごほうび
 const MAX_QUESTS     = 2;
-const SHOP_RETURN    = 0.42;   // おみせの ねんかん しゅうえき = ねだん x これ
+const SHOP_RETURN    = 0.42;   // お店の年間収益 = ねだん x これ
 
 const SEASONS = [
-  { name: 'はる', emoji: '🌸' },
-  { name: 'なつ', emoji: '🌻' },
-  { name: 'あき', emoji: '🍁' },
-  { name: 'ふゆ', emoji: '⛄' },
+  { name: '春{はる}', emoji: '🌸' },
+  { name: '夏{なつ}', emoji: '🌻' },
+  { name: '秋{あき}', emoji: '🍁' },
+  { name: '冬{ふゆ}', emoji: '⛄' },
 ];
 
 const TOKENS = [
-  { emoji: '🐶', name: 'いぬた',   color: '#e08a3c', light: '#fdf0e2' },
-  { emoji: '🐱', name: 'ねこみ',   color: '#c96b8e', light: '#fbeef3' },
-  { emoji: '🐻', name: 'くまお',   color: '#8a6a4f', light: '#f4efe9' },
-  { emoji: '🦊', name: 'きつね',   color: '#d9645e', light: '#fceeed' },
-  { emoji: '🐼', name: 'ぱんだ',   color: '#5b6b7a', light: '#eef1f4' },
-  { emoji: '🐧', name: 'ぺんぎん', color: '#3f8fc0', light: '#e8f3fa' },
+  { emoji: '🐶', name: '犬{いぬ}のイヌタ',   short: 'イヌタ',   color: '#e08a3c', light: '#fdf0e2' },
+  { emoji: '🐱', name: '猫{ねこ}のネコミ',   short: 'ネコミ',   color: '#c96b8e', light: '#fbeef3' },
+  { emoji: '🐻', name: '熊{くま}のクマオ',   short: 'クマオ',   color: '#8a6a4f', light: '#f4efe9' },
+  { emoji: '🦊', name: '狐{きつね}のキツネ', short: 'キツネ',   color: '#d9645e', light: '#fceeed' },
+  { emoji: '🐼', name: 'パンダのパンタ',      short: 'パンタ',   color: '#5b6b7a', light: '#eef1f4' },
+  { emoji: '🐧', name: 'ペンギンのペンコ',    short: 'ペンコ',   color: '#3f8fc0', light: '#e8f3fa' },
 ];
 
-/* 3つの もくひょうが だいたい おなじ おもさに なるように きめた てんすう。
- * めやす（3ねんあそんだとき）：おかね 100〜250てん／カード 300〜450てん／
- * もくてきち 0〜600てん／おみせ 100〜300てん */
+/* 3つの目的が だいたい同じ重さになるように決めた点数。
+ * 目安（3年遊んだとき）：お金 100〜250点／カード 300〜450点／
+ * 目的地 0〜600点／お店 100〜300点 */
 const SCORE = { yenPerPoint: 20, perCard: 15, perArrival: 200, perShop: 15 };
 
-const SAVE_KEY = 'nippon-sugoroku-save-v1';
-const DEX_KEY  = 'nippon-sugoroku-dex-v1';
+const SAVE_KEY  = 'nippon-sugoroku-save-v1';
+const DEX_KEY   = 'nippon-sugoroku-dex-v1';
+const SOUND_KEY = 'nippon-sugoroku-sound-v1';
 
-/* ゆきの ふる ちほう（ふゆの イベントで つかう） */
-const SNOWY = new Set(['hokkaido', 'tohoku']);
+/* 雪の降る地方（冬のイベントで使う） */
+const SNOWY_REGIONS = new Set(['hokkaido', 'tohoku']);
 const SNOWY_PREFS = new Set(['niigata', 'toyama', 'ishikawa', 'fukui', 'nagano', 'gifu']);
 
-/* ══════════════ こまごました どうぐ ══════════════ */
+/* ══════════════ 小道具 ══════════════ */
 
 const $  = (s) => document.querySelector(s);
 const $$ = (s) => Array.from(document.querySelectorAll(s));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const randInt = (n) => Math.floor(Math.random() * n);
 const pick = (arr) => arr[randInt(arr.length)];
-const yen = (n) => n.toLocaleString('ja-JP') + 'えん';
+
+/* ルビの土台になれる文字＝漢字の並び、または数字（9.4 のような小数も）。
+ * ここを「空白以外なんでも」にすると、HTMLのタグや属性まで巻きこんでしまう。 */
+const RUBY_RE = /((?:[\u3005\u3006\u30F6\u4E00-\u9FFF\uF900-\uFAFF]+)|(?:[0-9\uFF10-\uFF19][0-9\uFF10-\uFF19.]*))\{([^}]*)\}/g;
+
+/** 漢字{よみ} → <ruby>漢字<rt>よみ</rt></ruby> */
+function ruby(s) {
+  return String(s).replace(RUBY_RE, '<ruby>$1<rt>$2</rt></ruby>');
+}
+/** ふりがな記法と ruby タグを取り除いた ふつうの文字列（読み上げ・SVG用） */
+function plain(s) {
+  return String(s)
+    .replace(/<rt>.*?<\/rt>/g, '')   // ふりがなの中身は 読み上げない
+    .replace(/<[^>]*>/g, '')
+    .replace(/\{[^}]*\}/g, '');
+}
+/** 「1,200円」。数字がルビの土台に入らないよう、ここだけ ruby タグを直接書く */
+const yen = (n) => n.toLocaleString('ja-JP') + '<ruby>円<rt>えん</rt></ruby>';
 
 const PREF_BY_ID = Object.fromEntries(PREFS.map((p) => [p.id, p]));
 const CARD_BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
@@ -58,7 +79,7 @@ for (const c of CARDS) (CARDS_BY_PREF[c.pref] = CARDS_BY_PREF[c.pref] || []).pus
 
 const RARE_LABEL = { 1: 'ふつう', 2: 'めずらしい', 3: 'でんせつ' };
 
-/** となりの けんまでの あるきかず（はばゆうせん たんさく） */
+/** 隣の県までの歩数（幅優先探索） */
 function bfsFrom(startId) {
   const dist = { [startId]: 0 };
   const queue = [startId];
@@ -71,27 +92,78 @@ function bfsFrom(startId) {
   return dist;
 }
 
-/* ══════════════ ちずの ざひょう ══════════════ */
+/* ══════════════ 盤面の座標（実際の地図の上） ══════════════ */
 
-const MAP_SCALE_X = 105;
-const MAP_SCALE_Y = 96;
-const MAP_PAD = 80;
-let MAP_W = 0, MAP_H = 0;
+/* 地図の表示範囲。沖縄のインセット枠が 元の viewBox より 左に はみ出るので、
+ * その分だけ 左へ広げる */
+const VB = (() => {
+  const v = MAP_VIEWBOX.split(/\s+/).map(Number);   // [x, y, w, h]
+  const extra = Math.max(0, v[0] - (OKI_FRAME.x - 6));
+  return [v[0] - extra, v[1], v[2] + extra, v[3]];
+})();
+const NODE_R = 12;          // 駒のマルの半径（地図の単位）
+const MIN_NODE_GAP = 46;    // 駒どうしの最小の間かく
+const MAX_NODE_MOVE = 32;   // 県の代表点から どれだけ ずらしてよいか
 
-(function layoutMap() {
-  const lons = PREFS.map((p) => p.mapLon ?? p.lon);
-  const lats = PREFS.map((p) => p.mapLat ?? p.lat);
-  const minLon = Math.min(...lons);
-  const maxLat = Math.max(...lats);
+(function layoutNodes() {
+  const byName = Object.fromEntries(PREFECTURES.map((p) => [p.name, p]));
   for (const p of PREFS) {
-    p.x = ((p.mapLon ?? p.lon) - minLon) * MAP_SCALE_X + MAP_PAD;
-    p.y = (maxLat - (p.mapLat ?? p.lat)) * MAP_SCALE_Y + MAP_PAD;
+    const m = byName[p.name];
+    p.path = m.path;
+    p.hx = m.lx; p.hy = m.ly;   // 県の代表点（引き出し線のもと）
+    p.x = m.lx;  p.y = m.ly;    // 駒を置く場所
   }
-  MAP_W = Math.max(...PREFS.map((p) => p.x)) + MAP_PAD;
-  MAP_H = Math.max(...PREFS.map((p) => p.y)) + MAP_PAD;
+  // 重ならないように押し広げつつ、代表点から離れすぎないよう引きもどす
+  for (let it = 0; it < 900; it++) {
+    for (let i = 0; i < PREFS.length; i++) {
+      for (let j = i + 1; j < PREFS.length; j++) {
+        const a = PREFS[i], b = PREFS[j];
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.hypot(dx, dy) || 0.01;
+        if (d < MIN_NODE_GAP) {
+          const push = ((MIN_NODE_GAP - d) / 2) * 0.6, ux = dx / d, uy = dy / d;
+          a.x -= ux * push; a.y -= uy * push;
+          b.x += ux * push; b.y += uy * push;
+        }
+      }
+    }
+    for (const p of PREFS) {
+      const dx = p.x - p.hx, dy = p.y - p.hy, d = Math.hypot(dx, dy);
+      if (d > MAX_NODE_MOVE) { p.x = p.hx + (dx / d) * MAX_NODE_MOVE; p.y = p.hy + (dy / d) * MAX_NODE_MOVE; }
+    }
+  }
+  // 地図に書く短い名前（「県」「府」「都」を落とす。北海道はそのまま）
+  for (const p of PREFS) p.shortName = p.name.replace(/[都府県]$/, '');
 })();
 
-/* ══════════════ ずかん（ずっと のこる） ══════════════ */
+/* ══════════════ 音 ══════════════ */
+
+const sound = { bgm: true, se: true, voice: true };
+(function loadSound() {
+  try {
+    const raw = localStorage.getItem(SOUND_KEY);
+    if (raw) Object.assign(sound, JSON.parse(raw));
+  } catch (e) { /* 無視 */ }
+})();
+function saveSound() {
+  try { localStorage.setItem(SOUND_KEY, JSON.stringify(sound)); } catch (e) { /* 無視 */ }
+}
+function applySound() {
+  SoundEngine.setSeEnabled(sound.se);
+  SoundEngine.setVoiceEnabled(sound.voice);
+  SoundEngine.setBgmEnabled(sound.bgm && inGame);
+}
+/** 文章を読み上げる（ふりがな記法は外す） */
+function say(text) {
+  if (sound.voice) SoundEngine.speak(plain(text));
+}
+/** お金の増減に あわせて 音を鳴らす */
+function moneySound(delta) {
+  if (delta > 0) SoundEngine.seCoin();
+  else if (delta < 0) SoundEngine.seLose();
+}
+
+/* ══════════════ ずかん（ずっと残る） ══════════════ */
 
 function loadDex() {
   try {
@@ -100,15 +172,16 @@ function loadDex() {
   } catch (e) { return new Set(); }
 }
 function saveDex(set) {
-  try { localStorage.setItem(DEX_KEY, JSON.stringify([...set])); } catch (e) { /* むし */ }
+  try { localStorage.setItem(DEX_KEY, JSON.stringify([...set])); } catch (e) { /* 無視 */ }
 }
 let DEX = loadDex();
 
-/* ══════════════ ゲームの じょうたい ══════════════ */
+/* ══════════════ ゲームの状態 ══════════════ */
 
-let S = null;             // いまの ゲーム
-let busy = false;         // しょり ちゅうは そうさを うけつけない
-let pendingClick = null;  // ちずの タップまち
+let S = null;             // いまのゲーム
+let busy = false;         // 処理中は操作を受けつけない
+let pendingClick = null;  // 地図のタップ待ち
+let inGame = false;
 
 function newPlayer(name, tokenIndex, cpu) {
   const t = TOKENS[tokenIndex];
@@ -122,16 +195,12 @@ function newPlayer(name, tokenIndex, cpu) {
 }
 
 function newGame(players) {
-  S = {
-    v: 1, year: 1, turnInYear: 0, cur: 0,
-    players, dest: null, destTakenBy: null, usedDests: [],
-  };
-  S.players.forEach((p, i) => { p.pos = 'tokyo'; });
+  S = { v: 1, year: 1, turnInYear: 0, cur: 0, players, dest: null, destTakenBy: null, usedDests: [] };
   chooseDestination();
 }
 
 function save() {
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* むし */ }
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); } catch (e) { /* 無視 */ }
 }
 function loadSave() {
   try {
@@ -142,15 +211,14 @@ function loadSave() {
   } catch (e) { return null; }
 }
 function clearSave() {
-  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* むし */ }
+  try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* 無視 */ }
 }
 
-/** ことしの もくてきち を きめる（みんなから そこそこ とおい ところ） */
+/** 今年の目的地を決める（みんなから そこそこ遠いところ） */
 function chooseDestination() {
   const used = new Set(S.usedDests);
   const dists = S.players.map((p) => bfsFrom(p.pos));
-  const scored = PREFS
-    .filter((p) => !used.has(p.id))
+  const scored = PREFS.filter((p) => !used.has(p.id))
     .map((p) => ({ id: p.id, d: Math.min(...dists.map((dm) => dm[p.id] ?? 99)) }));
   let cands = scored.filter((s) => s.d >= 6 && s.d <= 12);
   if (!cands.length) cands = scored.filter((s) => s.d >= 4);
@@ -161,7 +229,7 @@ function chooseDestination() {
   S.usedDests.push(best.id);
 }
 
-/* ══════════════ ちずの えがき ══════════════ */
+/* ══════════════ 地図を描く ══════════════ */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const el = (tag, attrs = {}, text) => {
@@ -174,10 +242,28 @@ const el = (tag, attrs = {}, text) => {
 function buildMap() {
   const svg = $('#map');
   svg.innerHTML = '';
-  svg.setAttribute('viewBox', `0 0 ${MAP_W} ${MAP_H}`);
-  svg.setAttribute('width', MAP_W);
-  svg.setAttribute('height', MAP_H);
+  svg.setAttribute('viewBox', VB.join(' '));
 
+  // ① 都道府県のかたち
+  const gShapes = el('g', { id: 'shapes' });
+  for (const p of PREFS) {
+    const path = el('path', {
+      class: 'pref-shape', 'data-id': p.id, d: p.path,
+      fill: REGIONS[p.region].fill,
+    });
+    path.addEventListener('click', () => onNodeClick(p.id));
+    gShapes.appendChild(path);
+  }
+  svg.appendChild(gShapes);
+
+  // ② 沖縄県のインセット枠
+  const f = OKI_FRAME;
+  const gOki = el('g', { id: 'oki-frame' });
+  gOki.appendChild(el('rect', { x: f.x, y: f.y, width: f.w, height: f.h, rx: 10, class: 'oki-rect' }));
+  gOki.appendChild(el('text', { x: f.x + 8, y: f.y + 22, class: 'oki-label' }, '沖縄県（拡大）'));
+  svg.appendChild(gOki);
+
+  // ③ 県と県をむすぶ道
   const gLinks = el('g', { id: 'links' });
   const drawn = new Set();
   for (const p of PREFS) {
@@ -186,26 +272,29 @@ function buildMap() {
       if (drawn.has(key)) continue;
       drawn.add(key);
       const o = PREF_BY_ID[q];
-      const line = el('line', {
+      gLinks.appendChild(el('line', {
         x1: p.x, y1: p.y, x2: o.x, y2: o.y,
         class: 'link-line' + (SEA_LINKS.has(key) ? ' sea' : ''),
-      });
-      gLinks.appendChild(line);
+      }));
     }
   }
   svg.appendChild(gLinks);
 
+  // ④ 駒を置くマル＋県名（ふりがなは上に小さく）
   const gNodes = el('g', { id: 'nodes' });
   for (const p of PREFS) {
+    // 代表点から ずれている駒には 引き出し線をひく
+    if (Math.hypot(p.x - p.hx, p.y - p.hy) > 8) {
+      gNodes.appendChild(el('line', { x1: p.hx, y1: p.hy, x2: p.x, y2: p.y, class: 'leader' }));
+      gNodes.appendChild(el('circle', { cx: p.hx, cy: p.hy, r: 2.6, class: 'leader-dot' }));
+    }
     const g = el('g', { class: 'node', 'data-id': p.id, transform: `translate(${p.x},${p.y})` });
-    g.appendChild(el('circle', { class: 'node-ring', r: 30 }));
-    g.appendChild(el('circle', { class: 'node-pick', r: 30, fill: 'transparent' }));
-    g.appendChild(el('circle', {
-      class: 'node-circle', r: 21, fill: REGIONS[p.region].color, stroke: '#fff',
-    }));
-    g.appendChild(el('text', { class: 'node-emoji', y: 6, fill: '#fff' }, ''));
-    g.appendChild(el('text', { class: 'node-label', y: 41 }, p.kana));
-    g.appendChild(el('circle', { class: 'node-hit', r: 34 }));
+    g.appendChild(el('circle', { class: 'node-ring', r: NODE_R + 9 }));
+    g.appendChild(el('circle', { class: 'node-circle', r: NODE_R, fill: REGIONS[p.region].color }));
+    g.appendChild(el('text', { class: 'node-check', y: 4 }, ''));
+    g.appendChild(el('text', { class: 'node-kana', y: NODE_R + 8 }, p.kana));
+    g.appendChild(el('text', { class: 'node-name', y: NODE_R + 20 }, p.shortName));
+    g.appendChild(el('circle', { class: 'node-hit', r: NODE_R + 10 }));
     g.addEventListener('click', () => onNodeClick(p.id));
     gNodes.appendChild(g);
   }
@@ -220,29 +309,35 @@ function renderMap(selectable) {
   const owned = {};
   for (const p of S.players) for (const s of p.shops) (owned[s.pref] = owned[s.pref] || []).push(p);
 
+  for (const shape of $$('#map .pref-shape')) {
+    const id = shape.dataset.id;
+    shape.classList.toggle('selectable', sel.has(id));
+    shape.classList.toggle('is-dest', S.dest === id && S.destTakenBy === null);
+    shape.classList.toggle('is-here', me.pos === id);
+  }
   for (const g of $$('#map .node')) {
     const id = g.dataset.id;
     g.classList.toggle('selectable', sel.has(id));
     g.classList.toggle('is-dest', S.dest === id && S.destTakenBy === null);
-    // カードを ぜんぶ あつめた けんには ✔ を つける（のこりが ある けんは まっさら）
+    // カードを全部あつめた県には ✔
     const left = (CARDS_BY_PREF[id] || []).some((c) => c.rare < 3 && !me.cards.includes(c.id));
-    g.querySelector('.node-emoji').textContent = left ? '' : '✔';
+    g.querySelector('.node-check').textContent = left ? '' : '✓';
   }
 
-  // おみせの もちぬしを しめす ちいさな まる
+  // お店の持ち主を示す小さなマル
   const gOwners = $('#owners');
   gOwners.innerHTML = '';
   for (const prefId in owned) {
     const p = PREF_BY_ID[prefId];
     owned[prefId].slice(0, 3).forEach((pl, i) => {
       gOwners.appendChild(el('circle', {
-        cx: p.x + 15 + i * 10, cy: p.y - 17, r: 5,
-        fill: pl.color, stroke: '#fff', 'stroke-width': 2,
+        cx: p.x + NODE_R - 2 + i * 7, cy: p.y - NODE_R - 3, r: 3.4,
+        fill: pl.color, stroke: '#fff', 'stroke-width': 1.4,
       }));
     });
   }
 
-  // こま
+  // 駒
   const gTokens = $('#tokens');
   gTokens.innerHTML = '';
   const byPos = {};
@@ -252,94 +347,97 @@ function renderMap(selectable) {
     const list = byPos[posId];
     list.forEach((pi, k) => {
       const pl = S.players[pi];
-      const ang = (Math.PI * 2 * k) / list.length - Math.PI / 2;
-      const r = list.length === 1 ? 0 : 17;
-      const cx = p.x + Math.cos(ang) * r;
-      const cy = p.y + Math.sin(ang) * r - 2;
+      const gap = list.length > 2 ? 9 : 10;
+      const cx = p.x + (k - (list.length - 1) / 2) * gap;
+      const cy = p.y;
       gTokens.appendChild(el('circle', {
-        class: 'token-bg', cx, cy: cy + 1, r: 14, fill: pl.color,
-        opacity: pi === S.cur ? 1 : 0.72,
+        class: 'token-bg', cx, cy, r: 9.5, fill: pl.color,
+        opacity: pi === S.cur ? 1 : 0.7,
       }));
-      gTokens.appendChild(el('text', { class: 'token', x: cx, y: cy + 7 }, pl.emoji));
+      gTokens.appendChild(el('text', { class: 'token', x: cx, y: cy + 4.6 }, pl.emoji));
     });
   }
 }
 
-/* 3だんかい：ふつう → すこし ひいた → にっぽん ぜんたい（がめんに ぴったり） */
-const ZOOM_LEVELS = [1, 0.68, 'fit'];
+/* 3段階：ふつう → すこし引いた → 日本ぜんたい（画面にぴったり） */
+const ZOOM_LEVELS = [1.5, 1.0, 'fit'];
 let zoomIndex = 0;
 
 function zoomValue(i) {
   const v = ZOOM_LEVELS[i];
   if (v !== 'fit') return v;
-  const w = $('#map-wrap').clientWidth || MAP_W;
-  return Math.max(0.2, Math.min(0.95, w / MAP_W));
+  const w = $('#map-wrap').clientWidth || VB[2];
+  return Math.max(0.15, Math.min(1.4, w / VB[2]));
 }
 
 function applyZoom(i) {
   zoomIndex = ((i % ZOOM_LEVELS.length) + ZOOM_LEVELS.length) % ZOOM_LEVELS.length;
   const z = zoomValue(zoomIndex);
   const svg = $('#map');
-  svg.style.width = (MAP_W * z) + 'px';
-  svg.style.height = (MAP_H * z) + 'px';
-  // ちいさすぎて けんめいが よめない ときは、まるだけの「ぜんたいマップ」にする
-  svg.classList.toggle('overview', z < 0.5);
+  svg.style.width = (VB[2] * z) + 'px';
+  svg.style.height = (VB[3] * z) + 'px';
+  // 小さすぎて県名が読めないときは、かたちだけの「ぜんたい地図」にする
+  svg.classList.toggle('overview', z < 0.7);
   const btn = $('#btn-zoom');
-  if (btn) btn.textContent = ZOOM_LEVELS[zoomIndex] === 'fit' ? '🔍 ぜんたい' : `🔍 ${Math.round(z * 100)}%`;
+  if (btn) {
+    btn.innerHTML = ruby(ZOOM_LEVELS[zoomIndex] === 'fit'
+      ? '🔍 全体{ぜんたい}'
+      : `🔍 ${Math.round((z / ZOOM_LEVELS[0]) * 100)}%`);
+  }
 }
 
 function centerOn(prefId) {
   const wrap = $('#map-wrap');
   const p = PREF_BY_ID[prefId];
   const svg = $('#map');
-  const scale = svg.clientWidth / MAP_W || 1;
+  const scale = (svg.clientWidth || VB[2]) / VB[2];
   wrap.scrollTo({
-    left: p.x * scale - wrap.clientWidth / 2,
-    top: p.y * scale - wrap.clientHeight / 2,
+    left: (p.x - VB[0]) * scale - wrap.clientWidth / 2,
+    top: (p.y - VB[1]) * scale - wrap.clientHeight / 2,
     behavior: 'smooth',
   });
 }
 
 function onNodeClick(id) {
-  if (!pendingClick) return;
-  if (!pendingClick.allowed.has(id)) return;
+  if (!pendingClick || !pendingClick.allowed.has(id)) return;
   const fn = pendingClick.resolve;
   pendingClick = null;
+  SoundEngine.seStep();
   renderMap([]);
   fn(id);
 }
 
-/* ══════════════ まど（モーダル）と トースト ══════════════ */
+/* ══════════════ まど（モーダル）とトースト ══════════════ */
 
 function modal(opts) {
   return new Promise((resolve) => {
     const box = $('#overlay-box');
     const acts = opts.actions && opts.actions.length
       ? opts.actions
-      : [{ label: 'つぎへ', value: 'ok', primary: true }];
-    box.innerHTML = `
+      : [{ label: '次{つぎ}へ', value: 'ok', primary: true }];
+    box.innerHTML = ruby(`
       ${opts.kicker ? `<p class="m-kicker">${opts.kicker}</p>` : ''}
       ${opts.emoji ? `<div class="m-emoji">${opts.emoji}</div>` : ''}
       ${opts.title ? `<h2 class="m-title">${opts.title}${opts.yomi ? `<span class="yomi">${opts.yomi}</span>` : ''}</h2>` : ''}
-      ${opts.html || ''}
-      <div class="m-actions"></div>`;
+      ${opts.html || ''}`) + '<div class="m-actions"></div>';
     const wrap = box.querySelector('.m-actions');
     acts.forEach((a) => {
       const b = document.createElement('button');
       b.className = a.primary ? 'primary' : '';
-      b.innerHTML = a.label + (a.sub ? `<span class="sub">${a.sub}</span>` : '');
+      b.innerHTML = ruby(a.label + (a.sub ? `<span class="sub">${a.sub}</span>` : ''));
       b.disabled = !!a.disabled;
       b.addEventListener('click', () => {
+        SoundEngine.seTap();
         if (opts.onPick) { opts.onPick(a.value, b, wrap, resolve); return; }
-        close();
+        SoundEngine.stopSpeak();
+        closeModal();
         resolve(a.value);
       });
       wrap.appendChild(b);
     });
     $('#overlay').hidden = false;
     box.scrollTop = 0;
-    function close() { $('#overlay').hidden = true; }
-    resolve.close = close;
+    if (opts.speak) say(opts.speak);
   });
 }
 function closeModal() { $('#overlay').hidden = true; }
@@ -347,7 +445,7 @@ function closeModal() { $('#overlay').hidden = true; }
 function toast(msg, ms = 1700) {
   const t = document.createElement('div');
   t.className = 'toast';
-  t.innerHTML = msg;
+  t.innerHTML = ruby(msg);
   $('#toast-area').appendChild(t);
   setTimeout(() => t.remove(), ms);
   return sleep(Math.min(ms, 650));
@@ -362,18 +460,17 @@ function cardHTML(c) {
     <div class="cv-emoji">${cat.emoji}</div>
     <span class="cv-rare">${RARE_LABEL[c.rare]}</span>
     <div class="cv-name">${c.name}</div>
-    <div class="cv-meta">No.${c.id} ／ ${pref.name}（${pref.kana}） ／ ${cat.label}</div>
+    <div class="cv-meta">No.${c.id} ／ ${pref.name} ／ ${cat.label}</div>
     <p class="cv-text">${c.text}</p>
   </div>`;
 }
 
-/** その けんで まだ もっていない カードを 1まい えらぶ（でんせつは のぞく） */
+/** その県で まだ持っていないカードを1枚えらぶ（でんせつは のぞく） */
 function drawCard(player, prefId, includeLegendary) {
   const pool = (CARDS_BY_PREF[prefId] || []).filter(
     (c) => !player.cards.includes(c.id) && (includeLegendary ? true : c.rare < 3)
   );
   if (!pool.length) return null;
-  // ふつうの カードが でやすい ように おもみを つける
   const weighted = [];
   for (const c of pool) {
     const w = c.rare === 1 ? 4 : c.rare === 2 ? 2 : 1;
@@ -388,7 +485,7 @@ function giveCard(player, card) {
   saveDex(DEX);
 }
 
-/* ══════════════ おつかい（クエスト） ══════════════ */
+/* ══════════════ お使い（クエスト） ══════════════ */
 
 function makeQuest(fromPrefId) {
   const dist = bfsFrom(fromPrefId);
@@ -402,10 +499,10 @@ function makeQuest(fromPrefId) {
 }
 
 function questText(q) {
-  return `${PREF_BY_ID[q.from].kana}の「${q.item}」を <b>${PREF_BY_ID[q.to].kana}</b> へ とどける`;
+  return `${PREF_BY_ID[q.from].name}の「${q.item}」を <b>${PREF_BY_ID[q.to].name}</b> へ 届{とど}ける`;
 }
 
-/* ══════════════ おみせ ══════════════ */
+/* ══════════════ お店 ══════════════ */
 
 const shopIncome = (price) => Math.round((price * SHOP_RETURN) / 10) * 10;
 
@@ -418,55 +515,55 @@ function shopOwner(prefId, idx) {
   return S.players.find((p) => p.shops.some((s) => s.pref === prefId && s.idx === idx)) || null;
 }
 
-/* ══════════════ きせつの できごと ══════════════ */
+/* ══════════════ 季節のできごと ══════════════ */
 
 const EVENTS = [
-  { id: 'snow', season: 3, when: (p) => SNOWY.has(PREF_BY_ID[p.pos].region) || SNOWY_PREFS.has(p.pos),
-    emoji: '❄️', title: 'おおゆき！',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}は ゆきで でんしゃが とまってしまった。つぎの ターンは おやすみ。`,
-    apply: (p) => { p.rest = 1; } },
-  { id: 'festival', season: 1, emoji: '🎆', title: 'なつまつり！',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}の おまつりを てつだったら おれいを もらったよ。`,
+  { id: 'snow', season: 3,
+    when: (p) => SNOWY_REGIONS.has(PREF_BY_ID[p.pos].region) || SNOWY_PREFS.has(p.pos),
+    emoji: '❄️', title: '大雪{おおゆき}！',
+    text: (p) => `${PREF_BY_ID[p.pos].name}は 雪{ゆき}で 電車{でんしゃ}が 止{と}まってしまった。次{つぎ}の ターンは お休{やす}み。`,
+    apply: (p) => { p.rest = 1; SoundEngine.seRest(); } },
+  { id: 'festival', season: 1, emoji: '🎆', title: '夏祭{なつまつ}り！',
+    text: (p) => `${PREF_BY_ID[p.pos].name}の お祭{まつ}りを 手伝{てつだ}ったら お礼{れい}を もらったよ。`,
     money: 220 },
-  { id: 'hanami', season: 0, emoji: '🌸', title: 'おはなみ',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}の さくらが まんかい。かんこうきゃくの あんないを して おこづかいを もらった。`,
+  { id: 'hanami', season: 0, emoji: '🌸', title: 'お花見{はなみ}',
+    text: (p) => `${PREF_BY_ID[p.pos].name}の 桜{さくら}が 満開{まんかい}。観光客{かんこうきゃく}の 案内{あんない}を して お小遣{こづか}いを もらった。`,
     money: 170 },
-  { id: 'harvest', season: 2, emoji: '🌾', title: 'しゅうかくの てつだい',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}の はたけを てつだって、おれいを もらったよ。`,
+  { id: 'harvest', season: 2, emoji: '🌾', title: '収穫{しゅうかく}の 手伝{てつだ}い',
+    text: (p) => `${PREF_BY_ID[p.pos].name}の 畑{はたけ}を 手伝{てつだ}って、お礼{れい}を もらったよ。`,
     money: 200 },
-  { id: 'souvenir', emoji: '🎁', title: 'おみやげを かった',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}の おみやげやさんで つい かいすぎちゃった。`,
+  { id: 'souvenir', emoji: '🎁', title: 'お土産{みやげ}を 買{か}った',
+    text: (p) => `${PREF_BY_ID[p.pos].name}の お土産屋{みやげや}さんで つい 買{か}いすぎちゃった。`,
     money: -120 },
-  { id: 'lost', emoji: '💸', title: 'さいふを おとした',
-    text: () => 'あわてて さがしたけれど、すこし なくなっていた…。',
+  { id: 'lost', emoji: '💸', title: '財布{さいふ}を 落{お}とした',
+    text: () => 'あわてて 探{さが}したけれど、少{すこ}し なくなっていた…。',
     money: -150 },
-  { id: 'localtrain', emoji: '🚃', title: 'かんこう れっしゃ',
-    text: (p) => `${PREF_BY_ID[p.pos].kana}の かんこう れっしゃに のって きぶんてんかん。えきべんも もらった！`,
+  { id: 'localtrain', emoji: '🚃', title: '観光列車{かんこうれっしゃ}',
+    text: (p) => `${PREF_BY_ID[p.pos].name}の 観光列車{かんこうれっしゃ}に 乗{の}って 気分転換{きぶんてんかん}。駅弁{えきべん}も もらった！`,
     money: 130 },
 ];
 
 function rollEvent(player, seasonIdx) {
   const pool = EVENTS.filter((e) => (e.season === undefined || e.season === seasonIdx)
     && (!e.when || e.when(player)));
-  if (!pool.length) return null;
-  return pick(pool);
+  return pool.length ? pick(pool) : null;
 }
 
-/* ══════════════ ゲームの ながれ ══════════════ */
+/* ══════════════ ゲームの流れ ══════════════ */
 
-/* 1ねんの さいごの しょりちゅうは turnInYear が 8 に なるので、はみださないように する */
+/* 1年の最後の処理中は turnInYear が 8 になるので、はみ出さないようにする */
 const seasonIndex = () => Math.min(Math.floor(S.turnInYear / 2), SEASONS.length - 1);
 
 function renderHUD() {
   const s = SEASONS[seasonIndex()];
-  $('#hud-year').textContent = `${S.year}ねんめ / ${TOTAL_YEARS}`;
-  $('#hud-season').textContent = `${s.emoji} ${s.name}`;
+  $('#hud-year').innerHTML = ruby(`${S.year}年目{ねんめ} / ${TOTAL_YEARS}`);
+  $('#hud-season').innerHTML = ruby(`${s.emoji} ${s.name}`);
   const d = PREF_BY_ID[S.dest];
-  $('#hud-dest').textContent = S.destTakenBy === null
-    ? `📍 ${d.kana}`
-    : `${d.kana}（${S.players[S.destTakenBy].name} とうちゃく）`;
+  $('#hud-dest').innerHTML = ruby(S.destTakenBy === null
+    ? `📍 ${d.name}`
+    : `${d.name}（${S.players[S.destTakenBy].name} 到着{とうちゃく}）`);
   $('.hud-dest').classList.toggle('reached', S.destTakenBy !== null);
-  $('#hud-turns').textContent = `${TURNS_PER_YEAR - S.turnInYear}かい`;
+  $('#hud-turns').innerHTML = ruby(`${TURNS_PER_YEAR - S.turnInYear}回{かい}`);
 }
 
 function renderPlayers() {
@@ -477,22 +574,22 @@ function renderPlayers() {
     d.className = 'pstat' + (i === S.cur ? ' is-cur' : '');
     d.style.setProperty('--pc', p.color);
     d.style.setProperty('--pc-l', p.light);
-    d.innerHTML = `
+    d.innerHTML = ruby(`
       <div class="pname">${p.emoji} ${p.name}${p.cpu ? '<span class="cpu-tag">CPU</span>' : ''}</div>
       <div class="pnums">
         <span>💰<b>${p.money.toLocaleString('ja-JP')}</b></span>
         <span>🃏<b>${p.cards.length}</b></span>
         <span>📍<b>${p.arrivals}</b></span>
         <span>🏪<b>${p.shops.length}</b></span>
-      </div>`;
+      </div>`);
     box.appendChild(d);
   });
 }
 
 function renderBanner() {
   const p = S.players[S.cur];
-  $('#turn-banner-text').innerHTML =
-    `${p.emoji} <b style="color:${p.color}">${p.name}</b> の ばん — いま ${PREF_BY_ID[p.pos].kana}`;
+  $('#turn-banner-text').innerHTML = ruby(
+    `${p.emoji} <b style="color:${p.color}">${p.name}</b> の番{ばん} — いま ${PREF_BY_ID[p.pos].name}`);
 }
 
 function render(selectable) {
@@ -506,7 +603,7 @@ function setDiceEnabled(on, label) {
   const b = $('#btn-dice');
   b.disabled = !on;
   b.hidden = !on;
-  if (label) b.textContent = label;
+  if (label) b.innerHTML = ruby(label);
   $('#step-info').hidden = on;
 }
 
@@ -519,16 +616,17 @@ async function startTurn() {
   if (p.rest > 0) {
     p.rest--;
     setDiceEnabled(false);
-    $('#step-info').textContent = `${p.name}は おやすみ…`;
-    await toast(`😴 ${p.name}は 1かい おやすみ`, 1500);
-    await sleep(500);
+    SoundEngine.seRest();
+    $('#step-info').innerHTML = ruby(`${p.name}は お休{やす}み…`);
+    await toast(`😴 ${p.name}は 1回{かい} お休{やす}み`, 1500);
+    await sleep(400);
     return endTurn();
   }
 
   if (p.cpu) {
     setDiceEnabled(false);
-    $('#step-info').textContent = `${p.name}（CPU）が かんがえています…`;
-    await sleep(700);
+    $('#step-info').innerHTML = ruby(`${p.name}（CPU）が 考{かんが}えています…`);
+    await sleep(600);
     return doRoll();
   }
 
@@ -544,32 +642,35 @@ async function doRoll() {
   const box = $('#dice-box');
   const faces = ['⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
   box.classList.add('rolling');
+  SoundEngine.seDice();
   for (let i = 0; i < 6; i++) { $('#dice-face').textContent = faces[randInt(6)]; await sleep(65); }
   const n = 1 + randInt(6);
   box.classList.remove('rolling');
   $('#dice-face').textContent = faces[n - 1];
-  await toast(`🎲 ${n} が でた！`, 1000);
+  SoundEngine.seDiceStop();
+  await toast(`🎲 ${n} が 出{で}た！`, 1000);
 
   await moveSteps(p, n);
   await resolveLanding(p);
   endTurn();
 }
 
-/** サイコロの めの かず だけ、1ますずつ すすむ */
+/** サイコロの目の数だけ、1マスずつ進む */
 async function moveSteps(player, steps) {
   let prev = null;
   for (let i = steps; i > 0; i--) {
     const here = PREF_BY_ID[player.pos];
     let options = here.adj.filter((id) => id !== prev);
-    if (!options.length) options = here.adj.slice();   // いきどまり は もどれる
+    if (!options.length) options = here.adj.slice();   // 行き止まりは もどれる
 
     let next;
     if (player.cpu) {
       next = cpuChoose(player, options);
       render(options);
       await sleep(220);
+      SoundEngine.seStep();
     } else {
-      $('#step-info').innerHTML = `あと <b>${i}</b> ます — すすむ さきを タップしてね`;
+      $('#step-info').innerHTML = ruby(`あと <b>${i}</b> マス — 進{すす}む先{さき}を タップしてね`);
       render(options);
       next = await waitForNode(options);
     }
@@ -583,14 +684,12 @@ async function moveSteps(player, steps) {
 }
 
 function waitForNode(options) {
-  return new Promise((resolve) => {
-    pendingClick = { allowed: new Set(options), resolve };
-  });
+  return new Promise((resolve) => { pendingClick = { allowed: new Set(options), resolve }; });
 }
 
-/** CPUの いきさき えらび：いまの ねらいに いちばん ちかづく となりの けん */
-const CPU_WANDER = 0.25;   // これくらいの かくりつで さいたんルートを えらばない
+const CPU_WANDER = 0.25;   // これくらいの確率で 最短ルートを選ばない
 
+/** CPUの行き先えらび：いまの ねらいに いちばん近づく 隣の県 */
 function cpuChoose(player, options) {
   if (options.length > 1 && Math.random() < CPU_WANDER) return pick(options);
   const target = cpuTarget(player);
@@ -598,7 +697,6 @@ function cpuChoose(player, options) {
   let best = options[0], bestD = Infinity;
   for (const o of options) {
     let d = dist[o] ?? 99;
-    // まだ とっていない カードが ある けんは すこし おとくに みる
     const left = (CARDS_BY_PREF[o] || []).some((c) => c.rare < 3 && !player.cards.includes(c.id));
     if (left) d -= 0.4;
     if (d < bestD) { bestD = d; best = o; }
@@ -609,7 +707,6 @@ function cpuChoose(player, options) {
 function cpuTarget(player) {
   if (S.destTakenBy === null) return S.dest;
   if (player.quests.length) return player.quests[0].to;
-  // カードが のこっている いちばん ちかい けん
   const dist = bfsFrom(player.pos);
   const cands = PREFS
     .filter((p) => (CARDS_BY_PREF[p.id] || []).some((c) => c.rare < 3 && !player.cards.includes(c.id)))
@@ -617,40 +714,45 @@ function cpuTarget(player) {
   return cands.length ? cands[0].id : S.dest;
 }
 
-/* ══════════════ ますに とまったときの しょり ══════════════ */
+/* ══════════════ マスに止まったときの処理 ══════════════ */
 
 async function resolveLanding(player) {
   const pref = PREF_BY_ID[player.pos];
   const cpu = player.cpu;
   const card = drawCard(player, player.pos, false);
 
-  /* ① とうちゃく＋ごとうち じょうほう（＋カード） */
+  /* ① 到着＋ご当地情報（＋カード） */
   if (card) giveCard(player, card);
   if (cpu) {
-    await toast(`${player.emoji} ${player.name} が ${pref.kana} に とうちゃく`
-      + (card ? `<br>🃏 カード「${card.name}」を はっけん` : ''), 1500);
+    await toast(`${player.emoji} ${player.name} が ${pref.name} に 到着{とうちゃく}`
+      + (card ? `<br>🃏 カード「${card.name}」を 発見{はっけん}` : ''), 1500);
+    if (card) SoundEngine.seCard();
   } else {
     await modal({
-      kicker: `${REGIONS[pref.region].label}ちほう`,
+      kicker: `${REGIONS[pref.region].label}地方{ちほう}`,
       emoji: '🚩',
       title: pref.name,
-      yomi: `${pref.kana} ／ けんちょうしょざいち：${pref.capital}`,
+      yomi: `${pref.kana} ／ 県庁所在地{けんちょうしょざいち}：${pref.capital}`,
       html: `<p class="m-body">${pref.trivia}</p>`,
+      speak: `${pref.name}。${pref.trivia}`,
     });
     if (card) {
-      await modal({ kicker: 'ひみつのカードを はっけん！', html: cardHTML(card) });
+      SoundEngine.seCard();
+      await modal({ kicker: 'ひみつのカードを 発見{はっけん}！', html: cardHTML(card),
+        speak: `${card.name}。${card.text}` });
     } else {
       player.money += 100;
+      SoundEngine.seCoin();
       await modal({
         emoji: '🃏', title: 'カードは そろっているよ',
-        html: `<p class="m-body center">${pref.kana}の カードは ぜんぶ あつめずみ。<br>おみやげだいを もらった。</p>
+        html: `<p class="m-body center">${pref.name}の カードは 全部{ぜんぶ} 集{あつ}めずみ。<br>お土産代{みやげだい}を もらった。</p>
                <p class="m-money plus">＋${yen(100)}</p>`,
       });
     }
   }
   render([]);
 
-  /* ② もくてきち とうちゃく */
+  /* ② 目的地に到着 */
   if (player.pos === S.dest && S.destTakenBy === null) {
     S.destTakenBy = S.cur;
     player.arrivals++;
@@ -658,75 +760,83 @@ async function resolveLanding(player) {
     const legend = drawCard(player, player.pos, true);
     const bonus = legend && legend.rare === 3 ? legend : null;
     if (bonus) giveCard(player, bonus);
+    SoundEngine.seFanfare();
     if (cpu) {
-      await toast(`📍 ${player.name} が もくてきち ${pref.kana} に いちばんのり！ ＋${yen(DEST_REWARD)}`, 2000);
-      if (bonus) await toast(`👑 でんせつカード「${bonus.name}」を てにいれた`, 1800);
+      await toast(`📍 ${player.name} が 目的地{もくてきち} ${pref.name} に 一番{いちばん}のり！ ＋${yen(DEST_REWARD)}`, 2000);
+      if (bonus) await toast(`👑 でんせつカード「${bonus.name}」を 手{て}に入{い}れた`, 1800);
     } else {
       await modal({
-        emoji: '🎉', kicker: 'いちばんのり！', title: 'もくてきち とうちゃく',
-        html: `<p class="m-body center">${S.year}ねんめの もくてきち <b>${pref.name}</b> に とうちゃく！</p>
+        emoji: '🎉', kicker: '一番{いちばん}のり！', title: '目的地{もくてきち} 到着{とうちゃく}',
+        html: `<p class="m-body center">${S.year}年目{ねんめ}の 目的地{もくてきち} <b>${pref.name}</b> に 到着{とうちゃく}！</p>
                <p class="m-money plus">＋${yen(DEST_REWARD)}</p>`,
+        speak: `目的地 ${pref.name} に 一番のり！`,
       });
-      if (bonus) await modal({ kicker: 'でんせつカードを もらった！', html: cardHTML(bonus) });
+      if (bonus) await modal({ kicker: 'でんせつカードを もらった！', html: cardHTML(bonus),
+        speak: `${bonus.name}。${bonus.text}` });
     }
     render([]);
   }
-  // 2ばんめ いこうの ごほうびは、1ねんに 1かい だけ
+  // 2番目以降のごほうびは 1年に1回だけ
   else if (player.pos === S.dest && S.destTakenBy !== S.cur && player.consolationYear !== S.year) {
     player.consolationYear = S.year;
-    player.money += 250;
+    player.money += DEST_CONSOLE;
+    SoundEngine.seCoin();
     if (cpu) {
-      await toast(`📍 ${player.name} も もくてきちに とうちゃく ＋${yen(250)}`, 1200);
+      await toast(`📍 ${player.name} も 目的地{もくてきち}に 到着{とうちゃく} ＋${yen(DEST_CONSOLE)}`, 1200);
     } else {
       await modal({
-        emoji: '🏳️', title: 'もくてきちに ついた！',
-        html: `<p class="m-body center">いちばんのりは ${S.players[S.destTakenBy].name} だったけれど、<br>
-               きねんひんを もらったよ。</p><p class="m-money plus">＋${yen(250)}</p>`,
+        emoji: '🏳️', title: '目的地{もくてきち}に ついた！',
+        html: `<p class="m-body center">一番{いちばん}のりは ${S.players[S.destTakenBy].name} だったけれど、<br>
+               記念品{きねんひん}を もらったよ。</p><p class="m-money plus">＋${yen(DEST_CONSOLE)}</p>`,
       });
     }
     render([]);
   }
 
-  /* ③ おつかいの たっせい */
+  /* ③ お使いの達成 */
   const done = player.quests.filter((q) => q.to === player.pos);
   for (const q of done) {
     player.quests = player.quests.filter((x) => x !== q);
     player.money += q.reward;
+    SoundEngine.seCoin();
     if (cpu) {
-      await toast(`📮 ${player.name} が おつかい たっせい ＋${yen(q.reward)}`, 1500);
+      await toast(`📮 ${player.name} が お使{つか}い 達成{たっせい} ＋${yen(q.reward)}`, 1500);
     } else {
       await modal({
-        emoji: '📮', title: 'おつかい たっせい！',
-        html: `<p class="m-body center">${questText(q)}<br>ぶじに とどけたよ。</p>
+        emoji: '📮', title: 'お使{つか}い 達成{たっせい}！',
+        html: `<p class="m-body center">${questText(q)}<br>ぶじに 届{とど}けたよ。</p>
                <p class="m-money plus">＋${yen(q.reward)}</p>`,
       });
     }
   }
   render([]);
 
-  /* ④ ごとうちクイズ */
+  /* ④ ご当地クイズ */
   await doQuiz(player, pref);
   render([]);
 
-  /* ⑤ おみせ／おつかい の アクション */
+  /* ⑤ お店／お使い のアクション */
   await doActions(player, pref);
   render([]);
 
-  /* ⑥ きせつの できごと（ときどき） */
+  /* ⑥ 季節のできごと（ときどき） */
   if (Math.random() < 0.28) {
     const ev = rollEvent(player, seasonIndex());
     if (ev) {
       const delta = ev.money || 0;
-      if (delta) player.money = Math.max(0, player.money + delta);
+      if (delta) { player.money = Math.max(0, player.money + delta); moneySound(delta); }
       if (ev.apply) ev.apply(player);
+      const s = SEASONS[seasonIndex()];
       if (cpu) {
-        await toast(`${ev.emoji} ${player.name}：${ev.title}${delta ? `（${delta > 0 ? '＋' : '－'}${yen(Math.abs(delta))}）` : ''}`, 1600);
+        await toast(`${ev.emoji} ${player.name}：${ev.title}`
+          + (delta ? `（${delta > 0 ? '＋' : '－'}${yen(Math.abs(delta))}）` : ''), 1600);
       } else {
         await modal({
-          kicker: `${SEASONS[seasonIndex()].emoji} ${SEASONS[seasonIndex()].name}の できごと`,
+          kicker: `${s.emoji} ${s.name}の できごと`,
           emoji: ev.emoji, title: ev.title,
           html: `<p class="m-body center">${ev.text(player)}</p>
                  ${delta ? `<p class="m-money ${delta > 0 ? 'plus' : 'minus'}">${delta > 0 ? '＋' : '－'}${yen(Math.abs(delta))}</p>` : ''}`,
+          speak: ev.text(player),
         });
       }
     }
@@ -738,17 +848,17 @@ async function doQuiz(player, pref) {
   const q = pref.quiz;
   if (player.cpu) {
     const ok = Math.random() < 0.65;
-    if (ok) player.money += QUIZ_REWARD;
-    await toast(`❓ ${player.name} の クイズ：${ok ? `せいかい！ ＋${yen(QUIZ_REWARD)}` : 'ざんねん…'}`, 1200);
+    if (ok) { player.money += QUIZ_REWARD; SoundEngine.seCorrect(); } else SoundEngine.seWrong();
+    await toast(`❓ ${player.name} のクイズ：${ok ? `正解{せいかい}！ ＋${yen(QUIZ_REWARD)}` : '残念{ざんねん}…'}`, 1200);
     return;
   }
-  // せんたくしを シャッフルして だす
   const order = [0, 1, 2].sort(() => Math.random() - 0.5);
   await new Promise((done) => {
     modal({
-      kicker: `${pref.kana}の クイズ`, emoji: '❓', title: q.q,
-      html: `<p class="m-note" style="text-align:center">せいかいすると ${yen(QUIZ_REWARD)} もらえるよ</p>`,
+      kicker: `${pref.name}のクイズ`, emoji: '❓', title: q.q,
+      html: `<p class="m-note" style="text-align:center">正解{せいかい}すると ${yen(QUIZ_REWARD)} もらえるよ</p>`,
       actions: order.map((i) => ({ label: q.a[i], value: i })),
+      speak: q.q,
       onPick: (val, btn, wrap, resolve) => {
         const correct = val === q.c;
         Array.from(wrap.children).forEach((b, k) => {
@@ -756,16 +866,21 @@ async function doQuiz(player, pref) {
           if (order[k] === q.c) b.classList.add('right');
         });
         if (!correct) btn.classList.add('wrong');
-        if (correct) player.money += QUIZ_REWARD;
+        if (correct) { player.money += QUIZ_REWARD; SoundEngine.seCorrect(); } else SoundEngine.seWrong();
         renderPlayers();
         const msg = document.createElement('p');
         msg.className = correct ? 'm-money plus' : 'm-money minus';
-        msg.textContent = correct ? `せいかい！ ＋${yen(QUIZ_REWARD)}` : `ざんねん… こたえは「${q.a[q.c]}」`;
+        msg.innerHTML = ruby(correct
+          ? `正解{せいかい}！ ＋${yen(QUIZ_REWARD)}`
+          : `残念{ざんねん}… 答{こた}えは「${plain(q.a[q.c])}」`);
         wrap.parentElement.insertBefore(msg, wrap);
+        say(correct ? '正解！' : `残念。答えは ${plain(q.a[q.c])}`);
         const next = document.createElement('button');
         next.className = 'primary';
-        next.textContent = 'つぎへ';
-        next.addEventListener('click', () => { closeModal(); resolve('done'); done(); });
+        next.innerHTML = ruby('次{つぎ}へ');
+        next.addEventListener('click', () => {
+          SoundEngine.seTap(); SoundEngine.stopSpeak(); closeModal(); resolve('done'); done();
+        });
         wrap.appendChild(next);
         next.scrollIntoView({ block: 'nearest' });
       },
@@ -774,21 +889,20 @@ async function doQuiz(player, pref) {
 }
 
 async function doActions(player, pref) {
-  const free = shopsOf(pref.id).filter((s) => !shopOwner(s.prefId, s.idx));
-  const canQuest = player.quests.length < MAX_QUESTS;
-
   if (player.cpu) {
+    const free = shopsOf(pref.id).filter((s) => !shopOwner(s.prefId, s.idx));
     const buyable = free.filter((s) => player.money - s.price >= 500)
       .sort((a, b) => b.income / b.price - a.income / a.price);
     if (buyable.length) {
       const s = buyable[0];
       player.money -= s.price;
       player.shops.push({ pref: s.prefId, idx: s.idx });
-      await toast(`🏪 ${player.name} が「${s.name}」を かった（${yen(s.price)}）`, 1200);
-    } else if (canQuest) {
+      SoundEngine.seStamp();
+      await toast(`🏪 ${player.name} が「${s.name}」を 買{か}った（${yen(s.price)}）`, 1200);
+    } else if (player.quests.length < MAX_QUESTS) {
       const q = makeQuest(pref.id);
       player.quests.push(q);
-      await toast(`📮 ${player.name} が おつかいを うけた（${PREF_BY_ID[q.to].kana}へ）`, 1200);
+      await toast(`📮 ${player.name} が お使{つか}いを 受{う}けた（${PREF_BY_ID[q.to].name}へ）`, 1200);
     }
     return;
   }
@@ -798,22 +912,22 @@ async function doActions(player, pref) {
     const actions = [];
     for (const s of stillFree) {
       actions.push({
-        label: `🏪 「${s.name}」を かう`,
-        sub: `${yen(s.price)} ／ まいとし ${yen(s.income)} はいる`,
+        label: `🏪 「${s.name}」を 買{か}う`,
+        sub: `${yen(s.price)} ／ 毎年{まいとし} ${yen(s.income)} 入{はい}る`,
         value: { kind: 'buy', shop: s },
         disabled: player.money < s.price,
       });
     }
     if (player.quests.length < MAX_QUESTS) {
-      actions.push({ label: '📮 おつかいを うける', sub: 'とどけると おかねが もらえる', value: { kind: 'quest' } });
+      actions.push({ label: '📮 お使{つか}いを 受{う}ける', sub: '届{とど}けると お金{かね}が もらえる', value: { kind: 'quest' } });
     }
-    actions.push({ label: 'つぎへ ▶', value: { kind: 'end' }, primary: true });
+    actions.push({ label: '次{つぎ}へ ▶', value: { kind: 'end' }, primary: true });
 
     const chosen = await modal({
-      kicker: `${pref.kana}で できること`,
-      title: `もちきん ${yen(player.money)}`,
+      kicker: `${pref.name}で できること`,
+      title: `持{も}ち金{きん} ${yen(player.money)}`,
       html: player.quests.length
-        ? `<p class="m-note">📮 うけている おつかい：${player.quests.map((q) => questText(q)).join('／')}</p>`
+        ? `<p class="m-note">📮 受{う}けている お使{つか}い：${player.quests.map((q) => questText(q)).join('／')}</p>`
         : '',
       actions,
     });
@@ -824,10 +938,11 @@ async function doActions(player, pref) {
       player.money -= s.price;
       player.shops.push({ pref: s.prefId, idx: s.idx });
       renderPlayers();
+      SoundEngine.seStamp();
       await modal({
-        emoji: '🏪', title: 'おみせを かった！',
-        html: `<p class="m-body center"><b>${pref.kana}</b> の「${s.name}」が あなたの おみせに。<br>
-               まいとし 12がつに <b>${yen(s.income)}</b> はいってくるよ。</p>
+        emoji: '🏪', title: 'お店{みせ}を 買{か}った！',
+        html: `<p class="m-body center"><b>${pref.name}</b> の「${s.name}」が あなたの お店{みせ}に。<br>
+               毎年{まいとし} 12月{がつ}に <b>${yen(s.income)}</b> 入{はい}ってくるよ。</p>
                <p class="m-money minus">－${yen(s.price)}</p>`,
       });
     }
@@ -835,15 +950,16 @@ async function doActions(player, pref) {
       const q = makeQuest(pref.id);
       player.quests.push(q);
       await modal({
-        emoji: '📮', title: 'おつかいを うけた',
+        emoji: '📮', title: 'お使{つか}いを 受{う}けた',
         html: `<p class="m-body center">${questText(q)}</p>
-               <p class="m-note center" style="text-align:center">とどけると <b>${yen(q.reward)}</b> もらえる（あるいて やく ${q.hops} けんぶん）</p>`,
+               <p class="m-note" style="text-align:center">届{とど}けると <b>${yen(q.reward)}</b> もらえる（歩{ある}いて 約{やく} ${q.hops} 県分{けんぶん}）</p>`,
+        speak: `${plain(PREF_BY_ID[q.from].name)}の ${plain(q.item)} を ${plain(PREF_BY_ID[q.to].name)} へ 届けよう`,
       });
     }
   }
 }
 
-/* ══════════════ ターン／としの きりかえ ══════════════ */
+/* ══════════════ ターン／年の切りかえ ══════════════ */
 
 function endTurn() {
   S.cur++;
@@ -863,13 +979,14 @@ async function yearEnd() {
     p.money += income;
     return { p, income };
   });
+  if (rows.some((r) => r.income > 0)) SoundEngine.seCoin();
 
   await modal({
-    emoji: '📅', kicker: `${S.year}ねんめ おわり`, title: 'おみせの けっさん',
+    emoji: '📅', kicker: `${S.year}年目{ねんめ} おわり`, title: 'お店{みせ}の 決算{けっさん}',
     html: `<div class="info-grid">${rows.map((r) =>
-      `<dt>${r.p.emoji} ${r.p.name}</dt><dd>${r.income ? `＋${yen(r.income)}` : 'おみせ なし'}　→　${yen(r.p.money)}</dd>`
+      `<dt>${r.p.emoji} ${r.p.name}</dt><dd>${r.income ? `＋${yen(r.income)}` : 'お店{みせ} なし'}　→　${yen(r.p.money)}</dd>`
     ).join('')}</div>
-    <p class="m-note">おみせは まいとし 12がつに しゅうえきが はいるよ。</p>`,
+    <p class="m-note">お店{みせ}は 毎年{まいとし} 12月{がつ}に 収益{しゅうえき}が 入{はい}るよ。</p>`,
   });
   renderPlayers();
 
@@ -881,17 +998,23 @@ async function yearEnd() {
   chooseDestination();
   save();
   render([]);
-  const d = PREF_BY_ID[S.dest];
-  await modal({
-    emoji: '📍', kicker: `${S.year}ねんめ スタート`, title: 'あたらしい もくてきち',
-    html: `<p class="m-body center">ことしの もくてきちは<br><b style="font-size:24px">${d.name}（${d.kana}）</b></p>
-           <p class="m-note center" style="text-align:center">いちばんのりで とうちゃくすると ${yen(DEST_REWARD)} と でんせつカード！</p>`,
-  });
-  centerOn(S.dest);
+  await announceDestination();
   startTurn();
 }
 
-/* ══════════════ けっか ══════════════ */
+function announceDestination() {
+  const d = PREF_BY_ID[S.dest];
+  centerOn(S.dest);
+  return modal({
+    emoji: '📍', kicker: `${S.year}年目{ねんめ} スタート`, title: '新{あたら}しい 目的地{もくてきち}',
+    html: `<p class="m-body center">今年{ことし}の 目的地{もくてきち}は<br>
+           <b style="font-size:24px">${d.name}（${d.kana}）</b></p>
+           <p class="m-note" style="text-align:center">一番{いちばん}のりで 到着{とうちゃく}すると ${yen(DEST_REWARD)} と でんせつカード！</p>`,
+    speak: `今年の 目的地は ${plain(d.name)}`,
+  });
+}
+
+/* ══════════════ 結果 ══════════════ */
 
 function scoreOf(p) {
   const money = Math.round(p.money / SCORE.yenPerPoint);
@@ -903,82 +1026,81 @@ function scoreOf(p) {
 
 function finish() {
   clearSave();
-  const ranked = S.players
-    .map((p) => ({ p, s: scoreOf(p) }))
-    .sort((a, b) => b.s.total - a.s.total);
+  SoundEngine.seFanfare();
+  const ranked = S.players.map((p) => ({ p, s: scoreOf(p) })).sort((a, b) => b.s.total - a.s.total);
   const medals = ['🥇', '🥈', '🥉', '🏅'];
 
-  $('#result-body').innerHTML = `
-    <h2>🏁 3ねんかんの たびが おわった！</h2>
-    <p class="winner">${medals[0]} ゆうしょう：${ranked[0].p.emoji} ${ranked[0].p.name}</p>
+  $('#result-body').innerHTML = ruby(`
+    <h2>🏁 3年間{ねんかん}の 旅{たび}が おわった！</h2>
+    <p class="winner">${medals[0]} 優勝{ゆうしょう}：${ranked[0].p.emoji} ${ranked[0].p.name}</p>
     ${ranked.map((r, i) => `
       <div class="rank-card${i === 0 ? ' first' : ''}">
         <div class="rank-head">
           <span class="medal">${medals[Math.min(i, 3)]}</span>
           <span>${r.p.emoji} ${r.p.name}</span>
-          <span class="total">${r.s.total} てん</span>
+          <span class="total">${r.s.total} 点{てん}</span>
         </div>
         <div class="rank-rows">
-          <span class="lbl">💰 おかね</span><span class="val">${yen(r.p.money)}</span><span class="pts">${r.s.money} てん</span>
-          <span class="lbl">🃏 ひみつのカード</span><span class="val">${r.p.cards.length} / 100 まい</span><span class="pts">${r.s.cards} てん</span>
-          <span class="lbl">📍 もくてきち とうちゃく</span><span class="val">${r.p.arrivals} かい</span><span class="pts">${r.s.arr} てん</span>
-          <span class="lbl">🏪 おみせ</span><span class="val">${r.p.shops.length} けん</span><span class="pts">${r.s.shops} てん</span>
+          <span class="lbl">💰 お金{かね}</span><span class="val">${yen(r.p.money)}</span><span class="pts">${r.s.money} 点{てん}</span>
+          <span class="lbl">🃏 ひみつのカード</span><span class="val">${r.p.cards.length} / 100 枚{まい}</span><span class="pts">${r.s.cards} 点{てん}</span>
+          <span class="lbl">📍 目的地{もくてきち} 到着{とうちゃく}</span><span class="val">${r.p.arrivals} 回{かい}</span><span class="pts">${r.s.arr} 点{てん}</span>
+          <span class="lbl">🏪 お店{みせ}</span><span class="val">${r.p.shops.length} 軒{けん}</span><span class="pts">${r.s.shops} 点{てん}</span>
         </div>
       </div>`).join('')}
     <p class="m-note" style="text-align:center;margin:18px 0">
-      ずかんの あつめた カード：${DEX.size} / 100 まい</p>
+      ずかんに 集{あつ}めたカード：${DEX.size} / 100 枚{まい}</p>
     <div class="title-actions">
-      <button class="big-btn" id="btn-again">▶ もういちど あそぶ</button>
-      <button class="big-btn ghost" id="btn-result-dex">📕 カードずかんを みる</button>
-    </div>`;
-  $('#btn-again').addEventListener('click', () => showScreen('title'));
-  $('#btn-result-dex').addEventListener('click', () => showDex());
+      <button class="big-btn" id="btn-again">▶ もう一度{いちど} 遊{あそ}ぶ</button>
+      <button class="big-btn ghost" id="btn-result-dex">📕 カードずかんを 見{み}る</button>
+    </div>`);
+  $('#btn-again').addEventListener('click', () => { SoundEngine.seTap(); leaveGame(); });
+  $('#btn-result-dex').addEventListener('click', () => { SoundEngine.seTap(); showDex(); });
+  say(`優勝は ${plain(ranked[0].p.name)}`);
   showScreen('result');
 }
 
-/* ══════════════ ずかん・いちらん ══════════════ */
+/* ══════════════ ずかん・一覧 ══════════════ */
 
 function showDex() {
-  const owned = S ? new Set(S.players[S.cur] ? S.players[S.cur].cards : []) : new Set();
+  const owned = new Set(S && S.players[S.cur] ? S.players[S.cur].cards : []);
   const byRegion = {};
   for (const p of PREFS) (byRegion[p.region] = byRegion[p.region] || []).push(p);
 
   let html = `<div class="dex-head"><h2>📕 カードずかん</h2>
-    <span class="dex-count">これまでに ${DEX.size} / 100 まい</span></div>
+    <span class="dex-count">これまでに ${DEX.size} / 100 枚{まい}</span></div>
     <div class="dex-bar"><span style="width:${DEX.size}%"></span></div>`;
 
   for (const rk in byRegion) {
-    html += `<div class="dex-region">${REGIONS[rk].label}</div><div class="dex-grid">`;
+    html += `<div class="dex-region">${REGIONS[rk].label}地方{ちほう}</div><div class="dex-grid">`;
     for (const pref of byRegion[rk]) {
-      for (const c of (CARDS_BY_PREF[pref.id] || []).sort((a, b) => a.id - b.id)) {
+      for (const c of (CARDS_BY_PREF[pref.id] || []).slice().sort((a, b) => a.id - b.id)) {
         const cat = CARD_CATS[c.cat];
-        const got = DEX.has(c.id);
-        html += got
+        html += DEX.has(c.id)
           ? `<div class="dex-cell got" style="--cc:${cat.color};--cc-l:${cat.color}22">
                <span class="dc-emoji">${cat.emoji}</span>
                <span class="dc-name">${c.name}</span>
-               <span class="dc-pref">${pref.kana}${owned.has(c.id) ? ' ✔' : ''}</span></div>`
+               <span class="dc-pref">${pref.shortName}${owned.has(c.id) ? ' ✓' : ''}</span></div>`
           : `<div class="dex-cell locked">
                <span class="dc-emoji">❔</span>
                <span class="dc-name">？？？</span>
-               <span class="dc-pref">${pref.kana}</span></div>`;
+               <span class="dc-pref">${pref.shortName}</span></div>`;
       }
     }
     html += '</div>';
   }
-  modal({ html, actions: [{ label: 'とじる', value: 'x', primary: true }] });
+  modal({ html, actions: [{ label: '閉{と}じる', value: 'x', primary: true }] });
 }
 
 function showQuests() {
   const p = S.players[S.cur];
   const html = p.quests.length
     ? p.quests.map((q) => `<div class="list-item"><b>${questText(q)}</b>
-        <div class="li-sub">おれい ${yen(q.reward)}</div></div>`).join('')
-    : '<p class="list-empty">いまは おつかいを うけていないよ。<br>ますに とまったときに うけられる。</p>';
+        <div class="li-sub">お礼{れい} ${yen(q.reward)}</div></div>`).join('')
+    : '<p class="list-empty">いまは お使{つか}いを 受{う}けていないよ。<br>マスに 止{と}まったときに 受{う}けられる。</p>';
   modal({
-    title: `📮 ${p.name}の おつかい`,
-    html: html + `<p class="m-note">おなじときに ${MAX_QUESTS}つ まで うけられるよ。</p>`,
-    actions: [{ label: 'とじる', value: 'x', primary: true }],
+    title: `📮 ${p.name}の お使{つか}い`,
+    html: html + `<p class="m-note">同時{どうじ}に ${MAX_QUESTS}つ まで 受{う}けられるよ。</p>`,
+    actions: [{ label: '閉{と}じる', value: 'x', primary: true }],
   });
 }
 
@@ -986,37 +1108,67 @@ function showShops() {
   const html = S.players.map((p) => {
     const income = p.shops.reduce((s, x) => s + shopIncome(PREF_BY_ID[x.pref].shops[x.idx][1]), 0);
     const list = p.shops.length
-      ? p.shops.map((x) => `${PREF_BY_ID[x.pref].kana}「${PREF_BY_ID[x.pref].shops[x.idx][0]}」`).join('／')
-      : 'まだ もっていない';
+      ? p.shops.map((x) => `${PREF_BY_ID[x.pref].name}「${PREF_BY_ID[x.pref].shops[x.idx][0]}」`).join('／')
+      : 'まだ 持{も}っていない';
     return `<div class="list-item" style="border-color:${p.color}">
       <b>${p.emoji} ${p.name}</b>
       <div class="li-sub">${list}</div>
-      <div class="li-sub">まいとしの しゅうえき：<b>${yen(income)}</b></div></div>`;
+      <div class="li-sub">毎年{まいとし}の 収益{しゅうえき}：<b>${yen(income)}</b></div></div>`;
   }).join('');
-  modal({ title: '🏪 おみせの もちぬし', html, actions: [{ label: 'とじる', value: 'x', primary: true }] });
+  modal({ title: '🏪 お店{みせ}の 持{も}ち主{ぬし}', html, actions: [{ label: '閉{と}じる', value: 'x', primary: true }] });
 }
 
 function showHelp() {
   modal({
-    emoji: '🗾', title: 'あそびかた',
+    emoji: '🗾', title: '遊{あそ}び方{かた}',
     html: `<div class="m-body">
-      <p><b>ゴールは 3つ！</b> 3ねんかん たびを して、そうごうてんすうを きそうよ。</p>
-      <p>💰 <b>おかね</b>… クイズの せいかい・おつかい・おみせの しゅうえきで ふえる（100えん＝1てん）</p>
-      <p>🃏 <b>ひみつのカード</b>… ぜんぶで 100まい。とまった けんで 1まい みつかる（1まい＝20てん）</p>
-      <p>📍 <b>もくてきち</b>… 1ねんごとに かわる。いちばんのりで つくと ${yen(DEST_REWARD)}＋でんせつカード（1かい＝150てん）</p>
+      <p><b>ゴールは 3つ！</b> 3年間{ねんかん} 旅{たび}を して、総合点{そうごうてん}を きそうよ。</p>
+      <p>💰 <b>お金{かね}</b>… クイズの 正解{せいかい}・お使{つか}い・お店{みせ}の 収益{しゅうえき}で ふえる（${SCORE.yenPerPoint}円{えん}＝1点{てん}）</p>
+      <p>🃏 <b>ひみつのカード</b>… 全部{ぜんぶ}で 100枚{まい}。止{と}まった 県{けん}で 1枚{まい} 見{み}つかる（1枚{まい}＝${SCORE.perCard}点{てん}）</p>
+      <p>📍 <b>目的地{もくてきち}</b>… 1年{ねん}ごとに 変{か}わる。一番{いちばん}のりで つくと ${yen(DEST_REWARD)}＋でんせつカード（1回{かい}＝${SCORE.perArrival}点{てん}）</p>
       <hr style="border:none;border-top:2px dashed var(--line);margin:12px 0">
-      <p><b>すすみかた</b><br>サイコロを ふって、でた かずだけ となりの けんへ 1ますずつ すすむ。
-      みどりに ひかった けんを タップしてね。すぐ もどることは できないよ。</p>
-      <p><b>1ねん＝8ターン</b>（2ターンで きせつが かわる）。3ねんで しゅうりょう。</p>
-      <p>てんてんの せん（‥‥）は ふね・はし・ひこうきで わたる みちだよ。</p>
-      <p>✔が ついた けんは、カードを ぜんぶ あつめおわった けんだよ。</p>
-      <p>とちゅうで やめても、じどうで ほぞんされて「つづきから」あそべる。</p>
+      <p><b>進{すす}みかた</b><br>サイコロを ふって、出{で}た 数{かず}だけ 隣{となり}の 県{けん}へ 1マスずつ 進{すす}む。
+      緑{みどり}に 光{ひか}った 県{けん}を タップしてね。すぐ もどることは できないよ。</p>
+      <p><b>1年{ねん}＝8ターン</b>（2ターンで 季節{きせつ}が 変{か}わる）。3年{ねん}で 終了{しゅうりょう}。</p>
+      <p>点線{てんせん}（‥‥）は 船{ふね}・橋{はし}・飛行機{ひこうき}で わたる 道{みち}だよ。</p>
+      <p>✓が ついた 県{けん}は、カードを 全部{ぜんぶ} 集{あつ}め終{お}わった 県{けん}。</p>
+      <p>沖縄県{おきなわけん}は 地図{ちず}の 左上{ひだりうえ}の 枠{わく}に 大{おお}きく 描{か}いてあるよ。</p>
+      <p>途中{とちゅう}で やめても、自動{じどう}で 保存{ほぞん}されて「続{つづ}きから」遊{あそ}べる。</p>
     </div>`,
-    actions: [{ label: 'とじる', value: 'x', primary: true }],
+    actions: [{ label: '閉{と}じる', value: 'x', primary: true }],
   });
 }
 
-/* ══════════════ がめんの きりかえ ══════════════ */
+function showSound() {
+  const row = (key, icon, label, note) => {
+    const on = sound[key];
+    return { label: `${icon} ${label} <span class="toggle ${on ? 'on' : 'off'}">${on ? 'オン' : 'オフ'}</span>`,
+      sub: note, value: key };
+  };
+  modal({
+    emoji: '🔊', title: '音{おと}の 設定{せってい}',
+    html: `<p class="m-note" style="text-align:center">タップで 切{き}りかえられるよ。<br>
+           いまの BGM：${SoundEngine.currentTrackName() || '－'}</p>`,
+    actions: [
+      row('bgm', '🎵', 'BGM', '旅{たび}の 音楽{おんがく}'),
+      row('se', '🔔', '効果音{こうかおん}', 'サイコロ・正解{せいかい}などの 音{おと}'),
+      row('voice', '🗣️', '読{よ}み上{あ}げ', '県{けん}の せつめいを 声{こえ}で 読{よ}む'),
+      { label: '閉{と}じる', value: null, primary: true },
+    ],
+    onPick: (key, btn, wrap, resolve) => {
+      if (key === null) { closeModal(); resolve('x'); return; }
+      sound[key] = !sound[key];
+      saveSound();
+      applySound();
+      if (key === 'se' && sound.se) SoundEngine.seCoin();
+      closeModal();
+      showSound();
+      resolve('x');
+    },
+  });
+}
+
+/* ══════════════ 画面の切りかえ ══════════════ */
 
 function showScreen(name) {
   $$('.screen').forEach((s) => s.classList.remove('is-active'));
@@ -1024,7 +1176,15 @@ function showScreen(name) {
   if (name === 'title') refreshTitle();
 }
 
-/* ══════════════ タイトルがめん ══════════════ */
+function leaveGame() {
+  inGame = false;
+  pendingClick = null;
+  SoundEngine.stopSpeak();
+  SoundEngine.setBgmEnabled(false);
+  showScreen('title');
+}
+
+/* ══════════════ タイトル画面 ══════════════ */
 
 let setupHumans = 1;
 let setupCpus = 1;
@@ -1034,9 +1194,9 @@ function buildChooser(box, values, get, set) {
   box.innerHTML = '';
   for (const v of values) {
     const b = document.createElement('button');
-    b.textContent = v + 'にん';
+    b.innerHTML = ruby(v + '人{にん}');
     b.setAttribute('aria-pressed', String(get() === v));
-    b.addEventListener('click', () => { set(v); refreshTitle(); });
+    b.addEventListener('click', () => { SoundEngine.seTap(); set(v); refreshTitle(); });
     box.appendChild(b);
   }
 }
@@ -1053,7 +1213,6 @@ function refreshTitle() {
   buildChooser($('#choose-cpus'), [0, 1, 2, 3].filter((v) => v + setupHumans <= 4 && v + setupHumans >= 2),
     () => setupCpus, (v) => { setupCpus = v; });
 
-  // こまの えらびかた
   const total = setupHumans + setupCpus;
   while (setupTokens.length < total) setupTokens.push(setupTokens.length);
   const box = $('#token-setup');
@@ -1062,19 +1221,19 @@ function refreshTitle() {
     const isCpu = i >= setupHumans;
     const row = document.createElement('div');
     row.className = 'token-row';
-    row.innerHTML = `<span class="who">${isCpu ? 'コンピューター' : `${i + 1}にんめ`}
-      <small>${isCpu ? 'じどうで うごく' : 'あなたが うごかす'}</small></span>`;
+    row.innerHTML = ruby(`<span class="who">${isCpu ? 'コンピューター' : `${i + 1}人目{にんめ}`}
+      <small>${isCpu ? '自動{じどう}で 動{うご}く' : 'あなたが 動{うご}かす'}</small></span>`);
     const pickBox = document.createElement('div');
     pickBox.className = 'token-pick';
     TOKENS.forEach((t, ti) => {
       const b = document.createElement('button');
       b.textContent = t.emoji;
-      b.title = t.name;
+      b.title = plain(t.name);
       b.style.setProperty('--tk', t.color);
       b.style.setProperty('--tk-l', t.light);
       b.setAttribute('aria-pressed', String(setupTokens[i] === ti));
       b.disabled = setupTokens.slice(0, total).includes(ti) && setupTokens[i] !== ti;
-      b.addEventListener('click', () => { setupTokens[i] = ti; refreshTitle(); });
+      b.addEventListener('click', () => { SoundEngine.seTap(); setupTokens[i] = ti; refreshTitle(); });
       pickBox.appendChild(b);
     });
     row.appendChild(pickBox);
@@ -1082,7 +1241,7 @@ function refreshTitle() {
   }
 
   $('#btn-continue').hidden = !loadSave();
-  $('#dex-progress').textContent = `📕 これまでに あつめた カード：${DEX.size} / 100 まい`;
+  $('#dex-progress').innerHTML = ruby(`📕 これまでに 集{あつ}めたカード：${DEX.size} / 100 枚{まい}`);
 }
 
 function startNewGame() {
@@ -1091,8 +1250,7 @@ function startNewGame() {
   for (let i = 0; i < total; i++) {
     const isCpu = i >= setupHumans;
     const t = TOKENS[setupTokens[i]];
-    const name = isCpu ? `${t.name}（CPU）` : (setupHumans === 1 ? t.name : `${t.name}`);
-    players.push(newPlayer(name, setupTokens[i], isCpu));
+    players.push(newPlayer(isCpu ? `${t.short}（CPU）` : t.short, setupTokens[i], isCpu));
   }
   newGame(players);
   save();
@@ -1100,6 +1258,9 @@ function startNewGame() {
 }
 
 async function enterGame(announce) {
+  inGame = true;
+  SoundEngine.unlock();
+  applySound();
   showScreen('game');
   buildMap();
   applyZoom(zoomIndex);
@@ -1108,28 +1269,33 @@ async function enterGame(announce) {
   if (announce) {
     const d = PREF_BY_ID[S.dest];
     await modal({
-      emoji: '🚩', kicker: 'たびの はじまり', title: 'とうきょうから スタート！',
-      html: `<p class="m-body center">1ねんめの もくてきちは<br><b style="font-size:24px">${d.name}（${d.kana}）</b></p>
-             <p class="m-note center" style="text-align:center">いちばんのりで とうちゃくすると ${yen(DEST_REWARD)} と でんせつカード！</p>`,
+      emoji: '🚩', kicker: '旅{たび}の はじまり', title: '東京{とうきょう}から スタート！',
+      html: `<p class="m-body center">1年目{ねんめ}の 目的地{もくてきち}は<br>
+             <b style="font-size:24px">${d.name}（${d.kana}）</b></p>
+             <p class="m-note" style="text-align:center">一番{いちばん}のりで 到着{とうちゃく}すると ${yen(DEST_REWARD)} と でんせつカード！</p>`,
+      speak: `東京から スタート。1年目の 目的地は ${plain(d.name)}`,
     });
   }
   startTurn();
 }
 
-/* ══════════════ はいせん（イベント とうろく） ══════════════ */
+/* ══════════════ 配線（イベント登録） ══════════════ */
 
-$('#btn-start').addEventListener('click', startNewGame);
+$('#btn-start').addEventListener('click', () => { SoundEngine.seTap(); startNewGame(); });
 $('#btn-continue').addEventListener('click', () => {
   const s = loadSave();
   if (!s) return;
+  SoundEngine.seTap();
   S = s;
   busy = false;
   enterGame(false);
 });
 $('#btn-title-dex').addEventListener('click', showDex);
 $('#btn-title-help').addEventListener('click', showHelp);
+$('#btn-title-sound').addEventListener('click', () => { SoundEngine.unlock(); showSound(); });
 
 $('#btn-zoom').addEventListener('click', () => {
+  SoundEngine.seTap();
   applyZoom(zoomIndex + 1);
   if (S) centerOn(S.players[S.cur].pos);
 });
@@ -1137,17 +1303,20 @@ $('#btn-dice').addEventListener('click', doRoll);
 $('#btn-dex').addEventListener('click', showDex);
 $('#btn-quests').addEventListener('click', showQuests);
 $('#btn-shops').addEventListener('click', showShops);
+$('#btn-sound').addEventListener('click', showSound);
 $('#btn-help').addEventListener('click', showHelp);
 $('#btn-quit').addEventListener('click', async () => {
   const ans = await modal({
     emoji: '🏠', title: 'タイトルに もどる？',
-    html: '<p class="m-body center">いまの ゲームは ほぞんされているので、<br>あとで「つづきから」あそべるよ。</p>',
+    html: '<p class="m-body center">いまの ゲームは 保存{ほぞん}されているので、<br>あとで「続{つづ}きから」遊{あそ}べるよ。</p>',
     actions: [
       { label: 'もどる', value: 'yes' },
       { label: 'ゲームに もどる', value: 'no', primary: true },
     ],
   });
-  if (ans === 'yes') { save(); pendingClick = null; showScreen('title'); }
+  if (ans === 'yes') { save(); leaveGame(); }
 });
 
+SoundEngine.onTrackChange(() => { /* 曲が変わったときの表示は 設定まどで見る */ });
+applySound();
 refreshTitle();
