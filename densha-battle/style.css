@@ -249,11 +249,14 @@ body {
 .hud {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
+  min-width: 0;
 }
 
-.hud .spacer { flex: 1; }
+.hud .spacer { flex: 1 1 auto; min-width: 0; }
+
+.hud .icon-btn { flex: 0 0 auto; }
 
 .wave-chip {
   font-size: 13px;
@@ -261,9 +264,13 @@ body {
   color: #0b1622;
   background: var(--accent);
   border-radius: 999px;
-  padding: 5px 13px;
+  padding: 5px 12px;
   box-shadow: 0 3px 0 rgba(0, 0, 0, .25);
   white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .wave-chip.is-boss {
@@ -279,8 +286,11 @@ body {
   background: rgba(255, 255, 255, .12);
   border: 2px solid rgba(255, 255, 255, .25);
   border-radius: 999px;
-  padding: 3px 11px;
+  padding: 3px 10px;
   white-space: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .score-chip b { font-size: 15px; color: var(--accent); }
@@ -314,6 +324,29 @@ body {
 
 .arena.is-boss {
   background: linear-gradient(180deg, #1a0d2b 0%, #3b1a5c 55%, #6b2b7a 100%);
+}
+
+/* 大魔王戦は もっと まっくら */
+.arena.is-final {
+  background: linear-gradient(180deg, #0a0512 0%, #1e0b33 50%, #3d1145 100%);
+  border-color: #ffd43b;
+  box-shadow: inset 0 0 60px rgba(0, 0, 0, .7), 0 0 22px rgba(255, 212, 59, .5);
+}
+
+/* ボスが だい2けいたいに なると せかいが あかく そまる */
+.arena.is-rage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: radial-gradient(ellipse at 50% 60%, transparent 40%, rgba(201, 42, 42, .45) 100%);
+  animation: rage-pulse .9s ease-in-out infinite;
+}
+
+@keyframes rage-pulse {
+  0%, 100% { opacity: .55 }
+  50% { opacity: 1 }
 }
 
 .arena-bg { position: absolute; inset: 0; pointer-events: none; }
@@ -605,6 +638,156 @@ body {
   0% { transform: scale(1) rotate(0); opacity: 1; filter: brightness(4) }
   40% { transform: scale(1.5) rotate(-14deg); opacity: 1 }
   100% { transform: scale(.1) rotate(40deg) translateY(30px); opacity: 0 }
+}
+
+/* ---------------------------- 四天王(でかい てき) ---------------------------- */
+
+/* でかい てきは 中身の HPバーと ためゲージを かくして、上の プレートに まとめる */
+.mon.is-giant .mon-hp,
+.mon.is-giant .mon-charge { display: none; }
+
+.mon.is-giant {
+  align-self: flex-end;
+  z-index: 2;
+  filter: drop-shadow(0 0 18px var(--c, #fff));
+}
+
+.mon.is-giant .mon-body { animation: giant-idle 1.7s ease-in-out infinite; }
+
+@keyframes giant-idle {
+  0%, 100% { transform: translateY(0) scale(1, 1) rotate(-1deg) }
+  50% { transform: translateY(-9px) scale(1.03, .97) rotate(1deg) }
+}
+
+/* あしもとの まがまがしい かげ */
+.mon.is-giant::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  transform: translateX(-50%);
+  width: 92%;
+  height: 16px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--c, #000) 0%, transparent 70%);
+  opacity: .55;
+  animation: giant-shadow 1.7s ease-in-out infinite;
+}
+
+@keyframes giant-shadow {
+  0%, 100% { width: 92%; opacity: .55 }
+  50% { width: 78%; opacity: .35 }
+}
+
+.mon.is-giant .mon-eye {
+  border-width: 3px;
+  box-shadow: 0 0 14px var(--c, #fff);
+}
+
+.mon.is-giant .mon-eye::after { background: #c92a2a; box-shadow: 0 0 8px #ff4d4d; }
+
+.mon.is-giant .mon-crown {
+  top: calc(-16px * var(--sc, 1));
+  animation: crown-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes crown-shine {
+  0%, 100% { filter: drop-shadow(0 0 2px #ffd43b) }
+  50% { filter: drop-shadow(0 0 14px #ffd43b) brightness(1.4) }
+}
+
+/* だい2けいたい: あかく もえる */
+.mon.is-rage { filter: drop-shadow(0 0 24px #ff4d4d) saturate(1.5); }
+.mon.is-rage .mon-body { animation: giant-idle .85s ease-in-out infinite; }
+
+/* ボス戦は でんしゃを すこし ちいさく して、ボスの でかさを きわだたせる */
+.arena.is-boss .train-slot {
+  transform: scale(.86);
+  transform-origin: left bottom;
+}
+
+.arena.is-final .train-slot { transform: scale(.8); transform-origin: left bottom; }
+
+/* ---------------------------- ボスの なまえプレート ---------------------------- */
+
+.boss-plate {
+  position: relative;
+  z-index: 3;
+  margin: 0 8px 2px;
+  padding: 4px 10px 6px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(10, 6, 20, .88), rgba(10, 6, 20, .66));
+  border: 2px solid var(--bp-color, #e03131);
+  box-shadow: 0 0 18px rgba(224, 49, 49, .5);
+  animation: bp-in .5s cubic-bezier(.2, .9, .3, 1.3);
+}
+
+.boss-plate[hidden] { display: none; }
+
+@keyframes bp-in {
+  0% { transform: scaleX(.2); opacity: 0 }
+  100% { transform: scaleX(1); opacity: 1 }
+}
+
+.bp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.bp-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--bp-color, #ff8787);
+  letter-spacing: .1em;
+}
+
+.bp-name {
+  font-size: 15px;
+  font-weight: 900;
+  color: #fff;
+  text-shadow: 0 0 10px var(--bp-color, #e03131);
+}
+
+.bp-bar {
+  display: block;
+  height: 12px;
+  margin-top: 3px;
+  border-radius: 999px;
+  background: #180b1e;
+  border: 2px solid rgba(255, 255, 255, .45);
+  overflow: hidden;
+}
+
+.bp-bar i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #ff8787, #e03131);
+  transition: width .2s linear;
+}
+
+.bp-bar i.is-rage {
+  background: linear-gradient(90deg, #ffd43b, #fa5252, #862e9c);
+  animation: bp-rage .6s linear infinite;
+}
+
+@keyframes bp-rage {
+  0%, 100% { filter: brightness(1) }
+  50% { filter: brightness(1.7) }
+}
+
+.bp-phase {
+  display: block;
+  height: 11px;
+  font-size: 9px;
+  font-weight: 900;
+  color: #ffd43b;
+  letter-spacing: .08em;
 }
 
 /* ---------------------------- プレイヤーの HP ---------------------------- */
@@ -1192,9 +1375,133 @@ body {
   100% { transform: translateX(110%) skewX(-18deg); opacity: 0 }
 }
 
+/* ---------------------------- とうじょう カットイン ---------------------------- */
+
+.fx-cutin {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, .55);
+  animation: cutin-fade 1.9s forwards;
+}
+
+@media (min-width: 720px) {
+  .fx-cutin { flex-direction: row; gap: 3vw; }
+}
+
+@keyframes cutin-fade {
+  0% { opacity: 0 }
+  6% { opacity: 1 }
+  82% { opacity: 1 }
+  100% { opacity: 0 }
+}
+
+/* ななめに はしる くろい おび */
+.fx-cutin-slab {
+  position: absolute;
+  left: -20%;
+  right: -20%;
+  top: 18%;
+  height: 64%;
+  background:
+    linear-gradient(180deg, transparent, #000 14%, #000 86%, transparent),
+    linear-gradient(90deg, transparent, var(--cut-color) 40%, var(--cut-color) 60%, transparent);
+  box-shadow: 0 0 40px 10px var(--cut-color);
+  transform: skewY(-7deg);
+  animation: cutin-slab 1.9s cubic-bezier(.15, .9, .2, 1) forwards;
+}
+
+@keyframes cutin-slab {
+  0% { transform: skewY(-7deg) scaleX(0); }
+  14% { transform: skewY(-7deg) scaleX(1); }
+  86% { transform: skewY(-7deg) scaleX(1); }
+  100% { transform: skewY(-7deg) scaleX(1) translateY(-40%); opacity: 0 }
+}
+
+.fx-cutin-emoji {
+  position: relative;
+  font-size: clamp(110px, 34vw, 240px);
+  line-height: 1;
+  filter: drop-shadow(0 0 34px var(--cut-color)) drop-shadow(0 10px 14px rgba(0, 0, 0, .8));
+  animation: cutin-emoji 1.9s cubic-bezier(.1, .9, .2, 1) forwards;
+}
+
+@keyframes cutin-emoji {
+  0% { transform: translateX(-70vw) scale(2.6) rotate(-24deg); opacity: 0 }
+  16% { transform: translateX(0) scale(1) rotate(-6deg); opacity: 1 }
+  22% { transform: translateX(0) scale(1.12) rotate(2deg) }
+  30% { transform: translateX(0) scale(1) rotate(-2deg) }
+  86% { transform: translateX(0) scale(1.04) rotate(0deg); opacity: 1 }
+  100% { transform: translateX(0) scale(1.6); opacity: 0 }
+}
+
+.fx-cutin-name {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 96vw;
+  animation: cutin-name 1.9s cubic-bezier(.1, .9, .2, 1) forwards;
+}
+
+@keyframes cutin-name {
+  0% { transform: translateX(70vw); opacity: 0 }
+  20% { transform: translateX(0); opacity: 1 }
+  86% { transform: translateX(0); opacity: 1 }
+  100% { transform: translateX(-14vw); opacity: 0 }
+}
+
+.fx-cutin-title {
+  font-size: clamp(13px, 4vw, 22px);
+  font-weight: 900;
+  color: var(--cut-color);
+  letter-spacing: .22em;
+  -webkit-text-stroke: 3px #000;
+  paint-order: stroke fill;
+}
+
+.fx-cutin-main {
+  font-size: clamp(22px, 7.2vw, 52px);
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: .02em;
+  -webkit-text-stroke: 6px #000;
+  paint-order: stroke fill;
+  text-shadow: 0 0 20px var(--cut-color);
+  white-space: nowrap;
+}
+
+@media (min-width: 720px) {
+  .fx-cutin-name { align-items: flex-start; }
+}
+
+.fx-cutin-aura {
+  position: absolute;
+  bottom: 12%;
+  font-size: clamp(24px, 8vw, 46px);
+  letter-spacing: 2vw;
+  opacity: .9;
+  animation: cutin-aura 1.9s linear forwards;
+}
+
+@keyframes cutin-aura {
+  0% { transform: translateY(30px); opacity: 0 }
+  25% { transform: translateY(0); opacity: .9 }
+  100% { transform: translateY(-40px); opacity: 0 }
+}
+
 /* ============================ ちいさい がめん ============================ */
 
 @media (max-width: 380px) {
+  .wave-chip { font-size: 11px; padding: 5px 9px; }
+  .score-chip { font-size: 10px; padding: 3px 7px; }
+  .icon-btn { width: 33px; height: 33px; font-size: 16px; }
   .mon { width: calc(44px * var(--sc, 1)); }
   .mon-body { width: calc(44px * var(--sc, 1)); height: calc(44px * var(--sc, 1)); }
   .mon-emoji { font-size: calc(39px * var(--sc, 1)); }
@@ -1239,4 +1546,7 @@ body {
   .title-trains { animation: none; }
   .mon, .mon-body { animation: none !important; }
   .arena.is-hyper { animation: none; }
+  .arena.is-rage::before { animation: none; }
+  .fx-cutin-emoji, .fx-cutin-name, .fx-cutin-slab, .fx-cutin-aura { animation-duration: .01s; animation-fill-mode: forwards; }
+  .mon.is-giant::before, .mon.is-giant .mon-crown { animation: none; }
 }

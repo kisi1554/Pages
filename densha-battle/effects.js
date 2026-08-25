@@ -252,6 +252,35 @@ const Fx = (function createFx() {
     ensureLoop();
   }
 
+  /* がめんに ヒビが はいる(ボス とうじょうの ときの ドン!) */
+  function crack(color, count) {
+    const n = reduceMotion ? 2 : (count || 7);
+    const cx = w / 2;
+    const cy = h * 0.42;
+    for (let i = 0; i < n; i += 1) {
+      const ang = (Math.PI * 2 * i) / n + rnd(-0.25, 0.25);
+      const len = Math.max(w, h) * rnd(0.6, 1.1);
+      const segs = 9;
+      const pts = [{ x: cx, y: cy }];
+      for (let k = 1; k <= segs; k += 1) {
+        const t = k / segs;
+        pts.push({
+          x: cx + Math.cos(ang) * len * t + rnd(-26, 26),
+          y: cy + Math.sin(ang) * len * t + rnd(-26, 26),
+        });
+      }
+      items.push({
+        kind: 'bolt',
+        pts,
+        life: rnd(0.7, 1.1),
+        age: 0,
+        color: color || '#ffffff',
+        width: rnd(4, 9),
+      });
+    }
+    ensureLoop();
+  }
+
   /* かみふぶき(かち の おいわい) */
   function confetti(count) {
     const colors = ['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#da77f2', '#ffa94d'];
@@ -333,6 +362,31 @@ const Fx = (function createFx() {
     textLayer.appendChild(div);
     setTimeout(() => div.remove(), 1400);
     return div;
+  }
+
+  /*
+   * ボス とうじょうの カットイン。
+   * まっくらな はいけいに でかい えもじと なまえが ドンと でる。
+   * opts: { emoji, title, name, color, aura, ms }
+   */
+  function cutin(opts) {
+    if (!textLayer) return;
+    const o = opts || {};
+    const ms = o.ms || 1900;
+    const div = document.createElement('div');
+    div.className = 'fx-cutin';
+    div.style.setProperty('--cut-color', o.color || '#e03131');
+    div.style.animationDuration = ms + 'ms';
+    div.innerHTML =
+      '<span class="fx-cutin-slab"></span>' +
+      '<span class="fx-cutin-emoji">' + (o.emoji || '👹') + '</span>' +
+      '<span class="fx-cutin-name">' +
+      (o.title ? '<b class="fx-cutin-title">' + o.title + '</b>' : '') +
+      '<b class="fx-cutin-main">' + (o.name || '') + '</b>' +
+      '</span>' +
+      (o.aura ? '<span class="fx-cutin-aura">' + o.aura + o.aura + o.aura + '</span>' : '');
+    textLayer.appendChild(div);
+    setTimeout(() => div.remove(), ms + 120);
   }
 
   /* ひっさつわざの バナー(よこから ずばっと) */
@@ -557,6 +611,8 @@ const Fx = (function createFx() {
     bolt,
     beam,
     slash,
+    crack,
+    cutin,
     confetti,
     shake,
     zoom,

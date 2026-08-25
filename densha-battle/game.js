@@ -3,7 +3,7 @@
 /*
  * でんしゃバトル 本体(リアルタイム ウェーブ制)
  *
- *  タイトル → レベルえらび → あいぼうえらび → バトル(8ウェーブ) → けっか
+ *  タイトル → レベルえらび → あいぼうえらび → バトル(10ウェーブ) → けっか
  *
  *  バトルの ながれ:
  *    - 野菜モンスターが 右から おしよせる。ターンは まわってこない。
@@ -12,7 +12,10 @@
  *    - モンスターは それぞれ「ためゲージ」を もっていて、たまると かってに こうげきしてくる。
  *    - まちがえると すこし ダメージ + 0.6びょう うごけない。
  *    - れんぞく せいかいで ひっさつゲージが たまり、MAXで 全体こうげき。
- *      8れんぞくで「ハイパーモード」(ダメージ 1.4ばい・BGMも はやくなる)。
+ *      8れんぞくで「ハイパーモード」(ダメージ 1.3ばい・BGMも はやくなる)。
+ *    - ウェーブ 3/5/7/9 は でかい「やさい四天王」、10は「大魔王 ベジタゴン」。
+ *      ボスは HPが はんぶんを きると だい2けいたいに なり、曲も かわる。
+ *    - BGMは ウェーブごとに じゅんばんに きりかわる。
  */
 
 (function main() {
@@ -23,6 +26,7 @@
     'btn-start', 'level-list', 'char-list', 'select-sub',
     'wave-chip', 'score-num', 'btn-bgm', 'btn-voice', 'btn-home',
     'arena', 'field', 'player-slot', 'mon-row',
+    'boss-plate', 'bp-title', 'bp-name', 'bp-fill', 'bp-phase',
     'player-name', 'player-tag', 'player-hp-fill', 'player-hp-num',
     'gauge-fill', 'combo-chip', 'timer-fill',
     'question', 'hint', 'choices', 'verdict',
@@ -47,6 +51,10 @@
   const SHOT_MS = 160;        // たまが とどくまでの じかん
   const MISS_LOCK_MS = 600;   // まちがえた ときに うごけない じかん
   const WAVE_GAP_MS = 1300;   // ウェーブの あいだ
+  const CUTIN_MS = 1900;      // ボス とうじょう カットインの ながさ
+
+  /* ざこ波の BGM。ウェーブが すすむたびに つぎの 曲へ */
+  const BATTLE_TRACKS = BGM_TRACKS.filter((t) => t.mood === 'battle').map((t) => t.name);
 
   /* ---------------------------- じょうたい ---------------------------- */
 
@@ -58,6 +66,7 @@
 
     wave: 0,
     monsters: [],
+    boss: null,
 
     playerHp: PLAYER_MAX_HP,
     combo: 0,
@@ -206,7 +215,10 @@
 
     el['player-name'].textContent = fighter.name;
     el['player-tag'].textContent = fighter.line;
-    el['arena'].classList.remove('is-hyper', 'is-boss');
+    el['arena'].classList.remove('is-hyper', 'is-boss', 'is-final', 'is-rage');
+    el['boss-plate'].hidden = true;
+    S.boss = null;
+    Fx.setClip(el['arena']);
 
     showScreen('screen-battle');
     /* つぶは アリーナの 中だけに えがく(こたえボタンを かくさない) */
@@ -248,34 +260,90 @@
 
   function startWave() {
     const spec = WAVES[S.wave];
-    const isBoss = !!spec.boss;
+    const bossDef = spec.boss ? BOSSES[spec.boss] : null;
     S.monsters = buildWave(S.wave);
+    S.boss = bossDef ? S.monsters.filter((m) => m.isBoss)[0] : null;
 
-    el['wave-chip'].textContent = isBoss
-      ? '★ ボス ' + (S.wave + 1) + ' / ' + WAVE_COUNT + ' ★'
+    el['wave-chip'].textContent = bossDef
+      ? '★ ' + (bossDef.isFinal ? '大魔王' : '四天王') + ' ' + (S.wave + 1) + '/' + WAVE_COUNT
       : 'ウェーブ ' + (S.wave + 1) + ' / ' + WAVE_COUNT;
-    el['wave-chip'].classList.toggle('is-boss', isBoss);
-    el['arena'].classList.toggle('is-boss', isBoss);
+    el['wave-chip'].classList.toggle('is-boss', !!bossDef);
+    el['arena'].classList.toggle('is-boss', !!bossDef);
+    el['arena'].classList.toggle('is-final', !!(bossDef && bossDef.isFinal));
+    el['arena'].classList.remove('is-rage');
 
     renderMonsters();
-    SoundEngine.setMood(isBoss ? 'boss' : (S.hyper ? 'hyper' : 'battle'));
+    setupBossPlate(bossDef);
 
-    if (isBoss) {
-      const boss = BOSSES[spec.boss];
-      Fx.banner(boss.name, '#e03131');
-      Fx.flash('#3b1a5c', 380);
-      Fx.shake(16, 600);
-      Fx.focusLines(window.innerWidth * 0.72, window.innerHeight * 0.32, 'rgba(255,120,120,.8)', 46);
-      SoundEngine.speak(boss.intro, { rate: 0.95, pitch: 0.55 });
-      el['verdict'].textContent = boss.name + 'が あらわれた! ' + boss.intro;
-    } else {
-      Fx.banner('ウェーブ ' + (S.wave + 1), '#ffd43b');
-      el['verdict'].textContent = 'やさいモンスターが おしよせてきた!';
+    /* BGM: ボスは せんよう曲、ざこ波は ウェーブごとに つぎの 曲へ */
+    if (bossDef) SoundEngine.playTrack(bossDef.bgm);
+    else if (S.hyper) SoundEngine.playTrack('ハイパー ドライブ');
+    else SoundEngine.playTrack(BATTLE_TRACKS[S.wave % BATTLE_TRACKS.length]);
+
+    if (bossDef) {
+      bossEntrance(bossDef);
+      S.inputLockUntil = performance.now() + CUTIN_MS + 250;
+      later(CUTIN_MS + 250, () => { newQuestion(); startLoop(); });
+      return;
     }
 
-    S.inputLockUntil = performance.now() + (isBoss ? 900 : 500);
+    Fx.banner('ウェーブ ' + (S.wave + 1), '#ffd43b');
+    Fx.speedLines(-1, 'rgba(255,255,255,.6)', 18);
+    el['verdict'].textContent = 'やさいモンスターが おしよせてきた!';
+    el['verdict'].className = 'verdict';
+    S.inputLockUntil = performance.now() + 500;
     newQuestion();
     startLoop();
+  }
+
+  /* ----------------------------- ボス とうじょう ----------------------------- */
+
+  function bossEntrance(bossDef) {
+    /* カットインの あいだだけ つぶの クリップを はずして がめん ぜんたいを つかう */
+    Fx.setClip(null);
+    Fx.cutin({
+      emoji: bossDef.emoji,
+      title: bossDef.title,
+      name: bossDef.name,
+      color: bossDef.color,
+      aura: bossDef.aura,
+      ms: CUTIN_MS,
+    });
+    Fx.flash('#000000', 300);
+    Fx.crack(bossDef.color, 8);
+    Fx.shake(26, 900);
+    Fx.zoom(0.06, 600);
+    SoundEngine.seHorn();
+    later(220, () => {
+      SoundEngine.seSpecial();
+      Fx.crack('#ffffff', 5);
+      Fx.shake(22, 700);
+    });
+    later(CUTIN_MS, () => {
+      Fx.setClip(el['arena']);
+      Fx.focusLines(window.innerWidth * 0.68, window.innerHeight * 0.3, 'rgba(255,255,255,.7)', 46);
+      Fx.shake(16, 400);
+    });
+    SoundEngine.speak(bossDef.title + ' ' + bossDef.name + '! ' + bossDef.intro,
+      { rate: 0.95, pitch: bossDef.isFinal ? 0.45 : 0.6 });
+    el['verdict'].textContent = bossDef.intro;
+    el['verdict'].className = 'verdict is-ng';
+  }
+
+  /* ボスの なまえプレート(アリーナの 上) */
+  function setupBossPlate(bossDef) {
+    const plate = el['boss-plate'];
+    if (!bossDef) {
+      plate.hidden = true;
+      return;
+    }
+    plate.hidden = false;
+    plate.style.setProperty('--bp-color', bossDef.color);
+    el['bp-title'].textContent = bossDef.title;
+    el['bp-name'].textContent = bossDef.name;
+    el['bp-fill'].style.width = '100%';
+    el['bp-fill'].classList.remove('is-rage');
+    el['bp-phase'].textContent = '';
   }
 
   function renderMonsters() {
@@ -283,7 +351,7 @@
     S.monsters.forEach((m, i) => {
       const d = m.def;
       const div = document.createElement('div');
-      div.className = 'mon';
+      div.className = 'mon' + (m.scale >= 2.4 ? ' is-giant' : '');
       div.style.setProperty('--sc', m.scale);
       div.style.setProperty('--c', d.color);
       div.style.animationDelay = (i * 70) + 'ms';
@@ -305,8 +373,26 @@
       m.pendingHp = m.hp;
       /* いっせいに こうげきしないように ためゲージを ずらす */
       m.charge = -0.35 * i - (m.isBoss ? 0 : 0.1);
+      m.raged = false;
     });
     markTarget();
+    fitMonRow();
+  }
+
+  /*
+   * 四天王は でかいので、でんしゃと ならべると はみ出すことが ある。
+   * はみ出す ぶんだけ ならび ぜんたいを ちぢめて、ぜんいん 画面に おさめる。
+   */
+  function fitMonRow() {
+    const row = el['mon-row'];
+    row.style.transform = '';
+    let need = 0;
+    Array.prototype.forEach.call(row.children, (ch, i) => {
+      need += ch.offsetWidth + (i ? 4 : 0);
+    });
+    const avail = el['field'].clientWidth - el['player-slot'].offsetWidth - 20;
+    if (need <= avail || need === 0) return;
+    row.style.transform = 'scale(' + Math.max(0.55, avail / need).toFixed(3) + ')';
   }
 
   function markTarget() {
@@ -400,7 +486,9 @@
   }
 
   function updateMonHp(m) {
-    m.hpFill.style.width = (Math.max(0, m.hp) / m.maxHp * 100) + '%';
+    const r = Math.max(0, m.hp) / m.maxHp;
+    m.hpFill.style.width = (r * 100) + '%';
+    if (m.isBoss) el['bp-fill'].style.width = (r * 100) + '%';
   }
 
   /* ------------------------------ もんだい ------------------------------ */
@@ -504,14 +592,14 @@
     Fx.zoom(0.05, 400);
     Fx.confetti(60);
     SoundEngine.seHyper();
-    if (!WAVES[S.wave].boss) SoundEngine.setMood('hyper');
+    if (!WAVES[S.wave].boss) SoundEngine.playTrack('ハイパー ドライブ');
   }
 
   function leaveHyper() {
     if (!S.hyper) return;
     S.hyper = false;
     el['arena'].classList.remove('is-hyper');
-    if (!WAVES[S.wave].boss) SoundEngine.setMood('battle');
+    if (!WAVES[S.wave].boss) SoundEngine.playTrack(BATTLE_TRACKS[S.wave % BATTLE_TRACKS.length]);
   }
 
   /* ============================ こうげき ============================ */
@@ -612,7 +700,41 @@
     }
 
     if (m.hp <= 0) killMonster(m);
+    else checkRage(m);
     markTarget();
+  }
+
+  /*
+   * ボスの HPが はんぶんを きると「だい2けいたい」。
+   * こうげきが はやく・つよく なり、BGMも せんようの 曲に かわる。
+   */
+  function checkRage(m) {
+    if (!m.isBoss || m.raged || !m.alive) return;
+    if (m.hp > m.maxHp * 0.5) return;
+    const def = m.def;
+    m.raged = true;
+    m.atk = Math.round(m.atk * (def.rage || 1.35));
+    m.cd = Math.max(2.2, m.cd / (def.rage || 1.35));
+
+    el['arena'].classList.add('is-rage');
+    m.el.classList.add('is-rage');
+    el['bp-fill'].classList.add('is-rage');
+    el['bp-phase'].textContent = '⚡ だい2けいたい ⚡';
+
+    if (def.bgm2) SoundEngine.playTrack(def.bgm2);
+    SoundEngine.seHyper();
+    Fx.banner('だい2けいたい!!', '#ff4d4d');
+    Fx.flash('#ff4d4d', 420);
+    Fx.shake(30, 800);
+    Fx.zoom(0.06, 520);
+    Fx.crack('#ff4d4d', 6);
+    const c = centerOf(m.el);
+    Fx.focusLines(c.x, c.y, 'rgba(255,120,120,.85)', 50);
+    Fx.ring(c.x, c.y, '#ff4d4d', 420, 18);
+    Fx.emojiBurst(c.x, c.y, def.aura || '🔥', 16);
+    SoundEngine.speak(def.name + 'は ほんきを だした!', { rate: 1.0, pitch: 0.5 });
+    el['verdict'].textContent = def.name + 'は ほんきを だした!';
+    el['verdict'].className = 'verdict is-ng';
   }
 
   function killMonster(m) {
@@ -641,19 +763,36 @@
     if (m.isBoss || m.maxHp >= 60) Fx.shout(Quiz.pick(KILL_WORDS), m.isBoss ? 'crit' : '');
 
     if (m.isBoss) {
-      Fx.focusLines(to.x, to.y, 'rgba(255,255,255,.85)', 56);
-      Fx.confetti(90);
-      [0, 140, 280].forEach((d) => later(d, () => {
-        Fx.burst(to.x + rnd(-90, 90), to.y + rnd(-70, 70), {
-          count: 60, power: 1.4, colors: ['#ffffff', '#ffe066', m.def.color],
+      /* ボスは がめん ぜんたいを つかって 大ばくはつ */
+      Fx.setClip(null);
+      Fx.focusLines(to.x, to.y, 'rgba(255,255,255,.9)', 60);
+      Fx.crack('#ffffff', 8);
+      Fx.confetti(120);
+      Fx.banner((m.def.isFinal ? '大魔王' : '四天王') + ' げきは!!', '#ffd43b');
+      const shots = m.def.isFinal ? [0, 110, 220, 330, 460, 600] : [0, 140, 280, 420];
+      shots.forEach((d, i) => later(d, () => {
+        Fx.burst(to.x + rnd(-120, 120), to.y + rnd(-90, 90), {
+          count: 80, power: 1.6, colors: ['#ffffff', '#ffe066', m.def.color],
         });
+        Fx.ring(to.x + rnd(-60, 60), to.y + rnd(-40, 40), i % 2 ? '#ffffff' : m.def.color, 300 + i * 60, 14);
+        Fx.flash('#ffffff', 160);
+        Fx.shake(24, 300);
         SoundEngine.seHit();
       }));
-      if (m.def.defeat) SoundEngine.speak(m.def.defeat, { rate: 0.95, pitch: 0.55 });
+      later(shots[shots.length - 1] + 240, () => {
+        Fx.setClip(el['arena']);
+        el['arena'].classList.remove('is-rage');
+      });
+      el['boss-plate'].hidden = true;
+      if (m.def.defeat) SoundEngine.speak(m.def.defeat, { rate: 0.95, pitch: 0.5 });
+      el['verdict'].textContent = m.def.defeat || '';
     }
 
     m.el.classList.add('is-dead');
-    later(460, () => { if (m.el && m.el.parentNode) m.el.remove(); });
+    later(460, () => {
+      if (m.el && m.el.parentNode) m.el.remove();
+      fitMonRow();
+    });
 
     checkWaveClear();
   }
@@ -697,6 +836,7 @@
         Fx.shake(14, 260);
         SoundEngine.seHit();
         if (m.hp <= 0) killMonster(m);
+        else checkRage(m);
         markTarget();
       });
     });
@@ -752,11 +892,13 @@
     if (S.monsters.some((m) => m.alive)) return;
 
     stopLoop();
-    S.inputLockUntil = performance.now() + WAVE_GAP_MS + 200;
+    /* ボスを たおした あとは ばくはつを 見せる ぶん ながめに とる */
+    const gap = S.boss ? WAVE_GAP_MS + 900 : WAVE_GAP_MS;
+    S.inputLockUntil = performance.now() + gap + 200;
 
     const isLast = S.wave >= WAVE_COUNT - 1;
     if (isLast) {
-      later(900, () => finish(true));
+      later(1800, () => finish(true));
       return;
     }
 
@@ -777,7 +919,7 @@
     el['verdict'].textContent = 'ウェーブ ' + (S.wave + 1) + ' クリア! つぎが くるよ!';
     el['verdict'].className = 'verdict is-ok';
 
-    later(WAVE_GAP_MS, () => {
+    later(gap, () => {
       S.wave += 1;
       startWave();
     });
@@ -807,10 +949,11 @@
     const rate = total ? Math.round((S.stats.correct / total) * 100) : 0;
 
     if (win) {
-      el['result-title'].textContent = '🏆 やさい ぜんめつ!';
+      el['result-title'].textContent = '🏆 大魔王 げきは!';
       el['result-train'].innerHTML = trainHTML(S.player, 'right');
       el['result-msg'].innerHTML =
-        S.player.name + 'は やさいの おうさま ベジタゴンを たおした!<br>' +
+        S.player.name + 'は やさい四天王を たおし、<br>' +
+        '大魔王 ベジタゴンまで やっつけた!<br>' +
         'けいさんの ちからで まちに へいわが もどったよ。';
       el['btn-again'].textContent = '▶ もういちど あそぶ';
       SoundEngine.seFanfare();
@@ -894,6 +1037,10 @@
       const b = S.choiceBtns[n - 1];
       if (b && !b.disabled) b.click();
     }
+  });
+
+  window.addEventListener('resize', () => {
+    if (el['screen-battle'].classList.contains('is-active')) fitMonRow();
   });
 
   /* さいしょの タップで 音を つかえるように する(スマホ たいさく) */

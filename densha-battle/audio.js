@@ -28,8 +28,16 @@ const SCALES = {
 /*
  * 1トラック = 16分音符 32ステップ の くりかえし。
  *   '.' = 休み  'x' = 鳴らす  数字 = スケールの何番目か
- *   mood: 'menu' = えらぶ画面 / 'battle' = ふつうの たたかい /
- *         'hyper' = れんぞく せいかいちゅう / 'boss' = ボス野菜
+ *   mood: 'menu'    = えらぶ画面
+ *         'battle'  = ざこの 波(ウェーブごとに じゅんばんに きりかわる)
+ *         'hyper'   = れんぞく せいかいちゅう
+ *         'shiten'  = やさい四天王 との たたかい
+ *         'shiten2' = 四天王が だい2けいたいに なった
+ *         'boss'    = 大魔王 ベジタゴン
+ *         'boss2'   = 大魔王が しんの すがたに なった
+ *
+ *   game.js からは SoundEngine.playTrack('曲の name') で
+ *   ばめんに あわせて ピンポイントに 曲を えらべる。
  */
 
 const BGM_TRACKS = [
@@ -98,6 +106,22 @@ const BGM_TRACKS = [
     drive: 1.05,
   },
   {
+    name: 'やさいばたけ しんげき',
+    mood: 'battle',
+    bpm: 158,
+    root: -19, // D2
+    scale: 'dorian',
+    kick: 'x...x...x...x..xx...x...x.x.x...',
+    snare: '....x.......x.......x.......x...',
+    hat: 'x.x.xxx.x.x.xxx.x.x.xxx.x.xxx.x.',
+    bassWave: 'triangle',
+    bass: '0.0.2.0.3.0.2.0.5.5.3.2.0.0.2.3.',
+    leadWave: 'square',
+    lead: '..5.7.9.7...5.3...5.7.9.10.9.7.5',
+    leadOct: 12,
+    drive: 0.92,
+  },
+  {
     name: 'ハイパー ドライブ',
     mood: 'hyper',
     bpm: 196,
@@ -114,20 +138,140 @@ const BGM_TRACKS = [
     drive: 1.2,
   },
   {
-    name: 'やさいの おうさま',
-    mood: 'boss',
-    bpm: 188,
-    root: -22, // A#1
+    /* 四天王 とうじょう。RPGの ボス戦らしく、たんちょうの おもい リフから はじまる */
+    name: '四天王 とうじょう',
+    mood: 'shiten',
+    bpm: 170,
+    root: -21, // B1
     scale: 'harmonicMinor',
-    kick: 'x.x.x.x.x.x.x.x.x.x.x.x.x.x.xxxx',
+    kick: 'x..x..x.x..x..x.x..x..x.x..xx.x.',
+    snare: '....x.......x.......x.......x...',
+    hat: 'x.xxx.xxx.xxx.xxx.xxx.xxx.xxx.xx',
+    bassWave: 'sawtooth',
+    bass: '0.0.0.0.0.0.1.0.3.3.3.3.2.2.1.0.',
+    leadWave: 'square',
+    lead: '7...8.7.5...3.5.7...8.10.8.7.5.3',
+    leadOct: 12,
+    drive: 1.05,
+  },
+  {
+    /* こおりの四天王。ゆっくりめで つめたい ひびき */
+    name: '四天王 ひょうが',
+    mood: 'shiten',
+    bpm: 156,
+    root: -20, // C2
+    scale: 'harmonicMinor',
+    kick: 'x.......x...x...x.......x...x.x.',
+    snare: '....x.......x.......x.......x...',
+    hat: 'x.x.x.x.x.x.x.x.x.x.x.x.xxxxx.x.',
+    bassWave: 'triangle',
+    bass: '0...0...3...3...5...5...3...1...',
+    leadWave: 'sine',
+    lead: '12..11.12..14.12..11.10.8...7...',
+    leadOct: 24,
+    drive: 0.95,
+  },
+  {
+    /* かみなりの四天王。せわしなく ゴロゴロ なる */
+    name: '四天王 らいめい',
+    mood: 'shiten',
+    bpm: 190,
+    root: -22, // A#1
+    scale: 'phrygian',
+    kick: 'xx..x.x.xx..x.x.xx..x.x.xxxxx.x.',
+    snare: '....x.......x.......x.....x.x...',
+    hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    bassWave: 'square',
+    bass: '0.1.0.1.0.1.3.1.0.1.0.1.5.3.1.0.',
+    leadWave: 'square',
+    lead: '10.10.8.7.5.3.1.0.10.12.13.12.10.8.7.5',
+    leadOct: 12,
+    drive: 1.15,
+  },
+  {
+    /* 四天王 さいごの ひとり。もっと ひっぱくした かんじ */
+    name: '四天王 さいご',
+    mood: 'shiten',
+    bpm: 182,
+    root: -23, // A1
+    scale: 'harmonicMinor',
+    kick: 'x.x.x..xx.x.x..xx.x.x..xx.xxx.x.',
+    snare: '....x.......x.....x.x.......x.x.',
+    hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    bassWave: 'sawtooth',
+    bass: '0.1.0.1.3.1.0.1.5.3.1.0.7.5.3.1.',
+    leadWave: 'sawtooth',
+    lead: '0.3.7.8.7.3.0...10.8.7.5.3.1.0..',
+    leadOct: 12,
+    drive: 1.12,
+  },
+  {
+    /* 四天王 かくせい(だい2けいたい)。テンポも おとも あがる */
+    name: '四天王 かくせい',
+    mood: 'shiten2',
+    bpm: 200,
+    root: -23, // A1
+    scale: 'harmonicMinor',
+    kick: 'x.x.x.x.x.x.x.x.x.x.x.x.xxxxx.x.',
     snare: '....x.......x.......x.....x.x.x.',
     hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
     bassWave: 'sawtooth',
-    bass: '0.0.0.0.1.1.0.0.3.3.0.0.7.5.3.1.',
+    bass: '00.0.1.000.0.3.000.0.5.007.5.3.1',
     leadWave: 'sawtooth',
-    lead: '0.1.3.1.0...7.5.3.1.0.10.7.5.3.1',
+    lead: '7.8.10.11.10.8.7.5.7.8.10.12.11.10.8.7',
+    leadOct: 12,
+    drive: 1.2,
+  },
+  {
+    /* だい2けいたい その2。より くるおしい */
+    name: '四天王 きょうらん',
+    mood: 'shiten2',
+    bpm: 206,
+    root: -21, // B1
+    scale: 'phrygian',
+    kick: 'xx.xx.x.xx.xx.x.xx.xx.x.xxxxxxxx',
+    snare: '....x.....x.x.......x.....x.x.x.',
+    hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    bassWave: 'sawtooth',
+    bass: '0.1.3.1.0.1.5.1.0.1.3.1.7.5.3.1.',
+    leadWave: 'sawtooth',
+    lead: '12.13.12.10.8.7.5.3.12.13.15.13.12.10.8.7',
+    leadOct: 12,
+    drive: 1.22,
+  },
+  {
+    /* 大魔王 ベジタゴン。おごそかで おもい ラスボス曲 */
+    name: '大魔王 ベジタゴン',
+    mood: 'boss',
+    bpm: 174,
+    root: -25, // G#1
+    scale: 'harmonicMinor',
+    kick: 'x...x...x...x...x...x...x.x.xxx.',
+    snare: '....x.......x.......x.......x...',
+    hat: 'x.xxx.xxx.xxx.xxx.xxx.xxx.xxxxxx',
+    bassWave: 'sawtooth',
+    bass: '0...0.1.3...3.2.1...1.0.7.5.3.1.',
+    leadWave: 'square',
+    lead: '0.3.5.7.8.7.5.3.10.8.7.5.3.1.0..',
     leadOct: 12,
     drive: 1.15,
+  },
+  {
+    /* 大魔王 しんのすがた。いちばん はやくて いちばん こわい */
+    name: '大魔王 しんのすがた',
+    mood: 'boss2',
+    bpm: 212,
+    root: -25, // G#1
+    scale: 'phrygian',
+    kick: 'xx.xx.x.xx.xx.x.xx.xx.x.xxxxxxxx',
+    snare: '....x.....x.x.......x.....x.x.x.',
+    hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    bassWave: 'sawtooth',
+    bass: '01.01.3.01.01.5.01.01.7.05.3.1.0',
+    leadWave: 'sawtooth',
+    lead: '0.1.3.5.7.8.10.12.10.8.7.5.3.1.0.1',
+    leadOct: 24,
+    drive: 1.25,
   },
 ];
 
@@ -351,6 +495,23 @@ const SoundEngine = (function createAudio() {
       /* 8小節(128ステップ)ごとに 同じふんいきの べつの曲へ */
       if (step % 128 === 0) loadTrack(pickTrack(mood));
     }
+  }
+
+  /* なまえで 曲を ピンポイントに かける(ばめんの きりかえ用) */
+  function playTrack(name) {
+    const found = BGM_TRACKS.filter((t) => t.name === name)[0];
+    if (!found) return false;
+    mood = found.mood;
+    if (!bgmOn) return true;
+    if (!ensureCtx()) return true;
+    loadTrack(found);
+    step = 0;
+    if (!playing) {
+      nextNoteTime = ctx.currentTime + 0.08;
+      playing = true;
+      timerId = setInterval(scheduler, LOOKAHEAD_MS);
+    }
+    return true;
   }
 
   function startBgm(wantMood) {
@@ -698,6 +859,7 @@ const SoundEngine = (function createAudio() {
     startBgm,
     stopBgm,
     setMood,
+    playTrack,
     isBgmPlaying: () => playing,
     currentTrackName: () => (track ? track.name : ''),
     setBgmEnabled(v) {
