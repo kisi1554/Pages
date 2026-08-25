@@ -8,8 +8,9 @@
  *   futsuu … 20までの たしざん と ひきざん
  *   tsuyoi … かけざん(九九) と 2けたの たしざん・ひきざん
  *
- * ステージが すすむほど すこしずつ むずかしく なる(stage は 0 から)。
+ * 波(ウェーブ)が すすむほど すこしずつ むずかしく なる(stage は 0 から)。
  * こたえの えらびかたは いつも 4たく。
+ * crit … この びょうすう いないに こたえると クリティカル。
  */
 
 const LEVELS = [
@@ -20,7 +21,7 @@ const LEVELS = [
     detail: '1けた + 1けた',
     emoji: '🍎',
     color: '#2f9e44',
-    time: 14,
+    crit: 2.8,
   },
   {
     id: 'futsuu',
@@ -29,7 +30,7 @@ const LEVELS = [
     detail: '20までの けいさん',
     emoji: '➕',
     color: '#1a6fb5',
-    time: 12,
+    crit: 2.4,
   },
   {
     id: 'tsuyoi',
@@ -38,7 +39,7 @@ const LEVELS = [
     detail: '九九と 2けたの けいさん',
     emoji: '✖️',
     color: '#d6336c',
-    time: 12,
+    crit: 2.6,
   },
 ];
 

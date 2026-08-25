@@ -1,14 +1,14 @@
 'use strict';
 
 /*
- * でんしゃバトル: キャラクターと ステージの データ
+ * でんしゃバトル: データ
  *
- * キャラの なまえ・いろ・口ぐせ は「でんしゃトーク」(../densha-talk/knowledge.js)と
- * そろえてある。ここでは それに バトル用の パラメータ(こうげき力・ひっさつわざ)を たしている。
+ *  FIGHTERS … プレイヤーが えらぶ でんしゃキャラ
+ *             なまえ・いろ・口ぐせは「でんしゃトーク」(../densha-talk/knowledge.js)と そろえてある
+ *  VEGGIES  … てきの 野菜モンスター
+ *  WAVES    … 何波めに どの モンスターが おしよせるか
  *
  *   power    … こうげき力の ばいりつ(1.0 が ふつう)
- *   hp       … てきとして でてきた ときの たいりょく
- *   special  … ひっさつわざの なまえ
  *   spark    … こうげき えんしゅつで とびちる きらきら の えもじ
  */
 
@@ -20,7 +20,7 @@ const FIGHTERS = [
     hat: '🔁', aura: '💫', face: '😃', spark: '💫',
     color: '#9acd32', ink: '#4f7a06',
     me: 'ぼく', end: 'だよ',
-    power: 1.0, hp: 70,
+    power: 1.0,
     attack: 'ぐるぐる アタック',
     special: 'エンドレス・サークル',
     line: '山手線',
@@ -32,7 +32,7 @@ const FIGHTERS = [
     hat: '🔥', aura: '💨', face: '😆', spark: '🔥',
     color: '#e5171f', ink: '#9b0d13',
     me: 'おれ', end: 'だぜ',
-    power: 1.25, hp: 78,
+    power: 1.25,
     attack: 'かっとび ダッシュ',
     special: 'まっかっか とっきゅう',
     line: '京急本線',
@@ -44,7 +44,7 @@ const FIGHTERS = [
     hat: '🎧', aura: '✨', face: '😎', spark: '✨',
     color: '#e6003e', ink: '#8f0026',
     me: 'ぼく', end: 'さ',
-    power: 1.1, hp: 74,
+    power: 1.1,
     attack: 'とっきゅう キック',
     special: 'みなとまち エクスプレス',
     line: '東急東横線',
@@ -56,7 +56,7 @@ const FIGHTERS = [
     hat: '🎩', aura: '🕰️', face: '🧐', spark: '⚡',
     color: '#ff9500', ink: '#a35c00',
     me: 'わし', end: 'じゃ',
-    power: 1.15, hp: 80,
+    power: 1.15,
     attack: 'レトロ ビーム',
     special: 'ちかてつ ゴールドラッシュ',
     line: '銀座線',
@@ -68,7 +68,7 @@ const FIGHTERS = [
     hat: '🎀', aura: '💬', face: '😄', spark: '💖',
     color: '#f62e36', ink: '#a3151b',
     me: 'わたし', end: 'なの',
-    power: 1.05, hp: 72,
+    power: 1.05,
     attack: 'まるまる パンチ',
     special: 'サインウェーブ・ストーム',
     line: '丸ノ内線',
@@ -80,7 +80,7 @@ const FIGHTERS = [
     hat: '👑', aura: '✨', face: '😊', spark: '🌟',
     color: '#0068b7', ink: '#00457a',
     me: 'わたし', end: 'ね',
-    power: 1.2, hp: 76,
+    power: 1.2,
     attack: 'ロマンス アロー',
     special: 'はこね スーパーひかり',
     line: '小田急ロマンスカー',
@@ -92,7 +92,7 @@ const FIGHTERS = [
     hat: '⛑️', aura: '🔦', face: '😁', spark: '🔷',
     color: '#0067c0', ink: '#00427a',
     me: 'ぼく', end: 'だよ',
-    power: 1.0, hp: 72,
+    power: 1.0,
     attack: 'トンネル タックル',
     special: 'ブルーライン・ラッシュ',
     line: '横浜市営ブルーライン',
@@ -104,7 +104,7 @@ const FIGHTERS = [
     hat: '🐟', aura: '🫧', face: '😄', spark: '🫧',
     color: '#005bac', ink: '#003a70',
     me: 'ぼく', end: 'だよ',
-    power: 1.05, hp: 74,
+    power: 1.05,
     attack: 'うみかぜ スラッシュ',
     special: 'オーシャン トルネード',
     line: 'りんかい線',
@@ -116,7 +116,7 @@ const FIGHTERS = [
     hat: '🎡', aura: '🌊', face: '😊', spark: '🌊',
     color: '#004098', ink: '#002a63',
     me: 'わたし', end: 'なの',
-    power: 1.1, hp: 74,
+    power: 1.1,
     attack: 'みなと ウェーブ',
     special: 'かんらんしゃ フラッシュ',
     line: 'みなとみらい線',
@@ -128,7 +128,7 @@ const FIGHTERS = [
     hat: '🏖️', aura: '🌅', face: '😌', spark: '🌅',
     color: '#F68B1E', ink: '#a15a08',
     me: 'ぼく', end: 'だよ',
-    power: 1.15, hp: 82,
+    power: 1.15,
     attack: 'ロング ラン',
     special: 'サンライズ ブレイク',
     line: '東海道線',
@@ -140,7 +140,7 @@ const FIGHTERS = [
     hat: '⚓', aura: '💙', face: '🙂', spark: '💠',
     color: '#0071bc', ink: '#00477a',
     me: 'ぼく', end: 'んだ',
-    power: 1.05, hp: 76,
+    power: 1.05,
     attack: 'ネイビー チャージ',
     special: 'そうてつ ブルーインパクト',
     line: '相鉄本線',
@@ -152,7 +152,7 @@ const FIGHTERS = [
     hat: '🌿', aura: '💤', face: '🙂', spark: '🍃',
     color: '#20a288', ink: '#0d6b58',
     me: 'ぼく', end: 'だなあ',
-    power: 0.95, hp: 84,
+    power: 0.95,
     attack: 'のんびり プレス',
     special: 'グリーンライン・ヒーリング',
     line: '田園都市線',
@@ -164,7 +164,7 @@ const FIGHTERS = [
     hat: '🧭', aura: '🍃', face: '🙂', spark: '🧡',
     color: '#e4610f', ink: '#8a3a00',
     me: 'ぼく', end: 'よ',
-    power: 1.1, hp: 78,
+    power: 1.1,
     attack: 'アウター サークル',
     special: 'むさしの グレートループ',
     line: '武蔵野線',
@@ -176,7 +176,7 @@ const FIGHTERS = [
     hat: '🪷', aura: '🌫️', face: '🙂', spark: '💚',
     color: '#00ac9a', ink: '#00695c',
     me: 'ぼく', end: 'だよ',
-    power: 1.05, hp: 76,
+    power: 1.05,
     attack: 'エメラルド ブロー',
     special: 'じょうばん ミストブレイク',
     line: '常磐線',
@@ -188,7 +188,7 @@ const FIGHTERS = [
     hat: '🎈', aura: '🌈', face: '😊', spark: '🎉',
     color: '#d81b60', ink: '#7a0f3a',
     me: 'わたし', end: 'なの',
-    power: 1.1, hp: 72,
+    power: 1.1,
     attack: 'ドリーム シュート',
     special: 'ゆめのくに カーニバル',
     line: 'ディズニーリゾートライン',
@@ -200,70 +200,147 @@ const FIGHTERS = [
     hat: '🥟', aura: '🌾', face: '😆', spark: '🌾',
     color: '#82AE43', ink: '#4f6b1e',
     me: 'わたし', end: 'よ',
-    power: 1.0, hp: 78,
+    power: 1.0,
     attack: 'ぎょうざ パンチ',
     special: 'みや グリーンストーム',
     line: '宇都宮線',
   },
 ];
 
-/*
- * ラスボス。でんしゃトークには いない、この ゲームだけの オリジナル電車。
- * 「けいさんを きらいに する」ために はしってきた まっくろな とっきゅう。
- */
-const BOSS = {
-  id: 'yamikage',
-  name: 'ヤミカゲごう',
-  fullName: 'あんこく とっきゅう ヤミカゲごう',
-  tag: 'けいさんを けす まっくろな とっきゅう',
-  hat: '👹', aura: '🌑', face: '😈', spark: '🟣',
-  color: '#2b1b48', ink: '#120a22',
-  me: 'われ', end: 'なのだ',
-  power: 1.6, hp: 170,
-  attack: 'シャドウ クラッシュ',
-  special: 'ダーク・トンネル',
-  line: '???線',
-  isBoss: true,
-  intro: 'フフフ… けいさんなど できまい。まっくらな トンネルに とじこめてやるのだ!',
-  defeat: 'バカな… こどもの けいさんに… まけるとは… うわああああ!',
+
+
+/* ============================================================
+ * 野菜モンスター
+ *
+ *   size … s(ざこ) / m(ふつう) / l(おおきい) / boss
+ *   てきの つよさは SIZE_SPEC で サイズごとに きまる。
+ * ============================================================ */
+
+const SIZE_SPEC = {
+  s: { hp: 30, atk: 4, cd: 5.6, scale: 1.00, label: 'ざこ' },
+  m: { hp: 62, atk: 6, cd: 6.2, scale: 1.28, label: 'ふつう' },
+  l: { hp: 100, atk: 9, cd: 7.0, scale: 1.58, label: 'おおもの' },
 };
 
-/* てきが こうげきする ときの セリフ */
-const ENEMY_TAUNTS = [
-  'こんどは こっちの ばんだ!',
-  'そーれ、いくぞー!',
-  'まだまだ まけないよ!',
-  'とっしーん!',
-  'ふふん、すきありー!',
+const VEGGIES = [
+  { id: 'ninjin',  name: 'ニンジーン',    emoji: '🥕', color: '#ff8c42', ink: '#a34d0f', size: 's', cry: 'ニンジン キーック!' },
+  { id: 'tomaton', name: 'トマトン',      emoji: '🍅', color: '#ff5a5a', ink: '#a32020', size: 's', cry: 'トマト ばくだん!' },
+  { id: 'piman',   name: 'ピーマング',    emoji: '🫑', color: '#4caf50', ink: '#256029', size: 's', cry: 'にがいぞー!' },
+  { id: 'kyuri',   name: 'キューリー',    emoji: '🥒', color: '#69b34c', ink: '#33682a', size: 's', cry: 'ポリポリ こうげき!' },
+  { id: 'ninniku', name: 'ニンニクー',    emoji: '🧄', color: '#e8e0d0', ink: '#8a7f6a', size: 's', cry: 'におい こうせん!' },
+  { id: 'burokko', name: 'ブロッコリン',  emoji: '🥦', color: '#5cb85c', ink: '#2f6b2f', size: 'm', cry: 'もりもり タックル!' },
+  { id: 'corn',    name: 'コーンガー',    emoji: '🌽', color: '#ffd93b', ink: '#a37a00', size: 'm', cry: 'つぶつぶ マシンガン!' },
+  { id: 'nasu',    name: 'ナスビーム',    emoji: '🍆', color: '#9b6bd6', ink: '#4f2f7a', size: 'm', cry: 'むらさき ビーム!' },
+  { id: 'tamanegi',name: 'タマネギング',  emoji: '🧅', color: '#e0b088', ink: '#8a5f30', size: 'm', cry: 'なみだが とまらない!' },
+  { id: 'togarashi', name: 'トウガラシー', emoji: '🌶️', color: '#f4511e', ink: '#8f2a0a', size: 'm', cry: 'からーい ほのお!' },
+  { id: 'jagaimo', name: 'ジャガイモス',  emoji: '🥔', color: '#c9a06a', ink: '#7a5a2f', size: 'l', cry: 'ゴロゴロ プレス!' },
+  { id: 'hakusai', name: 'ハクサイダー',  emoji: '🥬', color: '#8bc34a', ink: '#4a7a1e', size: 'l', cry: 'はっぱ カッター!' },
+  { id: 'satsuma', name: 'サツマイモン',  emoji: '🍠', color: '#d17ba5', ink: '#7a3a5a', size: 'l', cry: 'ほくほく ボンバー!' },
+  { id: 'avocado', name: 'アボガドン',    emoji: '🥑', color: '#7cb342', ink: '#41631f', size: 'l', cry: 'たねを くらえ!' },
 ];
 
-/* プレイヤーが せいかいした ときの かけごえ */
-const HIT_WORDS = ['どっかーん!', 'ばっしゃーん!', 'ずどーん!', 'がっしゃーん!', 'ばきーん!'];
+const VEG_BY_SIZE = { s: [], m: [], l: [] };
+VEGGIES.forEach((v) => { VEG_BY_SIZE[v.size].push(v); });
 
-/* ステージ数(さいごの 1つが ボス) */
-const STAGE_COUNT = 6;
+/* ------------------------------ ボス野菜 ------------------------------ */
+
+const BOSSES = {
+  kabocha: {
+    id: 'kabocha',
+    name: 'カボチャだいまおう',
+    emoji: '🎃',
+    color: '#ff922b',
+    ink: '#a34d0f',
+    size: 'boss',
+    hp: 210, atk: 12, cd: 4.0, scale: 2.05,
+    cry: 'ハロウィンだー! ドッカーン!',
+    intro: 'グワッハッハ! やさいを きらいな こどもは わしの なかまじゃ!',
+  },
+  vegetagon: {
+    id: 'vegetagon',
+    name: 'ベジタゴン',
+    emoji: '🥦',
+    color: '#2f9e44',
+    ink: '#14532d',
+    size: 'boss',
+    hp: 330, atk: 15, cd: 3.4, scale: 2.3,
+    crown: '👑',
+    isFinal: true,
+    cry: 'ベジタ・インパクト!',
+    intro: 'われこそ やさいの おうさま ベジタゴン! けいさんなど できまい!',
+    defeat: 'バカな… こどもの けいさんに… まけるとは…! うわああああ!',
+  },
+};
+
+/* ============================================================
+ * ウェーブ(波)
+ *   mons … おしよせる モンスターの サイズ(ならびは 前から)
+ *   boss … いれば その波は ボス戦
+ * ============================================================ */
+
+const WAVES = [
+  { mons: ['s', 's', 's'] },
+  { mons: ['s', 's', 's', 's'] },
+  { mons: ['s', 'm', 's', 'm'] },
+  { boss: 'kabocha', mons: ['s', 's'] },
+  { mons: ['m', 'm', 'm', 'm'] },
+  { mons: ['m', 'm', 'l', 'l'] },
+  { mons: ['l', 'l', 'l', 'l'] },
+  { boss: 'vegetagon', mons: ['m', 'm'] },
+];
+
+const WAVE_COUNT = WAVES.length;
 
 /*
- * ステージを つくる。プレイヤーが えらんだ キャラは でてこない。
- * さきに いくほど てきの たいりょくと こうげき力が あがる。
+ * ウェーブの モンスターを つくる。
+ * おなじ 波の 中で 同じ野菜が ならばないように シャッフルして えらぶ。
  */
-function buildStages(playerId) {
-  const pool = FIGHTERS.filter((f) => f.id !== playerId);
-  /* シャッフル */
-  for (let i = pool.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const t = pool[i];
-    pool[i] = pool[j];
-    pool[j] = t;
+function buildWave(waveIndex) {
+  const spec = WAVES[waveIndex];
+  const out = [];
+
+  if (spec.boss) {
+    const b = BOSSES[spec.boss];
+    out.push({
+      def: b,
+      maxHp: b.hp,
+      hp: b.hp,
+      atk: b.atk,
+      cd: b.cd,
+      scale: b.scale,
+      isBoss: true,
+    });
   }
-  const stages = [];
-  for (let i = 0; i < STAGE_COUNT - 1; i += 1) {
-    const base = pool[i % pool.length];
-    stages.push(Object.assign({}, base, {
-      hp: Math.round(base.hp * (1.0 + i * 0.2)),
-      power: base.power * (0.8 + i * 0.1),
-    }));
-  }
-  stages.push(Object.assign({}, BOSS));
-  return stages;
+
+  const used = {};
+  spec.mons.forEach((size) => {
+    const pool = VEG_BY_SIZE[size];
+    let v = pool[Math.floor(Math.random() * pool.length)];
+    let guard = 0;
+    while (used[v.id] && guard < 8) {
+      v = pool[Math.floor(Math.random() * pool.length)];
+      guard += 1;
+    }
+    used[v.id] = true;
+    const s = SIZE_SPEC[size];
+    /* さきの 波ほど かたく なる */
+    const boost = 1 + waveIndex * 0.07;
+    out.push({
+      def: v,
+      maxHp: Math.round(s.hp * boost),
+      hp: Math.round(s.hp * boost),
+      atk: Math.round(s.atk * (1 + waveIndex * 0.06)),
+      cd: Math.max(3.2, s.cd - waveIndex * 0.18),
+      scale: s.scale,
+      isBoss: false,
+    });
+  });
+
+  return out;
 }
+
+/* プレイヤーが せいかいした ときの かけごえ */
+const HIT_WORDS = ['どっかーん!', 'ばっしゃーん!', 'ずどーん!', 'がっしゃーん!', 'ばきーん!', 'めった ぎり!'];
+
+/* モンスターを たおした ときの かけごえ */
+const KILL_WORDS = ['やさい げきは!', 'ぺしゃんこ!', 'こなごな!', 'サラダに なった!', 'ノックアウト!'];

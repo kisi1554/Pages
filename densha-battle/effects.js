@@ -29,6 +29,7 @@ const Fx = (function createFx() {
   let shakePower = 0;
   let shakeUntil = 0;
   let reduceMotion = false;
+  let clipEl = null;
 
   function init(canvasEl, shakeTarget, layerEl) {
     canvas = canvasEl;
@@ -54,6 +55,15 @@ const Fx = (function createFx() {
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  /*
+   * つぶを えがく はんいを この えれめんとの 中だけに かぎる。
+   * バトル中は アリーナだけに して、下の こたえボタンが よみにくく ならないように する。
+   * null で かいじょ。
+   */
+  function setClip(node) {
+    clipEl = node || null;
   }
 
   /* えれめんとの まんなかの ざひょう(がめん きじゅん) */
@@ -215,6 +225,33 @@ const Fx = (function createFx() {
     ensureLoop();
   }
 
+  /* ぶっとい ひかりの ビーム(2てんを つらぬく) */
+  function beam(x1, y1, x2, y2, color, width) {
+    items.push({
+      kind: 'beam',
+      x1, y1, x2, y2,
+      life: 0.3,
+      age: 0,
+      width: width || 26,
+      color: color || '#ffffff',
+    });
+    ensureLoop();
+  }
+
+  /* がめんを よこぎる きりさき(ざしゅっ) */
+  function slash(x, y, color, len, ang) {
+    items.push({
+      kind: 'slash',
+      x, y,
+      ang: ang === undefined ? rnd(-0.9, -0.3) : ang,
+      len: len || 420,
+      life: 0.26,
+      age: 0,
+      color: color || '#ffffff',
+    });
+    ensureLoop();
+  }
+
   /* かみふぶき(かち の おいわい) */
   function confetti(count) {
     const colors = ['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#da77f2', '#ffa94d'];
@@ -238,6 +275,17 @@ const Fx = (function createFx() {
   }
 
   /* --------------------------- がめんの ゆれ / フラッシュ --------------------------- */
+
+  let zoomPower = 0;
+  let zoomUntil = 0;
+
+  /* がめんが ぐいっと よる(ヒットの ときの インパクト) */
+  function zoom(power, ms) {
+    if (!shakeEl || reduceMotion) return;
+    zoomPower = Math.max(zoomPower, power);
+    zoomUntil = Math.max(zoomUntil, performance.now() + ms);
+    ensureLoop();
+  }
 
   function shake(power, ms) {
     if (!shakeEl) return;
@@ -302,6 +350,8 @@ const Fx = (function createFx() {
     items = [];
     shakePower = 0;
     shakeUntil = 0;
+    zoomPower = 0;
+    zoomUntil = 0;
     if (shakeEl) shakeEl.style.transform = '';
     if (textLayer) textLayer.innerHTML = '';
     if (g) g.clearRect(0, 0, w, h);
@@ -313,6 +363,18 @@ const Fx = (function createFx() {
     const dt = Math.min((now - lastT) / 1000, 0.05);
     lastT = now;
     g.clearRect(0, 0, w, h);
+
+    let clipped = false;
+    if (clipEl) {
+      const r = clipEl.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        g.save();
+        g.beginPath();
+        g.rect(r.left, r.top, r.width, r.height);
+        g.clip();
+        clipped = true;
+      }
+    }
 
     for (let i = items.length - 1; i >= 0; i -= 1) {
       const p = items[i];
@@ -398,6 +460,42 @@ const Fx = (function createFx() {
         for (let k = 1; k < p.pts.length; k += 1) g.lineTo(p.pts[k].x, p.pts[k].y);
         g.stroke();
         g.shadowBlur = 0;
+      } else if (p.kind === 'beam') {
+        /* しろい しんと、そとがわの いろ。ふとさが きゅうげきに ほそくなる */
+        const wpx = p.width * Math.pow(fade, 0.6);
+        g.globalAlpha = fade;
+        g.lineCap = 'round';
+        g.shadowColor = p.color;
+        g.shadowBlur = 26;
+        g.strokeStyle = p.color;
+        g.lineWidth = wpx;
+        g.beginPath();
+        g.moveTo(p.x1, p.y1);
+        g.lineTo(p.x2, p.y2);
+        g.stroke();
+        g.strokeStyle = '#ffffff';
+        g.lineWidth = Math.max(2, wpx * 0.45);
+        g.beginPath();
+        g.moveTo(p.x1, p.y1);
+        g.lineTo(p.x2, p.y2);
+        g.stroke();
+        g.shadowBlur = 0;
+      } else if (p.kind === 'slash') {
+        const grow = Math.min(1, t * 2.4);
+        const half = (p.len / 2) * grow;
+        const dx = Math.cos(p.ang) * half;
+        const dy = Math.sin(p.ang) * half;
+        g.globalAlpha = fade;
+        g.strokeStyle = p.color;
+        g.lineCap = 'round';
+        g.shadowColor = p.color;
+        g.shadowBlur = 20;
+        g.lineWidth = 16 * fade;
+        g.beginPath();
+        g.moveTo(p.x - dx, p.y - dy);
+        g.lineTo(p.x + dx, p.y + dy);
+        g.stroke();
+        g.shadowBlur = 0;
       } else if (p.kind === 'confetti') {
         p.x += p.vx * dt;
         p.y += p.vy * dt;
@@ -412,22 +510,33 @@ const Fx = (function createFx() {
       }
     }
     g.globalAlpha = 1;
+    if (clipped) g.restore();
 
-    /* がめんの ゆれ */
+    /* がめんの ゆれ と ズーム */
     if (shakeEl) {
-      if (now < shakeUntil) {
-        const left = (shakeUntil - now) / 400;
-        const amp = shakePower * Math.min(1, left);
-        shakeEl.style.transform =
-          'translate(' + rnd(-amp, amp).toFixed(1) + 'px,' + rnd(-amp, amp).toFixed(1) + 'px)' +
-          ' rotate(' + rnd(-amp * 0.08, amp * 0.08).toFixed(2) + 'deg)';
-      } else if (shakePower !== 0) {
+      const shaking = now < shakeUntil;
+      const zooming = now < zoomUntil;
+      if (shaking || zooming) {
+        let tf = '';
+        if (shaking) {
+          const left = (shakeUntil - now) / 400;
+          const amp = shakePower * Math.min(1, left);
+          tf += 'translate(' + rnd(-amp, amp).toFixed(1) + 'px,' + rnd(-amp, amp).toFixed(1) + 'px)' +
+            ' rotate(' + rnd(-amp * 0.08, amp * 0.08).toFixed(2) + 'deg)';
+        }
+        if (zooming) {
+          const zl = (zoomUntil - now) / 260;
+          tf += ' scale(' + (1 + zoomPower * Math.min(1, zl)).toFixed(4) + ')';
+        }
+        shakeEl.style.transform = tf;
+      } else if (shakePower !== 0 || zoomPower !== 0) {
         shakePower = 0;
+        zoomPower = 0;
         shakeEl.style.transform = '';
       }
     }
 
-    if (items.length === 0 && shakePower === 0) {
+    if (items.length === 0 && shakePower === 0 && zoomPower === 0) {
       running = false;
       return;
     }
@@ -437,6 +546,7 @@ const Fx = (function createFx() {
   return {
     init,
     resize,
+    setClip,
     centerOf,
     burst,
     emojiBurst,
@@ -445,8 +555,11 @@ const Fx = (function createFx() {
     focusLines,
     speedLines,
     bolt,
+    beam,
+    slash,
     confetti,
     shake,
+    zoom,
     flash,
     damage,
     shout,

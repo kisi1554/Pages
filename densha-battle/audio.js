@@ -28,7 +28,8 @@ const SCALES = {
 /*
  * 1トラック = 16分音符 32ステップ の くりかえし。
  *   '.' = 休み  'x' = 鳴らす  数字 = スケールの何番目か
- *   mood: 'menu' = えらぶ画面 / 'battle' = ふつうの たたかい / 'boss' = ラスボス
+ *   mood: 'menu' = えらぶ画面 / 'battle' = ふつうの たたかい /
+ *         'hyper' = れんぞく せいかいちゅう / 'boss' = ボス野菜
  */
 
 const BGM_TRACKS = [
@@ -97,7 +98,23 @@ const BGM_TRACKS = [
     drive: 1.05,
   },
   {
-    name: 'ヤミカゲ しゅつげん',
+    name: 'ハイパー ドライブ',
+    mood: 'hyper',
+    bpm: 196,
+    root: -17, // E2
+    scale: 'minorPenta',
+    kick: 'x.x.x.x.x.x.x.x.x.x.x.x.x.xxx.x.',
+    snare: '....x.......x.......x.......x.x.',
+    hat: 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx',
+    bassWave: 'sawtooth',
+    bass: '0.0.3.0.5.0.7.5.0.0.3.0.7.5.3.0.',
+    leadWave: 'square',
+    lead: '7.10.12.10.7.5.7.10.12.14.12.10.7.5.3.0',
+    leadOct: 24,
+    drive: 1.2,
+  },
+  {
+    name: 'やさいの おうさま',
     mood: 'boss',
     bpm: 188,
     root: -22, // A#1
@@ -571,6 +588,54 @@ const SoundEngine = (function createAudio() {
     blip(1500, ctx.currentTime, 0.04, 'square', 0.12);
   }
 
+  /* たまを うつ(ピシュン) */
+  function seShot() {
+    if (!seOn || !ensureCtx()) return;
+    const t = ctx.currentTime;
+    sweep(t, 2400, 700, 0.1, 'square', 0.16);
+    blip(1800, t, 0.05, 'triangle', 0.12);
+  }
+
+  /* モンスターを たおした(はじけて とぶ) */
+  function seSquash() {
+    if (!seOn || !ensureCtx()) return;
+    const t = ctx.currentTime;
+    boom(t, 0.55, 0.45);
+    sweep(t, 900, 140, 0.28, 'triangle', 0.26);
+    const src = ctx.createBufferSource();
+    src.buffer = noiseBuffer(0.25);
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.setValueAtTime(2600, t);
+    bp.frequency.exponentialRampToValueAtTime(400, t + 0.25);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.4, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+    src.connect(bp); bp.connect(g); g.connect(seBus);
+    src.start(t); src.stop(t + 0.25);
+  }
+
+  /* ウェーブ クリア */
+  function seWave() {
+    if (!seOn || !ensureCtx()) return;
+    const t = ctx.currentTime;
+    [784, 988, 1175, 1568].forEach((hz, i) => {
+      blip(hz, t + i * 0.08, 0.22, 'square', 0.26);
+      blip(hz / 2, t + i * 0.08, 0.22, 'triangle', 0.14);
+    });
+  }
+
+  /* ハイパーモード とつにゅう */
+  function seHyper() {
+    if (!seOn || !ensureCtx()) return;
+    const t = ctx.currentTime;
+    sweep(t, 200, 3000, 0.55, 'sawtooth', 0.24);
+    [523, 659, 784, 1046, 1318, 1568].forEach((hz, i) => {
+      blip(hz, t + 0.5 + i * 0.05, 0.2, 'square', 0.24);
+    });
+    boom(t + 0.5, 0.6, 0.7);
+  }
+
   /* でんしゃの けいてき(バトル かいし) */
   function seHorn() {
     if (!seOn || !ensureCtx()) return;
@@ -662,6 +727,10 @@ const SoundEngine = (function createAudio() {
     seLose,
     seTick,
     seHorn,
+    seShot,
+    seSquash,
+    seWave,
+    seHyper,
     speak,
     stopSpeak,
   };
