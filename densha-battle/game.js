@@ -3,7 +3,10 @@
 /*
  * でんしゃバトル 本体(リアルタイム ウェーブ制)
  *
- *  タイトル → レベルえらび → あいぼうえらび → バトル(10ウェーブ) → けっか
+ *  タイトル → ジャンルえらび → レベルえらび → 勇者えらび → バトル(10ウェーブ) → けっか
+ *
+ *  もんだいは 3ジャンル(さんすう / えきめいの かんじ / にほんちず)。
+ *  たたかうのは 人間の 勇者たち、あいては 野菜モンスター。
  *
  *  バトルの ながれ:
  *    - 野菜モンスターが 右から おしよせる。ターンは まわってこない。
@@ -22,8 +25,8 @@
   /* ------------------------------ DOM ------------------------------ */
 
   const el = {};
-  ['screen-title', 'screen-level', 'screen-select', 'screen-battle', 'screen-result',
-    'btn-start', 'level-list', 'char-list', 'select-sub',
+  ['screen-title', 'screen-genre', 'screen-level', 'screen-select', 'screen-battle', 'screen-result',
+    'btn-start', 'genre-list', 'level-list', 'level-sub', 'char-list', 'select-sub',
     'wave-chip', 'score-num', 'btn-bgm', 'btn-voice', 'btn-home',
     'arena', 'field', 'player-slot', 'mon-row',
     'boss-plate', 'bp-title', 'bp-name', 'bp-fill', 'bp-phase',
@@ -49,7 +52,7 @@
   const HYPER_COMBO = 8;      // これだけ れんぞくすると ハイパーモード
   const HYPER_BOOST = 1.3;
   const SHOT_MS = 160;        // たまが とどくまでの じかん
-  const MISS_LOCK_MS = 600;   // まちがえた ときに うごけない じかん
+  const MISS_LOCK_MS = 750;   // まちがえた ときに うごけない じかん(こたえを よむ じかん)
   const WAVE_GAP_MS = 1300;   // ウェーブの あいだ
   const CUTIN_MS = 1900;      // ボス とうじょう カットインの ながさ
 
@@ -59,8 +62,10 @@
   /* ---------------------------- じょうたい ---------------------------- */
 
   const S = {
+    genre: 'sansu',
+    genreDef: GENRES[0],
     level: 'kantan',
-    levelDef: LEVELS[0],
+    levelDef: GENRES[0].levels[0],
     player: null,
     playerTrain: null,
 
@@ -83,6 +88,7 @@
     running: false,
     rafId: 0,
     lastT: 0,
+    quirkAt: 0,
 
     stats: { correct: 0, wrong: 0 },
     result: null,
@@ -114,30 +120,30 @@
   /* ------------------------------ がめん ------------------------------ */
 
   function showScreen(id) {
-    ['screen-title', 'screen-level', 'screen-select', 'screen-battle', 'screen-result']
+    ['screen-title', 'screen-genre', 'screen-level', 'screen-select', 'screen-battle', 'screen-result']
       .forEach((s) => el[s].classList.toggle('is-active', s === id));
   }
 
   /* --------------------------- でんしゃの みため --------------------------- */
 
-  function trainHTML(f, dir) {
-    return '<div class="train" data-dir="' + dir + '" data-face="normal"' +
-      ' style="--c:' + f.color + ';--ink-c:' + f.ink + '">' +
-      '<div class="train-aura">' + (f.aura || '✨') + '</div>' +
-      '<div class="train-hat">' + (f.hat || '') + '</div>' +
-      '<div class="train-car">' +
-      '<div class="train-dest">' + f.line + '</div>' +
-      '<div class="train-face">' +
+  function heroHTML(h) {
+    return '<div class="hero" data-face="normal"' +
+      ' style="--c:' + h.color + ';--ink-c:' + h.ink + ';--hair:' + h.hair + ';--skin:' + h.skin + '">' +
+      '<div class="hero-aura">' + (h.aura || '✨') + '</div>' +
+      (h.hat ? '<div class="hero-hat">' + h.hat + '</div>' : '') +
+      '<div class="hero-head">' +
       '<span class="eye eye-l"></span><span class="eye eye-r"></span>' +
       '<span class="mouth"></span>' +
       '</div>' +
-      '</div>' +
-      '<div class="train-wheels"><i></i><i></i><i></i></div>' +
+      '<div class="hero-torso"></div>' +
+      '<div class="hero-weapon">' + h.weapon + '</div>' +
+      '<div class="hero-legs"><i></i><i></i></div>' +
+      '<div class="hero-cls">' + h.cls + '</div>' +
       '</div>';
   }
 
-  function setFace(train, face) {
-    if (train) train.dataset.face = face;
+  function setFace(hero, face) {
+    if (hero) hero.dataset.face = face;
   }
 
   /* アニメの クラスを つけて、おわったら はずす */
@@ -155,15 +161,38 @@
 
   /* ------------------------------ レベル ------------------------------ */
 
+  function buildGenreList() {
+    el['genre-list'].innerHTML = '';
+    GENRES.forEach((gn) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'genre-card';
+      b.style.setProperty('--gc', gn.color);
+      b.innerHTML =
+        '<span class="g-emoji">' + gn.emoji + '</span>' +
+        '<span><span class="g-name">' + gn.name + '</span>' +
+        '<span class="g-sub">' + gn.sub + '</span></span>';
+      b.addEventListener('click', () => {
+        SoundEngine.seTap();
+        S.genre = gn.id;
+        S.genreDef = gn;
+        el['level-sub'].textContent = gn.emoji + ' ' + gn.name + '(' + gn.sub + ')';
+        buildLevelList();
+        showScreen('screen-level');
+      });
+      el['genre-list'].appendChild(b);
+    });
+  }
+
   function buildLevelList() {
     el['level-list'].innerHTML = '';
-    LEVELS.forEach((lv) => {
+    S.genreDef.levels.forEach((lv) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'level-card';
-      b.style.setProperty('--lc', lv.color);
+      b.style.setProperty('--lc', S.genreDef.color);
       b.innerHTML =
-        '<span class="lv-emoji">' + lv.emoji + '</span>' +
+        '<span class="lv-emoji">' + S.genreDef.emoji + '</span>' +
         '<span><span class="lv-name">' + lv.name + '</span> ' +
         '<span class="lv-sub">' + lv.sub + '</span><br>' +
         '<span class="lv-detail">' + lv.detail + '</span></span>';
@@ -171,7 +200,8 @@
         SoundEngine.seTap();
         S.level = lv.id;
         S.levelDef = lv;
-        el['select-sub'].textContent = 'レベル: ' + lv.name + '(' + lv.sub + ')';
+        el['select-sub'].textContent =
+          S.genreDef.name + ' / ' + lv.name + '(' + lv.sub + ')';
         showScreen('screen-select');
       });
       el['level-list'].appendChild(b);
@@ -180,13 +210,13 @@
 
   function buildCharList() {
     el['char-list'].innerHTML = '';
-    FIGHTERS.forEach((f) => {
+    HEROES.forEach((f) => {
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'char-card';
       b.style.setProperty('--ink-c', f.ink);
       b.innerHTML =
-        trainHTML(f, 'right') +
+        heroHTML(f) +
         '<span class="cc-name">' + f.name + '</span>' +
         '<span class="cc-tag">' + f.tag + '</span>';
       b.addEventListener('click', () => {
@@ -214,7 +244,7 @@
     S.stats = { correct: 0, wrong: 0 };
 
     el['player-name'].textContent = fighter.name;
-    el['player-tag'].textContent = fighter.line;
+    el['player-tag'].textContent = fighter.cls;
     el['arena'].classList.remove('is-hyper', 'is-boss', 'is-final', 'is-rage');
     el['boss-plate'].hidden = true;
     S.boss = null;
@@ -230,12 +260,15 @@
     updateScore();
 
     SoundEngine.seHorn();
+    Fx.banner(fighter.name + ' 出発!', fighter.color);
+    SoundEngine.speak(fighter.name + '! ' + fighter.quote, { rate: 1.05, pitch: 1.2 });
+    el['verdict'].textContent = fighter.quote;
     startWave();
   }
 
   function renderPlayer() {
-    el['player-slot'].innerHTML = trainHTML(S.player, 'right');
-    const t = el['player-slot'].querySelector('.train');
+    el['player-slot'].innerHTML = heroHTML(S.player);
+    const t = el['player-slot'].querySelector('.hero');
     t.classList.add('is-run', 'is-enter');
     later(600, () => t.classList.remove('is-enter'));
     return t;
@@ -250,7 +283,7 @@
       const b = document.createElement('button');
       b.type = 'button';
       b.className = 'choice';
-      b.addEventListener('click', () => answer(parseInt(b.textContent, 10), b));
+      b.addEventListener('click', () => answer(b.dataset.v, b));
       el['choices'].appendChild(b);
       S.choiceBtns.push(b);
     }
@@ -283,6 +316,7 @@
     if (bossDef) {
       bossEntrance(bossDef);
       S.inputLockUntil = performance.now() + CUTIN_MS + 250;
+      S.quirkAt = performance.now() + CUTIN_MS + 2500;
       later(CUTIN_MS + 250, () => { newQuestion(); startLoop(); });
       return;
     }
@@ -292,6 +326,7 @@
     el['verdict'].textContent = 'やさいモンスターが おしよせてきた!';
     el['verdict'].className = 'verdict';
     S.inputLockUntil = performance.now() + 500;
+    S.quirkAt = performance.now() + 1800;
     newQuestion();
     startLoop();
   }
@@ -352,6 +387,7 @@
       const d = m.def;
       const div = document.createElement('div');
       div.className = 'mon' + (m.scale >= 2.4 ? ' is-giant' : '');
+      div.dataset.move = d.move || 'hop';
       div.style.setProperty('--sc', m.scale);
       div.style.setProperty('--c', d.color);
       div.style.animationDelay = (i * 70) + 'ms';
@@ -451,11 +487,32 @@
       m.el.classList.toggle('is-ready', r > 0.82);
     }
 
+    /* ときどき モンスターが とつぜん へんな うごきを する */
+    if (now > S.quirkAt) {
+      S.quirkAt = now + 2400 + Math.random() * 2800;
+      doQuirk();
+    }
+
     /* はやさボーナスの のこり(クリティカルの まど) */
     const left = 1 - (now - S.askedAt) / (S.levelDef.crit * 1000);
     setTimerRatio(left);
 
     S.rafId = requestAnimationFrame(loop);
+  }
+
+  /*
+   * きまぐれアクション。
+   * ざこモンスターが 1ぴき、とつぜん 大ジャンプしたり ワープしたり する。
+   * うごきは 6しゅるいの 中から ランダム。
+   */
+  function doQuirk() {
+    const zako = S.monsters.filter((m) => m.alive && !m.isBoss && m.el);
+    if (zako.length === 0) return;
+    const m = zako[Math.floor(Math.random() * zako.length)];
+    const n = 1 + Math.floor(Math.random() * 6);
+    play(m.el, 'is-sp' + n, 1200);
+    const c = centerOf(m.el);
+    Fx.emojiBurst(c.x, c.y - 20, Quiz.pick(['❔', '💭', '✨']), 2);
   }
 
   /* ------------------------------ ひょうじ ------------------------------ */
@@ -494,31 +551,31 @@
   /* ------------------------------ もんだい ------------------------------ */
 
   function newQuestion() {
-    const q = Quiz.make(S.level, S.wave);
+    const q = Quiz.make(S.genre, S.level, S.wave);
     S.question = q;
     S.askedAt = performance.now();
 
-    el['question'].innerHTML =
-      '<span>' + q.a + '</span><span class="q-op">' + q.op + '</span><span>' + q.b + '</span>' +
-      '<span class="q-eq">=</span><span class="q-ask">?</span>';
-
-    if (S.level === 'kantan' && q.countable) {
-      el['hint'].innerHTML =
-        '<span class="hint-group">' + '🚃'.repeat(q.a) + '</span>' +
-        '<span class="hint-plus">+</span>' +
-        '<span class="hint-group">' + '🚋'.repeat(q.b) + '</span>';
-    } else {
-      el['hint'].innerHTML = '';
-    }
+    el['question'].innerHTML = q.qHtml;
+    el['hint'].innerHTML = q.hintHtml || '';
+    el['choices'].classList.toggle('is-wide', !!q.wide);
 
     S.choiceBtns.forEach((b, i) => {
       b.textContent = q.choices[i];
+      b.dataset.v = q.choices[i];
       b.className = 'choice';
       b.disabled = false;
     });
 
-    /* かんたん・ふつう は もんだいを よみあげる(つよいは テンポを ゆうせん) */
-    if (S.level !== 'tsuyoi') SoundEngine.speak(q.speech, { rate: 1.15, pitch: 1.25 });
+    /* まえの もんだいの「こたえは○○」を のこすと、あたらしい もんだいと
+       まざって まぎらわしいので ここで けす */
+    el['verdict'].textContent = '';
+    el['verdict'].className = 'verdict';
+
+    /* さんすうの かんたん・ふつう、ことばの もんだいは よみあげる
+       (さんすうの つよいだけ テンポを ゆうせん して よまない) */
+    if (!(S.genre === 'sansu' && S.level === 'tsuyoi')) {
+      SoundEngine.speak(q.speech, { rate: 1.15, pitch: 1.25 });
+    }
   }
 
   /* ------------------------------ こたえる ------------------------------ */
@@ -564,7 +621,7 @@
       btn.classList.add('is-wrong');
       S.choiceBtns.forEach((b) => {
         b.disabled = true;
-        if (parseInt(b.textContent, 10) === S.question.answer) b.classList.add('is-right');
+        if (b.dataset.v === S.question.answer) b.classList.add('is-right');
       });
       el['verdict'].textContent = 'ざんねん… こたえは ' + S.question.answer;
       el['verdict'].className = 'verdict is-ng';
@@ -806,7 +863,7 @@
 
     Fx.banner('ひっさつ! ' + p.special, p.color);
     SoundEngine.seSpecial();
-    SoundEngine.speak('ひっさつ! ' + p.special, { rate: 1.2, pitch: 1.3 });
+    SoundEngine.speak(p.quote + ' ひっさつ! ' + p.special, { rate: 1.25, pitch: 1.3 });
 
     play(S.playerTrain, 'is-charge', 460);
     Fx.focusLines(from.x, from.y, 'rgba(255,255,255,.85)', 54);
@@ -866,7 +923,12 @@
       Fx.burst(to.x, to.y, { count: m.isBoss ? 60 : 34, colors: [m.def.color, '#ffffff', '#ff6b6b'] });
       Fx.emojiBurst(from.x, from.y, m.def.emoji, 4);
       Fx.damage(to.x, to.y - 30, m.atk, '');
-      if (m.isBoss || Math.random() < 0.3) Fx.shout(m.def.cry, 'bad');
+      /* 野菜は じぶんの 英語名を さけぶ(みみと めで えいごを おぼえる) */
+      if (m.def.en) {
+        Fx.shout(m.def.en + '!', 'en');
+        SoundEngine.speakEn(m.def.en, { rate: 0.85 });
+      }
+      if (m.isBoss) later(650, () => Fx.shout(m.def.cry, 'bad'));
 
       damagePlayer(m.atk, false);
     });
@@ -950,11 +1012,11 @@
 
     if (win) {
       el['result-title'].textContent = '🏆 大魔王 げきは!';
-      el['result-train'].innerHTML = trainHTML(S.player, 'right');
+      el['result-train'].innerHTML = heroHTML(S.player);
       el['result-msg'].innerHTML =
-        S.player.name + 'は やさい四天王を たおし、<br>' +
+        S.player.cls + ' ' + S.player.name + 'は やさい四天王を たおし、<br>' +
         '大魔王 ベジタゴンまで やっつけた!<br>' +
-        'けいさんの ちからで まちに へいわが もどったよ。';
+        'クイズの ちからで せかいに へいわが もどったよ。';
       el['btn-again'].textContent = '▶ もういちど あそぶ';
       SoundEngine.seFanfare();
       Fx.confetti(220);
@@ -963,7 +1025,7 @@
     } else {
       el['result-title'].textContent = 'やられちゃった…';
       el['result-msg'].innerHTML =
-        'ウェーブ ' + (S.wave + 1) + ' で ちからつきた…<br>' +
+        S.player.name + 'は ウェーブ ' + (S.wave + 1) + ' で ちからつきた…<br>' +
         'もういちど ちょうせん しよう!';
       el['result-train'].innerHTML = '<div class="result-veg">' +
         S.monsters.filter((m) => m.alive).slice(0, 4).map((m) => m.def.emoji).join('') + '</div>';
@@ -973,6 +1035,7 @@
     }
 
     el['result-stats'].innerHTML =
+      '<div class="stat"><b>' + S.genreDef.emoji + '</b><span>' + S.genreDef.name + ' / ' + S.levelDef.name + '</span></div>' +
       '<div class="stat"><b>' + S.score + '</b><span>スコア</span></div>' +
       '<div class="stat"><b>' + S.kills + '</b><span>たおした かず</span></div>' +
       '<div class="stat"><b>' + S.stats.correct + '</b><span>せいかい</span></div>' +
@@ -987,7 +1050,7 @@
     SoundEngine.unlock();
     SoundEngine.seTap();
     SoundEngine.setMood('menu');
-    showScreen('screen-level');
+    showScreen('screen-genre');
   });
 
   el['btn-again'].addEventListener('click', () => {
@@ -1049,6 +1112,7 @@
     document.removeEventListener('pointerdown', unlockOnce);
   }, { once: true });
 
+  buildGenreList();
   buildLevelList();
   buildCharList();
 })();

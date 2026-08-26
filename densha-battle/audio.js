@@ -6,7 +6,8 @@
  *         「メニュー」「バトル」「ボス」の 3しゅるいの ふんいきを もっていて、
  *         ばめんに あわせて 曲が きりかわる。
  *  - 効果音: こうげき / ひっさつわざ / ひばく / せいかい / まちがい / KO / ファンファーレ
- *  - 読み上げ: ブラウザの 音声合成(日本語)
+ *  - 読み上げ: ブラウザの 音声合成。日本語(speak)と 英語(speakEn)の りょうほう。
+ *    英語は 野菜モンスターが じぶんの 英語名を さけぶ ときに つかう。
  */
 
 /* ------------------------------ 音階 ------------------------------ */
@@ -821,6 +822,7 @@ const SoundEngine = (function createAudio() {
   /* ------- 読み上げ ------- */
 
   let jaVoice = null;
+  let enVoice = null;
   function pickVoice() {
     if (!window.speechSynthesis) return null;
     const voices = window.speechSynthesis.getVoices();
@@ -828,6 +830,10 @@ const SoundEngine = (function createAudio() {
     jaVoice =
       voices.find((v) => v.lang === 'ja-JP') ||
       voices.find((v) => (v.lang || '').indexOf('ja') === 0) ||
+      null;
+    enVoice =
+      voices.find((v) => v.lang === 'en-US') ||
+      voices.find((v) => (v.lang || '').indexOf('en') === 0) ||
       null;
     return jaVoice;
   }
@@ -846,6 +852,24 @@ const SoundEngine = (function createAudio() {
     if (jaVoice) u.voice = jaVoice;
     u.rate = o.rate || 1.0;
     u.pitch = o.pitch || 1.15;
+    u.volume = 1;
+    window.speechSynthesis.speak(u);
+  }
+
+  /*
+   * 英語で よむ。野菜モンスターが じぶんの 英語名を さけぶ ときに つかう。
+   * みじかい ことばなので、いま しゃべっている ぶんは わりこんで けす。
+   */
+  function speakEn(text, opts) {
+    const o = opts || {};
+    if (!voiceOn || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US';
+    if (!enVoice) pickVoice();
+    if (enVoice) u.voice = enVoice;
+    u.rate = o.rate || 0.9;
+    u.pitch = o.pitch || 1.0;
     u.volume = 1;
     window.speechSynthesis.speak(u);
   }
@@ -894,6 +918,7 @@ const SoundEngine = (function createAudio() {
     seWave,
     seHyper,
     speak,
+    speakEn,
     stopSpeak,
   };
 })();
