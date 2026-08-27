@@ -32,25 +32,43 @@ const CFG = {
 const BOARD_W = CFG.COLS * CFG.CELL;
 const BOARD_H = CFG.ROWS * CFG.CELL;
 
-// fall: 落ちる速さ(マス/秒), accel: 1問正かいごとに ふえる速さ
+// はやさ(1〜100)は モードとは べつに えらぶ。モードは 見た目と 4択の むずかしさ。
 // tilt: かたむきの さいだい角度(度), sameGroup: 4択のうち おなじグループから出す数
 const MODES = [
   {
     id: 'easy', name: 'やさしい', emoji: '🐢',
-    note: 'ゆっくり おちる・かたむかない・ヒント1つめは さいしょから',
-    fall: 7.5, accel: 0.22, maxFall: 15, tilt: 0, sameGroup: 0, autoHint: 1, mul: 1,
+    note: 'かたむかない・ちがう地方から えらぶ・ヒント1つめは さいしょから',
+    tilt: 0, sameGroup: 0, autoHint: 1, mul: 1,
   },
   {
     id: 'normal', name: 'ふつう', emoji: '🚶',
-    note: 'すこし はやい・すこし かたむく',
-    fall: 11, accel: 0.32, maxFall: 22, tilt: 7, sameGroup: 1, autoHint: 0, mul: 1.5,
+    note: 'すこし かたむく・1つは おなじ地方から',
+    tilt: 7, sameGroup: 1, autoHint: 0, mul: 1.5,
   },
   {
     id: 'hard', name: 'むずかしい', emoji: '🐇',
-    note: 'はやい・よく かたむく・にている なかまから えらぶ',
-    fall: 15, accel: 0.42, maxFall: 30, tilt: 16, sameGroup: 3, autoHint: 0, mul: 2,
+    note: 'よく かたむく・にている なかまから えらぶ',
+    tilt: 16, sameGroup: 3, autoHint: 0, mul: 2,
   },
 ];
+
+/*
+ * おちる はやさ … 1〜100 の 100段階。
+ *   20 = マス/秒 11(この ゲームを 作ったときの ふつうの はやさ)
+ *   1マスは 7px なので、1 めもり = 0.55マス/秒 ずつ はやくなる。
+ *   正かいするたび 3%ずつ 速くなり、えらんだ はやさの 2ばいで うちどめ。
+ */
+const SPEED = {
+  MIN: 1,
+  MAX: 100,
+  DEFAULT: 20,
+  PER_LEVEL: 0.55,     // マス/秒
+  ACCEL: 0.03,         // 1問正かいごとに ふえる わりあい
+  MAX_MUL: 2,          // どれだけ はやくなっても えらんだ はやさの 2ばいまで
+};
+
+const SPEED_KEY = 'shirotto-quiz:speed';
+
 
 // 落ちてくる ブロックの色(なかま分けとは わざと むすびつけない)
 const PIECE_COLORS = [
@@ -78,6 +96,11 @@ const el = {
   },
   topicList: $('topicList'),
   modeList: $('modeList'),
+  speedRange: $('speedRange'),
+  speedNum: $('speedNum'),
+  speedNote: $('speedNote'),
+  speedPresets: $('speedPresets'),
+  speedView: $('speedView'),
   soundTitle: $('soundToggleTitle'),
   soundGame: $('soundToggleGame'),
   board: $('board'),
@@ -110,6 +133,7 @@ const stackCtx = stack.getContext('2d');
 const game = {
   topic: null,
   mode: MODES[1],
+  speed: SPEED.DEFAULT,     // 1〜100
   grid: null,          // Uint8Array(COLS*ROWS) 1 = つもっている
   piece: null,
   queue: [],
@@ -393,9 +417,24 @@ function spawnPiece() {
   }
 }
 
+// えらんだ はやさ(1〜100)から、いまの 落下スピード(マス/秒)を だす
+function baseSpeed(level) {
+  return Math.max(0.5, level * SPEED.PER_LEVEL);
+}
+
 function fallSpeed() {
-  const m = game.mode;
-  return Math.min(m.maxFall, m.fall + m.accel * game.right);
+  const base = baseSpeed(game.speed);
+  return Math.min(base * SPEED.MAX_MUL, base * (1 + SPEED.ACCEL * game.right));
+}
+
+// はやさの めやす: 1つが 上から 下まで おちきるのに かかる 秒数
+function fallSeconds(level) {
+  return (CFG.ROWS - 4) / baseSpeed(level);
+}
+
+// はやいほど 点数が 高くなる(20めもり = 1.0ばい)
+function speedMul(level) {
+  return 0.5 + level / 40;
 }
 
 /* ============================ こたえ ============================ */
@@ -437,7 +476,8 @@ function scoreFor(piece) {
   const left = total > 0 ? clamp(1 - (piece.rowF - piece.spawnRow) / total, 0, 1) : 0;
   const base = 100 + Math.round(60 * left) + Math.min(game.combo, 10) * 10;
   const paid = Math.max(0, piece.hints.length - piece.freeHints);
-  return Math.max(10, Math.round(base * game.mode.mul) - paid * HINT_COST);
+  const gain = base * game.mode.mul * speedMul(game.speed);
+  return Math.max(10, Math.round(gain) - paid * HINT_COST);
 }
 
 function missPiece(piece, timeout) {
@@ -616,6 +656,7 @@ function updateHud() {
   el.score.textContent = game.score;
   el.combo.textContent = game.combo;
   el.right.textContent = `${game.right}/${game.asked}`;
+  el.speedView.textContent = game.speed;
 }
 
 function bumpStat(node) {
@@ -716,6 +757,7 @@ function renderResult(cleared) {
     ['さいだいれんぞく', `${game.maxCombo}`],
     ['つかったヒント', `${game.hintsUsed}こ`],
     ['むずかしさ', game.mode.name],
+    ['はやさ', `${game.speed}`],
   ];
   for (const [k, v] of stats) {
     const s = document.createElement('span');
@@ -774,6 +816,55 @@ function renderTitle() {
   }
 }
 
+const SPEED_PRESETS = [
+  { level: 10, label: 'のんびり' },
+  { level: 20, label: 'ふつう' },
+  { level: 40, label: 'はやい' },
+  { level: 70, label: 'げきはや' },
+  { level: 100, label: 'さいそく' },
+];
+
+function renderSpeed() {
+  el.speedRange.value = String(game.speed);
+  el.speedNum.textContent = game.speed;
+  el.speedNote.textContent =
+    `1つが おちきるまで やく ${fallSeconds(game.speed).toFixed(1)}びょう ／ 点数 ${speedMul(game.speed).toFixed(2)}ばい`;
+  [...el.speedPresets.children].forEach((b) => {
+    b.classList.toggle('is-on', Number(b.dataset.level) === game.speed);
+  });
+  if (el.speedView) el.speedView.textContent = game.speed;
+}
+
+function setSpeed(level, save) {
+  game.speed = clamp(Math.round(level), SPEED.MIN, SPEED.MAX);
+  if (save) {
+    try { localStorage.setItem(SPEED_KEY, String(game.speed)); }
+    catch (e) { /* 保存できなくても あそべる */ }
+  }
+  renderSpeed();
+}
+
+function initSpeedUi() {
+  let saved = SPEED.DEFAULT;
+  try {
+    const v = Number(localStorage.getItem(SPEED_KEY));
+    if (v >= SPEED.MIN && v <= SPEED.MAX) saved = v;
+  } catch (e) { /* よみだせなくても あそべる */ }
+
+  el.speedPresets.innerHTML = '';
+  for (const p of SPEED_PRESETS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.dataset.level = String(p.level);
+    btn.textContent = `${p.label} ${p.level}`;
+    btn.addEventListener('click', () => setSpeed(p.level, true));
+    el.speedPresets.appendChild(btn);
+  }
+  el.speedRange.addEventListener('input', () => setSpeed(Number(el.speedRange.value), false));
+  el.speedRange.addEventListener('change', () => setSpeed(Number(el.speedRange.value), true));
+  setSpeed(saved, false);
+}
+
 function setTopic(topic) {
   game.topic = topic;
   miniMapBase = null;
@@ -804,6 +895,7 @@ function init() {
     return;
   }
   setTopic(SHIROTTO_TOPICS[0]);
+  initSpeedUi();
   renderTitle();
   syncSoundButtons();
   fitCanvas();
