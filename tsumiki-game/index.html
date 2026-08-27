@@ -1,0 +1,1351 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>つみきは いくつ？ 見えないブロックを かぞえよう</title>
+<style>
+  :root{
+    --pink:#ff6f91;
+    --orange:#ff9a3d;
+    --yellow:#ffd23f;
+    --green:#3ddc97;
+    --blue:#3ec7ff;
+    --purple:#9d6fff;
+    --bg1:#fff1e0;
+    --bg2:#ffe6f2;
+    --ink:#5a3b2e;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;
+    padding:0;
+    height:100%;
+    font-family:"Hiragino Maru Gothic ProN","Yu Gothic","Rounded Mplus 1c","Comic Sans MS",sans-serif;
+    background:linear-gradient(160deg,var(--bg1),var(--bg2));
+    overscroll-behavior:none;
+    -webkit-tap-highlight-color:transparent;
+    user-select:none;
+    touch-action:manipulation;
+  }
+  #app{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:14px;
+    position:relative;
+    z-index:1;
+  }
+  .screen{
+    display:none;
+    width:100%;
+    max-width:600px;
+    text-align:center;
+  }
+  .screen.active{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:12px;
+  }
+  h1{
+    font-size:clamp(1.5rem,5.5vw,2.4rem);
+    color:#8a4b12;
+    margin:0 0 4px 0;
+    text-shadow:2px 2px 0 #fff;
+  }
+  .subtitle{
+    font-size:clamp(.95rem,3.4vw,1.25rem);
+    color:#b06a28;
+    margin:0;
+    font-weight:bold;
+  }
+  .mascot{
+    font-size:clamp(3.4rem,15vw,6rem);
+    animation:bob 2s ease-in-out infinite;
+    line-height:1;
+  }
+  @keyframes bob{
+    0%,100%{transform:translateY(0) rotate(-3deg);}
+    50%{transform:translateY(-14px) rotate(3deg);}
+  }
+  .big-button{
+    font-size:clamp(1.2rem,4.5vw,1.7rem);
+    font-weight:bold;
+    color:#fff;
+    background:linear-gradient(135deg,var(--orange),var(--pink));
+    border:none;
+    border-radius:50px;
+    padding:16px 40px;
+    box-shadow:0 6px 0 #c94f6d, 0 10px 18px rgba(0,0,0,.2);
+    cursor:pointer;
+    transition:transform .08s;
+  }
+  .big-button:active{
+    transform:translateY(6px);
+    box-shadow:0 0 0 #c94f6d, 0 4px 8px rgba(0,0,0,.2);
+  }
+  /* ---- ステージ選び ---- */
+  .stage-list{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    width:100%;
+    max-width:420px;
+  }
+  .stage-button{
+    font-family:inherit;
+    font-size:clamp(1.1rem,4vw,1.45rem);
+    font-weight:bold;
+    color:#fff;
+    border:none;
+    border-radius:24px;
+    padding:16px 20px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:12px;
+    transition:transform .08s;
+  }
+  .stage-button:active{transform:translateY(4px);}
+  .stage-button .hint{
+    font-size:.72em;
+    font-weight:normal;
+    opacity:.92;
+  }
+  .stage-button.easy{background:linear-gradient(135deg,var(--green),#22b3a0);box-shadow:0 6px 0 #1c8f7f;}
+  .stage-button.normal{background:linear-gradient(135deg,var(--blue),#3f7fe0);box-shadow:0 6px 0 #2f62b5;}
+  .stage-button.hard{background:linear-gradient(135deg,var(--purple),var(--pink));box-shadow:0 6px 0 #a33b70;}
+
+  /* ---- ゲーム画面 ---- */
+  #screen-game{
+    background:rgba(255,255,255,.8);
+    border-radius:28px;
+    padding:14px 14px 22px;
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+    width:100%;
+    position:relative;
+    overflow:hidden;
+  }
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    width:100%;
+    gap:8px;
+  }
+  #stars-display{
+    font-size:1.1rem;
+    font-weight:bold;
+    color:#c98600;
+    background:#fff6dd;
+    border-radius:20px;
+    padding:6px 14px;
+    box-shadow:0 3px 0 #e8c56a;
+    white-space:nowrap;
+  }
+  #sound-toggle{
+    font-size:1.25rem;
+    background:#fff;
+    border:2px solid #f0dcc6;
+    border-radius:14px;
+    width:44px;
+    height:40px;
+    cursor:pointer;
+    line-height:1;
+  }
+  #sound-toggle:active{transform:translateY(3px);}
+  #progress-dots{
+    display:flex;
+    gap:6px;
+    flex-wrap:wrap;
+    justify-content:flex-end;
+  }
+  .dot{
+    width:14px;
+    height:14px;
+    border-radius:50%;
+    background:#f3e3d3;
+    border:2px solid #e0c5a8;
+  }
+  .dot.done{
+    background:var(--orange);
+    border-color:#c97b18;
+  }
+  .dot.current{
+    background:var(--yellow);
+    border-color:#c99500;
+    transform:scale(1.3);
+  }
+  .question{
+    font-size:clamp(1.05rem,4.1vw,1.45rem);
+    font-weight:bold;
+    color:var(--ink);
+    margin:6px 0 0;
+    line-height:1.45;
+    min-height:2.9em;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .streak-badge{
+    font-size:1rem;
+    font-weight:bold;
+    color:#e0521f;
+    min-height:1.4em;
+  }
+
+  /* ---- つみきの絵 ---- */
+  .stage-box{
+    width:100%;
+    max-width:420px;
+    background:#fff;
+    border-radius:22px;
+    box-shadow:0 4px 0 #f0dcc6, 0 8px 18px rgba(0,0,0,.08);
+    padding:8px;
+    position:relative;
+  }
+  svg#scene{
+    width:100%;
+    height:auto;
+    display:block;
+  }
+  .face{
+    stroke:rgba(255,255,255,.75);
+    stroke-width:.8;
+    stroke-linejoin:round;
+    transition:opacity .25s;
+  }
+  .floor-tile{
+    fill:#f4eee8;
+    stroke:#e3d7cc;
+    stroke-width:.7;
+  }
+  /* すけて みる: ふつうの積み木をうすくして、かくれた積み木を うかび上がらせる */
+  /* うすくするのは 手前の層(cube-layer)だけ。xray-layer にも効かせると
+     かんじんの かくれた積み木まで 消えてしまう */
+  #scene.xray #cube-layer .cube .face{opacity:.13;}
+  #scene.xray #cube-layer .cube.is-hidden .face{opacity:0;}
+  #xray-layer{display:none;}
+  #scene.xray #xray-layer{display:block;}
+  #xray-layer .face{
+    opacity:1;
+    fill:var(--pink);
+    fill-opacity:.82;
+    stroke:#b32a55;
+    stroke-width:1.8;
+    stroke-dasharray:3.5 2;
+  }
+  /* はこに してみる: たりない ところを 点線の はこで しめす */
+  #fill-layer{display:none;}
+  #scene.boxmode #fill-layer{display:block;}
+  #scene.boxmode #cube-layer .cube .face{opacity:.78;}
+  #fill-layer .face{
+    opacity:1;
+    fill:var(--green);
+    fill-opacity:.15;
+    stroke:#17886a;
+    stroke-width:1.7;
+    stroke-dasharray:3.5 2.5;
+  }
+  #scene.boxmode #cube-layer .cube.counted .face,
+  #scene.boxmode #cube-layer .cube.counting .face{opacity:1;}
+  #fill-layer .cube.counted .face{
+    fill:#ffeaad;fill-opacity:1;stroke:#e3bc5c;stroke-dasharray:none;
+  }
+  #fill-layer .cube.counting .face{
+    fill:var(--yellow);fill-opacity:1;stroke:#c98600;stroke-dasharray:none;
+  }
+
+  /* かぞえおわった つみきは うすい金、いま かぞえている 1こ だけ こい金。
+     どこまで かぞえたかが 見えるので、二度かぞえ・かぞえもれ に気づける */
+  .cube.counted .face{
+    fill:#ffeaad;
+    stroke:#e3bc5c;
+    stroke-width:1;
+    opacity:1;
+  }
+  .cube.counting .face{
+    fill:var(--yellow);
+    stroke:#c98600;
+    stroke-width:1.6;
+    opacity:1;
+  }
+  /* かぞえている最中は すけた状態にするので、金色にした積み木だけは
+     うすくせず、はっきり浮かび上がらせる (形が1こずつ 金色に建ち上がっていく) */
+  #scene.xray #cube-layer .cube.counted .face,
+  #scene.xray #cube-layer .cube.counting .face{opacity:1;}
+  #xray-layer .cube.counted .face{
+    fill:#ffeaad;
+    stroke:#e3bc5c;
+    fill-opacity:1;
+    stroke-dasharray:none;
+  }
+  #xray-layer .cube.counting .face{
+    fill:var(--yellow);
+    stroke:#c98600;
+    fill-opacity:1;
+    stroke-dasharray:none;
+  }
+  #count-label{
+    font-family:inherit;
+    font-size:13px;
+    font-weight:bold;
+    fill:#8a4b12;
+    text-anchor:middle;
+    paint-order:stroke;
+    stroke:#fff;
+    stroke-width:3.5;
+    stroke-linejoin:round;
+  }
+
+  .view-tools{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-top:4px;
+  }
+  .tool{
+    font-family:inherit;
+    font-size:clamp(.9rem,3.2vw,1.05rem);
+    font-weight:bold;
+    border:none;
+    border-radius:30px;
+    padding:10px 16px;
+    cursor:pointer;
+    background:#fff;
+    color:#8a6a52;
+    box-shadow:0 4px 0 #f0dcc6;
+    transition:transform .08s;
+  }
+  .tool:active{transform:translateY(3px);}
+  .tool.on{
+    background:linear-gradient(135deg,var(--pink),#e0447a);
+    color:#fff;
+    box-shadow:0 4px 0 #b32e5c;
+  }
+  .tool.count-btn{
+    background:linear-gradient(135deg,var(--yellow),var(--orange));
+    color:#6b3b00;
+    box-shadow:0 4px 0 #c97b18;
+  }
+
+  /* ---- こたえ ---- */
+  .answers{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:12px;
+  }
+  .answer-btn{
+    font-family:inherit;
+    font-size:clamp(1.5rem,6vw,2.1rem);
+    font-weight:bold;
+    color:#fff;
+    background:linear-gradient(135deg,var(--blue),var(--purple));
+    border:none;
+    border-radius:22px;
+    width:clamp(64px,18vw,84px);
+    height:clamp(64px,18vw,84px);
+    cursor:pointer;
+    box-shadow:0 5px 0 #5b45c0;
+    transition:transform .08s;
+  }
+  .answer-btn:active{transform:translateY(4px);box-shadow:0 1px 0 #5b45c0;}
+  .answer-btn.correct{
+    background:linear-gradient(135deg,var(--green),#1fae86);
+    box-shadow:0 5px 0 #17886a;
+  }
+  .answer-btn.wrong{
+    background:#d9c9bd;
+    box-shadow:0 5px 0 #b9a596;
+  }
+  .feedback{
+    font-size:clamp(1.05rem,3.9vw,1.45rem);
+    font-weight:bold;
+    min-height:2.6em;
+    margin-top:10px;
+    color:var(--ink);
+    line-height:1.5;
+    white-space:pre-line;
+  }
+  .feedback.good{color:#12a37b;}
+  .feedback.oops{color:#e0521f;}
+
+  /* ---- 演出 ---- */
+  #confetti-container{
+    position:fixed;
+    inset:0;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:50;
+  }
+  .confetti{
+    position:absolute;
+    width:10px;
+    height:16px;
+    border-radius:2px;
+    animation:fall linear forwards;
+  }
+  @keyframes fall{
+    from{transform:translateY(-30px) rotate(0);opacity:1;}
+    to{transform:translateY(105vh) rotate(720deg);opacity:.9;}
+  }
+  #flash-overlay{
+    position:fixed;
+    inset:0;
+    background:#fff;
+    opacity:0;
+    pointer-events:none;
+    z-index:40;
+  }
+  #flash-overlay.flash{animation:flashAnim .3s ease-out;}
+  @keyframes flashAnim{
+    0%{opacity:.7;}
+    100%{opacity:0;}
+  }
+  .shake{animation:shakeAnim .4s ease;}
+  @keyframes shakeAnim{
+    0%,100%{transform:translateX(0);}
+    20%{transform:translateX(-9px);}
+    40%{transform:translateX(9px);}
+    60%{transform:translateX(-6px);}
+    80%{transform:translateX(6px);}
+  }
+  #final-score{
+    font-size:clamp(1.2rem,4.5vw,1.7rem);
+    font-weight:bold;
+    color:#c98600;
+  }
+  .end-buttons{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ================= スタート ================= -->
+  <section id="screen-start" class="screen active">
+    <div class="mascot">🧱</div>
+    <h1>つみきは いくつ？</h1>
+    <p class="subtitle">みえない つみきも かぞえよう</p>
+    <div class="stage-list">
+      <button class="stage-button easy" data-stage="easy">
+        <span>🟢 やさしい</span><span class="hint">ぜんぶ みえる</span>
+      </button>
+      <button class="stage-button normal" data-stage="normal">
+        <span>🔵 ふつう</span><span class="hint">かくれた つみき あり</span>
+      </button>
+      <button class="stage-button hard" data-stage="hard">
+        <span>🟣 むずかしい</span><span class="hint">たかく つみあげる</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= ゲーム ================= -->
+  <section id="screen-game" class="screen">
+    <div class="topbar">
+      <div id="stars-display">⭐ 0</div>
+      <button id="sound-toggle" title="おと">🔊</button>
+      <div id="progress-dots"></div>
+    </div>
+
+    <p id="question" class="question">ぜんぶで なんこ？</p>
+    <p id="streak-badge" class="streak-badge"></p>
+
+    <div class="stage-box">
+      <svg id="scene" viewBox="0 0 200 160" aria-label="つみきの かたち"></svg>
+    </div>
+
+    <div class="view-tools">
+      <button id="btn-rotate" class="tool">🔄 まわして みる</button>
+      <button id="btn-xray" class="tool">🔍 すけて みる</button>
+      <button id="btn-box" class="tool" style="display:none">📦 はこに してみる</button>
+      <button id="btn-count" class="tool count-btn">👉 いっしょに かぞえよう</button>
+    </div>
+
+    <div id="answers" class="answers"></div>
+    <p id="feedback" class="feedback"></p>
+  </section>
+
+  <!-- ================= おわり ================= -->
+  <section id="screen-end" class="screen">
+    <div class="mascot">🏆</div>
+    <h1>だいせいこう！</h1>
+    <p id="final-score"></p>
+    <p class="subtitle">みえない つみきも かぞえられました</p>
+    <div class="end-buttons">
+      <button id="btn-restart" class="big-button">もういちど</button>
+      <button id="btn-back" class="big-button">ステージを えらぶ</button>
+    </div>
+  </section>
+
+</div>
+
+<div id="confetti-container"></div>
+<div id="flash-overlay"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ============================================================
+  // ステージの設定
+  //   size … 床のマスの数(たて=よこ)、maxH … いちばん高く積める数
+  //   hidden … かくれた積み木が いくつ必要か
+  // ============================================================
+  //   foot … 床の形(よこ×たて)。正方形だけでなく 長方形も つかう
+  //   gens … 形の作りかた。同じ作りかたが つづかないようにして 見た目を変える
+  //   qtypes … きく ことがら。おなじ絵でも 問いが変われば 別の問題になる
+  var STAGES = {
+    easy: {
+      foot:[[2,2],[2,3],[3,2]], maxH:2, minTotal:3, maxTotal:7,
+      minHidden:0, maxHidden:0,
+      gens:["random","stairs","tower","carve","wall"],
+      qtypes:["total"]
+    },
+    normal: {
+      foot:[[2,2],[2,3],[3,2],[3,3]], maxH:3, minTotal:5, maxTotal:14,
+      minHidden:1, maxHidden:5,
+      gens:["random","stairs","tower","carve","wall","pyramid","boxminus"],
+      qtypes:["total","total","hidden"]
+    },
+    hard: {
+      foot:[[3,3],[3,4],[4,3],[4,4]], maxH:3, minTotal:9, maxTotal:20,
+      minHidden:2, maxHidden:14,
+      gens:["random","stairs","tower","carve","wall","pyramid","boxminus"],
+      qtypes:["total","total","hidden","fill"]
+    }
+  };
+  var ROUNDS_PER_GAME = 6;
+
+  // 等角投影(アイソメ)のおおきさ
+  var TW = 22;   // よこ半分
+  var TH = 12;   // たて半分(上の面)
+  var CH = 26;   // 積み木の高さ
+
+  // 高さごとの色。段で色が変わるので「何段あるか」も見てわかる
+  var LEVEL_COLORS = [
+    { top:"#8ad8ff", right:"#3ec7ff", left:"#2892bd" },
+    { top:"#93efc8", right:"#3ddc97", left:"#26a06d" },
+    { top:"#ffcb92", right:"#ff9a3d", left:"#d2700f" },
+    { top:"#c9adff", right:"#9d6fff", left:"#6f43cc" }
+  ];
+
+  // ---------- 要素 ----------
+  var screenStart = document.getElementById("screen-start");
+  var screenGame  = document.getElementById("screen-game");
+  var screenEnd   = document.getElementById("screen-end");
+  var scene       = document.getElementById("scene");
+  var answersEl   = document.getElementById("answers");
+  var feedbackEl  = document.getElementById("feedback");
+  var streakEl    = document.getElementById("streak-badge");
+  var starsEl     = document.getElementById("stars-display");
+  var dotsEl      = document.getElementById("progress-dots");
+  var finalScoreEl= document.getElementById("final-score");
+  var soundToggle = document.getElementById("sound-toggle");
+  var btnRotate   = document.getElementById("btn-rotate");
+  var btnXray     = document.getElementById("btn-xray");
+  var btnBox      = document.getElementById("btn-box");
+  var questionEl  = document.getElementById("question");
+  var btnCount    = document.getElementById("btn-count");
+  var btnRestart  = document.getElementById("btn-restart");
+  var btnBack     = document.getElementById("btn-back");
+  var confettiContainer = document.getElementById("confetti-container");
+  var flashOverlay = document.getElementById("flash-overlay");
+
+  // ---------- じょうたい ----------
+  var soundOn = true;
+  var stageKey = "easy";
+  var rounds = [];
+  var roundIndex = 0;
+  var stars = 0;
+  var streak = 0;
+  var current = null;     // { heights, size, total }
+  var rotation = 0;       // 0..3
+  var xrayOn = false;
+  var boxOn = false;
+  var locked = false;
+  var countingTimers = [];
+
+  // ============================================================
+  // 音まわり (Web Audio, 追加ファイル不要)
+  // ============================================================
+  var audioCtx = null;
+  function getCtx(){
+    if(!audioCtx){
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if(AC) audioCtx = new AC();
+    }
+    if(audioCtx && audioCtx.state === "suspended"){
+      audioCtx.resume();
+    }
+    return audioCtx;
+  }
+  function tone(startTime, freq, dur, vol, type){
+    var ctx = getCtx();
+    if(!ctx) return;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, startTime);
+    gain.gain.setValueAtTime(0.0001, startTime);
+    gain.gain.exponentialRampToValueAtTime(vol, startTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, startTime + dur);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(startTime);
+    osc.stop(startTime + dur + 0.05);
+  }
+  function beep(freq, dur, delay, type){
+    if(!soundOn) return;
+    var ctx = getCtx();
+    if(!ctx) return;
+    tone(ctx.currentTime + (delay || 0), freq, dur, 0.26, type);
+  }
+  function playCorrectSound(){
+    beep(523.25, 0.16, 0, "triangle");
+    beep(659.25, 0.16, 0.12, "triangle");
+    beep(783.99, 0.22, 0.24, "triangle");
+    beep(1046.5, 0.22, 0.34, "triangle");
+  }
+  function playWrongSound(){ beep(220, 0.28, 0, "sawtooth"); }
+  function playPopSound(i){ beep(440 + (i % 10) * 60, 0.12, 0, "square"); }
+  function playSwooshSound(){
+    beep(300, 0.1, 0, "sine");
+    beep(520, 0.12, 0.07, "sine");
+  }
+  function playFanfare(){
+    var seq = [523.25,523.25,523.25,659.25,783.99,1046.5,1318.5];
+    seq.forEach(function(f, i){ beep(f, 0.24, i*0.14, "triangle"); });
+  }
+
+  // ============================================================
+  // 音声読み上げ
+  // ============================================================
+  var japaneseVoices = [];
+  function loadVoices(){
+    if(!("speechSynthesis" in window)) return;
+    var all = window.speechSynthesis.getVoices() || [];
+    japaneseVoices = all.filter(function(v){ return /^ja/i.test(v.lang); });
+  }
+  if("speechSynthesis" in window){
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+  }
+  function pickJapaneseVoice(){
+    if(!japaneseVoices.length) return null;
+    var priorityNames = /Google 日本語|Kyoko|O-Ren|Nanami|Haruka|Sayaka|Otoya/i;
+    var preferred = japaneseVoices.find(function(v){ return priorityNames.test(v.name); });
+    return preferred || japaneseVoices[0];
+  }
+  function speak(text){
+    if(!soundOn) return;
+    if(!("speechSynthesis" in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      var voice = pickJapaneseVoice();
+      if(voice) u.voice = voice;
+      u.lang = "ja-JP";
+      u.rate = 0.98;
+      u.pitch = 1.02;
+      u.volume = 1;
+      window.speechSynthesis.speak(u);
+    }catch(e){ /* 対応していない環境では無視 */ }
+  }
+  soundToggle.addEventListener("click", function(){
+    soundOn = !soundOn;
+    soundToggle.textContent = soundOn ? "🔊" : "🔇";
+    if(!soundOn && "speechSynthesis" in window){
+      window.speechSynthesis.cancel();
+    }
+  });
+
+  // ============================================================
+  // 画面切り替え・こまごま
+  // ============================================================
+  function showScreen(el){
+    [screenStart, screenGame, screenEnd].forEach(function(s){ s.classList.remove("active"); });
+    el.classList.add("active");
+  }
+  function shuffle(arr){
+    for(var i = arr.length - 1; i > 0; i--){
+      var j = Math.floor(Math.random() * (i + 1));
+      var tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+    }
+    return arr;
+  }
+  function randInt(min, max){
+    return min + Math.floor(Math.random() * (max - min + 1));
+  }
+
+  // ============================================================
+  // つみきの形をつくる
+  //   heights[y][x] … そのマスに何段つむか (0 なら置かない)
+  //   「うかんでいる積み木はない」ので、段の数がそのまま個数になる
+  // ============================================================
+  function emptyGrid(sx, sy, v){
+    var h = [];
+    for(var y = 0; y < sy; y++){
+      h.push([]);
+      for(var x = 0; x < sx; x++) h[y].push(v);
+    }
+    return h;
+  }
+  function clamp(v, lo, hi){ return v < lo ? lo : (v > hi ? hi : v); }
+
+  // 形の作りかた。それぞれ ちがう シルエットに なるようにしている
+  var GENERATORS = {
+    // でたらめ
+    random: function(sx, sy, maxH){
+      var h = emptyGrid(sx, sy, 0);
+      for(var y = 0; y < sy; y++) for(var x = 0; x < sx; x++) h[y][x] = randInt(0, maxH);
+      return h;
+    },
+    // かいだん … 一方向にむかって 高くなる
+    stairs: function(sx, sy, maxH){
+      var h = emptyGrid(sx, sy, 0);
+      var alongX = Math.random() < 0.5, desc = Math.random() < 0.5;
+      var n = alongX ? sx : sy;
+      for(var y = 0; y < sy; y++) for(var x = 0; x < sx; x++){
+        var i = alongX ? x : y;
+        if(desc) i = n - 1 - i;
+        h[y][x] = clamp(1 + Math.round(i * (maxH - 1) / Math.max(1, n - 1)), 0, maxH);
+      }
+      return h;
+    },
+    // とう … 1本だけ 高くつみあげる
+    tower: function(sx, sy, maxH){
+      var base = randInt(0, Math.max(1, maxH - 1));
+      var h = emptyGrid(sx, sy, base);
+      h[randInt(0, sy - 1)][randInt(0, sx - 1)] = maxH;
+      if(Math.random() < 0.6) h[randInt(0, sy - 1)][randInt(0, sx - 1)] = maxH - 1;
+      return h;
+    },
+    // くりぬき … 床の一部を あけて L字や コの字の 土台にする
+    carve: function(sx, sy, maxH){
+      var lvl = randInt(1, maxH);
+      var h = emptyGrid(sx, sy, lvl);
+      var holes = randInt(1, Math.max(1, Math.floor(sx * sy / 3)));
+      for(var i = 0; i < holes; i++) h[randInt(0, sy - 1)][randInt(0, sx - 1)] = 0;
+      if(Math.random() < 0.5) h[randInt(0, sy - 1)][randInt(0, sx - 1)] = clamp(lvl + 1, 0, maxH);
+      return h;
+    },
+    // かべ … 1れつだけ 高い
+    wall: function(sx, sy, maxH){
+      var h = emptyGrid(sx, sy, randInt(0, 1));
+      if(Math.random() < 0.5){
+        var col = randInt(0, sx - 1);
+        for(var y = 0; y < sy; y++) h[y][col] = maxH;
+      }else{
+        var row = randInt(0, sy - 1);
+        for(var x = 0; x < sx; x++) h[row][x] = maxH;
+      }
+      return h;
+    },
+    // ピラミッド … まんなかが 高い
+    pyramid: function(sx, sy, maxH){
+      var h = emptyGrid(sx, sy, 0);
+      // 頂点の場所も 高さも 土台も ばらす。決め打ちだと 同じ形しか 作れない
+      var cx = randInt(0, sx - 1), cy = randInt(0, sy - 1);
+      var peak = randInt(Math.max(2, maxH - 1), maxH);
+      var base = randInt(0, 1);
+      for(var y = 0; y < sy; y++) for(var x = 0; x < sx; x++){
+        var d = Math.max(Math.abs(x - cx), Math.abs(y - cy));
+        h[y][x] = clamp(peak - d, base, maxH);
+      }
+      return h;
+    },
+    // はこけずり … 直方体から いくつか けずる (中学受験で よく出る形)
+    boxminus: function(sx, sy, maxH){
+      var h = emptyGrid(sx, sy, maxH);
+      var cuts = randInt(Math.max(1, Math.ceil(sx * sy / 4)), sx * sy);
+      for(var i = 0; i < cuts; i++){
+        var y = randInt(0, sy - 1), x = randInt(0, sx - 1);
+        h[y][x] = clamp(h[y][x] - randInt(1, maxH), 0, maxH);
+      }
+      return h;
+    }
+  };
+
+  function totalOf(heights){
+    var t = 0;
+    heights.forEach(function(row){ row.forEach(function(h){ t += h; }); });
+    return t;
+  }
+  function maxHeightOf(heights){
+    var m = 0;
+    heights.forEach(function(row){ row.forEach(function(h){ if(h > m) m = h; }); });
+    return m;
+  }
+  function usedCells(heights){
+    var n = 0;
+    heights.forEach(function(row){ row.forEach(function(h){ if(h > 0) n++; }); });
+    return n;
+  }
+  // 回すと たてよこが 入れかわる
+  function rotDims(sx, sy, r){ return (r % 2 === 0) ? [sx, sy] : [sy, sx]; }
+  function rotateCell(x, y, sx, sy, r){
+    if(r === 1) return [y, sx - 1 - x];
+    if(r === 2) return [sx - 1 - x, sy - 1 - y];
+    if(r === 3) return [sy - 1 - y, x];
+    return [x, y];
+  }
+
+  // 見えている向きでの積み木の一覧をつくる
+  //   この投影では 1つの積み木は「上・右・左」の3面を見せる。
+  //   3面ぜんぶが となりの積み木でふさがれていたら、その積み木は 完全に見えない。
+  function cubesFor(heights, sx, sy, r){
+    var occupied = {}, list = [];
+    for(var y = 0; y < sy; y++){
+      for(var x = 0; x < sx; x++){
+        var p = rotateCell(x, y, sx, sy, r);
+        for(var z = 0; z < heights[y][x]; z++){
+          occupied[p[0] + "," + p[1] + "," + z] = true;
+          list.push({ x:p[0], y:p[1], z:z });
+        }
+      }
+    }
+    list.forEach(function(c){
+      var up    = occupied[c.x + "," + c.y + "," + (c.z + 1)];
+      var right = occupied[(c.x + 1) + "," + c.y + "," + c.z];
+      var left  = occupied[c.x + "," + (c.y + 1) + "," + c.z];
+      c.hidden = !!(up && right && left);
+    });
+    // 奥から手前へ描く (x+y+z の小さい順)
+    list.sort(function(a, b){ return (a.x + a.y + a.z) - (b.x + b.y + b.z); });
+    return list;
+  }
+  // 「しかくい はこ」にするために たりない ところ
+  function missingFor(heights, sx, sy, r){
+    var top = maxHeightOf(heights), list = [];
+    for(var y = 0; y < sy; y++){
+      for(var x = 0; x < sx; x++){
+        var p = rotateCell(x, y, sx, sy, r);
+        for(var z = heights[y][x]; z < top; z++) list.push({ x:p[0], y:p[1], z:z });
+      }
+    }
+    list.sort(function(a, b){ return (a.x + a.y + a.z) - (b.x + b.y + b.z); });
+    return list;
+  }
+  function countHidden(cubes){
+    return cubes.filter(function(c){ return c.hidden; }).length;
+  }
+
+  // 同じ絵・同じ問いが 1回のゲームで くりかえされないように おぼえておく
+  function signatureOf(round){
+    return round.sx + "x" + round.sy + ":" +
+           round.heights.map(function(r){ return r.join(""); }).join("|") +
+           "/" + round.qtype;
+  }
+
+  function makeRound(cfg, used, lastGen){
+    for(var attempt = 0; attempt < 600; attempt++){
+      var foot = pickOne(cfg.foot);
+      var sx = foot[0], sy = foot[1];
+      // 直前と同じ作りかたは なるべく さける (見た目が つづけて 似ないように)
+      var gens = cfg.gens.filter(function(g){ return g !== lastGen; });
+      var gen = pickOne(gens.length ? gens : cfg.gens);
+      var heights = GENERATORS[gen](sx, sy, cfg.maxH);
+
+      var total = totalOf(heights);
+      if(total < cfg.minTotal || total > cfg.maxTotal) continue;
+      if(usedCells(heights) < 2) continue;
+      var cubes = cubesFor(heights, sx, sy, 0);
+      var hidden = countHidden(cubes);
+      if(hidden < cfg.minHidden || hidden > cfg.maxHidden) continue;
+
+      var qtype = pickOne(cfg.qtypes);
+      if(qtype === "hidden" && hidden < 1) qtype = "total";
+      var need = sx * sy * maxHeightOf(heights) - total;
+      if(qtype === "fill" && (need < 1 || need > 16)) qtype = "total";
+
+      var round = {
+        heights:heights, sx:sx, sy:sy, gen:gen, qtype:qtype,
+        total:total, hidden:hidden, visible:total - hidden, need:need
+      };
+      var sig = signatureOf(round);
+      if(used[sig]) continue;
+      used[sig] = true;
+      return round;
+    }
+    var fb = { heights:[[1,1],[2,1]], sx:2, sy:2, gen:"random", qtype:"total" };
+    fb.total = 5; fb.hidden = 0; fb.visible = 5; fb.need = 3;
+    return fb;
+  }
+
+  function pickOne(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+
+  // ============================================================
+  // 絵をかく
+  // ============================================================
+  var SVG_NS = "http://www.w3.org/2000/svg";
+
+  function isoX(x, y){ return (x - y) * TW; }
+  function isoY(x, y, z){ return (x + y) * TH - z * CH; }
+
+  function facePoints(kind, x, y, z){
+    var ax = isoX(x, y), ay = isoY(x, y, z);
+    if(kind === "top"){
+      return [[ax, ay], [ax + TW, ay + TH], [ax, ay + 2*TH], [ax - TW, ay + TH]];
+    }
+    if(kind === "right"){
+      return [[ax + TW, ay + TH], [ax, ay + 2*TH], [ax, ay + 2*TH + CH], [ax + TW, ay + TH + CH]];
+    }
+    return [[ax - TW, ay + TH], [ax, ay + 2*TH], [ax, ay + 2*TH + CH], [ax - TW, ay + TH + CH]];
+  }
+  function makePolygon(points, fill, cls){
+    var el = document.createElementNS(SVG_NS, "polygon");
+    el.setAttribute("points", points.map(function(p){ return p[0] + "," + p[1]; }).join(" "));
+    if(fill) el.setAttribute("fill", fill);
+    el.setAttribute("class", cls);
+    return el;
+  }
+  function makeCubeGroup(c, idx){
+    var g = document.createElementNS(SVG_NS, "g");
+    g.setAttribute("class", "cube" + (c.hidden ? " is-hidden" : ""));
+    g.setAttribute("data-idx", idx);
+    var col = LEVEL_COLORS[c.z % LEVEL_COLORS.length];
+    g.appendChild(makePolygon(facePoints("left",  c.x, c.y, c.z), col.left,  "face"));
+    g.appendChild(makePolygon(facePoints("right", c.x, c.y, c.z), col.right, "face"));
+    g.appendChild(makePolygon(facePoints("top",   c.x, c.y, c.z), col.top,   "face"));
+    return g;
+  }
+
+  function makeGhostGroup(c, idx){
+    var g = document.createElementNS(SVG_NS, "g");
+    g.setAttribute("class", "cube ghost");
+    g.setAttribute("data-ghost", idx);
+    g.appendChild(makePolygon(facePoints("left",  c.x, c.y, c.z), null, "face"));
+    g.appendChild(makePolygon(facePoints("right", c.x, c.y, c.z), null, "face"));
+    g.appendChild(makePolygon(facePoints("top",   c.x, c.y, c.z), null, "face"));
+    return g;
+  }
+
+  function render(){
+    while(scene.firstChild) scene.removeChild(scene.firstChild);
+
+    var d = rotDims(current.sx, current.sy, rotation);
+    var fx = d[0], fy = d[1];
+    var cubes = cubesFor(current.heights, current.sx, current.sy, rotation);
+    var missing = missingFor(current.heights, current.sx, current.sy, rotation);
+
+    // 床のマス目 (何マスあるか わかるように)
+    var floorLayer = document.createElementNS(SVG_NS, "g");
+    for(var y = 0; y < fy; y++){
+      for(var x = 0; x < fx; x++){
+        floorLayer.appendChild(makePolygon(facePoints("top", x, y, -1), null, "floor-tile"));
+      }
+    }
+    scene.appendChild(floorLayer);
+
+    var cubeLayer = document.createElementNS(SVG_NS, "g");
+    cubeLayer.setAttribute("id", "cube-layer");
+    cubes.forEach(function(c, i){ cubeLayer.appendChild(makeCubeGroup(c, i)); });
+    scene.appendChild(cubeLayer);
+
+    // すけて みる 用: かくれた積み木だけを いちばん手前に もう一度かく
+    var xrayLayer = document.createElementNS(SVG_NS, "g");
+    xrayLayer.setAttribute("id", "xray-layer");
+    cubes.forEach(function(c, i){
+      if(c.hidden) xrayLayer.appendChild(makeCubeGroup(c, i));
+    });
+    scene.appendChild(xrayLayer);
+
+    // はこに してみる 用: たりない ところを 点線で しめす
+    var fillLayer = document.createElementNS(SVG_NS, "g");
+    fillLayer.setAttribute("id", "fill-layer");
+    missing.forEach(function(c, i){ fillLayer.appendChild(makeGhostGroup(c, i)); });
+    scene.appendChild(fillLayer);
+
+    // かぞえるときの ばんごう
+    var label = document.createElementNS(SVG_NS, "text");
+    label.setAttribute("id", "count-label");
+    label.setAttribute("visibility", "hidden");
+    scene.appendChild(label);
+
+    fitViewBox(cubes.concat(current.qtype === "fill" ? missing : []), fx, fy);
+    return cubes;
+  }
+
+  // 形の大きさに合わせて viewBox を決める (どのステージでも 画面いっぱいに写る)
+  function fitViewBox(cubes, fx, fy){
+    var xs = [], ys = [];
+    function collect(pts){
+      pts.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); });
+    }
+    for(var y = 0; y < fy; y++){
+      for(var x = 0; x < fx; x++){
+        collect(facePoints("top", x, y, -1));
+      }
+    }
+    cubes.forEach(function(c){
+      collect(facePoints("top",   c.x, c.y, c.z));
+      collect(facePoints("left",  c.x, c.y, c.z));
+      collect(facePoints("right", c.x, c.y, c.z));
+    });
+    var pad = 14;
+    var minX = Math.min.apply(null, xs) - pad;
+    var maxX = Math.max.apply(null, xs) + pad;
+    var minY = Math.min.apply(null, ys) - pad;
+    var maxY = Math.max.apply(null, ys) + pad;
+    scene.setAttribute("viewBox", minX + " " + minY + " " + (maxX - minX) + " " + (maxY - minY));
+  }
+
+  // ============================================================
+  // 見る道具 (まわす・すける・いっしょに かぞえる)
+  // ============================================================
+  function setXray(on){
+    xrayOn = on;
+    scene.classList.toggle("xray", on);
+    btnXray.classList.toggle("on", on);
+  }
+  function setBoxMode(on){
+    boxOn = on;
+    scene.classList.toggle("boxmode", on);
+    btnBox.classList.toggle("on", on);
+  }
+
+  btnRotate.addEventListener("click", function(){
+    if(locked) return;
+    getCtx();
+    stopCounting();
+    rotation = (rotation + 1) % 4;
+    render();
+    if(xrayOn) scene.classList.add("xray");
+    playSwooshSound();
+    speak("まわしたよ。うしろが みえるかな");
+  });
+
+  btnXray.addEventListener("click", function(){
+    if(locked) return;
+    getCtx();
+    setXray(!xrayOn);
+    playSwooshSound();
+    speak(xrayOn ? "かくれている つみきが みえるよ" : "もとに もどしたよ");
+  });
+
+  btnBox.addEventListener("click", function(){
+    if(locked) return;
+    getCtx();
+    setBoxMode(!boxOn);
+    playSwooshSound();
+    speak(boxOn ? "たりない ところが みえるよ" : "もとに もどしたよ");
+  });
+
+  function stopCounting(){
+    countingTimers.forEach(clearTimeout);
+    countingTimers = [];
+    var lit = scene.querySelectorAll(".cube.counting, .cube.counted");
+    for(var i = 0; i < lit.length; i++){
+      lit[i].classList.remove("counting");
+      lit[i].classList.remove("counted");
+    }
+    var label = document.getElementById("count-label");
+    if(label) label.setAttribute("visibility", "hidden");
+  }
+
+  // 「かぞえよう」は 問いの種類で 数えるものが かわる
+  btnCount.addEventListener("click", function(){
+    if(locked) return;
+    getCtx();
+    stopCounting();
+
+    var q = current.qtype, targets, sel, endWord;
+    if(q === "fill"){
+      setBoxMode(true);
+      targets = missingFor(current.heights, current.sx, current.sy, rotation);
+      sel = "[data-ghost=\"$\"]";
+      endWord = "あと " + current.need + "こで はこに なるよ！";
+    }else{
+      // かくれた積み木も 見えないと数えられないので、かぞえる間は すけた状態にする
+      setXray(true);
+      var all = cubesFor(current.heights, current.sx, current.sy, rotation);
+      targets = (q === "hidden") ? all.filter(function(c){ return c.hidden; }) : all;
+      // data-idx は「ぜんぶの中での ばんごう」なので、もとの番号を おぼえておく
+      targets = targets.map(function(c){ return { c:c, idx:all.indexOf(c) }; })
+                       .map(function(o){ o.c.idx = o.idx; return o.c; });
+      sel = "[data-idx=\"$\"]";
+      endWord = (q === "hidden")
+        ? ("かくれているのは " + current.hidden + "こ！")
+        : ("ぜんぶで " + current.total + "こ！");
+    }
+
+    var label = document.getElementById("count-label");
+    locked = true;
+
+    targets.forEach(function(c, i){
+      var key = (q === "fill") ? i : c.idx;
+      countingTimers.push(setTimeout(function(){
+        // いま光っていたものを「かぞえおわった」色に落としてから、次の1こを光らせる
+        var prev = scene.querySelectorAll(".cube.counting");
+        for(var p = 0; p < prev.length; p++){
+          prev[p].classList.remove("counting");
+          prev[p].classList.add("counted");
+        }
+        var groups = scene.querySelectorAll(sel.replace("$", key));
+        for(var k = 0; k < groups.length; k++) groups[k].classList.add("counting");
+        label.setAttribute("x", isoX(c.x, c.y));
+        label.setAttribute("y", isoY(c.x, c.y, c.z) + TH + 5);
+        label.textContent = (i + 1);
+        label.setAttribute("visibility", "visible");
+        playPopSound(i);
+        speak((i + 1) + "こ");
+      }, i * 750));
+    });
+
+    countingTimers.push(setTimeout(function(){
+      speak(endWord);
+      locked = false;
+    }, targets.length * 750 + 400));
+  });
+
+  // ============================================================
+  // こたえのボタン
+  //   まちがえやすい「見えている数だけ」を わざと選択肢に入れる
+  // ============================================================
+  function buildChoices(round){
+    var ans = answerOf(round);
+    var set = [ans];
+    function push(v){
+      if(v > 0 && set.indexOf(v) < 0) set.push(v);
+    }
+    // 問いごとに「いちばん ありがちな まちがい」を まぜる
+    if(round.qtype === "total")  push(round.visible);   // 見えているぶんだけ数える
+    if(round.qtype === "hidden") push(round.visible);   // 見えているほうを答えてしまう
+    if(round.qtype === "fill")   push(round.total);     // いまの数を答えてしまう
+    push(ans + 1);
+    push(ans - 1);
+    push(ans + 2);
+    push(ans + 3);
+    return shuffle(set.slice(0, 4));
+  }
+
+  function answerOf(round){
+    if(round.qtype === "hidden") return round.hidden;
+    if(round.qtype === "fill")   return round.need;
+    return round.total;
+  }
+  var QUESTION_TEXT = {
+    total:  "ぜんぶで なんこ？",
+    hidden: "かくれて みえない つみきは なんこ？",
+    fill:   "おなじ たかさの しかくい はこに するには あと なんこ？"
+  };
+
+  function renderAnswers(){
+    answersEl.innerHTML = "";
+    current.choices.forEach(function(num){
+      var btn = document.createElement("button");
+      btn.className = "answer-btn";
+      btn.textContent = num;
+      btn.addEventListener("click", function(){ onAnswer(num, btn); });
+      answersEl.appendChild(btn);
+    });
+  }
+
+  function onAnswer(num, btn){
+    if(locked) return;
+    getCtx();
+    stopCounting();
+    if(num === answerOf(current)) onCorrect(btn);
+    else onWrong(num, btn);
+  }
+
+  function onCorrect(btn){
+    locked = true;
+    stars++;
+    streak++;
+    btn.classList.add("correct");
+    updateStars();
+    updateStreakBadge();
+    updateDots(true);
+    playCorrectSound();
+    launchConfettiBurst();
+    flashScreen();
+
+    var msg;
+    if(current.qtype === "fill"){
+      msg = "せいかい！ あと " + current.need + "こで しかくい はこに なるよ";
+      setBoxMode(true);   // たりない ところを 見せてあげる
+    }else if(current.qtype === "hidden"){
+      msg = "せいかい！ " + current.hidden + "こ かくれていたよ（ぜんぶで " + current.total + "こ）";
+      setXray(true);
+    }else if(current.hidden > 0){
+      msg = "せいかい！ みえない つみきが " + current.hidden + "こ かくれていたよ";
+      setXray(true);
+    }else{
+      msg = "せいかい！ " + current.total + "こ でした";
+    }
+    feedbackEl.textContent = msg;
+    feedbackEl.className = "feedback good";
+    speak(streak >= 3 ? (streak + "れんぞく せいかい！ すごいね！") : msg);
+
+    setTimeout(function(){
+      locked = false;
+      roundIndex++;
+      if(roundIndex >= rounds.length) finishGame();
+      else renderRound();
+    }, 2800);
+  }
+
+  function onWrong(num, btn){
+    streak = 0;
+    updateStreakBadge();
+    btn.classList.add("wrong");
+    btn.disabled = true;
+    playWrongSound();
+    shakeScreen();
+
+    var ans = answerOf(current), msg = null;
+    // 問いごとの「いちばん大事な まちがい」だけは、理由を はっきり伝える
+    if(current.qtype === "total" && num === current.visible && current.hidden > 0){
+      msg = "おしい！ みえている つみきは " + current.visible + "こ。\nしたに かくれている つみきも あるよ";
+      setXray(true);
+    }else if(current.qtype === "hidden" && num === current.visible){
+      msg = "それは みえている ほうの かず だよ。\nかくれている ほうを かぞえてみよう";
+      setXray(true);
+    }else if(current.qtype === "fill" && num === current.total){
+      msg = "それは いま ある つみきの かず。\nきくのは「あと なんこ たりないか」だよ";
+      setBoxMode(true);
+    }
+    if(msg){
+      feedbackEl.textContent = msg;
+      speak(msg.replace(/\n/g, " "));
+    }else if(num < ans){
+      feedbackEl.textContent = "もうすこし おおいよ";
+      speak("もうすこし おおいよ");
+    }else{
+      feedbackEl.textContent = "すこし おおすぎるかな";
+      speak("すこし おおすぎるかな");
+    }
+    feedbackEl.className = "feedback oops";
+  }
+
+  // ============================================================
+  // 画面のこまごま
+  // ============================================================
+  function updateStars(){ starsEl.textContent = "⭐ " + stars; }
+  function updateStreakBadge(){
+    streakEl.textContent = streak >= 2 ? ("🔥 " + streak + "れんぞく！") : "";
+  }
+  function buildDots(){
+    dotsEl.innerHTML = "";
+    for(var i = 0; i < rounds.length; i++){
+      var d = document.createElement("div");
+      d.className = "dot";
+      dotsEl.appendChild(d);
+    }
+    updateDots(false);
+  }
+  function updateDots(markCurrentDone){
+    var ds = dotsEl.children;
+    for(var i = 0; i < ds.length; i++){
+      var done = markCurrentDone ? (i <= roundIndex) : (i < roundIndex);
+      ds[i].className = "dot" + (done ? " done" : (i === roundIndex ? " current" : ""));
+    }
+  }
+  function flashScreen(){
+    flashOverlay.classList.remove("flash");
+    void flashOverlay.offsetWidth;
+    flashOverlay.classList.add("flash");
+  }
+  function shakeScreen(){
+    screenGame.classList.remove("shake");
+    void screenGame.offsetWidth;
+    screenGame.classList.add("shake");
+  }
+  var confettiColors = ["#ff6f91","#ff9a3d","#ffd23f","#3ddc97","#3ec7ff","#9d6fff"];
+  function launchConfettiBurst(){
+    for(var i = 0; i < 40; i++){
+      var c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = confettiColors[Math.floor(Math.random()*confettiColors.length)];
+      c.style.animationDuration = (1.2 + Math.random()*1.1) + "s";
+      c.style.animationDelay = (Math.random()*0.35) + "s";
+      confettiContainer.appendChild(c);
+      (function(el){
+        setTimeout(function(){ if(el.parentNode) el.parentNode.removeChild(el); }, 2800);
+      })(c);
+    }
+  }
+
+  // ============================================================
+  // ゲームの進行
+  // ============================================================
+  function renderRound(){
+    current = rounds[roundIndex];
+    rotation = 0;
+    stopCounting();
+    setXray(false);
+    setBoxMode(false);
+    feedbackEl.textContent = "";
+    feedbackEl.className = "feedback";
+    questionEl.textContent = QUESTION_TEXT[current.qtype];
+    // 「はこに してみる」は はこの問いのときだけ
+    btnBox.style.display = (current.qtype === "fill") ? "" : "none";
+    render();
+    renderAnswers();
+    updateDots(false);
+    speak(QUESTION_TEXT[current.qtype]);
+  }
+
+  function startGame(){
+    var cfg = STAGES[stageKey];
+    rounds = [];
+    var used = {}, lastGen = null;
+    for(var i = 0; i < ROUNDS_PER_GAME; i++){
+      var r = makeRound(cfg, used, lastGen);
+      lastGen = r.gen;
+      r.choices = buildChoices(r);
+      rounds.push(r);
+    }
+    roundIndex = 0;
+    stars = 0;
+    streak = 0;
+    locked = false;
+    updateStars();
+    updateStreakBadge();
+    buildDots();
+    showScreen(screenGame);
+    renderRound();
+  }
+
+  function finishGame(){
+    stopCounting();
+    showScreen(screenEnd);
+    finalScoreEl.textContent = "⭐ " + stars + " / " + rounds.length + " もん せいかい！";
+    playFanfare();
+    launchConfettiBurst();
+    setTimeout(launchConfettiBurst, 500);
+    speak("だいせいこう！ みえない つみきも かぞえられました！");
+  }
+
+  var stageButtons = document.querySelectorAll(".stage-button");
+  for(var i = 0; i < stageButtons.length; i++){
+    stageButtons[i].addEventListener("click", function(){
+      getCtx(); // ユーザー操作内で AudioContext を起動(モバイル対策)
+      stageKey = this.getAttribute("data-stage");
+      startGame();
+    });
+  }
+  btnRestart.addEventListener("click", startGame);
+  btnBack.addEventListener("click", function(){
+    stopCounting();
+    showScreen(screenStart);
+  });
+
+})();
+</script>
+</body>
+</html>
