@@ -30,7 +30,7 @@
     'wave-chip', 'score-num', 'btn-bgm', 'btn-voice', 'btn-home',
     'arena', 'field', 'player-slot', 'mon-row',
     'boss-plate', 'bp-title', 'bp-name', 'bp-fill', 'bp-phase',
-    'player-name', 'player-tag', 'player-hp-fill', 'player-hp-num',
+    'player-name', 'player-tag', 'player-line', 'player-hp', 'player-hp-fill', 'player-hp-num',
     'gauge-fill', 'combo-chip', 'timer-fill',
     'question', 'hint', 'choices', 'verdict',
     'result-title', 'result-train', 'result-msg', 'result-stats', 'btn-again',
@@ -135,10 +135,13 @@
       '<span class="eye eye-l"></span><span class="eye eye-r"></span>' +
       '<span class="mouth"></span>' +
       '</div>' +
-      '<div class="hero-torso"></div>' +
+      '<div class="hero-torso">' +
+      '<span class="hero-stripe"></span>' +
+      '<span class="hero-badge">' + h.symbol + '</span>' +
+      '</div>' +
       '<div class="hero-weapon">' + h.weapon + '</div>' +
       '<div class="hero-legs"><i></i><i></i></div>' +
-      '<div class="hero-cls">' + h.cls + '</div>' +
+      '<div class="hero-line">' + h.line + '</div>' +
       '</div>';
   }
 
@@ -215,9 +218,12 @@
       b.type = 'button';
       b.className = 'char-card';
       b.style.setProperty('--ink-c', f.ink);
+      b.style.setProperty('--line-c', f.color);
       b.innerHTML =
         heroHTML(f) +
+        '<span class="cc-line">' + f.line + '</span>' +
         '<span class="cc-name">' + f.name + '</span>' +
+        '<span class="cc-cls">' + f.cls + '</span>' +
         '<span class="cc-tag">' + f.tag + '</span>';
       b.addEventListener('click', () => {
         SoundEngine.seTap();
@@ -245,6 +251,8 @@
 
     el['player-name'].textContent = fighter.name;
     el['player-tag'].textContent = fighter.cls;
+    el['player-line'].textContent = fighter.symbol + ' ' + fighter.line;
+    el['player-hp'].style.setProperty('--line-c', fighter.color);
     el['arena'].classList.remove('is-hyper', 'is-boss', 'is-final', 'is-rage');
     el['boss-plate'].hidden = true;
     S.boss = null;
@@ -260,7 +268,7 @@
     updateScore();
 
     SoundEngine.seHorn();
-    Fx.banner(fighter.name + ' 出発!', fighter.color);
+    Fx.banner(fighter.line + ' ' + fighter.name + ' 出発!', fighter.color);
     SoundEngine.speak(fighter.name + '! ' + fighter.quote, { rate: 1.05, pitch: 1.2 });
     el['verdict'].textContent = fighter.quote;
     startWave();
@@ -1012,9 +1020,12 @@
 
     if (win) {
       el['result-title'].textContent = '🏆 大魔王 げきは!';
-      el['result-train'].innerHTML = heroHTML(S.player);
+      el['result-train'].innerHTML =
+        '<span class="result-line">' + S.player.symbol + ' ' + S.player.line + '</span>' +
+        heroHTML(S.player);
       el['result-msg'].innerHTML =
-        S.player.cls + ' ' + S.player.name + 'は やさい四天王を たおし、<br>' +
+        S.player.line + 'の ' + S.player.cls + ' ' + S.player.name + 'は<br>' +
+        'やさい四天王を たおし、<br>' +
         '大魔王 ベジタゴンまで やっつけた!<br>' +
         'クイズの ちからで せかいに へいわが もどったよ。';
       el['btn-again'].textContent = '▶ もういちど あそぶ';
