@@ -142,6 +142,7 @@ const game = {
   combo: 0,
   maxCombo: 0,
   score: 0,
+  rounds: 1,
   hintsUsed: 0,
   misses: [],
   running: false,
@@ -167,6 +168,8 @@ function buildPiece(item, tiltDeg) {
   const piece = {
     item,
     path: new Path2D(item.shape),
+    // 立体の 見取図など、ぬりの上に かさねる 線(dash: true で 見えない辺)
+    lines: (item.lines || []).map((l) => ({ path: new Path2D(l.d), dash: !!l.dash })),
     cx: box.x + box.w / 2,
     cy: box.y + box.h / 2,
     s, rot, w, h, cols, rows,
@@ -219,7 +222,8 @@ function buildPiece(item, tiltDeg) {
 // item ごとの 大きさ。本物の 大小を すこしだけ のこしつつ、小さすぎないようにする。
 function scaleFor(item) {
   const dim = Math.max(item.box.w, item.box.h);
-  const t = clamp((dim - game.topic.minDim) / (game.topic.maxDim - game.topic.minDim), 0, 1);
+  const span = game.topic.maxDim - game.topic.minDim;
+  const t = span < 0.001 ? 0.5 : clamp((dim - game.topic.minDim) / span, 0, 1);
   const target = 72 + 52 * Math.sqrt(t);
   return target / dim;
 }
@@ -233,6 +237,25 @@ function applyShapeTransform(g, piece, px, py) {
 }
 
 function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+
+// かたちを ぬって、ふちと 見取図の 線を 引く(g は すでに かたちの座標系に なっていること)
+function paintPiece(g, piece, alpha) {
+  g.globalAlpha = alpha;
+  g.fillStyle = piece.color.fill;
+  g.fill(piece.path);
+  g.globalAlpha = 1;
+  g.lineJoin = 'round';
+  g.lineCap = 'round';
+  g.lineWidth = 2.4 / piece.s;
+  g.strokeStyle = piece.color.edge;
+  g.stroke(piece.path);
+  for (const line of piece.lines) {
+    g.lineWidth = 1.8 / piece.s;
+    g.setLineDash(line.dash ? [5 / piece.s, 4 / piece.s] : []);
+    g.stroke(line.path);
+  }
+  g.setLineDash([]);
+}
 
 /* ========================= あたり判定 ========================= */
 
@@ -267,14 +290,7 @@ function stampPiece(piece) {
   // 見た目は ベクターのまま つもり絵に やきつける
   stackCtx.save();
   applyShapeTransform(stackCtx, piece, piece.col * CFG.CELL, row * CFG.CELL);
-  stackCtx.fillStyle = piece.color.fill;
-  stackCtx.globalAlpha = 0.85;
-  stackCtx.fill(piece.path);
-  stackCtx.globalAlpha = 1;
-  stackCtx.lineJoin = 'round';
-  stackCtx.lineWidth = 2 / piece.s;
-  stackCtx.strokeStyle = piece.color.edge;
-  stackCtx.stroke(piece.path);
+  paintPiece(stackCtx, piece, 0.85);
   stackCtx.restore();
 }
 
@@ -361,7 +377,50 @@ function shuffled(arr) {
   return a;
 }
 
-function makeChoices(item) {
+// その図形に その せいしつが あるか(まるい立体の 辺の数などは 出さない)
+function quizValue(item, quiz) {
+  if (quiz.field === 'name') return item.name;
+  const v = item.props ? item.props[quiz.field] : undefined;
+  return v === undefined || v === null ? null : v;
+}
+
+function quizLabel(value, quiz) {
+  return quiz.field === 'name' ? value : `${value}${quiz.suffix || ''}`;
+}
+
+// 出題タイプを weight の おもさで えらぶ
+function pickQuiz(item) {
+  const list = game.topic.quizzes.filter((q) => quizValue(item, q) !== null);
+  const total = list.reduce((t, q) => t + (q.weight || 1), 0);
+  let r = Math.random() * total;
+  for (const q of list) {
+    r -= q.weight || 1;
+    if (r <= 0) return q;
+  }
+  return list[list.length - 1];
+}
+
+// 4択を つくる。{ key, label } の 4つを かえす(key で 正誤を くらべる)
+function makeChoices(item, quiz) {
+  if (quiz.field === 'name') return nameChoices(item);
+
+  // せいしつ(数)の問題は、ほかの図形の 数を えらびなおす
+  const answer = quizValue(item, quiz);
+  const values = [...new Set(
+    game.topic.items.map((i) => quizValue(i, quiz)).filter((v) => v !== null && v !== answer),
+  )];
+  const near = values.slice().sort((a, b) => Math.abs(a - answer) - Math.abs(b - answer));
+  const picked = (game.mode.sameGroup >= 3 ? near : shuffled(values)).slice(0, 3);
+  for (let d = 1; picked.length < 3 && d < 12; d++) {   // 数が 足りないときの ほけん
+    for (const c of [answer - d, answer + d]) {
+      if (c >= 0 && c !== answer && !picked.includes(c) && picked.length < 3) picked.push(c);
+    }
+  }
+  return shuffled(picked.concat([answer])).map((v) => ({ key: String(v), label: quizLabel(v, quiz) }));
+}
+
+// 「なまえ」の問題の 4択。にせものは モードに あわせて えらぶ。
+function nameChoices(item) {
   const pool = game.topic.items.filter((i) => i.id !== item.id);
   const same = shuffled(pool.filter((i) => i.group === item.group));
   const area = (i) => i.box.w * i.box.h;
@@ -369,8 +428,7 @@ function makeChoices(item) {
     .filter((i) => i.group !== item.group)
     .sort((a, b) => Math.abs(area(a) - area(item)) - Math.abs(area(b) - area(item)));
 
-  const want = game.mode.sameGroup;
-  const picked = same.slice(0, want);
+  const picked = same.slice(0, game.mode.sameGroup);
   // むずかしいほど「大きさが 近いもの」から、やさしいほど「ばらばら」から えらぶ
   const rest = game.mode.sameGroup >= 3 ? shuffled(others.slice(0, 12)) : shuffled(others);
   for (const o of rest) {
@@ -381,13 +439,25 @@ function makeChoices(item) {
     if (picked.length >= 3) break;
     if (!picked.includes(o)) picked.push(o);
   }
-  return shuffled(picked.concat([item]));
+  return shuffled(picked.concat([item])).map((i) => ({ key: i.id, label: i.name }));
+}
+
+// いまの 問題で 見せてよい ヒント(こたえが ばれる ヒントは のぞく)
+function hintsFor(item, quiz) {
+  return (item.hints || []).filter((h) => !(h.hide || []).includes(quiz.id));
 }
 
 function spawnPiece() {
-  if (game.queue.length === 0) { gameOver(true); return; }
+  if (game.queue.length === 0) {
+    // 数が 少ないテーマ(図形など)は くりかえし 出す。おわりは 山が つもったときだけ。
+    if (!game.topic.loopItems) { gameOver(true); return; }
+    game.queue = shuffled(game.topic.items);
+    game.rounds++;
+  }
   const item = game.queue.shift();
-  const tilt = game.mode.tilt ? (Math.random() * 2 - 1) * game.mode.tilt : 0;
+  // 図形テーマは かたむけない(正方形が ひし形に 見えてしまうため)
+  const maxTilt = game.topic.allowTilt === false ? 0 : game.mode.tilt;
+  const tilt = maxTilt ? (Math.random() * 2 - 1) * maxTilt : 0;
   const piece = buildPiece(item, tilt);
 
   // 出てくる よこ位置は、何回か ためして いちばん 低く つめる ところにする
@@ -408,6 +478,15 @@ function spawnPiece() {
   piece.answered = false;
   piece.hints = [];
   piece.freeHints = game.mode.autoHint;   // さいしょから出るヒントは 点数を へらさない
+
+  const quiz = pickQuiz(item);
+  const value = quizValue(item, quiz);
+  piece.quiz = quiz;
+  piece.answerKey = quiz.field === 'name' ? item.id : String(value);
+  piece.answerText = quiz.field === 'name'
+    ? item.name
+    : `${quizLabel(value, quiz)}（${item.name}）`;
+  piece.hintPool = hintsFor(item, quiz);
   game.piece = piece;
   game.asked++;
 
@@ -439,13 +518,13 @@ function speedMul(level) {
 
 /* ============================ こたえ ============================ */
 
-function answer(item, btn) {
+function answer(choice, btn) {
   const piece = game.piece;
   if (!piece || piece.answered || piece.state !== 'fall') return;
   piece.answered = true;
   [...el.choices.children].forEach((b) => { b.disabled = true; });
 
-  if (item.id === piece.item.id) {
+  if (choice.key === piece.answerKey) {
     btn.classList.add('is-right');
     piece.state = 'pop';
     piece.popT = 0;
@@ -455,20 +534,24 @@ function answer(item, btn) {
     game.combo++;
     game.maxCombo = Math.max(game.maxCombo, game.combo);
     SQAudio.sfx('correct');
-    showFlash('ok', 'せいかい！', `${piece.item.name}　+${gain}てん`);
+    showFlash('ok', 'せいかい！', `${piece.answerText}　+${gain}てん`);
     bumpStat(el.score);
     game.waitSpawn = 0.3;   // きえる えんしゅつ(0.45秒)の あとの ま
   } else {
     btn.classList.add('is-wrong');
-    [...el.choices.children].forEach((b) => {
-      if (b.dataset.id === piece.item.id) b.classList.add('is-right');
-    });
+    markRightChoice(piece);
     piece.state = 'drop';
     SQAudio.sfx('wrong');
-    showFlash('ng', 'ざんねん…', `こたえは ${piece.item.name}`);
+    showFlash('ng', 'ざんねん…', `こたえは ${piece.answerText}`);
     missPiece(piece, false);
   }
   updateHud();
+}
+
+function markRightChoice(piece) {
+  [...el.choices.children].forEach((b) => {
+    if (b.dataset.key === piece.answerKey) b.classList.add('is-right');
+  });
 }
 
 function scoreFor(piece) {
@@ -485,11 +568,9 @@ function missPiece(piece, timeout) {
   if (!game.misses.some((m) => m.id === piece.item.id)) game.misses.push(piece.item);
   if (timeout) {
     piece.answered = true;
-    [...el.choices.children].forEach((b) => {
-      b.disabled = true;
-      if (b.dataset.id === piece.item.id) b.classList.add('is-right');
-    });
-    showFlash('ng', '時間ぎれ！', `こたえは ${piece.item.name}`);
+    [...el.choices.children].forEach((b) => { b.disabled = true; });
+    markRightChoice(piece);
+    showFlash('ng', '時間ぎれ！', `こたえは ${piece.answerText}`);
   }
   updateHud();
 }
@@ -499,7 +580,7 @@ function missPiece(piece, timeout) {
 function revealHint(silent) {
   const piece = game.piece;
   if (!piece || piece.answered) return;
-  const next = HINT_ORDER[piece.hints.length];
+  const next = piece.hintPool[piece.hints.length];
   if (!next) return;
   piece.hints.push(next);
   if (!silent) {
@@ -507,20 +588,14 @@ function revealHint(silent) {
     SQAudio.sfx('hint');
   }
   el.hintList.appendChild(hintNode(piece.item, next));
-  el.hintBtn.disabled = piece.hints.length >= HINT_ORDER.length;
+  el.hintBtn.disabled = piece.hints.length >= piece.hintPool.length;
 }
 
-function hintNode(item, kind) {
-  const h = item.hints;
-  if (kind === 'map') return miniMap(item);
+function hintNode(item, hint) {
+  if (hint.kind === 'map') return miniMap(item);
   const span = document.createElement('span');
   span.className = 'hint-chip';
-  if (kind === 'group') span.textContent = `🧭 ${h.group}`;
-  else if (kind === 'capital') span.textContent = `🏢 中心の まち: ${h.capital}`;
-  else {
-    const names = (h.famous || []).slice(0, 2).map((f) => `${f.e}${f.name}`).join('・');
-    span.textContent = names ? `⭐ ${names}` : '⭐ ヒントなし';
-  }
+  span.textContent = `${hint.e || '💡'} ${hint.text}`;
   return span;
 }
 
@@ -598,12 +673,7 @@ function draw() {
   }
   ctx.save();
   applyShapeTransform(ctx, piece, px, py);
-  ctx.fillStyle = piece.color.fill;
-  ctx.fill(piece.path);
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 2.4 / piece.s;
-  ctx.strokeStyle = piece.color.edge;
-  ctx.stroke(piece.path);
+  paintPiece(ctx, piece, 1);
   ctx.restore();
   ctx.restore();
 }
@@ -675,17 +745,17 @@ function showFlash(kind, big, small) {
 }
 
 function renderQuestion(piece) {
-  el.question.textContent = game.topic.question;
+  el.question.textContent = piece.quiz.question;
   el.hintList.innerHTML = '';
-  el.hintBtn.disabled = false;
+  el.hintBtn.disabled = piece.hintPool.length === 0;
   el.choices.innerHTML = '';
-  for (const item of makeChoices(piece.item)) {
+  for (const choice of makeChoices(piece.item, piece.quiz)) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'choice';
-    btn.textContent = item.name;
-    btn.dataset.id = item.id;
-    btn.addEventListener('click', () => answer(item, btn));
+    btn.textContent = choice.label;
+    btn.dataset.key = choice.key;
+    btn.addEventListener('click', () => answer(choice, btn));
     el.choices.appendChild(btn);
   }
 }
@@ -703,6 +773,7 @@ function startGame(mode) {
   game.score = 0;
   game.hintsUsed = 0;
   game.misses = [];
+  game.rounds = 1;
   game.waitSpawn = 0;
   game.running = true;
   game.lastT = performance.now();
@@ -733,10 +804,28 @@ function readBest(topicId, modeId) {
   catch (e) { return 0; }
 }
 
+// かたちの SVG(けっか画面の サムネイル用)。立体は 見取図の 線も 引く。
+function itemSvg(item) {
+  const b = item.box;
+  const pad = Math.max(b.w, b.h) * 0.04;
+  const lines = (item.lines || [])
+    .map((l) => `<path class="line${l.dash ? ' dash' : ''}" d="${l.d}"/>`)
+    .join('');
+  return `<svg viewBox="${b.x - pad} ${b.y - pad} ${b.w + pad * 2} ${b.h + pad * 2}" ` +
+    `role="img" aria-label="${item.name}のかたち"><path class="fig" d="${item.shape}"/>${lines}</svg>`;
+}
+
+function groupName(id) {
+  const g = (game.topic.groups || []).find((x) => x.id === id);
+  return g ? g.name : '';
+}
+
 function renderResult(cleared) {
   const unit = game.topic.unit;
   el.resultTitle.textContent = !cleared ? 'ゲームオーバー'
-    : game.misses.length === 0 ? 'パーフェクト！' : `${unit} 1しゅう クリア！`;
+    : game.right === game.asked ? 'パーフェクト！'
+    : game.right * 2 >= game.asked ? `${unit} 1しゅう クリア！`
+    : `${unit} 1しゅう おわり`;
   el.resultScore.textContent = game.score;
 
   let best = readBest(game.topic.id, game.mode.id);
@@ -774,12 +863,10 @@ function renderResult(cleared) {
     for (const item of game.misses) {
       const card = document.createElement('div');
       card.className = 'miss-card';
-      const b = item.box;
       card.innerHTML =
-        `<svg viewBox="${b.x} ${b.y} ${b.w} ${b.h}" role="img" aria-label="${item.name}のかたち">` +
-        `<path d="${item.shape}"/></svg>` +
+        itemSvg(item) +
         `<span class="m-name">${item.name}</span>` +
-        `<span class="m-sub">${item.hints.group || ''}</span>`;
+        `<span class="m-sub">${groupName(item.group)}</span>`;
       list.append(card);
     }
     el.missBlock.append(h3, list);
@@ -868,6 +955,10 @@ function initSpeedUi() {
 function setTopic(topic) {
   game.topic = topic;
   miniMapBase = null;
+  // 出題タイプが ないテーマは「なまえ」だけ
+  if (!topic.quizzes) {
+    topic.quizzes = [{ id: 'name', weight: 1, question: topic.question, field: 'name' }];
+  }
   const dims = topic.items.map((i) => Math.max(i.box.w, i.box.h));
   topic.minDim = Math.min(...dims);
   topic.maxDim = Math.max(...dims);
