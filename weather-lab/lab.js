@@ -1,5 +1,5 @@
-/* あしたのてんきやさん — 「雨は どこから やってくるの？」じっけん
-   うみ → じょうはつ → 雲 → 雨/雪 → かわ → うみ の みずの たびを canvas で うごかす。 */
+/* あしたの天気やさん — 「雨はどこからやってくるの？」実験
+   海 → 蒸発 → 雲 → 雨/雪 → 川 → 海 と、水がぐるぐる回るようすを canvas で動かす。 */
 
 const Lab = (function () {
   let cv, ctx, W = 0, H = 0, dpr = 1;
@@ -17,7 +17,7 @@ const Lab = (function () {
   /* かぞえるもの */
   const stat = { sea: 100, sky: 0, rained: 0, snow: 0 };
   let step = 0;              // いま どの だんかいか（0〜4）
-  const stepNames = ['あたためる', 'じょうはつ', 'くもに なる', 'あめに なる', 'うみへ もどる'];
+  const stepNames = ['あたためる', '蒸発', '雲になる', '雨になる', '海へもどる'];
   let onStep = null;         // だんかいが かわった ときに よぶ
   let onStat = null;         // すうじが かわった ときに よぶ
   let lastReport = 0;
@@ -311,7 +311,7 @@ const Lab = (function () {
 
     /* 「つめたい そら」の ふだ（雲より 手まえに かく） */
     ctx.font = '700 12px system-ui, sans-serif';
-    const coldTxt = 'ここから 上は つめたい そら';
+    const coldTxt = 'ここから上は つめたい空';
     const coldW = ctx.measureText(coldTxt).width + 16;
     ctx.fillStyle = 'rgba(255,255,255,.78)';
     ctx.beginPath();
@@ -332,8 +332,8 @@ const Lab = (function () {
       ctx.fillStyle = '#fff';
       ctx.fillText(txt, x + 7, y + 2);
     };
-    tag(6, seaLevel() + 26, 'うみ', 'rgba(20,70,110,.8)');
-    tag(W - 84, H - 14, 'やま・かわ', 'rgba(40,90,50,.8)');
+    tag(6, seaLevel() + 26, '海', 'rgba(20,70,110,.8)');
+    tag(W - 74, H - 14, '山と川', 'rgba(40,90,50,.8)');
   }
 
   function loop(now) {

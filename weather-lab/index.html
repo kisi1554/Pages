@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>あしたの てんきやさん</title>
-<meta name="description" content="ほんものの てんきよほうを 見ながら、雨や 雲が できる しくみを じっけんで まなべる 子どもむけ 天気アプリ。あしたの 天気を よそうして 答え合わせも できます。">
+<title>あしたの天気やさん</title>
+<meta name="description" content="本物の天気予報を見ながら、雨や雲ができるしくみを実験で学べる子どもむけ天気アプリ。日本と世界の地図で天気と気温をくらべたり、あしたの天気を予想して答え合わせもできます。">
 <meta name="theme-color" content="#2f8fd0">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌤️</text></svg>">
 <link rel="stylesheet" href="style.css">
@@ -12,69 +12,96 @@
 <body>
 
 <header class="topbar">
-  <h1>🌤️ あしたの てんきやさん</h1>
+  <h1>🌤️ あしたの天気やさん</h1>
   <div class="topbar-tools">
-    <span class="stamps" title="あつめた スタンプ">⭐<b id="stampCount">0</b></span>
-    <button class="icon-btn" id="btnSound" aria-pressed="true">🔊 おと</button>
+    <span class="stamps" title="集めたスタンプ">⭐<b id="stampCount">0</b></span>
+    <button class="icon-btn" id="btnSound" aria-pressed="true">🔊 音</button>
   </div>
 </header>
 
 <main id="main">
 
-  <!-- ============ よほう ============ -->
+  <!-- ============ 予報 ============ -->
   <section class="view" id="view-yohou">
-    <div class="chips" id="cityChips" role="tablist" aria-label="まちを えらぶ"></div>
-    <p class="source" id="sourceNote">よみこみちゅう…</p>
+    <div class="group-tabs" role="tablist" aria-label="町のグループ">
+      <button class="group-tab is-on" data-group="japan">🗾 日本の町</button>
+      <button class="group-tab" data-group="world">🌏 世界の町</button>
+    </div>
+    <div class="chips" id="cityChips" role="tablist" aria-label="町をえらぶ"></div>
+    <p class="source" id="sourceNote">読みこみ中…</p>
 
     <div class="today-card" id="todayCard">
       <div class="today-main">
         <div class="today-mark" id="todayMark">⛅</div>
         <div class="today-text">
-          <div class="today-label" id="todayLabel">よみこみちゅう</div>
+          <div class="today-label" id="todayLabel">読みこみ中</div>
           <div class="today-temp">
             <span class="tmax" id="todayMax">--</span><span class="sep">/</span><span class="tmin" id="todayMin">--</span><span class="unit">℃</span>
           </div>
           <div class="today-sub" id="todayNow"></div>
         </div>
       </div>
+      <div class="clock-row" id="clockRow"></div>
       <div class="today-facts" id="todayFacts"></div>
     </div>
 
-    <h2 class="sec-title">🔍 なぜ きょうは この てんき？</h2>
+    <h2 class="sec-title">🔍 なぜ今日はこの天気？</h2>
     <p class="story" id="story"></p>
     <div class="reasons" id="reasons"></div>
 
-    <h2 class="sec-title">📅 1しゅうかんの よほう</h2>
+    <h2 class="sec-title">📅 1週間の予報</h2>
     <div class="week" id="week"></div>
 
-    <h2 class="sec-title">🕒 きょう〜あしたの ながれ</h2>
+    <h2 class="sec-title">🕒 今日〜あしたの流れ</h2>
     <div class="hours" id="hours"></div>
   </section>
 
-  <!-- ============ よそう ============ -->
+  <!-- ============ 地図 ============ -->
+  <section class="view hidden" id="view-map">
+    <div class="group-tabs" role="tablist" aria-label="地図をえらぶ">
+      <button class="group-tab is-on" data-map="japan">🗾 日本の地図</button>
+      <button class="group-tab" data-map="world">🌏 世界の地図</button>
+    </div>
+    <p class="lead" id="mapLead">町のふだをタップすると、その町の予報が見られます。</p>
+
+    <div class="map-stage">
+      <canvas id="mapCanvas"></canvas>
+    </div>
+
+    <div class="legend">
+      <span class="legend-title">気温の色</span>
+      <div class="legend-bar" id="legendBar"></div>
+      <div class="legend-scale"><span>-10℃</span><span>0℃</span><span>10℃</span><span>20℃</span><span>30℃</span></div>
+    </div>
+
+    <div class="map-pick" id="mapPick"></div>
+    <p class="note" id="mapNote"></p>
+  </section>
+
+  <!-- ============ 予想 ============ -->
   <section class="view hidden" id="view-yosou">
     <div class="guess-head">
-      <h2 class="sec-title">✋ あしたの てんきを よそうしよう</h2>
-      <p class="lead" id="guessLead">よみこみちゅう…</p>
+      <h2 class="sec-title">✋ あしたの天気を予想しよう</h2>
+      <p class="lead" id="guessLead">読みこみ中…</p>
     </div>
 
     <div class="guess-grid" id="guessGrid"></div>
     <p class="guess-state" id="guessState"></p>
 
     <div class="score-box">
-      <div class="score-item"><b id="scoreTries">0</b><span>よそうした かず</span></div>
-      <div class="score-item"><b id="scoreHits">0</b><span>あたった かず</span></div>
-      <div class="score-item"><b id="scoreRate">-</b><span>あたり わりあい</span></div>
+      <div class="score-item"><b id="scoreTries">0</b><span>予想した数</span></div>
+      <div class="score-item"><b id="scoreHits">0</b><span>当たった数</span></div>
+      <div class="score-item"><b id="scoreRate">-</b><span>当たった割合</span></div>
     </div>
 
-    <h2 class="sec-title">📒 こたえあわせ</h2>
+    <h2 class="sec-title">📒 答え合わせ</h2>
     <div class="history" id="history"></div>
-    <p class="note">よそうは あした 天気が わかると じどうで こたえあわせ するよ。あたると スタンプ ⭐ が もらえる！</p>
+    <p class="note">予想はあした天気がわかると自動で答え合わせします。当たるとスタンプ ⭐ がもらえます！</p>
   </section>
 
-  <!-- ============ じっけん ============ -->
+  <!-- ============ 実験 ============ -->
   <section class="view hidden" id="view-lab">
-    <h2 class="sec-title">🧪 雨は どこから やってくるの？</h2>
+    <h2 class="sec-title">🧪 雨はどこからやってくるの？</h2>
     <div class="lab-steps" id="labSteps"></div>
     <div class="lab-stage">
       <canvas id="labCanvas"></canvas>
@@ -82,34 +109,34 @@
     </div>
     <div class="lab-controls">
       <label class="slider">
-        <span>☀️ たいようの つよさ</span>
+        <span>☀️ 太陽の強さ</span>
         <input type="range" id="sSun" min="0" max="100" value="60">
         <b id="vSun">60</b>
       </label>
       <label class="slider">
-        <span>🍃 かぜの つよさ</span>
+        <span>🍃 風の強さ</span>
         <input type="range" id="sWind" min="0" max="100" value="35">
         <b id="vWind">35</b>
       </label>
       <label class="slider">
-        <span>🌡️ そらの さむさ</span>
+        <span>🌡️ 空の寒さ</span>
         <input type="range" id="sCold" min="0" max="100" value="35">
         <b id="vCold">35</b>
       </label>
       <div class="lab-buttons">
-        <button class="btn primary" id="btnLabPlay">▶ うごかす</button>
+        <button class="btn primary" id="btnLabPlay">▶ 動かす</button>
         <button class="btn" id="btnLabReset">↺ さいしょから</button>
-        <button class="btn" id="btnLabToday">🌤️ きょうの てんきに あわせる</button>
+        <button class="btn" id="btnLabToday">🌤️ 今日の天気に合わせる</button>
       </div>
     </div>
-    <div class="lab-tip" id="labTip">たいようを つよくすると、うみの 水が 水じょうきに なって のぼるよ。</div>
+    <div class="lab-tip" id="labTip">太陽を強くすると、海の水が水蒸気になってのぼります。</div>
   </section>
 
-  <!-- ============ まなぶ ============ -->
+  <!-- ============ 学ぶ ============ -->
   <section class="view hidden" id="view-manabu">
     <div class="subtabs" role="tablist">
-      <button class="subtab is-on" data-sub="read">📖 よみかた</button>
-      <button class="subtab" data-sub="season">🍁 きせつ</button>
+      <button class="subtab is-on" data-sub="read">📖 読み方</button>
+      <button class="subtab" data-sub="season">🍁 季節</button>
       <button class="subtab" data-sub="quiz">❓ クイズ</button>
     </div>
 
@@ -125,17 +152,20 @@
 </main>
 
 <nav class="dock" role="tablist" aria-label="メニュー">
-  <button class="dock-btn is-on" data-view="yohou"><span class="d-emoji">🌤️</span><span class="d-name">よほう</span></button>
-  <button class="dock-btn" data-view="yosou"><span class="d-emoji">✋</span><span class="d-name">よそう</span></button>
-  <button class="dock-btn" data-view="lab"><span class="d-emoji">🧪</span><span class="d-name">じっけん</span></button>
-  <button class="dock-btn" data-view="manabu"><span class="d-emoji">📖</span><span class="d-name">まなぶ</span></button>
+  <button class="dock-btn is-on" data-view="yohou"><span class="d-emoji">🌤️</span><span class="d-name">予報</span></button>
+  <button class="dock-btn" data-view="map"><span class="d-emoji">🗺️</span><span class="d-name">地図</span></button>
+  <button class="dock-btn" data-view="yosou"><span class="d-emoji">✋</span><span class="d-name">予想</span></button>
+  <button class="dock-btn" data-view="lab"><span class="d-emoji">🧪</span><span class="d-name">実験</span></button>
+  <button class="dock-btn" data-view="manabu"><span class="d-emoji">📖</span><span class="d-name">学ぶ</span></button>
 </nav>
 
 <div class="toast" id="toast" aria-live="polite"></div>
 
 <script src="data.js"></script>
+<script src="map-data.js"></script>
 <script src="audio.js"></script>
 <script src="weather.js"></script>
+<script src="map.js"></script>
 <script src="lab.js"></script>
 <script src="app.js"></script>
 </body>

@@ -1,4 +1,4 @@
-/* あしたのてんきやさん — おと（WebAudio の合成音のみ。音声ファイルは つかわない） */
+/* あしたの天気やさん — 音（WebAudio の合成音のみ。音声ファイルは使わない） */
 
 const Sound = (function () {
   let ctx = null;
