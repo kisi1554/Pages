@@ -214,7 +214,7 @@
   }
 
   function loadCity() {
-    $('#sourceNote').textContent = city.name + 'の予報を読みこみ中…';
+    $('#sourceNote').textContent = city.name + 'の予報を読みこみちゅう…';
     $('#sourceNote').classList.remove('demo');
     Weather.load(city).then(d => {
       data = d;
@@ -341,7 +341,7 @@
       const home = CITIES.find(c => c.id === 'yokohama');
       if (home) list.push(home);
     }
-    $('#mapNote').textContent = '天気を読みこみ中…';
+    $('#mapNote').textContent = '天気を読みこみちゅう…';
     Weather.loadMany(list, group).then(res => {
       WeatherMap.setSpots(res.spots);
       mapLoaded[group] = true;
@@ -370,7 +370,7 @@
           (s.temp != null ? Math.round(s.temp) + '℃' : '--') + '</span>' +
       '</div>' +
       '<div class="pick-body">' +
-        '<span>' + (info ? info.label : '読みこみ中…') + '</span>' +
+        '<span>' + (info ? info.label : '読みこみちゅう…') + '</span>' +
         '<span class="pick-clock">🕒 <b class="clock-time">--:--:--</b> ' +
         (s.tzOffset != null ? '<span class="clock-tz">' + tzWord(s.tzOffset) + '</span>' : '') + '</span>' +
       '</div>';
@@ -734,7 +734,7 @@
       const perfect = quiz.hit === quiz.list.length;
       box.innerHTML =
         '<div class="q-done"><div class="big">' + (perfect ? '🏆' : quiz.hit >= 3 ? '🎉' : '💪') + '</div>' +
-        '<p class="q-text">' + quiz.list.length + '問中 ' + quiz.hit + '問 正解！</p>' +
+        '<p class="q-text">' + quiz.list.length + '問のうち ' + quiz.hit + '問 正解！</p>' +
         '<p class="q-exp">' + (perfect ? '全問 正解！ 天気はかせだ！' : 'もう一度やると、べつの問題が出ます。') + '</p></div>';
       const again = el('button', 'btn primary', '↺ もう一度');
       again.style.marginTop = '14px';
