@@ -72,9 +72,43 @@ function selectCountry(c, at) {
   }
   const h = lonHour(at ? at.lon : c.p[0]);
   const pod = partOfDay(h);
-  say(pod.face, c.n + "だよ。いま " + hourLabel(h) + " ごろ、" + pod.label + "。");
+  const isNew = !S.visited.has(c.id);
+  if (isNew) { S.visited.add(c.id); updateBook(); saveState(); }
+  say(pod.face, (isNew ? "はじめての 国! " : "") +
+      c.n + "だよ。いま " + hourLabel(h) + " ごろ、" + pod.label + "。");
   speak(c.k);
-  sfx.tap();
+  if (isNew) { sfx.star(); milestone(); } else sfx.tap();
+}
+
+/* ---------- くにの ずかん ---------- */
+const MILESTONES = [5, 10, 20, 40, 60, 77];
+function updateBook() {
+  const n = S.visited.size;
+  $("bookCount").textContent = n;
+  $("bookAll").textContent = COUNTRIES.named.length;
+  $("bookBtn").classList.toggle("is-got", n > 0);
+}
+function milestone() {
+  if (!MILESTONES.includes(S.visited.size)) return;
+  S.stars++; $("starCount").textContent = S.stars;
+  burst(); saveState();
+  say("📗", "ずかんが " + S.visited.size + "こに なった! ⭐を 1つ あげる。");
+}
+function openBook() {
+  const list = COUNTRIES.named.slice().sort((a, b) => a.n.localeCompare(b.n, "ja"));
+  const got = S.visited.size, all = COUNTRIES.named.length;
+  openSheet(
+    '<div class="sheet-eyebrow">くにの ずかん</div>' +
+    '<h2 class="sheet-title">' + got + " / " + all + " こ あつめた</h2>" +
+    '<p class="sheet-body">ちきゅうの 国を タップすると ここに たまるよ。</p>' +
+    '<div class="book-grid">' +
+      list.map(c => S.visited.has(c.id)
+        ? '<span class="book-item is-got">' + c.n + "</span>"
+        : '<span class="book-item">?</span>').join("") +
+    "</div>" +
+    '<div class="cta-row"><button class="cta" id="bookClose">とじる</button></div>'
+  );
+  $("bookClose").addEventListener("click", () => { closeSheet(); sfx.tap(); });
 }
 
 function say(face, text) { setSay(face, text); sayLockUntil = performance.now() + 5200; }
@@ -99,7 +133,7 @@ let stepIndex = 0, stepBase = 0, holdT = 0, sheetOpen = false, finished = false;
 
 /* ほぞん */
 function saveState() {
-  try { localStorage.setItem("guruguru-earth", JSON.stringify({ s: S.stars, i: stepIndex, f: finished })); } catch (e) {}
+  try { localStorage.setItem("guruguru-earth", JSON.stringify({ s: S.stars, i: stepIndex, f: finished, v: [...S.visited] })); } catch (e) {}
 }
 function loadState() {
   try {
@@ -107,6 +141,7 @@ function loadState() {
     if (typeof d.s === "number") S.stars = d.s;
     if (typeof d.i === "number") stepIndex = clamp(d.i, 0, STEPS.length - 1);
     if (d.f) finished = true;
+    if (Array.isArray(d.v)) S.visited = new Set(d.v);
   } catch (e) {}
 }
 
@@ -120,15 +155,15 @@ function setMissionCard() {
     $("missionNo").textContent = "⭐" + S.stars;
     $("missionKind").textContent = "じゆうモード";
     $("missionTitle").textContent = "すきなだけ まわして たんけん!";
-    $("missionHint").textContent = "くにを タップすると なまえを おしえるよ";
+    $("missionHint").textContent = "くにを タップすると ずかんに たまるよ";
     $("missionBar").style.width = "100%";
     return;
   }
   const st = STEPS[stepIndex];
   $("missionNo").textContent = (stepIndex + 1) + " / " + STEPS.length;
-  $("missionKind").textContent = st.kind;
+  $("missionKind").textContent = (st.ch ? st.ch + " · " : "") + st.kind;
   $("missionTitle").textContent = st.title;
-  $("missionHint").textContent = st.hint;
+  $("missionHint").textContent = typeof st.hint === "function" ? st.hint() : st.hint;
   $("missionBar").style.width = (stepIndex / STEPS.length * 100) + "%";
   card.style.display = "";
 }
@@ -190,14 +225,17 @@ function showFinish() {
     '<h2 class="sheet-title">ひるよる はかせ に なった!</h2>' +
     '<p class="sheet-body">⭐ ' + S.stars + " こ あつめたよ。<br>" +
       "ちきゅうは 24じかんで 1かいてん。たいようの ひかりが あたる がわが ひる、あたらない がわが よる。<br>" +
-      "じくが かたむいて いるから、きせつで ひるの ながさも かわるんだね。</p>" +
+      "じくが かたむいて いるから、きせつで ひるの ながさも かわる。<br>" +
+      "せかいには " + COUNTRIES.named.length + "の 国。きみは いま " + S.visited.size + "こ あつめたよ。</p>" +
     '<div class="cta-row">' +
       '<button class="cta" id="freeBtn">じゆうに あそぶ 🌍</button>' +
       '<button class="cta ghost" id="againBtn">もういちど</button>' +
     "</div>"
   );
   $("freeBtn").addEventListener("click", () => { closeSheet(); setMode("free"); sfx.tap(); });
-  $("againBtn").addEventListener("click", () => { closeSheet(); stepIndex = 0; startStep(); saveState(); sfx.tap(); });
+  $("againBtn").addEventListener("click", () => {
+    closeSheet(); stepIndex = 0; finished = false; startStep(); saveState(); sfx.tap();
+  });
 }
 
 function setMode(m) {
@@ -206,6 +244,7 @@ function setMode(m) {
   $("tabFree").setAttribute("aria-selected", m === "free" ? "true" : "false");
   if (m === "mission") startStep(); else { closeSheet(); setMissionCard(); }
 }
+$("bookBtn").addEventListener("click", () => { openBook(); sfx.tap(); });
 $("tabMission").addEventListener("click", () => { setMode("mission"); sfx.tap(); });
 $("tabFree").addEventListener("click", () => { setMode("free"); sfx.tap(); });
 
@@ -251,10 +290,12 @@ function tick(now) {
     $("dayLen").textContent = dayLength(c).toFixed(1);
     $("turnCount").textContent = Math.floor(S.odo / (Math.PI * 2));
     talkAbout(g);
+    if (S.mode === "mission" && !sheetOpen && typeof STEPS[stepIndex].hint === "function")
+      $("missionHint").textContent = STEPS[stepIndex].hint();
   }
 
   /* ミッションの はんてい */
-  if (S.mode === "mission" && !sheetOpen) {
+  if (S.mode === "mission" && !sheetOpen && !finished) {
     const st = STEPS[stepIndex];
     if (st.type === "act") {
       if (st.check(stepBase)) { holdT += dt; if (holdT > 0.45) succeed(); }
@@ -269,6 +310,7 @@ function tick(now) {
    ============================================================ */
 loadState();
 resize();
+updateBook();
 if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) S.camDist = S.camDistTarget;
 selectCity(0);
 $("starCount").textContent = S.stars;

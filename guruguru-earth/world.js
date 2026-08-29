@@ -422,6 +422,7 @@ const S = {
   camDistTarget: 5.6,
   city: 0,
   countryId: null,   // えらんでいる 国
+  visited: new Set(),// ずかんに たまった 国
   rays: true, axis: false, sound: true,
   mode: "mission",    // mission | free
   stars: 0,
