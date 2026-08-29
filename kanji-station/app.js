@@ -80,39 +80,136 @@ const SE = {
   fanfare() { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => tone(f, i * .13, .3, 'triangle')); }
 };
 
-/* ============ 漢字キャラの絵（SVG） ============ */
+/* ---- キャラの え（SVG） ----
+ * はいけい（SCENES）→ かお → 漢字 の じゅんに かさねる。
+ * はいけいは かならず うすく して、漢字が よみにくく ならない ようにする。
+ */
+const SCENES = {
+  town:   '<g fill="#7b94b8"><rect x="16" y="88" width="18" height="30" rx="2"/><rect x="38" y="76" width="16" height="42" rx="2"/><rect x="58" y="94" width="15" height="24" rx="2"/><rect x="77" y="82" width="20" height="36" rx="2"/></g>' +
+          '<g fill="#fff"><rect x="20" y="93" width="4" height="5"/><rect x="27" y="93" width="4" height="5"/><rect x="42" y="82" width="4" height="5"/><rect x="49" y="82" width="4" height="5"/><rect x="82" y="88" width="4" height="5"/><rect x="89" y="88" width="4" height="5"/></g>',
+  rice:   '<rect x="14" y="100" width="92" height="18" fill="#c0a353"/><g stroke="#7fae3f" stroke-width="3" stroke-linecap="round"><path d="M24 102 v-16"/><path d="M40 102 v-20"/><path d="M56 102 v-15"/><path d="M72 102 v-19"/><path d="M90 102 v-16"/></g>' +
+          '<g fill="#e8c34a"><circle cx="24" cy="84" r="4"/><circle cx="40" cy="80" r="4"/><circle cx="56" cy="85" r="4"/><circle cx="72" cy="81" r="4"/><circle cx="90" cy="84" r="4"/></g>',
+  water:  '<path d="M14 92 q11 -9 22 0 t22 0 t22 0 t22 0 v26 h-92z" fill="#8fd0f2"/><path d="M14 104 q11 -8 22 0 t22 0 t22 0 t22 0 v14 h-92z" fill="#4fb0e5"/>',
+  big:    '<g fill="none" stroke="#f3a05c" stroke-width="5"><circle cx="60" cy="68" r="42"/><circle cx="60" cy="68" r="29"/></g>',
+  five:   '<g fill="#f28fb1"><circle cx="30" cy="86" r="7"/><circle cx="45" cy="98" r="7"/><circle cx="60" cy="86" r="7"/><circle cx="75" cy="98" r="7"/><circle cx="90" cy="86" r="7"/></g>',
+  shine:  '<g fill="#ffce4d"><path d="M28 74 l4 -11 l4 11 l11 4 l-11 4 l-4 11 l-4 -11 l-11 -4z"/><path d="M88 96 l3 -8 l3 8 l8 3 l-8 3 l-3 8 l-3 -8 l-8 -3z"/><path d="M84 40 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2z"/></g>',
+  tree:   '<rect x="55" y="86" width="11" height="32" fill="#a9793f"/><circle cx="60" cy="80" r="26" fill="#7cbb52"/><circle cx="40" cy="90" r="15" fill="#8fca62"/><circle cx="82" cy="90" r="14" fill="#8fca62"/>',
+  cloud:  '<g fill="#dfe9f4"><ellipse cx="44" cy="92" rx="24" ry="14"/><ellipse cx="70" cy="98" rx="20" ry="12"/><ellipse cx="90" cy="76" rx="14" ry="9"/></g>',
+  sun:    '<circle cx="60" cy="86" r="26" fill="#ffd24d"/><g stroke="#ffb733" stroke-width="4" stroke-linecap="round"><path d="M60 48 v-8"/><path d="M28 86 h-9"/><path d="M92 86 h9"/><path d="M34 60 l-6 -6"/><path d="M86 60 l6 -6"/><path d="M34 112 l-6 6"/><path d="M86 112 l6 6"/></g>',
+  up:     '<g fill="none" stroke="#68b46a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M34 94 l26 -22 l26 22"/><path d="M34 116 l26 -22 l26 22"/></g>',
+  four:   '<g fill="#8ec7e8"><rect x="26" y="76" width="20" height="20" rx="4"/><rect x="72" y="76" width="20" height="20" rx="4"/><rect x="26" y="100" width="20" height="18" rx="4"/><rect x="72" y="100" width="20" height="18" rx="4"/></g>',
+  target: '<g fill="none" stroke="#e58a8a" stroke-width="6"><circle cx="60" cy="84" r="34"/><circle cx="60" cy="84" r="20"/></g><circle cx="60" cy="84" r="7" fill="#e05a5a"/>',
+  coin:   '<circle cx="60" cy="84" r="32" fill="#ffd863"/><circle cx="60" cy="84" r="24" fill="none" stroke="#e0a92c" stroke-width="4"/>',
+  three:  '<g fill="#f0b25e"><rect x="24" y="74" width="72" height="10" rx="5"/><rect x="32" y="92" width="56" height="10" rx="5"/><rect x="40" y="110" width="40" height="10" rx="5"/></g>',
+  small:  '<g fill="#9fd0e8"><circle cx="34" cy="80" r="5"/><circle cx="86" cy="76" r="4"/><circle cx="46" cy="106" r="3.5"/><circle cx="76" cy="110" r="5"/><circle cx="60" cy="92" r="3"/></g>',
+  stand:  '<rect x="14" y="108" width="92" height="10" fill="#c9b79a"/><ellipse cx="60" cy="106" rx="26" ry="6" fill="#a9937a" opacity=".7"/>',
+  eight:  '<g fill="none" stroke="#7fb3e0" stroke-width="9" stroke-linecap="round"><path d="M56 70 l-22 46"/><path d="M64 70 l22 46"/></g>',
+  crownbg:'<g stroke="#ffd24d" stroke-width="5" stroke-linecap="round"><path d="M60 60 v-14"/><path d="M28 84 l-12 -6"/><path d="M92 84 l12 -6"/><path d="M36 62 l-9 -9"/><path d="M84 62 l9 -9"/></g><circle cx="60" cy="90" r="24" fill="#ffe9a8"/>',
+  star:   '<g fill="#ffd863"><path d="M40 68 l5 -13 l5 13 l13 5 l-13 5 l-5 13 l-5 -13 l-13 -5z"/><path d="M84 98 l4 -9 l4 9 l9 4 l-9 4 l-4 9 l-4 -9 l-9 -4z"/><circle cx="30" cy="104" r="4"/></g>',
+  grass:  '<rect x="14" y="104" width="92" height="14" fill="#8fca62"/><g stroke="#5fa03c" stroke-width="4" stroke-linecap="round" fill="none"><path d="M26 106 q-4 -14 4 -20"/><path d="M44 106 q4 -16 -3 -22"/><path d="M62 106 q-5 -12 3 -18"/><path d="M80 106 q4 -15 -3 -21"/><path d="M96 106 q-4 -12 3 -17"/></g>',
+  thread: '<circle cx="60" cy="88" r="28" fill="#f2a7c3"/><g fill="none" stroke="#d76e9b" stroke-width="3"><path d="M36 76 q24 12 46 -4"/><path d="M34 92 q26 14 50 -6"/><path d="M40 106 q22 8 40 -4"/></g>',
+  book:   '<g fill="#f6e7c9" stroke="#c9a86a" stroke-width="3"><path d="M20 100 q20 -10 38 0 v22 q-18 -9 -38 0z"/><path d="M100 100 q-20 -10 -38 0 v22 q18 -9 38 0z"/></g>',
+  down:   '<g fill="none" stroke="#7f9fd4" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"><path d="M34 74 l26 22 l26 -22"/><path d="M34 96 l26 22 l26 -22"/></g>',
+  mountain:'<path d="M14 118 l30 -46 l20 28 l14 -20 l28 38z" fill="#9aa88f"/><path d="M44 72 l10 15 h-20z" fill="#fff"/>',
+  many:   '<g fill="#a8b6e0"><circle cx="26" cy="74" r="4"/><circle cx="42" cy="82" r="4"/><circle cx="58" cy="72" r="4"/><circle cx="74" cy="84" r="4"/><circle cx="92" cy="74" r="4"/><circle cx="32" cy="96" r="4"/><circle cx="50" cy="104" r="4"/><circle cx="68" cy="98" r="4"/><circle cx="86" cy="106" r="4"/><circle cx="60" cy="88" r="4"/></g>',
+  speech: '<g fill="#ffe9a8" stroke="#e8bf5a" stroke-width="3"><path d="M22 72 h34 a6 6 0 0 1 6 6 v16 a6 6 0 0 1 -6 6 h-20 l-10 9 v-9 h-4 a6 6 0 0 1 -6 -6 v-16 a6 6 0 0 1 6 -6z"/></g><g fill="#e8bf5a"><circle cx="78" cy="104" r="6"/><circle cx="92" cy="94" r="4"/></g>',
+  red:    '<g fill="#f4867f"><path d="M60 116 l-22 -22 a13 13 0 0 1 22 -14 a13 13 0 0 1 22 14z"/></g>',
+  cross:  '<g fill="#8fbfe8"><rect x="52" y="62" width="16" height="56" rx="4"/><rect x="32" y="82" width="56" height="16" rx="4"/></g>',
+  sky:    '<g fill="#b5d5f2"><ellipse cx="40" cy="96" rx="22" ry="12"/><ellipse cx="76" cy="104" rx="18" ry="10"/></g><g fill="#ffd863"><path d="M84 62 l4 -10 l4 10 l10 4 l-10 4 l-4 10 l-4 -10 l-10 -4z"/></g>',
+  nametag:'<g><rect x="26" y="76" width="68" height="40" rx="6" fill="#fff" stroke="#8fb0d0" stroke-width="3"/><rect x="26" y="76" width="68" height="11" rx="5" fill="#8fb0d0"/></g>',
+  sprout: '<rect x="14" y="106" width="92" height="12" fill="#c9a878"/><path d="M60 106 v-24" stroke="#5fa03c" stroke-width="4" stroke-linecap="round"/><ellipse cx="45" cy="80" rx="15" ry="9" fill="#7cbb52" transform="rotate(-20 45 80)"/><ellipse cx="76" cy="82" rx="15" ry="9" fill="#8fca62" transform="rotate(20 76 82)"/>',
+  hundred:'<g fill="none" stroke="#f08a8a" stroke-width="5"><circle cx="60" cy="86" r="32"/><circle cx="60" cy="86" r="21"/></g>',
+  ball:   '<circle cx="60" cy="86" r="30" fill="#8fd0c8"/><ellipse cx="50" cy="74" rx="9" ry="6" fill="#fff" opacity=".8" transform="rotate(-25 50 74)"/>',
+  flower: '<g><g fill="#f28fb8"><circle cx="32" cy="84" r="10"/><circle cx="18" cy="96" r="10"/><circle cx="46" cy="96" r="10"/><circle cx="32" cy="108" r="10"/></g><circle cx="32" cy="96" r="7" fill="#ffd863"/>' +
+          '<g fill="#bd9fe3"><circle cx="88" cy="92" r="9"/><circle cx="76" cy="102" r="9"/><circle cx="100" cy="102" r="9"/><circle cx="88" cy="112" r="9"/></g><circle cx="88" cy="102" r="6" fill="#ffd863"/></g>',
+  house:  '<rect x="14" y="106" width="92" height="12" fill="#a9c98a"/><path d="M34 106 v-24 h34 v24z" fill="#f2e2c4"/><path d="M28 84 l23 -18 l23 18z" fill="#d8776a"/><rect x="46" y="92" width="12" height="14" fill="#a9793f"/>',
+  stone:  '<g fill="#9e988b"><ellipse cx="38" cy="104" rx="20" ry="14"/><ellipse cx="78" cy="110" rx="16" ry="11"/><ellipse cx="86" cy="86" rx="11" ry="8"/></g>'
+};
+
+/* かおに かさねる もの。curl / ribbon / cap は あたまの うえ（★4以上では ぼうしに ゆずる） */
+const OVERLAYS = {
+  glasses: f => '<g fill="none" stroke="' + f + '" stroke-width="3"><circle cx="43" cy="41" r="15"/><circle cx="77" cy="41" r="15"/><path d="M58 41 h4"/><path d="M28 38 l-10 -4"/><path d="M92 38 l10 -4"/></g>',
+  curl:    () => '<path d="M62 16 q2 -14 12 -12 q8 2 4 9" fill="none" stroke="#c98b3f" stroke-width="4" stroke-linecap="round"/>',
+  ribbon:  () => '<g fill="#f4867f"><path d="M74 14 l14 -9 v18z"/><path d="M96 14 l-14 -9 v18z"/><circle cx="85" cy="14" r="5"/></g>',
+  cap:     () => '<g><path d="M60 2 l30 12 l-30 12 l-30 -12z" fill="#3d4a5c"/><rect x="56" y="14" width="8" height="4" fill="#3d4a5c"/><path d="M86 16 v12" stroke="#f0c040" stroke-width="2.5"/><circle cx="86" cy="29" r="3" fill="#f0c040"/></g>'
+};
+const HEAD_OVER = ['curl', 'ribbon', 'cap'];
+
+const EYES = {
+  round: f => '<circle cx="43" cy="41" r="11" fill="#fff" stroke="' + f + '" stroke-width="2.6"/><circle cx="77" cy="41" r="11" fill="#fff" stroke="' + f + '" stroke-width="2.6"/>' +
+              '<circle cx="44.5" cy="43" r="5" fill="' + f + '"/><circle cx="78.5" cy="43" r="5" fill="' + f + '"/>',
+  dot:   f => '<circle cx="43" cy="42" r="6.5" fill="' + f + '"/><circle cx="77" cy="42" r="6.5" fill="' + f + '"/>',
+  wink:  f => '<circle cx="43" cy="41" r="11" fill="#fff" stroke="' + f + '" stroke-width="2.6"/><circle cx="44.5" cy="43" r="5" fill="' + f + '"/>' +
+              '<path d="M68 45 q9 -11 18 0" fill="none" stroke="' + f + '" stroke-width="3.4" stroke-linecap="round"/>',
+  sparkle: f => EYES.round(f) + '<circle cx="41" cy="39" r="2.6" fill="#fff"/><circle cx="75" cy="39" r="2.6" fill="#fff"/>' +
+              '<path d="M26 30 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2z" fill="#ffd863"/>',
+  sleepy: f => '<path d="M32 41 a11 11 0 0 0 22 0z" fill="#fff" stroke="' + f + '" stroke-width="2.6"/><path d="M66 41 a11 11 0 0 0 22 0z" fill="#fff" stroke="' + f + '" stroke-width="2.6"/>' +
+              '<circle cx="43" cy="45" r="4" fill="' + f + '"/><circle cx="77" cy="45" r="4" fill="' + f + '"/>',
+  closed: f => '<g fill="none" stroke="' + f + '" stroke-width="3.4" stroke-linecap="round"><path d="M34 44 q9 -10 18 0"/><path d="M68 44 q9 -10 18 0"/></g>'
+};
+
+const MOUTHS = {
+  smile: f => '<path d="M50 54 Q60 66 70 54" fill="none" stroke="' + f + '" stroke-width="3.4" stroke-linecap="round"/>',
+  small: f => '<path d="M53 57 Q60 63 67 57" fill="none" stroke="' + f + '" stroke-width="3.2" stroke-linecap="round"/>',
+  open:  f => '<ellipse cx="60" cy="60" rx="8.5" ry="7" fill="' + f + '"/><ellipse cx="60" cy="63.5" rx="4.5" ry="3" fill="#ff9d9d"/>',
+  tooth: f => MOUTHS.smile(f) + '<rect x="56" y="53" width="9" height="6" rx="1.6" fill="#fff" stroke="' + f + '" stroke-width="1.4"/>',
+  wave:  f => '<path d="M48 58 q5 -7 10 0 t10 0" fill="none" stroke="' + f + '" stroke-width="3.2" stroke-linecap="round"/>'
+};
+
+let CHAR_UID = 0;
 function charSVG(ch, opts) {
   opts = opts || {};
   const k = KANJI[ch]; if (!k) return '';
+  const c = (typeof CHARA !== 'undefined' && CHARA[ch]) || null;
   const lv = opts.lv === undefined ? kLevel(ch) : opts.lv;
   const col = gradeColor(k.g);
   const face = '#2b3440';
+  const uid = 'kc' + (++CHAR_UID);
   const cls = 'kchar' + (opts.cls ? ' ' + opts.cls : '');
-  const mouth = lv >= 2
-    ? '<path d="M50 54 Q60 66 70 54" fill="none" stroke="' + face + '" stroke-width="3.4" stroke-linecap="round"/>'
-    : '<path d="M53 57 Q60 63 67 57" fill="none" stroke="' + face + '" stroke-width="3.2" stroke-linecap="round"/>';
+
+  const scene = c && SCENES[c.sc]
+    ? '<g clip-path="url(#' + uid + ')" opacity=".62">' + SCENES[c.sc] + '</g>' : '';
+  const eyes = (EYES[c && c.eyes] || EYES.round)(face);
+  const mouth = (MOUTHS[c && c.mouth] || (lv >= 2 ? MOUTHS.smile : MOUTHS.small))(face);
   const cheeks = lv >= 3
     ? '<ellipse cx="27" cy="52" rx="7.5" ry="4.6" fill="#ff9d9d" opacity=".75"/><ellipse cx="93" cy="52" rx="7.5" ry="4.6" fill="#ff9d9d" opacity=".75"/>'
     : '';
-  const hat = lv >= 4 && lv < 5
-    ? '<path d="M34 16 h52 l-4 -9 h-44 z" fill="' + col + '"/><rect x="30" y="14" width="60" height="6" rx="3" fill="' + col + '"/>'
+  const hat = lv === 4
+    ? '<path d="M38 16 a22 14 0 0 1 44 0z" fill="' + col + '"/>' +
+      '<path d="M82 16 h16 a4 4 0 0 1 0 6 h-60 v-6z" fill="' + col + '" opacity=".8"/>' +
+      '<circle cx="60" cy="2.5" r="4" fill="' + col + '"/>'
     : '';
   const crown = lv >= 5
     ? '<path d="M36 16 l6 -14 l9 10 l9 -14 l9 14 l9 -10 l6 14 z" fill="#f7c948" stroke="#d79b06" stroke-width="2" stroke-linejoin="round"/>'
     : '';
   const spark = lv >= 5 ? '<text x="12" y="30" font-size="16">✨</text><text x="98" y="112" font-size="14">✨</text>' : '';
-  return '<svg class="' + cls + '" viewBox="0 0 120 134" role="img" aria-label="' + esc(ch) + ' のキャラクター">' +
+  // あたまに のる かざりは、ぼうし・おうかんと ばしょが かさなるので ★4以上では 出さない
+  const over = c && c.ov && OVERLAYS[c.ov] && !(HEAD_OVER.includes(c.ov) && lv >= 4)
+    ? OVERLAYS[c.ov](face) : '';
+
+  return '<svg class="' + cls + '" viewBox="0 0 120 134" role="img" aria-label="' +
+    esc(ch) + (c ? '（' + esc(c.name) + '）' : '') + ' のキャラクター">' +
+    '<defs><clipPath id="' + uid + '"><rect x="14" y="16" width="92" height="102" rx="24"/></clipPath></defs>' +
     '<ellipse cx="44" cy="122" rx="12" ry="7" fill="' + col + '"/><ellipse cx="76" cy="122" rx="12" ry="7" fill="' + col + '"/>' +
     '<ellipse cx="11" cy="80" rx="8" ry="11" fill="' + col + '"/><ellipse cx="109" cy="80" rx="8" ry="11" fill="' + col + '"/>' +
-    '<rect x="14" y="16" width="92" height="102" rx="24" fill="' + col + '" opacity=".2"/>' +
+    '<rect x="14" y="16" width="92" height="102" rx="24" fill="' + col + '" opacity=".18"/>' +
+    scene +
     '<rect x="14" y="16" width="92" height="102" rx="24" fill="none" stroke="' + col + '" stroke-width="4"/>' +
-    hat + crown +
-    '<circle cx="43" cy="41" r="11" fill="#fff" stroke="' + face + '" stroke-width="2.6"/>' +
-    '<circle cx="77" cy="41" r="11" fill="#fff" stroke="' + face + '" stroke-width="2.6"/>' +
-    '<circle cx="44.5" cy="43" r="5" fill="' + face + '"/><circle cx="78.5" cy="43" r="5" fill="' + face + '"/>' +
-    cheeks + mouth +
+    hat + crown + eyes + cheeks + mouth +
     '<text x="60" y="108" text-anchor="middle" font-size="46" font-weight="700" fill="' + face + '">' + esc(ch) + '</text>' +
-    spark + '</svg>';
+    over + spark + '</svg>';
+}
+function charName(ch) {
+  const c = (typeof CHARA !== 'undefined' && CHARA[ch]) || null;
+  return c ? c.name : '';
+}
+function charSay(ch, kind) {
+  const c = (typeof CHARA !== 'undefined' && CHARA[ch]) || null;
+  return c && c[kind] ? c[kind] : '';
+}
+function bubbleHTML(ch, kind) {
+  const t = charSay(ch, kind); if (!t) return '';
+  return '<div class="bubble">' + (charName(ch) ? '<b>' + esc(charName(ch)) + '</b>' : '') + esc(t) + '</div>';
 }
 function starStr(lv) { return '★★★★★'.slice(0, lv) + '☆☆☆☆☆'.slice(0, 5 - lv); }
 
@@ -261,8 +358,11 @@ function askReading(name, kana) {
   const eki = KANJI_EKI[ch] || [];
   $('qcard').innerHTML =
     '<div class="qlabel">「' + rubyName(name, kana) + '」の <b>' + esc(ch) + '</b> は ほかの よみかたも あるよ！</div>' +
-    '<div class="charbox">' + charSVG(ch, { cls: 'pop' }) +
+    '<div class="charbox">' +
+    '<div class="charcol">' + charSVG(ch, { cls: 'pop' }) +
+    (charName(ch) ? '<div class="cname">' + esc(charName(ch)) + '</div>' : '') + '</div>' +
     '<div class="kinfo">' +
+    bubbleHTML(ch, 'voice') +
     '<span class="gradetag" style="--gc:' + gradeColor(k.g) + '">' + gradeLabel(k.g) + ' ' + (TYPE_EMOJI[k.t] || '✨') + '</span>' +
     '<div class="kmeta">おん：' + esc(k.on) + '　くん：' + esc(k.kun) + '</div>' +
     '<div class="stars">' + starStr(kLevel(ch)) + '</div>' +
@@ -293,12 +393,21 @@ function askReading(name, kana) {
         else if (after > before) { j.textContent = '⭕ せいかい！ ' + ch + ' が レベルアップ！'; SE.levelup(); }
         else { j.textContent = '⭕ せいかい！'; SE.ok(); }
         if (after > before) P.stars += (after - before);
-        extra = '<div class="charbox">' + charSVG(ch, { cls: 'pop' }) +
-          '<div class="kinfo"><div class="stars">' + starStr(after) + '</div>' +
+        extra = '<div class="charbox">' +
+          '<div class="charcol">' + charSVG(ch, { cls: 'pop' }) +
+          (charName(ch) ? '<div class="cname">' + esc(charName(ch)) + '</div>' : '') + '</div>' +
+          '<div class="kinfo">' + bubbleHTML(ch, 'win') +
+          '<div class="stars">' + starStr(after) + '</div>' +
           '<div class="kmeta">おぼえた よみ ' + rec.got.length + ' こ</div></div></div>';
       } else {
         j.textContent = '❌ ざんねん…';
         SE.ng(); $('qcard').classList.add('shake'); setTimeout(() => $('qcard').classList.remove('shake'), 320);
+        if (charSay(ch, 'lose')) {
+          extra = '<div class="charbox">' +
+            '<div class="charcol">' + charSVG(ch) +
+            (charName(ch) ? '<div class="cname">' + esc(charName(ch)) + '</div>' : '') + '</div>' +
+            '<div class="kinfo">' + bubbleHTML(ch, 'lose') + '</div></div>';
+        }
       }
       $('after2').innerHTML =
         '<div class="answerbox"><b>' + rubyName(r.w, r.y) + '</b>　' + esc(ch) + 'は「' + esc(r.y) + '」の ように よむよ</div>' +
@@ -317,7 +426,8 @@ function arrive() {
 
 function finishLine() {
   SE.fanfare();
-  const chars = P.newKanji.map(ch => '<div>' + charSVG(ch) + '</div>').join('');
+  const chars = P.newKanji.map(ch => '<div class="charcol">' + charSVG(ch) +
+    (charName(ch) ? '<div class="cname">' + esc(charName(ch)) + '</div>' : '') + '</div>').join('');
   $('resultCard').innerHTML =
     '<div class="big">🎉 ' + esc(P.line.name) + ' かんそう！</div>' +
     '<div>' + P.line.stations.length + 'えき ぜんぶ まわったよ</div>' +
@@ -351,7 +461,8 @@ function renderZukan() {
   $('zGrid').innerHTML = list.map(ch => {
     const lv = kLevel(ch);
     return '<button class="zcell' + (lv ? '' : ' locked') + '" data-ch="' + esc(ch) + '">' +
-      charSVG(ch) + '<div class="st">' + (lv ? starStr(lv).slice(0, lv) : 'みはっけん') + '</div></button>';
+      charSVG(ch) + '<div class="st">' + (lv ? starStr(lv).slice(0, lv) : 'みはっけん') + '</div>' +
+      (charName(ch) ? '<div class="cn">' + esc(charName(ch)) + '</div>' : '') + '</button>';
   }).join('');
   [...$('zGrid').children].forEach(b => b.onclick = () => { SE.tap(); openDetail(b.dataset.ch); });
 }
@@ -367,10 +478,11 @@ function openDetail(ch) {
   const host = $('modalHost');
   host.innerHTML = '<div class="modal"><div class="inner">' +
     '<div class="charbox">' + charSVG(ch) + '<div class="kinfo">' +
-    '<h3 style="margin:0">' + esc(ch) + '</h3>' +
+    '<h3 style="margin:0">' + esc(ch) + (charName(ch) ? ' <small>' + esc(charName(ch)) + '</small>' : '') + '</h3>' +
     '<span class="gradetag" style="--gc:' + gradeColor(k.g) + '">' + gradeLabel(k.g) + ' ' + (TYPE_EMOJI[k.t] || '✨') + '</span>' +
     '<div class="kmeta">おん：' + esc(k.on) + '<br>くん：' + esc(k.kun) + '</div>' +
     '<div class="stars">' + starStr(lv) + '</div></div></div>' +
+    (charSay(ch, 'zukan') ? '<div class="bubble wide">' + esc(charSay(ch, 'zukan')) + '</div>' : '') +
     '<div class="sectitle" style="margin-bottom:2px">よみかた</div>' + rows +
     '<div class="sectitle" style="margin-bottom:2px">この かんじを つかう えき</div>' +
     '<div class="ekilist">' + (eki || '—') + '</div>' +
