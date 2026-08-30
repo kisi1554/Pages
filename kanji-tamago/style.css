@@ -1,0 +1,346 @@
+/* かんじタマゴ - みため
+ * いろは :root でまとめて変えられる。1画面ずつ .screen で切りかえる。
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg-top:   #fff4e2;
+  --bg-bottom:#ffe6f0;
+  --ink:      #3a2a1c;
+  --ink-soft: #7a6752;
+  --card:     #fffdf8;
+  --line:     #f0d9bb;
+  --accent:   #f4832a;
+  --accent-d: #d9661a;
+  --gold:     #f5b81f;
+  --shadow:   rgba(120, 80, 30, .22);
+}
+
+html, body { margin: 0; padding: 0; height: 100%; }
+
+body {
+  min-height: 100%;
+  padding: 0 0 calc(96px + env(safe-area-inset-bottom));
+  background: linear-gradient(170deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+  background-attachment: fixed;
+  color: var(--ink);
+  font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体",
+               "Meiryo", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
+}
+
+.wrap { max-width: 760px; margin: 0 auto; padding: 12px 16px 0; }
+
+/* ============ ヘッダー ============ */
+header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 4px 6px;
+}
+h1 {
+  margin: 0; flex: 1;
+  font-size: clamp(22px, 6vw, 32px);
+  letter-spacing: .06em;
+}
+.count {
+  font-size: 14px; color: var(--ink-soft); white-space: nowrap;
+}
+.icon-btn {
+  min-width: 52px; min-height: 52px;
+  border: 3px solid var(--line); border-radius: 18px;
+  background: var(--card); color: var(--ink);
+  font: inherit; font-size: 22px; line-height: 1;
+  cursor: pointer;
+}
+.icon-btn:active { transform: translateY(2px); }
+
+/* ============ 画面 ============ */
+.screen { display: none; }
+.screen.on { display: block; animation: fade .25s ease; }
+@keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ============ タマゴ画面 ============ */
+.egg-stage {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 6px; padding: 6px 0 10px;
+}
+.egg-stage svg { width: min(260px, 62vw); height: auto; }
+.egg-wobble { animation: wob 2.6s ease-in-out infinite; transform-origin: 50% 88%; }
+@keyframes wob {
+  0%, 72%, 100% { transform: rotate(0) }
+  78% { transform: rotate(-5deg) }
+  84% { transform: rotate(5deg) }
+  90% { transform: rotate(-3deg) }
+}
+.speech {
+  margin: 0; padding: 10px 18px;
+  border: 3px dashed var(--line); border-radius: 999px;
+  background: var(--card); font-size: clamp(15px, 4.2vw, 18px);
+}
+
+.btn {
+  display: block; width: 100%;
+  min-height: 68px; margin: 12px 0 0; padding: 14px 20px;
+  border: none; border-radius: 999px;
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: clamp(18px, 5vw, 22px); font-weight: 700; letter-spacing: .08em;
+  box-shadow: 0 6px 0 var(--accent-d), 0 10px 20px var(--shadow);
+  cursor: pointer;
+}
+.btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--accent-d); }
+.btn.gold { background: linear-gradient(160deg, #ffd75e, var(--gold)); color: #6b4a00; box-shadow: 0 6px 0 #c98f04, 0 10px 20px var(--shadow); }
+.btn.gold:active { box-shadow: 0 2px 0 #c98f04; }
+.btn[disabled] { background: #ded3c4; color: #9b8b78; box-shadow: 0 6px 0 #c9bcaa; cursor: default; }
+.btn[disabled]:active { transform: none; box-shadow: 0 6px 0 #c9bcaa; }
+.btn small { display: block; font-size: 13px; font-weight: 400; letter-spacing: .04em; opacity: .9; }
+
+/* ============ ずかん ============ */
+.zukan {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px; margin-top: 10px;
+}
+.slot {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 8px 12px; min-height: 170px;
+  border: 3px solid var(--line); border-radius: 20px;
+  background: var(--card); color: inherit; font: inherit;
+  box-shadow: 0 4px 0 rgba(0,0,0,.05);
+  cursor: pointer;
+}
+.slot:active { transform: translateY(2px); }
+.slot svg { width: 100%; max-width: 116px; height: auto; }
+.slot .nm { font-size: 16px; font-weight: 700; }
+.slot .sub { font-size: 12px; color: var(--ink-soft); }
+.slot.locked { background: #f3ece1; cursor: default; }
+.slot.locked svg { filter: brightness(0) saturate(0); opacity: .18; }
+.slot.locked .nm::after { content: "？？？"; }
+.badge-n {
+  padding: 1px 10px; border-radius: 999px;
+  background: var(--gold); color: #6b4a00; font-size: 12px; font-weight: 700;
+}
+
+/* なかま の タブ */
+.ztabs {
+  display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 10px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch;
+}
+.ztabs::-webkit-scrollbar { display: none; }
+.ztab {
+  flex: none; min-height: 54px; padding: 8px 16px;
+  border: 3px solid var(--line); border-radius: 999px;
+  background: var(--card); color: var(--ink-soft);
+  font: inherit; font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer;
+}
+.ztab span { display: block; font-size: 12px; font-weight: 400; }
+.ztab.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.ztab:active { transform: translateY(2px); }
+
+/* ============ カード ============ */
+.card {
+  border: 4px solid var(--kc, var(--line)); border-radius: 24px;
+  background: var(--card);
+  box-shadow: 0 8px 0 rgba(0,0,0,.07), 0 16px 34px var(--shadow);
+  overflow: hidden;
+}
+.card-top {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; background: var(--kt, #f6efe2);
+}
+.card-top svg.mon { width: 108px; height: 108px; flex: none; }
+.card-name { font-size: clamp(20px, 5.4vw, 26px); font-weight: 700; letter-spacing: .04em; }
+.card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.tag {
+  padding: 3px 10px; border-radius: 999px;
+  background: #fff; border: 2px solid var(--kc, var(--line));
+  font-size: 12px; font-weight: 700; color: var(--kc, var(--ink));
+}
+.card-body { padding: 12px 14px 16px; }
+.kanji-row { display: flex; align-items: center; gap: 14px; }
+.kanji-box {
+  width: 92px; height: 92px; flex: none;
+  border: 3px solid var(--kc, var(--line)); border-radius: 16px;
+  background: #fff;
+  background-image: linear-gradient(#eee 1px, transparent 1px), linear-gradient(90deg, #eee 1px, transparent 1px);
+  background-size: 50% 50%; background-position: center;
+}
+.kanji-box svg { width: 100%; height: 100%; display: block; }
+.yomi { font-size: 15px; line-height: 1.9; }
+.yomi b { font-size: 17px; }
+h3 {
+  margin: 16px 0 6px; font-size: 15px; letter-spacing: .06em; color: var(--ink-soft);
+}
+.words { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.words li {
+  padding: 6px 12px; border-radius: 12px; background: var(--kt, #f6efe2);
+  font-size: 15px;
+}
+.words rt { font-size: .62em; letter-spacing: .02em; }
+.eki { margin: 0; padding: 0; list-style: none; }
+.eki li {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  padding: 7px 4px; border-bottom: 2px dotted var(--line);
+}
+.eki .en { font-size: 17px; font-weight: 700; }
+.eki .ey { font-size: 13px; color: var(--ink-soft); }
+.eki .el { margin-left: auto; font-size: 12px; color: #fff; background: var(--kc, #999); padding: 2px 10px; border-radius: 999px; }
+.about { margin: 10px 0 0; font-size: 15px; line-height: 1.9; }
+
+/* ============ クイズ ============ */
+.quiz-q {
+  margin: 10px 0 0; padding: 20px 16px;
+  border: 3px solid var(--line); border-radius: 20px; background: var(--card);
+  font-size: clamp(18px, 5vw, 22px); text-align: center; line-height: 1.7;
+}
+.choices { display: grid; gap: 10px; margin-top: 12px; }
+.choice {
+  min-height: 64px; padding: 12px 16px;
+  border: 3px solid var(--line); border-radius: 18px;
+  background: var(--card); color: inherit; font: inherit; font-size: 19px; cursor: pointer;
+}
+.choice:active { transform: translateY(2px); }
+.choice.ok { background: #d8f5cf; border-color: #6fbf4a; }
+.choice.ng { background: #ffdede; border-color: #e07070; }
+.quiz-res { margin-top: 14px; text-align: center; font-size: 18px; min-height: 30px; font-weight: 700; }
+
+/* ============ したのボタン ============ */
+nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; gap: 8px;
+  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  background: rgba(255, 253, 248, .95);
+  border-top: 3px solid var(--line);
+}
+nav button {
+  flex: 1; min-height: 62px;
+  border: none; border-radius: 16px;
+  background: transparent; color: var(--ink-soft);
+  font: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+nav button .ic { display: block; font-size: 24px; line-height: 1.1; }
+nav button.on { background: var(--accent); color: #fff; }
+
+/* ============ ふ化の えんしゅつ ============ */
+.hatch {
+  position: fixed; inset: 0; z-index: 50;
+  display: none; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 45%, #3b2a4d 0%, #1b1226 70%);
+  overflow: hidden;
+}
+.hatch.on { display: flex; }
+.hatch-inner { position: relative; width: min(92vw, 460px); text-align: center; }
+
+.rays {
+  position: absolute; left: 50%; top: 46%;
+  width: 200vmax; height: 200vmax; margin: -100vmax 0 0 -100vmax;
+  opacity: 0; animation: none;
+  -webkit-mask-image: radial-gradient(circle closest-side, #000 6%, rgba(0,0,0,.55) 16%, transparent 42%);
+  mask-image: radial-gradient(circle closest-side, #000 6%, rgba(0,0,0,.55) 16%, transparent 42%);
+}
+.hatch.burst .rays { opacity: .62; animation: spin 9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.flash {
+  position: absolute; inset: -50vmax; background: #fff; opacity: 0; pointer-events: none;
+}
+.hatch.burst .flash { animation: flash .55s ease-out; }
+@keyframes flash { 0% { opacity: 0 } 12% { opacity: 1 } 100% { opacity: 0 } }
+
+.egg-big { position: relative; width: min(60vw, 240px); margin: 0 auto; }
+.egg-big svg { width: 100%; height: auto; }
+.hatch.shake .egg-big { animation: knock 1.05s ease-in-out; }
+@keyframes knock {
+  0%, 100% { transform: rotate(0) }
+  8% { transform: rotate(-9deg) scale(1.03) } 16% { transform: rotate(8deg) }
+  24% { transform: rotate(0) }
+  46% { transform: rotate(-11deg) scale(1.05) } 56% { transform: rotate(10deg) }
+  64% { transform: rotate(0) }
+  82% { transform: rotate(-14deg) scale(1.08) } 92% { transform: rotate(12deg) }
+}
+.hatch.burst .egg-big { animation: eggout .4s ease-in forwards; }
+@keyframes eggout { to { transform: scale(1.5); opacity: 0; } }
+
+.crack { opacity: 0; }
+.hatch.crack1 .c1, .hatch.crack2 .c1, .hatch.crack2 .c2,
+.hatch.crack3 .c1, .hatch.crack3 .c2, .hatch.crack3 .c3 { opacity: 1; }
+
+.reveal { position: relative; opacity: 0; }
+.hatch.show .reveal { animation: pop .8s cubic-bezier(.2, 1.5, .4, 1) forwards; }
+@keyframes pop {
+  0% { opacity: 0; transform: scale(.2) rotate(-25deg) }
+  60% { opacity: 1; transform: scale(1.12) rotate(6deg) }
+  80% { transform: scale(.96) rotate(-3deg) }
+  100% { opacity: 1; transform: scale(1) rotate(0) }
+}
+.reveal svg.mon { width: min(64vw, 260px); height: auto; filter: drop-shadow(0 10px 16px rgba(0,0,0,.45)); }
+.reveal .nameplate {
+  display: inline-block; margin-top: 10px; padding: 8px 26px;
+  border: 4px solid #fff; border-radius: 999px;
+  background: linear-gradient(160deg, #ffd75e, #f5981f);
+  color: #5b3a00; font-size: clamp(22px, 6.4vw, 30px); font-weight: 700; letter-spacing: .08em;
+  box-shadow: 0 8px 22px rgba(0,0,0,.4);
+}
+.reveal .lead { margin: 0 0 6px; color: #ffe9a8; font-size: 17px; letter-spacing: .12em; font-weight: 700; }
+.reveal .rare { display: block; margin-top: 6px; color: #ffe9a8; font-size: 15px; letter-spacing: .1em; }
+
+.conf { position: absolute; left: 50%; top: 44%; width: 15px; height: 21px; border-radius: 4px; opacity: 0;
+  box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+.hatch.burst .conf { animation: fly 1.9s cubic-bezier(.15,.7,.3,1) forwards; }
+@keyframes fly {
+  0% { opacity: 1; transform: translate(0, 0) rotate(0) scale(.5) }
+  70% { opacity: 1 }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(var(--rot)) scale(1.1) }
+}
+
+/* モンスターの うしろの ひかり と キラキラ */
+.glow {
+  position: absolute; left: 50%; top: 44%; width: 92vmin; height: 92vmin;
+  margin: -46vmin 0 0 -46vmin; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle closest-side, rgba(255,247,214,.95), rgba(255,214,120,.45) 38%, transparent 70%);
+}
+.hatch.show .glow { animation: glowin .6s ease-out forwards, breathe 2.6s 1s ease-in-out infinite; }
+@keyframes glowin { to { opacity: .9 } }
+@keyframes breathe { 0%,100% { transform: scale(1) } 50% { transform: scale(1.08) } }
+
+.spark {
+  position: absolute; left: 50%; top: 44%; width: 34px; height: 34px; margin: -17px; opacity: 0;
+  background: #fff7d4;
+  clip-path: polygon(50% 0%, 59% 41%, 100% 50%, 59% 59%, 50% 100%, 41% 59%, 0% 50%, 41% 41%);
+  filter: drop-shadow(0 0 8px rgba(255, 226, 130, .95));
+}
+.hatch.show .spark { animation: twinkle 1.5s ease-in-out infinite; }
+@keyframes twinkle {
+  0%, 100% { opacity: 0; transform: translate(var(--sx), var(--sy)) scale(.4) rotate(0) }
+  50% { opacity: 1; transform: translate(var(--sx), var(--sy)) scale(1.15) rotate(90deg) }
+}
+
+.hatch .tap {
+  margin-top: 18px; min-height: 64px; padding: 14px 34px;
+  border: none; border-radius: 999px; background: #fff; color: #3a2a1c;
+  font: inherit; font-size: 19px; font-weight: 700; letter-spacing: .08em;
+  box-shadow: 0 6px 0 #c9b79e; cursor: pointer; opacity: 0;
+}
+.hatch.show .tap { animation: fade .4s .7s ease forwards; }
+
+/* カードを 見せる ところ */
+.card-view { position: fixed; inset: 0; z-index: 60; display: none; overflow: auto; padding: 16px; background: rgba(40, 28, 16, .6); }
+.card-view.on { display: block; }
+.card-view .card { max-width: 520px; margin: 0 auto; animation: pop .5s cubic-bezier(.2, 1.4, .4, 1); }
+.card-view .btn { max-width: 520px; margin: 14px auto 40px; }
+
+footer { margin: 26px 0 10px; text-align: center; font-size: 12px; color: var(--ink-soft); line-height: 1.8; }
+
+@media (prefers-reduced-motion: reduce) {
+  .egg-wobble, .hatch.shake .egg-big, .hatch.burst .conf, .hatch.burst .rays { animation: none; }
+}
+
+/* よこ持ち（せの ひくい 画面）では、タマゴを 小さくして ボタンを 見えるようにする */
+@media (max-height: 640px) {
+  .egg-stage { gap: 2px; padding: 2px 0 4px; }
+  .egg-stage svg { width: min(170px, 32vh); }
+  .speech { padding: 7px 16px; }
+  .btn { min-height: 58px; margin-top: 9px; padding: 10px 18px; }
+  .btn small { font-size: 12px; }
+  header { padding: 6px 4px 2px; }
+  nav button { min-height: 54px; }
+}
