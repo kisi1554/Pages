@@ -269,16 +269,113 @@ function cardHTML(m) {
       '<ul class="words">' + words + '</ul>' +
       '<h3>◆ この かんじが つかわれている えき</h3>' +
       '<ul class="eki">' + eki + '</ul>' +
+      '<h3>◆ おはなし してみよう</h3>' +
+      '<div class="talk">' +
+        '<p class="talk-bubble" id="talkBubble">…</p>' +
+        '<div class="talk-chips">' +
+          '<button type="button" class="chip" data-topic="self">🙋 じこしょうかい</button>' +
+          '<button type="button" class="chip" data-topic="words">📖 ことば</button>' +
+          '<button type="button" class="chip" data-topic="eki">🚉 えき</button>' +
+          '<button type="button" class="chip" data-topic="again">🔁 もういっかい</button>' +
+        '</div>' +
+        (Speech.micSupported()
+          ? '<button type="button" class="mic-btn" id="talkMic">🎤 はなしかけてみる</button>' +
+            '<p class="talk-status" id="talkStatus"></p>'
+          : '<p class="talk-note">ボタンを おすと、お話が きけるよ</p>') +
+      '</div>' +
     '</div></div>';
+}
+
+/* ============================ おはなし（読みあげ・ききとり） ============================ */
+
+const TALK_FILLER = ['うんうん、そうだね！', 'おもしろいね！', 'ふふっ、たのしいね。', 'もっと おしえて？'];
+let fillerAt = 0;
+
+/* キャラごとに 少しちがう こえに する（名まえの ハッシュから きめる） */
+function voiceFor(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return { pitch: 0.9 + (h % 60) / 100, rate: 0.9 + ((h >> 4) % 18) / 100 };
+}
+
+function topicReply(m, topic) {
+  if (topic === 'words') {
+    const list = m.words.slice(0, 2).map((w) => w.w + '（' + w.y + '）って つかうよ。');
+    return list.length ? list.join(' ') : 'ことばは まだ おもいつかないや。';
+  }
+  if (topic === 'eki') {
+    const list = m.stations.slice(0, 2).map((s) =>
+      s[0] + '（' + s[1] + '）の駅にも、この字が つかわれているよ。路線は ' + s[2] + '。');
+    return list.length ? list.join(' ') : 'この字が つかわれている駅は、まだ 見つかって いないんだ。';
+  }
+  if (topic === 'filler') {
+    const t = TALK_FILLER[fillerAt % TALK_FILLER.length];
+    fillerAt++;
+    return t;
+  }
+  /* self（デフォルト） */
+  return 'やあ、' + m.name + ' だよ！ ' + m.about;
+}
+
+/* 話しかけた ことばから、話題を あてる（見つからなければ filler） */
+function matchTopic(text) {
+  if (/名前|だれ|きみ|あなた|じこ/.test(text)) return 'self';
+  if (/ことば|つかいかた|いみ|つかう/.test(text)) return 'words';
+  if (/えき|どこ|ばしょ|路線|でんしゃ|駅/.test(text)) return 'eki';
+  if (/もう(いち|1)?ど|もういっかい|もう一回/.test(text)) return 'again';
+  return 'filler';
+}
+
+function setupTalk(m) {
+  const bubble = byId('talkBubble');
+  const mic = byId('talkMic');
+  const status = byId('talkStatus');
+  const voice = voiceFor(m.id);
+  let lastTopic = 'self';
+
+  function say(topic) {
+    const useTopic = topic === 'again' ? lastTopic : topic;
+    const text = topicReply(m, useTopic);
+    bubble.textContent = text;
+    if (useTopic !== 'filler') lastTopic = useTopic;
+    if (state.sound) Speech.speak(text, voice);
+  }
+
+  byId('cardBox').querySelectorAll('.chip').forEach((b) => {
+    b.onclick = () => say(b.dataset.topic);
+  });
+
+  if (mic) {
+    mic.onclick = () => {
+      if (Speech.isListening()) { Speech.stopListen(); return; }
+      status.textContent = 'きいているよ…';
+      mic.classList.add('on');
+      Speech.startListen({
+        onResult: (text) => {
+          status.textContent = '「' + text + '」って きこえたよ';
+          say(matchTopic(text));
+        },
+        onEnd: () => { mic.classList.remove('on'); },
+        onError: () => { mic.classList.remove('on'); status.textContent = 'マイクが つかえないみたい'; },
+      });
+    };
+  }
+
+  say('self');
 }
 
 function showCard(m) {
   byId('cardBox').innerHTML = cardHTML(m);
   byId('cardView').classList.add('on');
   Sound.pop();
+  setupTalk(m);
 }
 
-byId('cardClose').onclick = () => byId('cardView').classList.remove('on');
+byId('cardClose').onclick = () => {
+  byId('cardView').classList.remove('on');
+  Speech.stopSpeak();
+  Speech.stopListen();
+};
 
 /* ============================ 画面 ============================ */
 
@@ -422,6 +519,7 @@ byId('btnSound').onclick = function () {
   state.sound = !state.sound;
   this.textContent = state.sound ? '🔊' : '🔇';
   this.setAttribute('aria-label', state.sound ? '音を けす' : '音を だす');
+  Speech.setVoiceEnabled(state.sound);
   save();
   if (state.sound) Sound.pop();
 };
@@ -429,6 +527,7 @@ byId('btnSound').onclick = function () {
 /* ============================ はじまり ============================ */
 
 load();
+Speech.setVoiceEnabled(state.sound);
 byId('btnSound').textContent = state.sound ? '🔊' : '🔇';
 renderHome();
 renderZukan();
