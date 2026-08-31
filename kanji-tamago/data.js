@@ -367,31 +367,35 @@ const ALL_MONSTERS = [
   },
   {
     id: 'onna', name: 'ジョリン', kanji: '女', grade: 1, kaku: 3, group: 'hito', rare: 1,
-    on: 'ジョ・ニョ', kun: 'おんな・め', color: '#ef6f96', tint: '#fde4ec', hand: false,
-    about: 'やさしく すわった かっこうの モンスター。おどりが とくい。',
+    on: 'ジョ・ニョ', kun: 'おんな・め', color: '#d94a76', tint: '#fbe2ec', hand: true,
+    about: 'ふわりと ひろがる きものの すそが じまん。おどりが とくいで、そでを ひらひら させる。',
     words: [{ w: '女', y: 'おんな' }, { w: '女の子', y: 'おんなのこ' }, { w: '女子', y: 'じょし' }],
-    stations: [['女川', 'おながわ', 'JR石巻線']]
+    stations: [['女川', 'おながわ', 'JR石巻線']],
+    quiz: []
   },
   {
     id: 'ko', name: 'コッコ', kanji: '子', grade: 1, kaku: 3, group: 'hito', rare: 1,
-    on: 'シ・ス', kun: 'こ', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'いちばん ちいさな なかま。だれかの うしろを ちょこちょこ ついてくる。',
+    on: 'シ・ス', kun: 'こ', color: '#c99510', tint: '#fdf1d0', hand: true,
+    about: 'うまれたての ひよこ。たまごの からを ぼうしみたいに かぶっている。',
     words: [{ w: '子', y: 'こ' }, { w: '子ども', y: 'こども' }, { w: '王子', y: 'おうじ' }],
-    stations: [['王子', 'おうじ', '京浜東北・根岸線'], ['新子安', 'しんこやす', '京浜東北・根岸線'], ['磯子', 'いそご', '京浜東北・根岸線'], ['新丸子', 'しんまるこ', '東横線'], ['二子玉川', 'ふたこたまがわ', '田園都市線'], ['二子新地', 'ふたこしんち', '田園都市線']]
+    stations: [['王子', 'おうじ', '京浜東北・根岸線'], ['新子安', 'しんこやす', '京浜東北・根岸線'], ['磯子', 'いそご', '京浜東北・根岸線'], ['新丸子', 'しんまるこ', '東横線'], ['二子玉川', 'ふたこたまがわ', '田園都市線'], ['二子新地', 'ふたこしんち', '田園都市線']],
+    quiz: []
   },
   {
     id: 'ou', name: 'オウチャン', kanji: '王', grade: 1, kaku: 4, group: 'hito', rare: 1,
-    on: 'オウ', kun: '―', color: '#c99310', tint: '#fdf1cf', hand: false,
-    about: 'かんむりを かぶった みんなの おうさま。えらそうに しないのが すてき。',
+    on: 'オウ', kun: '―', color: '#b8850a', tint: '#f8ecd0', hand: true,
+    about: 'マントを はおった みんなの おうさま。かんむりと しゃくじょうが じまん。えらそうに しないのが すてき。',
     words: [{ w: '王', y: 'おう' }, { w: '王さま', y: 'おうさま' }, { w: '王子', y: 'おうじ' }],
-    stations: [['王子', 'おうじ', '京浜東北・根岸線'], ['天王町', 'てんのうちょう', '相鉄本線'], ['溜池山王', 'ためいけさんのう', '銀座線'], ['王子神谷', 'おうじかみや', '南北線'], ['天王台', 'てんのうだい', '常磐線'], ['八王子みなみ野', 'はちおうじみなみの', '横浜線']]
+    stations: [['王子', 'おうじ', '京浜東北・根岸線'], ['天王町', 'てんのうちょう', '相鉄本線'], ['溜池山王', 'ためいけさんのう', '銀座線'], ['王子神谷', 'おうじかみや', '南北線'], ['天王台', 'てんのうだい', '常磐線'], ['八王子みなみ野', 'はちおうじみなみの', '横浜線']],
+    quiz: []
   },
   {
     id: 'na', name: 'ナマエル', kanji: '名', grade: 1, kaku: 6, group: 'hito', rare: 2,
-    on: 'メイ・ミョウ', kun: 'な', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'だれの 名前も おぼえている。よんで もらうと しっぽを ふる。',
+    on: 'メイ・ミョウ', kun: 'な', color: '#7c3fa8', tint: '#f0e4fa', hand: true,
+    about: 'なふだ そのものの すがた。だれの 名前も おぼえていて、よんで もらうと しっぽを ふる。',
     words: [{ w: '名前', y: 'なまえ' }, { w: '名人', y: 'めいじん' }, { w: '名字', y: 'みょうじ' }],
-    stations: [['菊名', 'きくな', '東横線'], ['海老名', 'えびな', '相鉄本線'], ['名古屋', 'なごや', '新幹線のぞみ'], ['安中榛名', 'あんなかはるな', '北陸新幹線']]
+    stations: [['菊名', 'きくな', '東横線'], ['海老名', 'えびな', '相鉄本線'], ['名古屋', 'なごや', '新幹線のぞみ'], ['安中榛名', 'あんなかはるな', '北陸新幹線']],
+    quiz: []
   },
   {
     id: 'machi', name: 'マチマル', kanji: '町', grade: 1, kaku: 7, group: 'machi', rare: 2,
@@ -510,10 +514,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'dai', name: 'オオマル', kanji: '大', grade: 1, kaku: 3, group: 'muki', rare: 1,
-    on: 'ダイ・タイ', kun: 'おお(きい)', color: '#d64b2c', tint: '#fde6e0', hand: false,
-    about: '手を いっぱいに ひろげた 大きな なかま。ハグが とくい。',
+    on: 'ダイ・タイ', kun: 'おお(きい)', color: '#ea5a3c', tint: '#fde3dc', hand: true,
+    about: 'からだが まるごと「大」の字。両手両足を いっぱいに ひろげた 大きな なかま。ハグが とくい。',
     words: [{ w: '大きい', y: 'おおきい' }, { w: '大人', y: 'おとな' }, { w: '大学', y: 'だいがく' }],
-    stations: [['大塚', 'おおつか', '山手線'], ['新大久保', 'しんおおくぼ', '山手線'], ['大崎', 'おおさき', '山手線'], ['大宮', 'おおみや', '京浜東北・根岸線'], ['大井町', 'おおいまち', '京浜東北・根岸線'], ['大森', 'おおもり', '京浜東北・根岸線']]
+    stations: [['大塚', 'おおつか', '山手線'], ['新大久保', 'しんおおくぼ', '山手線'], ['大崎', 'おおさき', '山手線'], ['大宮', 'おおみや', '京浜東北・根岸線'], ['大井町', 'おおいまち', '京浜東北・根岸線'], ['大森', 'おおもり', '京浜東北・根岸線']],
+    quiz: []
   },
   {
     id: 'shou', name: 'チビスケ', kanji: '小', grade: 1, kaku: 3, group: 'muki', rare: 1,
@@ -648,10 +653,6 @@ const ART = {
   'chikara': { b: 'blob', p: 'red', k: '力', f: ['armsShort', 'legsShort', 'speed'] },
   'hito': { b: 'tall', p: 'sand', k: '人', f: ['armsShort', 'legsShort'] },
   'otoko': { b: 'box', p: 'blue', k: '男', f: ['armsShort', 'legsShort', 'stripe'] },
-  'onna': { b: 'blob', p: 'pink', k: '女', f: ['ribbon', 'feetTwo'] },
-  'ko': { b: 'blob', p: 'yellow', k: '子', f: ['earsRound', 'feetTwo'] },
-  'ou': { b: 'blob', p: 'gold', k: '王', f: ['crown', 'armsShort', 'feetTwo'] },
-  'na': { b: 'blob', p: 'purple', k: '名', f: ['sparkTop', 'armsShort', 'tailWave'] },
   'machi': { b: 'box', p: 'sand', k: '町', f: ['window', 'legsShort'] },
   'mura': { b: 'mound', p: 'green', k: '村', f: ['window', 'grass'] },
   'kou': { b: 'box', p: 'navy', k: '校', f: ['window', 'legsShort'] },
@@ -665,7 +666,6 @@ const ART = {
   'hidari': { b: 'blob', p: 'teal', k: '左', f: ['arrowLeft', 'armsShort', 'feetTwo'] },
   'migi': { b: 'blob', p: 'orange', k: '右', f: ['arrowRight', 'armsShort', 'feetTwo'] },
   'naka': { b: 'disc', p: 'red', k: '中', f: ['coin', 'armsShort', 'feetTwo'] },
-  'dai': { b: 'blob', p: 'red', k: '大', f: ['handWave', 'legsShort'] },
   'shou': { b: 'blob', p: 'yellow', k: '小', f: ['armsShort', 'feetTwo'], fc: { r: 13, g: 18 } },
   'saki': { b: 'tall', p: 'purple', k: '先', f: ['antenna', 'armsShort', 'feetTwo'] },
   'tachi': { b: 'stalk', p: 'brown', k: '立', f: ['legsShort'] },
