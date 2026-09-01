@@ -59,17 +59,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'go', name: 'ゴマル', kanji: '五', grade: 1, kaku: 4, group: 'kazu', rare: 1,
-    on: 'ゴ', kun: 'いつ(つ)', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: '手の ゆびと おなじ かず。ハイタッチが 大すき。',
+    on: 'ゴ', kun: 'いつ(つ)', color: '#1e8f7c', tint: '#dcf5ee', hand: true,
+    about: 'からだが まるごと 5つの ほし。手の ゆびと おなじ かずで、ハイタッチが 大すき。',
     words: [{ w: '五つ', y: 'いつつ' }, { w: '五日', y: 'いつか' }, { w: '五月', y: 'ごがつ' }],
-    stations: [['五反田', 'ごたんだ', '山手線'], ['五月台', 'さつきだい', '多摩線']]
+    stations: [['五反田', 'ごたんだ', '山手線'], ['五月台', 'さつきだい', '多摩線']],
+    quiz: []
   },
   {
     id: 'roku', name: 'ロクロー', kanji: '六', grade: 1, kaku: 4, group: 'kazu', rare: 1,
-    on: 'ロク', kun: 'む(っつ)', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'つのが ある なかま。六まで かぞえると まんぞく する。',
+    on: 'ロク', kun: 'む(っつ)', color: '#7c3fb0', tint: '#f0e4ff', hand: true,
+    about: 'さいころの すがた。つのも ある なかまで、六まで かぞえると まんぞく する。',
     words: [{ w: '六つ', y: 'むっつ' }, { w: '六日', y: 'むいか' }, { w: '六月', y: 'ろくがつ' }],
-    stations: [['六会日大前', 'むつあいにちだいまえ', '江ノ島線'], ['六本木', 'ろっぽんぎ', '日比谷線'], ['六本木一丁目', 'ろっぽんぎいっちょうめ', '南北線'], ['六郷土手', 'ろくごうどて', '京急本線'], ['六町', 'ろくちょう', 'つくばエクスプレス']]
+    stations: [['六会日大前', 'むつあいにちだいまえ', '江ノ島線'], ['六本木', 'ろっぽんぎ', '日比谷線'], ['六本木一丁目', 'ろっぽんぎいっちょうめ', '南北線'], ['六郷土手', 'ろくごうどて', '京急本線'], ['六町', 'ろくちょう', 'つくばエクスプレス']],
+    quiz: []
   },
   {
     id: 'nana', name: 'ナナホシ', kanji: '七', grade: 1, kaku: 2, group: 'kazu', rare: 1,
@@ -87,17 +89,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'kyuu', name: 'キュウタ', kanji: '九', grade: 1, kaku: 2, group: 'kazu', rare: 1,
-    on: 'キュウ・ク', kun: 'ここの(つ)', color: '#3f649b', tint: '#e0e9f6', hand: false,
-    about: 'あと ひとつで 十に なるのが うれしくて、いつも そわそわ している。',
+    on: 'キュウ・ク', kun: 'ここの(つ)', color: '#3a86ad', tint: '#e2f4fb', hand: true,
+    about: 'くるんと まいた かたつむり。あと ひとつで 十に なるのが うれしくて、しょっかくが いつも そわそわ している。',
     words: [{ w: '九つ', y: 'ここのつ' }, { w: '九日', y: 'ここのか' }, { w: '九月', y: 'くがつ' }],
-    stations: [['九品仏', 'くほんぶつ', '大井町線'], ['九段下', 'くだんした', '東西線']]
+    stations: [['九品仏', 'くほんぶつ', '大井町線'], ['九段下', 'くだんした', '東西線']],
+    quiz: []
   },
   {
     id: 'juu', name: 'トオマル', kanji: '十', grade: 1, kaku: 2, group: 'kazu', rare: 1,
-    on: 'ジュウ', kun: 'とお', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: 'からだが きれいな 十じ。まん中で ぴったり つりあっている。',
+    on: 'ジュウ', kun: 'とお', color: '#2c7c2c', tint: '#e2f5de', hand: true,
+    about: 'からだが きれいな 十じ その もの。まん中で ぴったり つりあっている。',
     words: [{ w: '十', y: 'とお' }, { w: '十日', y: 'とおか' }, { w: '十円', y: 'じゅうえん' }],
-    stations: [['東十条', 'ひがしじゅうじょう', '京浜東北・根岸線'], ['麻布十番', 'あざぶじゅうばん', '南北線'], ['十日市場', 'とおかいちば', '横浜線'], ['七戸十和田', 'しちのへとわだ', '東北新幹線']]
+    stations: [['東十条', 'ひがしじゅうじょう', '京浜東北・根岸線'], ['麻布十番', 'あざぶじゅうばん', '南北線'], ['十日市場', 'とおかいちば', '横浜線'], ['七戸十和田', 'しちのへとわだ', '東北新幹線']],
+    quiz: []
   },
   {
     id: 'hyaku', name: 'ヒャッキー', kanji: '百', grade: 1, kaku: 6, group: 'kazu', rare: 2,
@@ -346,10 +350,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'chikara', name: 'チカラン', kanji: '力', grade: 1, kaku: 2, group: 'karada', rare: 1,
-    on: 'リョク・リキ', kun: 'ちから', color: '#d64b2c', tint: '#fde6e0', hand: false,
-    about: '小さいのに とっても 力もち。大きな 石も ひょいと もちあげる。',
+    on: 'リョク・リキ', kun: 'ちから', color: '#b02418', tint: '#fbe0da', hand: true,
+    about: '小さいのに とっても 力もち。おおきな 石も ひょいと もちあげる。',
     words: [{ w: '力', y: 'ちから' }, { w: '力もち', y: 'ちからもち' }, { w: '水力', y: 'すいりょく' }],
-    stations: [['等々力', 'とどろき', '大井町線']]
+    stations: [['等々力', 'とどろき', '大井町線']],
+    quiz: []
   },
   {
     id: 'hito', name: 'ヒトマル', kanji: '人', grade: 1, kaku: 2, group: 'hito', rare: 1,
@@ -493,17 +498,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'hidari', name: 'ヒダリン', kanji: '左', grade: 1, kaku: 5, group: 'muki', rare: 2,
-    on: 'サ', kun: 'ひだり', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: 'かならず 左を むいている。ミギマルとは いつも せなか あわせ。',
+    on: 'サ', kun: 'ひだり', color: '#1e8f7c', tint: '#dcf5ee', hand: true,
+    about: 'ひだりの くつの すがた。かならず 左を むいている。ミギマルとは いつも せなか あわせ。',
     words: [{ w: '左', y: 'ひだり' }, { w: '左手', y: 'ひだりて' }, { w: '左右', y: 'さゆう' }],
-    stations: [['左沢', 'あてらざわ', 'JR左沢線']]
+    stations: [['左沢', 'あてらざわ', 'JR左沢線']],
+    quiz: []
   },
   {
     id: 'migi', name: 'ミギマル', kanji: '右', grade: 1, kaku: 5, group: 'muki', rare: 2,
-    on: 'ウ・ユウ', kun: 'みぎ', color: '#e07316', tint: '#fdead6', hand: false,
-    about: 'かならず 右を むいている。ヒダリンと ならぶと ぴったり。',
+    on: 'ウ・ユウ', kun: 'みぎ', color: '#c9660c', tint: '#fbe8d2', hand: true,
+    about: 'みぎの くつの すがた。かならず 右を むいている。ヒダリンと ならぶと ぴったり。',
     words: [{ w: '右', y: 'みぎ' }, { w: '右手', y: 'みぎて' }, { w: '右がわ', y: 'みぎがわ' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'naka', name: 'ナカマル', kanji: '中', grade: 1, kaku: 4, group: 'muki', rare: 1,
@@ -599,24 +606,27 @@ const ALL_MONSTERS = [
   },
   {
     id: 'aka', name: 'アカリン', kanji: '赤', grade: 1, kaku: 7, group: 'iro', rare: 2,
-    on: 'セキ', kun: 'あか(い)', color: '#d64b2c', tint: '#fde6e0', hand: false,
-    about: 'まっ赤な からだ。うれしいと もっと 赤くなる。',
+    on: 'セキ', kun: 'あか(い)', color: '#c9241a', tint: '#fbe0dc', hand: true,
+    about: 'まっ赤な りんごの すがた。うれしいと もっと 赤くなる。',
     words: [{ w: '赤', y: 'あか' }, { w: '赤い', y: 'あかい' }, { w: '赤ちゃん', y: 'あかちゃん' }],
-    stations: [['赤羽', 'あかばね', '京浜東北・根岸線'], ['赤坂見附', 'あかさかみつけ', '銀座線'], ['赤坂', 'あかさか', '千代田線'], ['地下鉄赤塚', 'ちかてつあかつか', '有楽町線'], ['赤羽岩淵', 'あかばねいわぶち', '南北線']]
+    stations: [['赤羽', 'あかばね', '京浜東北・根岸線'], ['赤坂見附', 'あかさかみつけ', '銀座線'], ['赤坂', 'あかさか', '千代田線'], ['地下鉄赤塚', 'ちかてつあかつか', '有楽町線'], ['赤羽岩淵', 'あかばねいわぶち', '南北線']],
+    quiz: []
   },
   {
     id: 'ao', name: 'アオマル', kanji: '青', grade: 1, kaku: 8, group: 'iro', rare: 3,
-    on: 'セイ・ショウ', kun: 'あお(い)', color: '#31a3dd', tint: '#dcf1fb', hand: false,
-    about: 'すきとおった 青い からだ。そらと うみを 見るのが すき。',
+    on: 'セイ・ショウ', kun: 'あお(い)', color: '#1e6fc4', tint: '#dcecfc', hand: true,
+    about: 'すきとおった 青い さかな。そらと うみを 見るのが すき。',
     words: [{ w: '青', y: 'あお' }, { w: '青い', y: 'あおい' }, { w: '青空', y: 'あおぞら' }],
-    stations: [['青葉台', 'あおばだい', '田園都市線'], ['青山一丁目', 'あおやまいっちょうめ', '銀座線'], ['新青森', 'しんあおもり', '東北新幹線'], ['青物横丁', 'あおものよこちょう', '京急本線'], ['青井', 'あおい', 'つくばエクスプレス']]
+    stations: [['青葉台', 'あおばだい', '田園都市線'], ['青山一丁目', 'あおやまいっちょうめ', '銀座線'], ['新青森', 'しんあおもり', '東北新幹線'], ['青物横丁', 'あおものよこちょう', '京急本線'], ['青井', 'あおい', 'つくばエクスプレス']],
+    quiz: []
   },
   {
     id: 'shiro', name: 'シロマル', kanji: '白', grade: 1, kaku: 5, group: 'iro', rare: 2,
-    on: 'ハク・ビャク', kun: 'しろ(い)', color: '#8d99a6', tint: '#f4f7fa', hand: false,
-    about: 'ゆきのように まっ白。よごれると おおさわぎ する。',
+    on: 'ハク・ビャク', kun: 'しろ(い)', color: '#8a8272', tint: '#f6f2e6', hand: true,
+    about: 'ゆきのように まっ白で もこもこ。よごれると おおさわぎ する。',
     words: [{ w: '白', y: 'しろ' }, { w: '白い', y: 'しろい' }, { w: 'まっ白', y: 'まっしろ' }],
-    stations: [['目白', 'めじろ', '山手線'], ['白楽', 'はくらく', '東横線'], ['東白楽', 'ひがしはくらく', '東横線'], ['清澄白河', 'きよすみしらかわ', '半蔵門線'], ['白金台', 'しろかねだい', '南北線'], ['白金高輪', 'しろかねたかなわ', '南北線']]
+    stations: [['目白', 'めじろ', '山手線'], ['白楽', 'はくらく', '東横線'], ['東白楽', 'ひがしはくらく', '東横線'], ['清澄白河', 'きよすみしらかわ', '半蔵門線'], ['白金台', 'しろかねだい', '南北線'], ['白金高輪', 'しろかねたかなわ', '南北線']],
+    quiz: []
   }
 ];
 
@@ -625,12 +635,8 @@ const ART = {
   'ni': { b: 'bar', p: 'sky', k: '二', f: ['bar2', 'armsShort', 'feetTwo'] },
   'san': { b: 'bar', p: 'orange', k: '三', f: ['bar3', 'armsShort', 'feetTwo'] },
   'yon': { b: 'box', p: 'purple', k: '四', f: ['stripe', 'armsShort', 'legsShort'] },
-  'go': { b: 'blob', p: 'teal', k: '五', f: ['handWave', 'feetTwo'] },
-  'roku': { b: 'blob', p: 'purple', k: '六', f: ['hornTwo', 'feetTwo'] },
   'nana': { b: 'bug', p: 'red', k: '七', f: ['dots7', 'antenna', 'legsShort'] },
   'hachi': { b: 'bug', p: 'yellow', k: '八', f: ['wingsBee', 'antenna', 'stripe'] },
-  'kyuu': { b: 'blob', p: 'navy', k: '九', f: ['earsLong', 'feetTwo'] },
-  'juu': { b: 'blob', p: 'green', k: '十', f: ['cross', 'armsShort', 'feetTwo'] },
   'hyaku': { b: 'disc', p: 'gold', k: '百', f: ['coin', 'armsShort', 'feetTwo'] },
   'sen': { b: 'tall', p: 'sky', k: '千', f: ['bar3', 'armsShort', 'feetTwo'] },
   'ten': { b: 'cloud', p: 'sky', k: '天', f: ['sparkTop', 'armsShort'] },
@@ -650,7 +656,6 @@ const ART = {
   'sei': { b: 'stalk', p: 'yellow', k: '生', f: ['leaf1', 'sparkTop', 'feetTwo'] },
   'kuchi': { b: 'blob', p: 'red', k: '口', f: ['armsShort', 'feetTwo'], fc: { r: 13, g: 26 }, mo: 1.9 },
   'ashi': { b: 'blob', p: 'teal', k: '足', f: ['legsShort', 'speed'] },
-  'chikara': { b: 'blob', p: 'red', k: '力', f: ['armsShort', 'legsShort', 'speed'] },
   'hito': { b: 'tall', p: 'sand', k: '人', f: ['armsShort', 'legsShort'] },
   'otoko': { b: 'box', p: 'blue', k: '男', f: ['armsShort', 'legsShort', 'stripe'] },
   'machi': { b: 'box', p: 'sand', k: '町', f: ['window', 'legsShort'] },
@@ -663,8 +668,6 @@ const ART = {
   'ito': { b: 'tall', p: 'pink', k: '糸', f: ['thread', 'armsShort', 'feetTwo'] },
   'ue': { b: 'bar', p: 'sky', k: '上', f: ['arrowUp', 'feetTwo'] },
   'shita': { b: 'bar', p: 'navy', k: '下', f: ['arrowDown', 'feetTwo'] },
-  'hidari': { b: 'blob', p: 'teal', k: '左', f: ['arrowLeft', 'armsShort', 'feetTwo'] },
-  'migi': { b: 'blob', p: 'orange', k: '右', f: ['arrowRight', 'armsShort', 'feetTwo'] },
   'naka': { b: 'disc', p: 'red', k: '中', f: ['coin', 'armsShort', 'feetTwo'] },
   'shou': { b: 'blob', p: 'yellow', k: '小', f: ['armsShort', 'feetTwo'], fc: { r: 13, g: 18 } },
   'saki': { b: 'tall', p: 'purple', k: '先', f: ['antenna', 'armsShort', 'feetTwo'] },
@@ -676,10 +679,7 @@ const ART = {
   'haya': { b: 'disc', p: 'yellow', k: '早', f: ['speed', 'armsShort', 'feetTwo'] },
   'tadashi': { b: 'box', p: 'teal', k: '正', f: ['cross', 'armsShort', 'feetTwo'] },
   'oto': { b: 'blob', p: 'purple', k: '音', f: ['note', 'antenna', 'feetTwo'] },
-  'en': { b: 'disc', p: 'yellow', k: '円', f: ['coin', 'armsShort', 'feetTwo'] },
-  'aka': { b: 'blob', p: 'red', k: '赤', f: ['ribbon', 'armsShort', 'feetTwo'] },
-  'ao': { b: 'blob', p: 'blue', k: '青', f: ['armsShort', 'feetTwo'] },
-  'shiro': { b: 'blob', p: 'snow', k: '白', f: ['sparkTop', 'armsShort', 'feetTwo'] }
+  'en': { b: 'disc', p: 'yellow', k: '円', f: ['coin', 'armsShort', 'feetTwo'] }
 };
 
 const KANJI_PATH = {

@@ -1381,6 +1381,306 @@ const MONSTER_ART = {
       '<ellipse cx="100" cy="132" rx="20" ry="12" fill="#fff0e8" opacity=".9"/>' +
       kprint('大', 100, 132, 19, '#8a2010', 0, .95);
   },
+
+  /* ゴマル（五）── 五つの ゆびと おなじ、5つの ほしの かたち。ハイタッチが すき */
+  go: function () {
+    const ink = '#0d5c52';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="go-b" cx="36%" cy="30%" r="86%">' +
+      '<stop offset="0" stop-color="#a4efd9"/><stop offset=".55" stop-color="#33b39a"/>' +
+      '<stop offset="1" stop-color="#146b5c"/></radialGradient>' +
+      '</defs>' +
+      /* ハイタッチの モーションせん */
+      '<g fill="none" stroke="' + ink + '" stroke-opacity=".4" stroke-width="3" stroke-linecap="round">' +
+      '<path d="M180 68 L 192 60"/><path d="M182 80 L 196 78"/></g>' +
+      /* あし */
+      '<g fill="url(#go-b)" stroke="' + ink + '" stroke-width="4" stroke-linejoin="round">' +
+      '<ellipse cx="86" cy="182" rx="12" ry="8"/><ellipse cx="114" cy="182" rx="12" ry="8"/></g>' +
+      /* からだ（ほし） */
+      '<path d="M100 32 L118.8 82.1 L172.3 84.5 L130.4 117.9 L144.7 169.5' +
+      ' L100 148 L55.3 169.5 L69.6 117.9 L27.7 84.5 L81.2 82.1 Z"' +
+      ' fill="url(#go-b)" stroke="' + ink + '" stroke-width="5.5" stroke-linejoin="round"/>' +
+      eye(84, 106, 15, 1) + eye(116, 106, 15, -1) +
+      cheek(66, 122, 9, '#1e8f7c') + cheek(134, 122, 9, '#1e8f7c') +
+      smile(100, 124, 12, 9, ink) +
+      '<ellipse cx="100" cy="148" rx="19" ry="10" fill="#e6fff8" opacity=".9"/>' +
+      kprint('五', 100, 148, 18, '#0d5c52', 0, .95);
+  },
+
+  /* ロクロー（六）── さいころの すがた。六まで かぞえると まんぞく */
+  roku: function () {
+    const ink = '#3f1f6b';
+    return '' +
+      '<defs>' +
+      '<linearGradient id="roku-b" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#e8d4ff"/><stop offset=".5" stop-color="#b673e0"/>' +
+      '<stop offset="1" stop-color="#7c3fb0"/></linearGradient>' +
+      '</defs>' +
+      /* つの */
+      '<g fill="#fff6e0" stroke="' + ink + '" stroke-width="3.6" stroke-linejoin="round">' +
+      '<path d="M66 46 C 60 30 64 18 74 18 C 82 18 84 32 80 48 Z"/>' +
+      '<path d="M134 46 C 140 30 136 18 126 18 C 118 18 116 32 120 48 Z"/></g>' +
+      /* あし */
+      '<g fill="url(#roku-b)" stroke="' + ink + '" stroke-width="4" stroke-linejoin="round">' +
+      '<ellipse cx="80" cy="184" rx="13" ry="8"/><ellipse cx="120" cy="184" rx="13" ry="8"/></g>' +
+      /* からだ（さいころ） */
+      '<rect x="38" y="44" width="124" height="124" rx="28" fill="url(#roku-b)"' +
+      ' stroke="' + ink + '" stroke-width="5.5"/>' +
+      /* め（6の めめ） */
+      '<g fill="#fff"><circle cx="62" cy="68" r="8"/><circle cx="62" cy="106" r="8"/>' +
+      '<circle cx="138" cy="68" r="8"/><circle cx="138" cy="106" r="8"/></g>' +
+      eye(84, 100, 13, 1) + eye(116, 100, 13, -1) +
+      cheek(70, 118, 9, '#a860d0') + cheek(130, 118, 9, '#a860d0') +
+      smile(100, 120, 11, 8, ink) +
+      '<ellipse cx="100" cy="146" rx="19" ry="11" fill="#f6ecff" opacity=".9"/>' +
+      kprint('六', 100, 146, 18, '#5c3096', 0, .95);
+  },
+
+  /* キュウタ（九）── くるんと まいた かたつむり。もうすぐ 十に なるから そわそわ */
+  kyuu: function () {
+    const ink = '#1f4f6b';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="kyu-b" cx="34%" cy="26%" r="86%">' +
+      '<stop offset="0" stop-color="#d8f0ff"/><stop offset=".55" stop-color="#7ec6e8"/>' +
+      '<stop offset="1" stop-color="#3a86ad"/></radialGradient>' +
+      '</defs>' +
+      /* しょっかく（めだま つき） */
+      '<g fill="none" stroke="' + ink + '" stroke-width="5" stroke-linecap="round">' +
+      '<path d="M70 96 C 62 78 60 62 66 50"/><path d="M92 90 C 90 70 92 54 100 44"/></g>' +
+      eye(66, 46, 12, 1) + eye(100, 40, 12, -1) +
+      /* からだ（かたつむりの あし） */
+      '<path d="M40 168 C 34 148 44 128 66 122 C 60 138 60 154 68 168 Z" fill="url(#kyu-b)"' +
+      ' stroke="' + ink + '" stroke-width="4.6" stroke-linejoin="round"/>' +
+      '<path d="M40 168 C 20 168 8 178 10 188 L 130 188 C 132 178 120 168 100 168 Z" fill="url(#kyu-b)"' +
+      ' stroke="' + ink + '" stroke-width="4.6" stroke-linejoin="round"/>' +
+      /* から（うずまき） */
+      '<circle cx="118" cy="118" r="58" fill="url(#kyu-b)" stroke="' + ink + '" stroke-width="5.5"/>' +
+      '<path d="M118 118 m0,-40 a40,40 0 1,1 -28,68 a26,26 0 1,1 20,-44 a13,13 0 1,1 -10,20"' +
+      ' fill="none" stroke="' + ink + '" stroke-width="3.6" stroke-linecap="round" opacity=".75"/>' +
+      eye(102, 132, 15, 1) + eye(132, 128, 15, -1) +
+      cheek(90, 150, 9, '#4a9ec4') + cheek(146, 146, 9, '#4a9ec4') +
+      smile(114, 154, 11, 8, ink) +
+      '<ellipse cx="118" cy="172" rx="18" ry="10" fill="#eafaff" opacity=".9"/>' +
+      kprint('九', 118, 172, 17, '#1f5c7c', 0, .95);
+  },
+
+  /* トオマル（十）── からだが きれいな 十じ。まん中で ぴったり つりあう */
+  juu: function () {
+    const ink = '#1d5c2e';
+    return '' +
+      '<defs>' +
+      '<linearGradient id="juu-b" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#b8ecb0"/><stop offset=".5" stop-color="#5cb555"/>' +
+      '<stop offset="1" stop-color="#2c7c2c"/></linearGradient>' +
+      '</defs>' +
+      /* 4本の うで・あし（十字） */
+      '<g fill="url(#juu-b)" stroke="' + ink + '" stroke-width="5" stroke-linejoin="round">' +
+      '<rect x="76" y="10" width="48" height="72" rx="22"/>' +
+      '<rect x="76" y="118" width="48" height="72" rx="22"/>' +
+      '<rect x="10" y="76" width="72" height="48" rx="22"/>' +
+      '<rect x="118" y="76" width="72" height="48" rx="22"/></g>' +
+      /* まんなかの まる */
+      '<circle cx="100" cy="100" r="52" fill="url(#juu-b)" stroke="' + ink + '" stroke-width="5.5"/>' +
+      /* てさき・あしさき */
+      '<g fill="#eafbe4" stroke="' + ink + '" stroke-width="3"><circle cx="100" cy="26" r="9"/>' +
+      '<circle cx="100" cy="174" r="9"/><circle cx="26" cy="100" r="9"/><circle cx="174" cy="100" r="9"/></g>' +
+      eye(84, 94, 15, 1) + eye(116, 94, 15, -1) +
+      cheek(70, 112, 10, '#4a9c44') + cheek(130, 112, 10, '#4a9c44') +
+      smile(100, 114, 13, 10, ink) +
+      '<ellipse cx="100" cy="138" rx="19" ry="10" fill="#eafbe4" opacity=".9"/>' +
+      kprint('十', 100, 138, 18, '#1d5c2e', 0, .95);
+  },
+
+  /* チカラン（力）── 小さいのに 力もち。おおきな 石も ひょいと もちあげる */
+  chikara: function () {
+    const ink = '#8a1810';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="chi-b" cx="36%" cy="28%" r="86%">' +
+      '<stop offset="0" stop-color="#ffb0a0"/><stop offset=".55" stop-color="#ea5a3c"/>' +
+      '<stop offset="1" stop-color="#b02418"/></radialGradient>' +
+      '<radialGradient id="chi-r" cx="34%" cy="26%" r="82%">' +
+      '<stop offset="0" stop-color="#c9c2b4"/><stop offset=".6" stop-color="#8f8676"/>' +
+      '<stop offset="1" stop-color="#5c5548"/></radialGradient>' +
+      '</defs>' +
+      /* もちあげている 石 */
+      '<path d="M74 24 C 60 18 44 24 40 40 C 36 56 46 68 64 68 C 84 70 104 66 108 50' +
+      ' C 112 34 96 22 74 24 Z" fill="url(#chi-r)" stroke="' + ink + '" stroke-width="4.4"' +
+      ' stroke-linejoin="round"/>' +
+      '<g fill="none" stroke="#5c5548" stroke-opacity=".5" stroke-width="2.4">' +
+      '<path d="M58 38 L 70 44"/><path d="M84 34 L 92 44"/></g>' +
+      /* ちからせん */
+      '<g fill="none" stroke="' + ink + '" stroke-opacity=".4" stroke-width="3" stroke-linecap="round">' +
+      '<path d="M18 60 L 8 52"/><path d="M14 74 L 2 74"/><path d="M182 60 L 192 52"/><path d="M186 74 L 198 74"/></g>' +
+      /* フレックスした うで */
+      '<path d="M62 96 C 40 92 24 76 26 56 C 40 62 50 76 62 92 Z" fill="url(#chi-b)"' +
+      ' stroke="' + ink + '" stroke-width="4.6" stroke-linejoin="round"/>' +
+      '<path d="M138 96 C 160 92 176 76 174 56 C 160 62 150 76 138 92 Z" fill="url(#chi-b)"' +
+      ' stroke="' + ink + '" stroke-width="4.6" stroke-linejoin="round"/>' +
+      /* あし */
+      '<g fill="url(#chi-b)" stroke="' + ink + '" stroke-width="4.4" stroke-linejoin="round">' +
+      '<ellipse cx="78" cy="182" rx="15" ry="9"/><ellipse cx="122" cy="182" rx="15" ry="9"/></g>' +
+      /* からだ */
+      '<circle cx="100" cy="132" r="54" fill="url(#chi-b)" stroke="' + ink + '" stroke-width="5.5"/>' +
+      eye(84, 124, 15, 1) + eye(116, 124, 15, -1) +
+      cheek(70, 142, 10, '#e8552a') + cheek(130, 142, 10, '#e8552a') +
+      smile(100, 144, 13, 10, ink) +
+      '<ellipse cx="100" cy="168" rx="19" ry="10" fill="#fff0e8" opacity=".9"/>' +
+      kprint('力', 100, 168, 18, '#8a1810', 0, .95);
+  },
+
+  /* アカリン（赤）── まっかな りんご。うれしいと もっと 赤くなる */
+  aka: function () {
+    const ink = '#7a1810';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="aka-b" cx="34%" cy="30%" r="82%">' +
+      '<stop offset="0" stop-color="#ffa090"/><stop offset=".55" stop-color="#ea3a28"/>' +
+      '<stop offset="1" stop-color="#a81a10"/></radialGradient>' +
+      '</defs>' +
+      /* は */
+      '<path d="M104 46 C 118 34 136 34 142 46 C 130 48 118 52 106 60 Z" fill="#4a9c44"' +
+      ' stroke="#1d5c2e" stroke-width="3" stroke-linejoin="round"/>' +
+      /* くき */
+      '<path d="M100 50 C 98 40 100 30 106 22" fill="none" stroke="#6b4a24" stroke-width="6"' +
+      ' stroke-linecap="round"/>' +
+      /* からだ（りんご） */
+      '<path d="M100 56 C 76 40 46 52 36 84 C 24 122 44 168 100 182 C 156 168 176 122 164 84' +
+      ' C 154 52 124 40 100 56 Z" fill="url(#aka-b)" stroke="' + ink + '" stroke-width="5.5"' +
+      ' stroke-linejoin="round"/>' +
+      /* へこみ */
+      '<path d="M84 58 C 92 52 108 52 116 58" fill="none" stroke="' + ink + '" stroke-opacity=".4"' +
+      ' stroke-width="3" stroke-linecap="round"/>' +
+      /* つや */
+      '<path d="M58 84 C 50 100 48 118 54 134" fill="none" stroke="#fff" stroke-width="7"' +
+      ' stroke-linecap="round" opacity=".5"/>' +
+      eye(82, 108, 16, 1) + eye(118, 108, 16, -1) +
+      cheek(62, 128, 10, '#c9241a') + cheek(138, 128, 10, '#c9241a') +
+      smile(100, 130, 13, 10, ink) +
+      '<ellipse cx="100" cy="158" rx="19" ry="11" fill="#ffe6e0" opacity=".9"/>' +
+      kprint('赤', 100, 158, 18, '#8a1810', 0, .95);
+  },
+
+  /* アオマル（青）── そらと うみが すきな、あおい さかな */
+  ao: function () {
+    const ink = '#0d3f66';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="ao-b" cx="32%" cy="28%" r="86%">' +
+      '<stop offset="0" stop-color="#a8d8ff"/><stop offset=".55" stop-color="#3a86d8"/>' +
+      '<stop offset="1" stop-color="#154f96"/></radialGradient>' +
+      '</defs>' +
+      /* あわ */
+      '<g fill="#cdeeff" opacity=".8"><circle cx="176" cy="56" r="6"/><circle cx="190" cy="72" r="4"/></g>' +
+      /* おびれ */
+      '<path d="M158 100 C 182 78 196 78 194 100 C 196 122 182 122 158 100 Z" fill="url(#ao-b)"' +
+      ' stroke="' + ink + '" stroke-width="4.4" stroke-linejoin="round"/>' +
+      /* せびれ */
+      '<path d="M96 46 C 88 30 92 18 104 14 C 110 26 108 38 100 50 Z" fill="url(#ao-b)"' +
+      ' stroke="' + ink + '" stroke-width="4" stroke-linejoin="round"/>' +
+      /* からだ */
+      '<path d="M104 54 C 140 54 164 76 164 106 C 164 138 138 158 100 158 C 58 158 26 138 24 106' +
+      ' C 22 76 60 54 104 54 Z" fill="url(#ao-b)" stroke="' + ink + '" stroke-width="5.5"' +
+      ' stroke-linejoin="round"/>' +
+      /* むなびれ */
+      '<path d="M70 118 C 54 128 44 142 44 156 C 60 152 74 140 80 124 Z" fill="url(#ao-b)"' +
+      ' stroke="' + ink + '" stroke-width="3.6" stroke-linejoin="round"/>' +
+      /* えら */
+      '<path d="M58 92 C 54 102 54 114 58 124" fill="none" stroke="' + ink + '" stroke-opacity=".45"' +
+      ' stroke-width="3" stroke-linecap="round"/>' +
+      /* うろこ もよう */
+      '<g fill="none" stroke="' + ink + '" stroke-opacity=".2" stroke-width="2">' +
+      '<path d="M96 100 a10 10 0 0 1 20 0"/><path d="M120 104 a10 10 0 0 1 20 0"/>' +
+      '<path d="M108 122 a10 10 0 0 1 20 0"/></g>' +
+      eye(82, 96, 17, 1) + eye(118, 96, 17, -1) +
+      cheek(64, 116, 10, '#1e6fc4') + cheek(136, 116, 10, '#1e6fc4') +
+      smile(100, 118, 13, 10, ink) +
+      '<ellipse cx="100" cy="140" rx="20" ry="11" fill="#e6f6ff" opacity=".9"/>' +
+      kprint('青', 100, 140, 19, '#0d3f66', 0, .95);
+  },
+
+  /* シロマル（白）── ゆきのように まっしろ。よごれると おおさわぎ */
+  shiro: function () {
+    const ink = '#8a8272';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="shiro-b" cx="34%" cy="28%" r="86%">' +
+      '<stop offset="0" stop-color="#ffffff"/><stop offset=".6" stop-color="#f2ede0"/>' +
+      '<stop offset="1" stop-color="#d8d0bc"/></radialGradient>' +
+      '</defs>' +
+      /* あし（ほそい） */
+      '<g fill="none" stroke="#3a352a" stroke-width="4.4" stroke-linecap="round">' +
+      '<path d="M80 178 L 78 194"/><path d="M120 178 L 122 194"/></g>' +
+      /* もこもこの ふち */
+      '<g fill="url(#shiro-b)" stroke="' + ink + '" stroke-width="4" stroke-linejoin="round">' +
+      '<circle cx="46" cy="96" r="26"/><circle cx="40" cy="130" r="24"/><circle cx="58" cy="158" r="24"/>' +
+      '<circle cx="154" cy="96" r="26"/><circle cx="160" cy="130" r="24"/><circle cx="142" cy="158" r="24"/>' +
+      '<circle cx="70" cy="58" r="26"/><circle cx="100" cy="46" r="28"/><circle cx="130" cy="58" r="26"/>' +
+      '<circle cx="100" cy="166" r="26"/></g>' +
+      /* からだ（まんなか） */
+      '<circle cx="100" cy="112" r="58" fill="url(#shiro-b)" stroke="' + ink + '" stroke-width="5"/>' +
+      eye(82, 108, 15, 1) + eye(118, 108, 15, -1) +
+      cheek(64, 126, 10, '#e8dcc0') + cheek(136, 126, 10, '#e8dcc0') +
+      smile(100, 128, 12, 9, ink) +
+      '<ellipse cx="100" cy="152" rx="19" ry="10" fill="#faf6ea" opacity=".9"/>' +
+      kprint('白', 100, 152, 18, '#8a8272', 0, .95);
+  },
+
+  /* ヒダリン（左）── ひだりの てぶくろ。おやゆびが 左に とび出ている */
+  hidari: function () {
+    const ink = '#0d5c52';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="hid-b" cx="36%" cy="28%" r="86%">' +
+      '<stop offset="0" stop-color="#a4efd9"/><stop offset=".55" stop-color="#33b39a"/>' +
+      '<stop offset="1" stop-color="#146b5c"/></radialGradient>' +
+      '</defs>' +
+      /* おやゆび（ひだりに とび出る） */
+      '<ellipse cx="34" cy="118" rx="24" ry="30" fill="url(#hid-b)" stroke="' + ink + '"' +
+      ' stroke-width="5" transform="rotate(-18 34 118)"/>' +
+      /* て（からだ） */
+      '<ellipse cx="108" cy="100" rx="60" ry="56" fill="url(#hid-b)" stroke="' + ink + '"' +
+      ' stroke-width="5.5"/>' +
+      /* リストバンド */
+      '<rect x="72" y="148" width="72" height="38" rx="16" fill="url(#hid-b)" stroke="' + ink + '"' +
+      ' stroke-width="5" stroke-linejoin="round"/>' +
+      '<g fill="none" stroke="#0a4238" stroke-opacity=".5" stroke-width="2.6">' +
+      '<path d="M80 162 L 136 162"/><path d="M80 172 L 136 172"/></g>' +
+      eye(92, 92, 16, 1) + eye(126, 96, 16, -1) +
+      cheek(78, 112, 10, '#1e8f7c') + cheek(140, 116, 10, '#1e8f7c') +
+      smile(110, 118, 13, 10, ink) +
+      '<ellipse cx="108" cy="166" rx="19" ry="10" fill="#eafff8" opacity=".9"/>' +
+      kprint('左', 108, 166, 18, '#0d5c52', 0, .95);
+  },
+
+  /* ミギマル（右）── みぎの てぶくろ。おやゆびが 右に とび出ている */
+  migi: function () {
+    const ink = '#8a5204';
+    return '' +
+      '<defs>' +
+      '<radialGradient id="mig-b" cx="36%" cy="28%" r="86%">' +
+      '<stop offset="0" stop-color="#ffd9a0"/><stop offset=".55" stop-color="#f4922a"/>' +
+      '<stop offset="1" stop-color="#c9660c"/></radialGradient>' +
+      '</defs>' +
+      /* おやゆび（みぎに とび出る） */
+      '<ellipse cx="166" cy="118" rx="24" ry="30" fill="url(#mig-b)" stroke="' + ink + '"' +
+      ' stroke-width="5" transform="rotate(18 166 118)"/>' +
+      /* て（からだ） */
+      '<ellipse cx="92" cy="100" rx="60" ry="56" fill="url(#mig-b)" stroke="' + ink + '"' +
+      ' stroke-width="5.5"/>' +
+      /* リストバンド */
+      '<rect x="56" y="148" width="72" height="38" rx="16" fill="url(#mig-b)" stroke="' + ink + '"' +
+      ' stroke-width="5" stroke-linejoin="round"/>' +
+      '<g fill="none" stroke="#7a4602" stroke-opacity=".5" stroke-width="2.6">' +
+      '<path d="M64 162 L 120 162"/><path d="M64 172 L 120 172"/></g>' +
+      eye(74, 96, 16, 1) + eye(108, 92, 16, -1) +
+      cheek(60, 116, 10, '#e8862a') + cheek(122, 112, 10, '#e8862a') +
+      smile(90, 118, 13, 10, ink) +
+      '<ellipse cx="92" cy="166" rx="19" ry="10" fill="#fff4e6" opacity=".9"/>' +
+      kprint('右', 92, 166, 18, '#8a5204', 0, .95);
+  },
 };
 
 /* id から SVG 文字列を作る。size を付けると width/height も入る。
