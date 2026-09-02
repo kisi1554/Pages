@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第2回 速さ — 比とダイヤグラムで倒す</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --fg:#1d1c1a; --muted:#6b6862; --line:#e2ded4;
+    --card:#ffffff; --accent:#9a4a2e; --accent-soft:#f6ece6;
+    --math:#2c5f7c; --math-soft:#e4eef5;
+    --kid:#40702f; --kid-soft:#eaf3e6;
+    --warn:#8a6a12; --warn-soft:#f8f1de;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171614; --fg:#eae7e0; --muted:#a09b91; --line:#33302b;
+      --card:#201e1b; --accent:#e0916f; --accent-soft:#33241c;
+      --math:#7fb4d4; --math-soft:#1b2833;
+      --kid:#9ccb8c; --kid-soft:#1e2a1a;
+      --warn:#dcb959; --warn-soft:#2b2413;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Noto Sans JP",system-ui,sans-serif;
+    font-size:16px; line-height:1.9; letter-spacing:.01em;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:32px 20px 96px}
+  header.top{border-bottom:2px solid var(--accent); padding-bottom:20px; margin-bottom:36px}
+  .kicker{font-size:13px; color:var(--accent); font-weight:700; letter-spacing:.14em; margin:0 0 6px}
+  h1{font-size:28px; line-height:1.4; margin:0 0 10px; letter-spacing:.01em}
+  .lead{color:var(--muted); font-size:14px; margin:0}
+  h2{font-size:20px; margin:52px 0 14px; padding-left:12px; border-left:5px solid var(--accent); line-height:1.5}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 14px; padding-left:1.5em}
+  li{margin-bottom:6px}
+
+  .box{border-radius:10px; padding:16px 18px; margin:20px 0; font-size:15px; line-height:1.85}
+  .box p:last-child,.box ul:last-child,.box ol:last-child,.box figure:last-child{margin-bottom:0}
+  .box .label{display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em; padding:2px 9px; border-radius:99px; margin-bottom:10px}
+  .math{background:var(--math-soft); border:1px solid color-mix(in srgb,var(--math) 32%, transparent)}
+  .math .label{background:var(--math); color:var(--bg)}
+  .kid{background:var(--kid-soft); border:1px solid color-mix(in srgb,var(--kid) 32%, transparent)}
+  .kid .label{background:var(--kid); color:var(--bg)}
+  .warn{background:var(--warn-soft); border:1px solid color-mix(in srgb,var(--warn) 35%, transparent)}
+  .warn .label{background:var(--warn); color:var(--bg)}
+  .tool{background:var(--card); border:1px solid var(--line)}
+
+  .q{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:26px 0}
+  .q .head{display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap}
+  .q .no{font-weight:700; font-size:15px}
+  .q .lv{font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; background:var(--accent-soft); color:var(--accent); letter-spacing:.06em}
+  .q .body{font-size:15px; margin:0}
+  details{margin-top:14px; border-top:1px dashed var(--line); padding-top:12px}
+  summary{cursor:pointer; font-size:14px; font-weight:700; color:var(--accent); list-style:none; user-select:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▶ "; font-size:11px}
+  details[open] summary::before{content:"▼ "}
+  details .ans{margin-top:12px; font-size:15px}
+
+  .frac{white-space:nowrap}
+  .maru{display:inline-block; min-width:1.4em; text-align:center; font-weight:700; color:var(--accent)}
+  code{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:.92em;
+       background:var(--accent-soft); color:var(--accent); padding:1px 5px; border-radius:4px}
+  .tblwrap{overflow-x:auto; margin:16px 0}
+  table{border-collapse:collapse; width:100%; font-size:14px; min-width:440px}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left}
+  th{background:var(--accent-soft); color:var(--accent); font-weight:700; white-space:nowrap}
+  footer.end{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--muted)}
+
+  /* ---- 図 ---- */
+  figure.dg{margin:24px 0; background:var(--card); border:1px solid var(--line);
+            border-radius:10px; padding:18px 18px 14px}
+  figure.dg svg{display:block; width:100%; height:auto; color:var(--fg)}
+  figure.dg figcaption{font-size:13px; color:var(--muted); line-height:1.7;
+                       margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .box figure.dg{background:var(--bg)}
+  svg text{fill:currentColor; font-family:inherit; font-size:13px}
+  svg .s{stroke:currentColor; fill:none; stroke-width:1.5}
+  svg .la{stroke:var(--accent); fill:none; stroke-width:2.6}
+  svg .lm{stroke:var(--math); fill:none; stroke-width:2.6}
+  svg .s2{stroke:currentColor; fill:none; stroke-width:2.6}
+  svg .sd{stroke:currentColor; fill:none; stroke-width:1.2; stroke-dasharray:4 4; opacity:.5}
+  svg .bxa{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.4}
+  svg .bxm{fill:var(--math-soft); stroke:var(--math); stroke-width:1.4}
+  svg .bxk{fill:var(--kid-soft); stroke:var(--kid); stroke-width:1.4}
+  svg .fila{fill:var(--accent)}
+  svg .film{fill:var(--math)}
+  svg .ta{fill:var(--accent)}
+  svg .tm{fill:var(--math)}
+  svg .tb{fill:var(--bg)}
+  svg .mu{fill:var(--muted); font-size:12px}
+  svg .bd{font-weight:700}
+  svg .sm{font-size:11px}
+</style></head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">SAPIX 難関校クラス／保護者のための算数</p>
+  <h1>第2回　速さ<br>— 旅人算・通過算・流水算を比で倒す</h1>
+  <p class="lead">対象：保護者／所要 50分＋演習　｜　前提：<a href="lesson-01-hi.html" style="color:var(--accent)">第1回「比」</a>の逆比とてんびん法</p>
+</header>
+
+<h2>0. 今回の位置づけ</h2>
+<p>速さは、中学受験算数で<strong>いちばん出題数が多い分野</strong>です。そして、その中身はほぼ全部が前回の比です。今回やることを先に言ってしまうと、こうなります。</p>
+<div class="box tool">
+  <ul>
+    <li><strong>旅人算</strong>　→　2人の速さを足すか引くか（相対速度）</li>
+    <li><strong>通過算</strong>　→　旅人算に「物体の長さ」を足しただけ</li>
+    <li><strong>流水算</strong>　→　旅人算に「川の流れ」を足しただけ、＋前回のてんびん法</li>
+    <li><strong>難関校の速さ</strong>　→　上のどれかに、<strong>逆比</strong>か<strong>ダイヤグラムの相似</strong>が乗る</li>
+  </ul>
+</div>
+<p>つまり新しい道具は「相対速度」と「ダイヤグラム」の2つだけ。あとは前回の使い回しです。</p>
+
+<h2>1. 速さは「1あたり量」——「みはじ」を使わせない</h2>
+<p>まず、お子さんが塾や学校で覚えてくる<strong>「みはじ」（速さ・時間・道のりの丸い図）</strong>について、親としての立場を決めておいてください。私の推奨は<strong>「使わせない。少なくとも最初は」</strong>です。</p>
+<p>理由は単純で、みはじは<strong>覚え方であって理解ではない</strong>から。そして難関校の問題は、みはじに当てはめれば解ける形では出ません。出るのは「比を作れるか」「図が描けるか」です。みはじで押し切る癖がつくと、比に乗り換えるときに一度崩れます。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>代わりに徹底させる一行：</strong>「速さとは、<strong>1分（1秒・1時間）で進む道のり</strong>のこと」。<br>
+  分速70mとは「1分で70m進む」。それだけです。この言い方さえ残っていれば、公式を忘れても全部その場で作れます。</p>
+</div>
+<p>お子さんがみはじを使い始めたら、一度だけ「その式、なんでそうなるの？」と聞いてください。「1分で70mだから、10分なら70が10個分」と答えられれば、道具として使わせて構いません。答えられなければ、上の一行に戻します。</p>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>速さは <code>dx/dt</code>。ただし中学受験に出てくる速さは<strong>すべて区間平均</strong>で、瞬間速度は登場しません。だから実質は「位置の変化 ÷ 時間の変化」＝<strong>グラフの傾き</strong>だけを扱っていることになります。</p>
+  <p>この見方に立つと、次節のダイヤグラムが「新しい道具」ではなく「速さの定義そのものを絵にしただけ」だとわかります。</p>
+</div>
+
+<h2>2. 道具① — ダイヤグラム（時間 - 位置グラフ）</h2>
+<p>横軸に時間、縦軸に位置（A町からの道のり）をとったグラフを、中学受験では<strong>ダイヤグラム</strong>と呼びます。物理の <code>x-t</code> グラフそのものです。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 310" role="img" aria-label="時間を横軸、A町からの道のりを縦軸にとったダイヤグラム。右上がりの兄の線と右下がりの弟の線が交わる点が出会いを表し、線のかたむきが速さを表すことを示す図">
+  <defs><marker id="b1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <line x1="90" y1="270" x2="605" y2="270" class="s" marker-end="url(#b1)"/>
+  <line x1="90" y1="270" x2="90" y2="45" class="s" marker-end="url(#b1)"/>
+  <text x="600" y="292" text-anchor="end" class="mu">時間</text>
+  <text x="82" y="274" text-anchor="end" class="mu">A町</text>
+  <text x="82" y="84" text-anchor="end" class="mu">B町</text>
+  <line x1="90" y1="80" x2="600" y2="80" class="sd"/>
+
+  <line x1="140" y1="245.6" x2="220" y2="245.6" class="s"/>
+  <line x1="220" y1="245.6" x2="220" y2="206.7" class="s"/>
+  <text x="180" y="260" text-anchor="middle" class="sm mu">時間</text>
+  <text x="226" y="230" class="sm mu">道のり</text>
+  <text x="232" y="243" class="bd ta">かたむき ＝ 速さ</text>
+
+  <line x1="90" y1="270" x2="480" y2="80" class="la"/>
+  <line x1="90" y1="80" x2="560" y2="270" class="lm"/>
+  <text x="490" y="68" class="bd ta">兄</text>
+  <text x="568" y="272" class="bd tm">弟</text>
+
+  <circle cx="303" cy="166" r="6" fill="currentColor"/>
+  <line x1="312" y1="167" x2="366" y2="170" class="s"/>
+  <text x="372" y="175" class="bd">出会い</text>
+</svg>
+<figcaption><strong>図1　ダイヤグラムの読み方は3つだけ。</strong>①<strong>かたむき＝速さ</strong>（急なほど速い）。②<strong>2本の交点＝出会い</strong>。③<strong>水平な部分＝止まっている</strong>（休けい・信号待ち）。右上がりはB町へ向かう人、右下がりはA町へ向かう人。中学受験の速さの問題は、この3つで9割読めます。</figcaption>
+</figure>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>2人の運動は2本の1次関数で、出会いはその交点です。大人なら連立方程式を解くところですが、<strong>小学生は連立方程式が使えない</strong>。ではどうするか——<strong>交点まわりにできる相似な三角形の辺の比</strong>で処理します。</p>
+  <p>これが難関校の速さの主戦場です。「ダイヤグラムを描いて相似を見つける」が、そのまま「連立方程式を解く」に対応していると思ってください。例題5で実際にやります。</p>
+</div>
+
+<h2>3. 道具② — 旅人算（近づく速さ・離れる速さ）</h2>
+<p>旅人算は、2人の速さを<strong>足すか引くか</strong>を決めるだけの分野です。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 240" role="img" aria-label="向かい合う場合は速さを足し、同じ向きの場合は速さを引くことを、2段の矢印図で比べた図">
+  <defs><marker id="b2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+
+  <text x="70" y="38" class="bd">向かい合う（出会い算）</text>
+  <line x1="70" y1="72" x2="570" y2="72" class="s"/>
+  <circle cx="70" cy="72" r="6" class="fila"/>
+  <line x1="78" y1="72" x2="139" y2="72" class="s" marker-end="url(#b2)"/>
+  <text x="108" y="60" text-anchor="middle" class="sm ta">分速70m</text>
+  <circle cx="570" cy="72" r="6" class="film"/>
+  <line x1="562" y1="72" x2="521" y2="72" class="s" marker-end="url(#b2)"/>
+  <text x="541" y="60" text-anchor="middle" class="sm tm">分速50m</text>
+  <text x="320" y="106" text-anchor="middle" class="bd ta">近づく速さ ＝ 70 ＋ 50 ＝ 分速120m</text>
+
+  <text x="70" y="152" class="bd">同じ向き（追いかけ算）</text>
+  <line x1="70" y1="186" x2="570" y2="186" class="s"/>
+  <circle cx="150" cy="186" r="6" class="fila"/>
+  <line x1="158" y1="186" x2="230" y2="186" class="s" marker-end="url(#b2)"/>
+  <text x="194" y="174" text-anchor="middle" class="sm ta">分速90m</text>
+  <circle cx="390" cy="186" r="6" class="film"/>
+  <line x1="398" y1="186" x2="448" y2="186" class="s" marker-end="url(#b2)"/>
+  <text x="423" y="174" text-anchor="middle" class="sm tm">分速60m</text>
+  <text x="320" y="220" text-anchor="middle" class="bd ta">近づく速さ ＝ 90 − 60 ＝ 分速30m</text>
+</svg>
+<figcaption><strong>図2　足すか引くかは、向きだけで決まる。</strong>向かい合えば足す、同じ向きなら引く。あとは<strong>「はなれている距離 ÷ 近づく速さ ＝ 出会うまでの時間」</strong>の一行で終わります。<br>離れていくとき（背中合わせに出発）も同じで、そのときは「離れる速さ ＝ 和」。</figcaption>
+</figure>
+
+<p>なぜ足したり引いたりしていいのか。ここは説明できたほうがいいので、絵にしておきます。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 240" role="img" aria-label="地面から見ると兄が分速70メートル弟が分速50メートルで近づくが、弟に乗って見ると弟は止まり兄だけが分速120メートルで近づくことを示す2段の図">
+  <defs><marker id="b3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+
+  <text x="70" y="38" class="mu">地面から見ると</text>
+  <line x1="70" y1="72" x2="570" y2="72" class="s"/>
+  <circle cx="70" cy="72" r="6" class="fila"/>
+  <line x1="78" y1="72" x2="139" y2="72" class="s" marker-end="url(#b3)"/>
+  <text x="108" y="60" text-anchor="middle" class="sm ta">70</text>
+  <circle cx="570" cy="72" r="6" class="film"/>
+  <line x1="562" y1="72" x2="521" y2="72" class="s" marker-end="url(#b3)"/>
+  <text x="541" y="60" text-anchor="middle" class="sm tm">50</text>
+
+  <text x="70" y="152" class="mu">弟に乗って見ると（弟を止める）</text>
+  <line x1="70" y1="186" x2="570" y2="186" class="s"/>
+  <circle cx="70" cy="186" r="6" class="fila"/>
+  <line x1="78" y1="186" x2="188" y2="186" class="s2" marker-end="url(#b3)"/>
+  <text x="132" y="174" text-anchor="middle" class="sm ta">120</text>
+  <circle cx="570" cy="186" r="6" class="film"/>
+  <text x="562" y="174" text-anchor="end" class="sm tm">0（止まって見える）</text>
+  <text x="320" y="222" text-anchor="middle" class="bd ta">1800 ÷ 120 ＝ 15分</text>
+</svg>
+<figcaption><strong>図3　「相手に乗って見る」と、動くのは1人だけになる。</strong>弟の上に立って眺めれば弟は止まっていて、兄だけが分速120mで近づいてくる。だから「はなれた距離 ÷ 120」で時間が出る。<strong>この視点の切り替えが、通過算でも流水算でもそのまま効きます。</strong></figcaption>
+</figure>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>図3はガリレイ変換です。弟の静止系に移れば、兄の速度は <code>v兄 − v弟</code>。向かい合いは <code>v弟</code> が負なので、差が和になる——これが「向かい合いは足す」の正体です。</p>
+  <p>お子さんに教えるときに「相対速度」という言葉は要りません。<strong>「弟の上に乗って見てごらん」</strong>で十分伝わります。電車が好きなお子さんなら、並走する電車の見え方（後述の図9）が最短の実感です。</p>
+</div>
+
+<h2>4. 道具③ — 通過算（長さのある物体）</h2>
+<p>通過算がややこしく見えるのは、動くのが「点」ではなく<strong>「長さのある線分」</strong>だからです。逆に言えば、扱う量を<strong>「先頭が進んだ距離」</strong>ひとつに決めてしまえば、旅人算に戻ります。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 250" role="img" aria-label="電車がトンネルに入りはじめてから完全に出るまでに、先頭がトンネルの長さと電車の長さの合計だけ進むことを示す図">
+  <defs><marker id="b4" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+
+  <text x="60" y="76" text-anchor="end" class="mu">入りはじめ</text>
+  <rect x="180" y="50" width="320" height="40" class="s"/>
+  <text x="340" y="75" text-anchor="middle" class="mu">トンネル 720m</text>
+  <rect x="100" y="58" width="80" height="24" class="fila"/>
+  <text x="140" y="45" text-anchor="middle" class="sm ta">電車 180m</text>
+
+  <text x="60" y="176" text-anchor="end" class="mu">出おわり</text>
+  <rect x="180" y="150" width="320" height="40" class="s"/>
+  <text x="340" y="175" text-anchor="middle" class="mu">トンネル 720m</text>
+  <rect x="500" y="158" width="80" height="24" class="fila"/>
+
+  <line x1="180" y1="90" x2="180" y2="122" class="sd"/>
+  <line x1="580" y1="122" x2="580" y2="158" class="sd"/>
+  <line x1="180" y1="122" x2="580" y2="122" class="s" marker-end="url(#b4)"/>
+  <text x="380" y="108" text-anchor="middle" class="bd ta">先頭が進んだ距離 ＝ 720 ＋ 180 ＝ 900m</text>
+  <text x="320" y="228" text-anchor="middle" class="bd ta">900 ÷ 30秒 ＝ 秒速30m</text>
+</svg>
+<figcaption><strong>図4　通過算の公式は1本だけ。</strong><strong>先頭が進む距離 ＝ 障害物の長さ ＋ 自分の長さ</strong>。トンネルでも鉄橋でも同じ。「電柱の前を通過」は<strong>障害物の長さが 0</strong> の場合なので、進む距離＝自分の長さ。公式を3つ覚える必要はありません。</figcaption>
+</figure>
+
+<p>2つの電車がすれちがう／追いこす場合も、図3の「相手に乗って見る」で処理します。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 262" role="img" aria-label="B列車を止めて見ると、すれちがいも追いこしも、A列車の先頭が両方の長さの合計だけ進むという同じ絵になることを示す図">
+  <defs><marker id="b5" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+    <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+  <text x="320" y="26" text-anchor="middle" class="mu">B列車に乗って見る（Bを止める）</text>
+
+  <text x="140" y="72" text-anchor="end" class="mu">はじめ</text>
+  <rect x="150" y="54" width="144" height="28" class="fila"/>
+  <text x="222" y="73" text-anchor="middle" class="bd tb">A 180m</text>
+  <rect x="294" y="54" width="96" height="28" class="film"/>
+  <text x="342" y="73" text-anchor="middle" class="bd tb">B 120m</text>
+
+  <text x="140" y="136" text-anchor="end" class="mu">おわり</text>
+  <rect x="294" y="118" width="96" height="28" class="film"/>
+  <text x="342" y="137" text-anchor="middle" class="bd tb">B 120m</text>
+  <rect x="390" y="118" width="144" height="28" class="fila"/>
+  <text x="462" y="137" text-anchor="middle" class="bd tb">A 180m</text>
+
+  <line x1="294" y1="82" x2="294" y2="176" class="sd"/>
+  <line x1="534" y1="146" x2="534" y2="176" class="sd"/>
+  <line x1="294" y1="176" x2="534" y2="176" class="s" marker-end="url(#b5)"/>
+  <line x1="534" y1="176" x2="294" y2="176" class="s" marker-end="url(#b5)"/>
+  <text x="414" y="198" text-anchor="middle" class="bd ta">A の先頭が進む ＝ 180 ＋ 120 ＝ 300m</text>
+
+  <text x="320" y="228" text-anchor="middle" class="sm">すれちがい（逆向き）：近づく速さ 30 ＋ 20 ＝ 50m/秒　→　300 ÷ 50 ＝ 6秒</text>
+  <text x="320" y="250" text-anchor="middle" class="sm">追いこし（同じ向き）：近づく速さ 30 − 20 ＝ 10m/秒　→　300 ÷ 10 ＝ 30秒</text>
+</svg>
+<figcaption><strong>図5　すれちがいと追いこしは、距離が同じで速さだけ違う。</strong>Bを止めて見れば、どちらも「Aの先頭がBの最後尾に並んでから、Aの最後尾がBの先頭を抜くまで」で、進む距離は<strong>どちらも長さの和 300m</strong>。違うのは近づく速さが和か差かだけ。<strong>「追いこしは長さの差」と覚えている子が非常に多い</strong>ので、ここは図で潰しておいてください。</figcaption>
+</figure>
+
+<h2>5. 道具④ — 流水算（速度の合成）</h2>
+<p>川を進む船。<strong>下りは流れに押され、上りは流れに逆らう</strong>。それだけです。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>下りの速さ ＝ 静水時の速さ ＋ 流れの速さ</strong><br>
+  <strong>上りの速さ ＝ 静水時の速さ − 流れの速さ</strong></p>
+</div>
+<p>この2本から、さらに強い形が出ます。数直線に置いてみてください。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 200" role="img" aria-label="数直線上に上りの速さ8、静水時10、下りの速さ12を等間隔に並べ、静水時が上りと下りのちょうど真ん中になることを示す図">
+  <line x1="140" y1="70" x2="320" y2="70" class="s"/>
+  <line x1="140" y1="63" x2="140" y2="77" class="s"/>
+  <line x1="320" y1="63" x2="320" y2="77" class="s"/>
+  <rect x="204" y="60" width="52" height="20" fill="var(--card)"/>
+  <text x="230" y="76" text-anchor="middle" class="bd">流れ 2</text>
+  <line x1="320" y1="70" x2="500" y2="70" class="s"/>
+  <line x1="500" y1="63" x2="500" y2="77" class="s"/>
+  <rect x="384" y="60" width="52" height="20" fill="var(--card)"/>
+  <text x="410" y="76" text-anchor="middle" class="bd">流れ 2</text>
+
+  <line x1="100" y1="110" x2="540" y2="110" class="s2"/>
+  <line x1="140" y1="100" x2="140" y2="120" class="s"/>
+  <line x1="320" y1="100" x2="320" y2="120" class="s"/>
+  <line x1="500" y1="100" x2="500" y2="120" class="s"/>
+  <circle cx="140" cy="110" r="7" class="film"/>
+  <circle cx="320" cy="110" r="7" fill="currentColor"/>
+  <circle cx="500" cy="110" r="7" class="fila"/>
+  <text x="140" y="142" text-anchor="middle" class="bd tm">上り 8</text>
+  <text x="320" y="142" text-anchor="middle" class="bd">静水時 10</text>
+  <text x="500" y="142" text-anchor="middle" class="bd ta">下り 12</text>
+  <text x="320" y="180" text-anchor="middle" class="bd ta">静水時の速さ ＝ 上りと下りの ちょうど真ん中</text>
+</svg>
+<figcaption><strong>図6　流水算は数直線1本で終わる。</strong>静水時の速さは上りと下りの<strong>平均</strong>、流れの速さは<strong>差の半分</strong>。前回のてんびん法でいえば、支点（＝静水時）が真ん中に来る特別な場合です。上りと下りの2つの数字さえ出せば、残りは暗算で出ます。</figcaption>
+</figure>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>速度の合成（これもガリレイ変換）です。<code>下り = v + f</code>、<code>上り = v − f</code> を足して2で割れば <code>v</code>、引いて2で割れば <code>f</code>。連立方程式そのものですが、<strong>数直線に置けば「真ん中」と「半分」で読めてしまう</strong>ので、小学生でも扱えます。</p>
+  <p>難関校では、ここに<strong>時間の比 → 速さの逆比</strong>（第1回の図3）が乗ります。例題4でやります。</p>
+</div>
+
+<h2>6. 演習</h2>
+<p>今回は必ず<strong>図を描いてから</strong>解いてください。速さは、図なしで式に飛びついた瞬間に事故ります。</p>
+
+<div class="q">
+  <div class="head"><span class="no">例題 1</span><span class="lv">基礎・出会い算</span></div>
+  <p class="body">1800m はなれた2地点から、兄と弟が同時に向かい合って歩き出しました。兄は分速70m、弟は分速50mです。2人が出会うのは何分後ですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：15分後</strong></p>
+    <p>図2の上段そのものです。近づく速さ ＝ 70 ＋ 50 ＝ 分速120m。<br>
+    1800 ÷ 120 ＝ <strong>15分後</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※お子さんが「70×?＋50×? ＝ 1800」と式を立てようとしたら、それでも正解にはたどり着きます。ただ、図3の「弟を止める」に切り替えたほうが速く、あとの難問でも効きます。早いうちに乗り換えさせてください。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 2</span><span class="lv">標準・追いかけ算</span></div>
+  <p class="body">弟が分速60mで家を出発しました。その12分後に、兄が分速90mで同じ道を追いかけました。兄が弟に追いつくのは、兄が出発してから何分後ですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：24分後</strong></p>
+    <p><strong>ステップ1：兄が出発した瞬間に、2人はどれだけ離れているか。</strong><br>
+    弟は12分先に出ているので、60 × 12 ＝ <strong>720m</strong> 先にいます。</p>
+    <p><strong>ステップ2：近づく速さ。</strong>同じ向きなので引き算。90 − 60 ＝ 分速30m（図2の下段）。</p>
+    <p>720 ÷ 30 ＝ <strong>24分後</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※追いかけ算の失点は、ほぼ全部ステップ1です。「12分後に追いかけた」を読み飛ばして 1800 ÷ 30 のように解いてしまう。<strong>時間のズレは必ず「距離のズレ」に翻訳してから</strong>、旅人算に入ります。ダイヤグラムを描くと、2本の線のスタート位置がずれているのが目で見えます。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 3</span><span class="lv">標準・通過算</span></div>
+  <p class="body">(1) 長さ180mの電車が、長さ720mのトンネルに入りはじめてから完全に出るまでに30秒かかりました。この電車の速さは秒速何mですか。<br>
+  (2) この電車が、長さ120m・秒速20mの電車と反対向きにすれちがうとき、出会ってから完全に離れるまで何秒かかりますか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：(1) 秒速30m　(2) 6秒</strong></p>
+    <p><strong>(1)</strong> 図4のとおり。先頭が進んだ距離 ＝ 720 ＋ 180 ＝ 900m。<br>
+    900 ÷ 30 ＝ <strong>秒速30m</strong>。</p>
+    <p><strong>(2)</strong> 図5のとおり。進む距離は<strong>長さの和</strong> 180 ＋ 120 ＝ 300m。<br>
+    反対向きなので近づく速さは和で 30 ＋ 20 ＝ 秒速50m。<br>
+    300 ÷ 50 ＝ <strong>6秒</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※もしこれが「同じ向きに追いこす」なら、距離は同じ300mのまま、速さだけ 30 − 20 ＝ 秒速10m になって 30秒。<strong>距離が変わるのではなく速さが変わる</strong>——ここを取り違えている子が本当に多いです。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 4</span><span class="lv">やや難・流水算 × 逆比</span></div>
+  <p class="body">ある船が、川にそった36km の区間を下るのに3時間、同じ区間を上るのに4時間30分かかりました。静水時のこの船の速さと、川の流れの速さは、それぞれ時速何km ですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：静水時 時速10km、流れ 時速2km</strong></p>
+    <p><strong>まっすぐ解くなら：</strong>下り 36 ÷ 3 ＝ 時速12km、上り 36 ÷ 4.5 ＝ 時速8km。<br>
+    図6の数直線に置いて、静水時 ＝ (12 ＋ 8) ÷ 2 ＝ <strong>時速10km</strong>、流れ ＝ (12 − 8) ÷ 2 ＝ <strong>時速2km</strong>。</p>
+    <p><strong>比で解くなら（こちらが難関校の型）：</strong>同じ36kmを、下り3時間・上り4.5時間。<br>
+    時間の比 <code>3 : 4.5 = 2 : 3</code> → 速さの比はその<strong>逆比</strong>で <code>下り : 上り = 3 : 2</code>（第1回・図3）。<br>
+    数直線に <span class="maru">③</span> と <span class="maru">②</span> を置けば、静水時は真ん中の <span class="maru">2.5</span>、流れは半分の <span class="maru">0.5</span>。<br>
+    実数を1つ入れて、下り <span class="maru">③</span> ＝ 12km/時 → <span class="maru">①</span> ＝ 4 → 静水時 ＝ 4 × 2.5 ＝ <strong>10</strong>、流れ ＝ 4 × 0.5 ＝ <strong>2</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※距離が与えられていない流水算（宿題3がそれです）では、後者の「時間の比から逆比」しか通りません。<strong>比のルートを標準にしておく</strong>と、距離が消えても崩れません。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 5</span><span class="lv">難関校レベル・出会いと到着</span></div>
+  <p class="body">A町とB町を結ぶ道があります。兄はA町から、弟はB町から同時に出発して向かい合って進み、出発から12分後に出会いました。兄はその後さらに8分でB町に着きました。弟がA町に着くのは、出発してから何分後ですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：30分後</strong></p>
+    <p>速さも道のりも1つも与えられていません。<strong>与えられているのは時間だけ</strong>。こういうときは比しか使えません。</p>
+
+    <figure class="dg">
+    <svg viewBox="0 0 640 262" role="img" aria-label="兄と弟の道のりを2本の帯で表し、出会った地点から先の同じ道のりを兄が8分、弟が12分で進むことから速さの比3対2を導く図">
+      <defs><marker id="b6" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+      <text x="60" y="82" text-anchor="end" class="bd ta">兄</text>
+      <rect x="70" y="56" width="300" height="40" class="bxa"/>
+      <text x="220" y="82" text-anchor="middle" class="bd ta">12分</text>
+      <rect x="370" y="56" width="200" height="40" class="fila"/>
+      <text x="470" y="82" text-anchor="middle" class="bd tb">8分</text>
+
+      <text x="62" y="128" text-anchor="end" class="mu">A町</text>
+      <text x="370" y="128" text-anchor="middle" class="mu">出会った地点</text>
+      <text x="578" y="128" class="mu">B町</text>
+
+      <text x="60" y="176" text-anchor="end" class="bd tm">弟</text>
+      <rect x="70" y="150" width="300" height="40" class="bxm" stroke-dasharray="5 3"/>
+      <text x="220" y="176" text-anchor="middle" class="bd tm">？分</text>
+      <rect x="370" y="150" width="200" height="40" class="film"/>
+      <text x="470" y="176" text-anchor="middle" class="bd tb">12分</text>
+
+      <line x1="470" y1="100" x2="470" y2="146" class="s" marker-end="url(#b6)"/>
+      <line x1="470" y1="146" x2="470" y2="100" class="s" marker-end="url(#b6)"/>
+      <rect x="428" y="114" width="84" height="18" fill="var(--card)"/>
+      <text x="470" y="128" text-anchor="middle" class="bd">同じ道のり</text>
+
+      <text x="320" y="222" text-anchor="middle" class="bd ta">同じ道のりを 兄8分・弟12分 → 速さの比 兄 : 弟 ＝ 3 : 2（逆比）</text>
+      <text x="320" y="248" text-anchor="middle" class="bd">左側は兄が12分 → 弟は 12 × 3/2 ＝ 18分　合計 12 ＋ 18 ＝ 30分</text>
+    </svg>
+    <figcaption><strong>図7　「同じ道のり」を2人が何分で進んだかを見つける。</strong>出会った地点からB町までは、兄が8分・弟が12分（出発から出会いまで）で進んだ<strong>同じ区間</strong>。時間の比 <code>8 : 12 = 2 : 3</code> なので、速さの比はその逆比 <code>3 : 2</code>。この一手が出れば残りは割り算です。</figcaption>
+    </figure>
+
+    <p>左側（A町〜出会った地点）は兄が12分で進んだ区間。弟の速さは兄の <span class="frac">2/3</span> なので、同じ区間に <span class="frac">3/2</span> 倍の時間、つまり 12 × <span class="frac">3/2</span> ＝ 18分 かかります。<br>
+    弟の合計 ＝ 12 ＋ 18 ＝ <strong>30分後</strong>。</p>
+
+    <p>同じことをダイヤグラムで見ると、こうなります。</p>
+
+    <figure class="dg">
+    <svg viewBox="0 0 640 310" role="img" aria-label="例題5のダイヤグラム。兄の線と弟の線が12分後に交わり、兄は20分でB町、弟は30分でA町に着くことを示す図">
+      <defs><marker id="b7" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+      <line x1="90" y1="270" x2="605" y2="270" class="s" marker-end="url(#b7)"/>
+      <line x1="90" y1="270" x2="90" y2="45" class="s" marker-end="url(#b7)"/>
+      <text x="600" y="292" text-anchor="end" class="mu">時間</text>
+      <text x="82" y="274" text-anchor="end" class="mu">A町</text>
+      <text x="82" y="84" text-anchor="end" class="mu">B町</text>
+      <line x1="90" y1="80" x2="600" y2="80" class="sd"/>
+      <line x1="270" y1="156" x2="270" y2="270" class="sd"/>
+      <line x1="390" y1="80" x2="390" y2="270" class="sd"/>
+      <line x1="540" y1="270" x2="540" y2="264" class="s"/>
+
+      <line x1="90" y1="270" x2="390" y2="80" class="la"/>
+      <line x1="90" y1="80" x2="540" y2="270" class="lm"/>
+      <text x="398" y="74" class="bd ta">兄</text>
+      <text x="548" y="262" class="bd tm">弟</text>
+      <circle cx="270" cy="156" r="6" fill="currentColor"/>
+
+      <text x="270" y="290" text-anchor="middle" class="mu">12分</text>
+      <text x="390" y="290" text-anchor="middle" class="ta bd">20分</text>
+      <text x="540" y="290" text-anchor="middle" class="tm bd">30分</text>
+
+      <text x="340" y="144" class="bd ta">8分</text>
+      <text x="418" y="244" class="bd tm">18分</text>
+    </svg>
+    <figcaption><strong>図8　同じ問題のダイヤグラム。</strong>交点（12分）から先、兄の線は8分でB町の高さに達し、弟の線は18分かけてA町の高さまで下りる。<strong>交点をはさんでできる2つの三角形が相似</strong>で、その相似比が <code>3 : 2</code>——大人が連立方程式でやることを、小学生は相似でやります。</figcaption>
+    </figure>
+
+    <div class="box math" style="margin-top:16px">
+      <span class="label">ここが難関校</span>
+      <p>この問題が難しいのは、<strong>「同じ道のりを2人が何分で進んだか」を自分で見つけないといけない</strong>点です。問題文には「同じ道のり」とは書いてありません。図7を描いて初めて、出会った地点から先の区間が兄と弟で共有されていることが見えます。</p>
+      <p>お子さんがこの型で止まったら、答えを教えるより<strong>「同じところを2人とも通ってるのはどこ？」</strong>と聞いてください。それが解法そのものです。</p>
+    </div>
+  </div></details>
+</div>
+
+<h2>7. 子どもへの仕込み（幼児〜低学年）</h2>
+<div class="box kid">
+  <span class="label">今すぐ日常でできること</span>
+  <p>速さの芽は<strong>「同じ時間でどっちが遠くまで行くか」</strong>と<strong>「相手に乗って見る」</strong>の2つ。どちらも机では育ちません。</p>
+  <ol>
+    <li><strong>競走して言葉にする</strong> — 「よーいドンで10秒。どっちが遠くまで行った？」。速い＝同じ時間で遠くまで、を体で入れる。これが「1あたり量」の原型です。</li>
+    <li><strong>並走する電車を見せる</strong> — 電車がお好きなら、これが最強の教材です。次の図をそのまま体験できます。</li>
+  </ol>
+
+  <figure class="dg">
+  <svg viewBox="0 0 640 236" role="img" aria-label="ホームから見ると自分の電車が時速80キロ隣が70キロで走っているが、窓から見ると隣の電車が時速10キロでゆっくり後ろへ下がって見えることを示す2段の図">
+    <defs><marker id="b8" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker>
+      <marker id="b9" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="4.5" markerHeight="4.5" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+    <text x="70" y="38" class="mu">ホーム（地面）から見ると</text>
+    <line x1="70" y1="76" x2="570" y2="76" class="s"/>
+    <circle cx="100" cy="76" r="6" class="fila"/>
+    <line x1="108" y1="76" x2="194" y2="76" class="s" marker-end="url(#b8)"/>
+    <text x="151" y="64" text-anchor="middle" class="sm ta">じぶんの電車 時速80km</text>
+    <circle cx="340" cy="76" r="6" class="film"/>
+    <line x1="348" y1="76" x2="422" y2="76" class="s" marker-end="url(#b8)"/>
+    <text x="385" y="64" text-anchor="middle" class="sm tm">となりの電車 時速70km</text>
+
+    <text x="70" y="152" class="mu">じぶんの電車の窓から見ると</text>
+    <line x1="70" y1="190" x2="570" y2="190" class="s"/>
+    <circle cx="100" cy="190" r="6" class="fila"/>
+    <text x="100" y="178" text-anchor="middle" class="sm ta">止まって見える</text>
+    <circle cx="340" cy="190" r="6" class="film"/>
+    <line x1="334" y1="190" x2="322" y2="190" class="s" marker-end="url(#b9)"/>
+    <text x="328" y="176" text-anchor="middle" class="sm tm">時速10km でゆっくり後ろへ</text>
+    <text x="320" y="224" text-anchor="middle" class="mu">速さの差が小さいほど、となりの電車はゆっくり動いて見える</text>
+  </svg>
+  <figcaption><strong>図9　並走する電車は、相対速度の最高の教材。</strong>「となりの電車、ゆっくり動いてるように見えるね。なんでだろう？」と聞くだけで十分です。答えられなくても構いません。<strong>この不思議さを覚えていること</strong>が、高学年で図3を見たときの「あ、あれか」になります。</figcaption>
+  </figure>
+
+  <ol start="3">
+    <li><strong>「あと何分？」を毎日聞く</strong> — 時間の量感がないと速さは入りません。「5分って、どれくらい？」を日常で。</li>
+    <li><strong>路線図で所要時間を見る</strong> — 「ここまで20分、こっちは40分。じゃあ倍の遠さかな？」。距離と時間の対応づけの入口です。</li>
+  </ol>
+  <p><strong>やらないほうがいいこと：</strong>「みはじ」を先に教えること。速さは<strong>体験が先、公式は後</strong>です。順番を逆にすると、第1節に書いたやり直しが必要になります。</p>
+</div>
+
+<h2>8. 宿題</h2>
+<p>次回までに3問。図を描いてから解いてください。</p>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 1</span><span class="lv">旅人算</span></div>
+  <p class="body">1周1200m の池のまわりを、兄と弟が同じ地点から同時に出発します。兄は分速80m、弟は分速70mです。<br>
+  (1) 反対向きに回ると、初めて出会うのは何分後ですか。<br>
+  (2) 同じ向きに回ると、兄が弟に初めて追いつくのは何分後ですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>(1) 8分後　(2) 120分後</strong></p>
+    <p>池の問題は「2人の間の距離が1周ぶん＝1200m」と読み替えるのがコツです。</p>
+    <p>(1) 反対向き → 近づく速さは和で 80 ＋ 70 ＝ 150。1200 ÷ 150 ＝ <strong>8分後</strong>。<br>
+    (2) 同じ向き → 近づく速さは差で 80 − 70 ＝ 10。追いつくとは<strong>兄が弟より1周ぶん多く進む</strong>ことなので 1200 ÷ 10 ＝ <strong>120分後</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※(2) の「1周ぶんの差をつける」が池の問題の急所です。図2の下段で、2人の間が1200m あると思って見てください。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 2</span><span class="lv">通過算</span></div>
+  <p class="body">長さ150m の電車が、ある鉄橋を渡りはじめてから渡り終わるまでに25秒かかりました。同じ電車が電柱の前を通過するのに5秒かかります。この鉄橋の長さは何m ですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>600m</strong></p>
+    <p><strong>電柱から速さを出す。</strong>電柱は「長さ0の障害物」なので、進む距離は電車の長さ150m だけ（図4）。<br>
+    150 ÷ 5 ＝ <strong>秒速30m</strong>。</p>
+    <p><strong>鉄橋にあてはめる。</strong>25秒で進む距離は 30 × 25 ＝ 750m。これが「鉄橋 ＋ 電車」なので、<br>
+    750 − 150 ＝ <strong>600m</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※「電柱＝障害物の長さ0」と読み替えられれば、公式は図4の1本で足ります。3つの公式として暗記させないでください。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 3</span><span class="lv">難関校レベル・流水算 × 逆比</span></div>
+  <p class="body">静水時の速さが時速12km の船が、川の上流のA地点と下流のB地点の間を往復します。A地点からB地点まで下るのに2時間、B地点からA地点まで上るのに3時間かかりました。川の流れの速さは時速何km ですか。また、AB間の距離は何km ですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>流れ 時速2.4km、AB間 28.8km</strong></p>
+    <p>距離が与えられていないので、<strong>時間の比から入るしかありません</strong>（例題4の後半のルート）。</p>
+    <p><strong>ステップ1：</strong>同じAB間を下り2時間・上り3時間。時間の比 <code>2 : 3</code> → 速さの比はその逆比で <code>下り : 上り ＝ 3 : 2</code>。</p>
+    <p><strong>ステップ2：</strong>図6の数直線に <span class="maru">③</span> と <span class="maru">②</span> を置くと、静水時は真ん中なので <span class="maru">2.5</span>。<br>
+    これが時速12km なので <span class="maru">①</span> ＝ 12 ÷ 2.5 ＝ <strong>4.8</strong>。</p>
+    <p><strong>ステップ3：</strong>流れ ＝ 差の半分 ＝ <span class="maru">0.5</span> ＝ 4.8 × 0.5 ＝ <strong>時速2.4km</strong>。<br>
+    下り ＝ <span class="maru">③</span> ＝ 14.4km/時 なので、AB間 ＝ 14.4 × 2 ＝ <strong>28.8km</strong>。</p>
+    <p>検算：上りは 12 − 2.4 ＝ 9.6km/時。28.8 ÷ 9.6 ＝ 3時間 ✓</p>
+    <p style="color:var(--muted);font-size:14px">※ステップ2の「静水時 ＝ <span class="maru">2.5</span>」で、比に小数が出るのを気持ち悪がる子がいます。そのときは全部2倍して <code>下り : 上り ＝ 6 : 4</code>、静水時 <span class="maru">⑤</span>、流れ <span class="maru">①</span> と置き直させてください。<strong>置き方は自由</strong>（第1回）です。</p>
+  </div></details>
+</div>
+
+<footer class="end">
+  <p><strong>次回予告 — 第3回「割合と相当算」</strong>：「もとにする量」をどこに置くか。売買損益、食塩水の応用、そして相当算（部分から全体を復元する）。比の第2の顔にあたる回です。</p>
+  <p>SAPIX 難関校クラス／保護者のための算数　第2回　｜　<a href="lesson-01-hi.html" style="color:var(--accent)">← 第1回 比</a></p>
+</footer>
+
+</div>
+</body>
+</html>
