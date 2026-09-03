@@ -38,24 +38,27 @@ const ALL_MONSTERS = [
   },
   {
     id: 'ni', name: 'ニコリ', kanji: '二', grade: 1, kaku: 2, group: 'kazu', rare: 1,
-    on: 'ニ', kun: 'ふた(つ)', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: 'いつも にこにこ している モンスター。ならぶと もっと うれしそう。',
+    on: 'ニ', kun: 'ふた(つ)', color: '#1a7fbe', tint: '#dcf1fb', hand: true,
+    about: 'ふたごの ピーナッツの すがた。ふたりで ひとくみ、いつも いっしょ。',
     words: [{ w: '二つ', y: 'ふたつ' }, { w: '二人', y: 'ふたり' }, { w: '二日', y: 'ふつか' }],
-    stations: [['二子玉川', 'ふたこたまがわ', '田園都市線'], ['二子新地', 'ふたこしんち', '田園都市線'], ['二俣川', 'ふたまたがわ', '相鉄本線'], ['二重橋前', 'にじゅうばしまえ', '千代田線'], ['二宮', 'にのみや', '東海道線'], ['二俣新町', 'ふたまたしんまち', '京葉線']]
+    stations: [['二子玉川', 'ふたこたまがわ', '田園都市線'], ['二子新地', 'ふたこしんち', '田園都市線'], ['二俣川', 'ふたまたがわ', '相鉄本線'], ['二重橋前', 'にじゅうばしまえ', '千代田線'], ['二宮', 'にのみや', '東海道線'], ['二俣新町', 'ふたまたしんまち', '京葉線']],
+    quiz: []
   },
   {
     id: 'san', name: 'サンタロ', kanji: '三', grade: 1, kaku: 3, group: 'kazu', rare: 1,
-    on: 'サン', kun: 'み(っつ)', color: '#e07316', tint: '#fdead6', hand: false,
-    about: 'だんだんに かさなった からだ。上から じゅんばんに かぞえるのが すき。',
+    on: 'サン', kun: 'み(っつ)', color: '#c9660c', tint: '#fbe8d2', hand: true,
+    about: 'だんごが 3こ、くしに ささった すがた。上から じゅんばんに かぞえるのが すき。',
     words: [{ w: '三つ', y: 'みっつ' }, { w: '三日', y: 'みっか' }, { w: '三月', y: 'さんがつ' }],
-    stations: [['三軒茶屋', 'さんげんぢゃや', '田園都市線'], ['三ツ沢上町', 'みつざわかみちょう', 'ブルーライン'], ['三ツ沢下町', 'みつざわしもちょう', 'ブルーライン'], ['三ツ境', 'みつきょう', '相鉄本線'], ['三越前', 'みつこしまえ', '銀座線'], ['本郷三丁目', 'ほんごうさんちょうめ', '丸ノ内線']]
+    stations: [['三軒茶屋', 'さんげんぢゃや', '田園都市線'], ['三ツ沢上町', 'みつざわかみちょう', 'ブルーライン'], ['三ツ沢下町', 'みつざわしもちょう', 'ブルーライン'], ['三ツ境', 'みつきょう', '相鉄本線'], ['三越前', 'みつこしまえ', '銀座線'], ['本郷三丁目', 'ほんごうさんちょうめ', '丸ノ内線']],
+    quiz: []
   },
   {
     id: 'yon', name: 'ヨンスケ', kanji: '四', grade: 1, kaku: 5, group: 'kazu', rare: 2,
-    on: 'シ', kun: 'よん・よ(っつ)', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'しかくい からだの モンスター。かどが 四つ あるのを じまんに している。',
+    on: 'シ', kun: 'よん・よ(っつ)', color: '#2c7c2c', tint: '#e2f5de', hand: true,
+    about: 'よつばの クローバーの すがた。かどが 四つ あるのを じまんに している。',
     words: [{ w: '四つ', y: 'よっつ' }, { w: '四日', y: 'よっか' }, { w: '四月', y: 'しがつ' }],
-    stations: [['四ツ谷', 'よつや', '丸ノ内線'], ['四谷三丁目', 'よつやさんちょうめ', '丸ノ内線']]
+    stations: [['四ツ谷', 'よつや', '丸ノ内線'], ['四谷三丁目', 'よつやさんちょうめ', '丸ノ内線']],
+    quiz: []
   },
   {
     id: 'go', name: 'ゴマル', kanji: '五', grade: 1, kaku: 4, group: 'kazu', rare: 1,
@@ -75,17 +78,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'nana', name: 'ナナホシ', kanji: '七', grade: 1, kaku: 2, group: 'kazu', rare: 1,
-    on: 'シチ', kun: 'なな・なの', color: '#d64b2c', tint: '#fde6e0', hand: false,
-    about: 'せなかに 七つの ほしが ある てんとうむしの モンスター。',
+    on: 'シチ', kun: 'なな・なの', color: '#a81a12', tint: '#fbe0dc', hand: true,
+    about: 'せなかに 七つの ほしが ある、てんとうむしの すがた。',
     words: [{ w: '七つ', y: 'ななつ' }, { w: '七日', y: 'なのか' }, { w: '七五三', y: 'しちごさん' }],
-    stations: [['七戸十和田', 'しちのへとわだ', '東北新幹線']]
+    stations: [['七戸十和田', 'しちのへとわだ', '東北新幹線']],
+    quiz: []
   },
   {
     id: 'hachi', name: 'ハチベエ', kanji: '八', grade: 1, kaku: 2, group: 'kazu', rare: 1,
-    on: 'ハチ', kun: 'や(っつ)', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'はねを ぶんぶん させる はちの モンスター。花の みつが だいこうぶつ。',
+    on: 'ハチ', kun: 'や(っつ)', color: '#c99510', tint: '#fdf1d0', hand: true,
+    about: 'はねを ぶんぶん させる、はちの すがた。花の みつが だいこうぶつ。',
     words: [{ w: '八つ', y: 'やっつ' }, { w: '八日', y: 'ようか' }, { w: '八百屋', y: 'やおや' }],
-    stations: [['代々木八幡', 'よよぎはちまん', '小田原線'], ['八丁堀', 'はっちょうぼり', '日比谷線'], ['本八幡', 'もとやわた', '中央・総武線'], ['八王子みなみ野', 'はちおうじみなみの', '横浜線'], ['八王子', 'はちおうじ', '横浜線'], ['八戸', 'はちのへ', '東北新幹線']]
+    stations: [['代々木八幡', 'よよぎはちまん', '小田原線'], ['八丁堀', 'はっちょうぼり', '日比谷線'], ['本八幡', 'もとやわた', '中央・総武線'], ['八王子みなみ野', 'はちおうじみなみの', '横浜線'], ['八王子', 'はちおうじ', '横浜線'], ['八戸', 'はちのへ', '東北新幹線']],
+    quiz: []
   },
   {
     id: 'kyuu', name: 'キュウタ', kanji: '九', grade: 1, kaku: 2, group: 'kazu', rare: 1,
@@ -105,17 +110,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'hyaku', name: 'ヒャッキー', kanji: '百', grade: 1, kaku: 6, group: 'kazu', rare: 2,
-    on: 'ヒャク', kun: 'もも', color: '#c99310', tint: '#fdf1cf', hand: false,
-    about: '数を 百まで かぞえられる ものしり。かぞえおわると ねむくなる。',
+    on: 'ヒャク', kun: 'もも', color: '#b8850a', tint: '#f8ecd0', hand: true,
+    about: 'きんいろの メダルの すがた。百てんを とった あかしに もらえる。',
     words: [{ w: '百', y: 'ひゃく' }, { w: '百円', y: 'ひゃくえん' }, { w: '百人', y: 'ひゃくにん' }],
-    stations: [['百合ヶ丘', 'ゆりがおか', '小田原線'], ['新百合ヶ丘', 'しんゆりがおか', '小田原線'], ['百草園', 'もぐさえん', '京王線']]
+    stations: [['百合ヶ丘', 'ゆりがおか', '小田原線'], ['新百合ヶ丘', 'しんゆりがおか', '小田原線'], ['百草園', 'もぐさえん', '京王線']],
+    quiz: []
   },
   {
     id: 'sen', name: 'センマル', kanji: '千', grade: 1, kaku: 3, group: 'kazu', rare: 1,
-    on: 'セン', kun: 'ち', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: '百の 十ばい。あんまり 大きな かずで、じぶんでも びっくりしている。',
+    on: 'セン', kun: 'ち', color: '#8a8272', tint: '#f6f2e6', hand: true,
+    about: 'おりがみの つるの すがた。千羽づるの ひとわに なりたいと おもっている。',
     words: [{ w: '千', y: 'せん' }, { w: '千円', y: 'せんえん' }, { w: '千日', y: 'せんにち' }],
-    stations: [['北千束', 'きたせんぞく', '大井町線'], ['千鳥町', 'ちどりちょう', '池上線'], ['千歳船橋', 'ちとせふなばし', '小田原線'], ['南千住', 'みなみせんじゅ', '日比谷線'], ['北千住', 'きたせんじゅ', '日比谷線'], ['千駄木', 'せんだぎ', '千代田線']]
+    stations: [['北千束', 'きたせんぞく', '大井町線'], ['千鳥町', 'ちどりちょう', '池上線'], ['千歳船橋', 'ちとせふなばし', '小田原線'], ['南千住', 'みなみせんじゅ', '日比谷線'], ['北千住', 'きたせんじゅ', '日比谷線'], ['千駄木', 'せんだぎ', '千代田線']],
+    quiz: []
   },
   {
     id: 'hi', name: 'ヒナタ', kanji: '日', grade: 1, kaku: 4, group: 'sora', rare: 1,
@@ -135,45 +142,51 @@ const ALL_MONSTERS = [
   },
   {
     id: 'ten', name: 'テンタロ', kanji: '天', grade: 1, kaku: 4, group: 'sora', rare: 1,
-    on: 'テン', kun: 'あま', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: 'そらの いちばん 高い ところに すんでいる。下を のぞくのが すき。',
+    on: 'テン', kun: 'あま', color: '#1a5c8a', tint: '#e2f2fc', hand: true,
+    about: 'そらに あがる たこの すがた。高い ところから 下を のぞくのが すき。',
     words: [{ w: '天気', y: 'てんき' }, { w: '天の川', y: 'あまのがわ' }, { w: '雨天', y: 'うてん' }],
-    stations: [['祐天寺', 'ゆうてんじ', '東横線'], ['天王町', 'てんのうちょう', '相鉄本線'], ['水天宮前', 'すいてんぐうまえ', '半蔵門線'], ['天王台', 'てんのうだい', '常磐線'], ['天王洲アイル', 'てんのうずアイル', 'りんかい線']]
+    stations: [['祐天寺', 'ゆうてんじ', '東横線'], ['天王町', 'てんのうちょう', '相鉄本線'], ['水天宮前', 'すいてんぐうまえ', '半蔵門線'], ['天王台', 'てんのうだい', '常磐線'], ['天王洲アイル', 'てんのうずアイル', 'りんかい線']],
+    quiz: []
   },
   {
     id: 'sora', name: 'ソラリン', kanji: '空', grade: 1, kaku: 8, group: 'sora', rare: 3,
-    on: 'クウ', kun: 'そら・あ(く)', color: '#8d99a6', tint: '#f4f7fa', hand: false,
-    about: 'からだの 中が すきとおっている。ふわふわ うかんで いどうする。',
+    on: 'クウ', kun: 'そら・あ(く)', color: '#0d4f76', tint: '#dcf1fb', hand: true,
+    about: 'ふわり うかぶ ねっききゅうの すがた。かごに のって いどうする。',
     words: [{ w: '空', y: 'そら' }, { w: '青空', y: 'あおぞら' }, { w: '空気', y: 'くうき' }],
-    stations: [['空港第2ビル', 'くうこうだいにびる', '京成本線'], ['新千歳空港', 'しんちとせくうこう', 'JR千歳線']]
+    stations: [['空港第2ビル', 'くうこうだいにびる', '京成本線'], ['新千歳空港', 'しんちとせくうこう', 'JR千歳線']],
+    quiz: []
   },
   {
     id: 'ame', name: 'アメンボ', kanji: '雨', grade: 1, kaku: 8, group: 'sora', rare: 3,
-    on: 'ウ', kun: 'あめ・あま', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: 'あたまの くもから ぽつぽつ 雨を ふらせる。かさを かすのが しゅみ。',
+    on: 'ウ', kun: 'あめ・あま', color: '#1a5c4f', tint: '#e0f5e8', hand: true,
+    about: '水の うえを すいすい すべる、みずすましの すがた。',
     words: [{ w: '雨', y: 'あめ' }, { w: '大雨', y: 'おおあめ' }, { w: '雨やどり', y: 'あまやどり' }],
-    stations: [['雨晴', 'あまはらし', 'JR氷見線']]
+    stations: [['雨晴', 'あまはらし', 'JR氷見線']],
+    quiz: []
   },
   {
     id: 'kimochi', name: 'ゲンキチ', kanji: '気', grade: 1, kaku: 6, group: 'sora', rare: 2,
-    on: 'キ・ケ', kun: '―', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: 'いつも 元気いっぱい。そばに いると みんなも 元気に なる。',
+    on: 'キ・ケ', kun: '―', color: '#8a5c04', tint: '#fdf1d0', hand: true,
+    about: 'いなずまの かたち。いつも 元気いっぱいで、そばに いると みんなも 元気に なる。',
     words: [{ w: '気もち', y: 'きもち' }, { w: '天気', y: 'てんき' }, { w: '元気', y: 'げんき' }],
-    stations: [['気仙沼', 'けせんぬま', 'JR大船渡線']]
+    stations: [['気仙沼', 'けせんぬま', 'JR大船渡線']],
+    quiz: []
   },
   {
     id: 'yuu', name: 'ユウマル', kanji: '夕', grade: 1, kaku: 3, group: 'sora', rare: 1,
-    on: 'セキ', kun: 'ゆう', color: '#e07316', tint: '#fdead6', hand: false,
-    about: 'そらが オレンジに なる じかんに あらわれる。ちょっぴり さみしがりや。',
+    on: 'セキ', kun: 'ゆう', color: '#8a3c10', tint: '#fde5d2', hand: true,
+    about: 'ゆうやけいろの ちょうちんの すがた。そらが オレンジに なる じかんに あかりが つく。',
     words: [{ w: '夕がた', y: 'ゆうがた' }, { w: '夕日', y: 'ゆうひ' }, { w: '夕やけ', y: 'ゆうやけ' }],
-    stations: [['四天王寺前夕陽ケ丘', 'してんのうじまえゆうひがおか', '大阪メトロ谷町線']]
+    stations: [['四天王寺前夕陽ケ丘', 'してんのうじまえゆうひがおか', '大阪メトロ谷町線']],
+    quiz: []
   },
   {
     id: 'toshi', name: 'トシマル', kanji: '年', grade: 1, kaku: 6, group: 'sora', rare: 2,
-    on: 'ネン', kun: 'とし', color: '#ef6f96', tint: '#fde4ec', hand: false,
-    about: '一年に 一かい、としを ひとつ とる。たん生日が だいすき。',
+    on: 'ネン', kun: 'とし', color: '#5c4404', tint: '#fdf3d0', hand: true,
+    about: 'すなどけいの すがた。一年に 一かい、としを ひとつ とる。',
     words: [{ w: '一年', y: 'いちねん' }, { w: '年上', y: 'としうえ' }, { w: 'お年玉', y: 'おとしだま' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'yama', name: 'ヤマゴン', kanji: '山', grade: 1, kaku: 3, group: 'sizen', rare: 1,
@@ -193,17 +206,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'tsuchi', name: 'ツチマル', kanji: '土', grade: 1, kaku: 3, group: 'sizen', rare: 1,
-    on: 'ド・ト', kun: 'つち', color: '#9c6633', tint: '#f2e3d0', hand: false,
-    about: 'あたたかい 土で できている。せなかから いつも 草が はえてくる。',
+    on: 'ド・ト', kun: 'つち', color: '#5c3a18', tint: '#f0e4d4', hand: true,
+    about: 'ちいさな 土の やま。あたまから 芽が 出てくる。',
     words: [{ w: '土', y: 'つち' }, { w: '土よう日', y: 'どようび' }, { w: '土手', y: 'どて' }],
-    stations: [['土呂', 'とろ', '宇都宮線'], ['土浦', 'つちうら', '常磐線'], ['保土ケ谷', 'ほどがや', '横須賀線'], ['六郷土手', 'ろくごうどて', '京急本線'], ['井土ヶ谷', 'いどがや', '京急本線']]
+    stations: [['土呂', 'とろ', '宇都宮線'], ['土浦', 'つちうら', '常磐線'], ['保土ケ谷', 'ほどがや', '横須賀線'], ['六郷土手', 'ろくごうどて', '京急本線'], ['井土ヶ谷', 'いどがや', '京急本線']],
+    quiz: []
   },
   {
     id: 'ishi', name: 'イシゴロ', kanji: '石', grade: 1, kaku: 5, group: 'sizen', rare: 2,
-    on: 'セキ', kun: 'いし', color: '#78838f', tint: '#eef1f5', hand: false,
-    about: 'かたくて じょうぶ。ころがると ゴロゴロ 音が する。',
+    on: 'セキ', kun: 'いし', color: '#4a4842', tint: '#eeeee6', hand: true,
+    about: 'ごろんと ころがる、かたい 石の すがた。',
     words: [{ w: '石', y: 'いし' }, { w: '小石', y: 'こいし' }, { w: '石だん', y: 'いしだん' }],
-    stations: [['石川町', 'いしかわちょう', '京浜東北・根岸線'], ['石川台', 'いしかわだい', '池上線'], ['愛甲石田', 'あいこういしだ', '小田原線'], ['石橋', 'いしばし', '宇都宮線'], ['白石蔵王', 'しろいしざおう', '東北新幹線']]
+    stations: [['石川町', 'いしかわちょう', '京浜東北・根岸線'], ['石川台', 'いしかわだい', '池上線'], ['愛甲石田', 'あいこういしだ', '小田原線'], ['石橋', 'いしばし', '宇都宮線'], ['白石蔵王', 'しろいしざおう', '東北新幹線']],
+    quiz: []
   },
   {
     id: 'mizu', name: 'ミズタマ', kanji: '水', grade: 1, kaku: 4, group: 'sizen', rare: 1,
@@ -223,10 +238,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'ta', name: 'タンボン', kanji: '田', grade: 1, kaku: 5, group: 'sizen', rare: 2,
-    on: 'デン', kun: 'た', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: 'たんぼの モンスター。かえると なかよしで、いっしょに 昼ねを する。',
+    on: 'デン', kun: 'た', color: '#1d5c52', tint: '#e2f5ee', hand: true,
+    about: 'たんぼの ますめの すがた。水めんが きらきら ひかる。',
     words: [{ w: '田', y: 'た' }, { w: '水田', y: 'すいでん' }, { w: '田んぼ', y: 'たんぼ' }],
-    stations: [['神田', 'かんだ', '山手線'], ['田端', 'たばた', '山手線'], ['高田馬場', 'たかだのばば', '山手線'], ['五反田', 'ごたんだ', '山手線'], ['田町', 'たまち', '山手線'], ['蒲田', 'かまた', '京浜東北・根岸線']]
+    stations: [['神田', 'かんだ', '山手線'], ['田端', 'たばた', '山手線'], ['高田馬場', 'たかだのばば', '山手線'], ['五反田', 'ごたんだ', '山手線'], ['田町', 'たまち', '山手線'], ['蒲田', 'かまた', '京浜東北・根岸線']],
+    quiz: []
   },
   {
     id: 'ki', name: 'キノスケ', kanji: '木', grade: 1, kaku: 4, group: 'sizen', rare: 1,
@@ -238,10 +254,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'hayashi', name: 'リンリン', kanji: '林', grade: 1, kaku: 8, group: 'sizen', rare: 3,
-    on: 'リン', kun: 'はやし', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: '木が ならんだ 林の子。かぜが ふくと はっぱが さらさら 鳴る。',
+    on: 'リン', kun: 'はやし', color: '#173d22', tint: '#e2f5de', hand: true,
+    about: '木が 2本 ならんだ、ちいさな 林の子。かぜが ふくと はっぱが さらさら 鳴る。',
     words: [{ w: '林', y: 'はやし' }, { w: '竹林', y: 'たけばやし' }, { w: '山林', y: 'さんりん' }],
-    stations: [['中央林間', 'ちゅうおうりんかん', '田園都市線'], ['若林', 'わかばやし', '世田谷線'], ['東林間', 'ひがしりんかん', '江ノ島線'], ['南林間', 'みなみりんかん', '江ノ島線']]
+    stations: [['中央林間', 'ちゅうおうりんかん', '田園都市線'], ['若林', 'わかばやし', '世田谷線'], ['東林間', 'ひがしりんかん', '江ノ島線'], ['南林間', 'みなみりんかん', '江ノ島線']],
+    quiz: []
   },
   {
     id: 'mori', name: 'モリモリ', kanji: '森', grade: 1, kaku: 12, group: 'sizen', rare: 3,
@@ -253,10 +270,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'kusa', name: 'クサリン', kanji: '草', grade: 1, kaku: 9, group: 'sizen', rare: 3,
-    on: 'ソウ', kun: 'くさ', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: 'やわらかい 草の からだ。だれかが ねころぶと よろこぶ。',
+    on: 'ソウ', kun: 'くさ', color: '#1d5c2e', tint: '#e2f5de', hand: true,
+    about: 'ぴょんと はねる、くさの たばの すがた。',
     words: [{ w: '草', y: 'くさ' }, { w: '草花', y: 'くさばな' }, { w: '草はら', y: 'くさはら' }],
-    stations: [['浅草', 'あさくさ', '銀座線'], ['浅草橋', 'あさくさばし', '中央・総武線'], ['百草園', 'もぐさえん', '京王線']]
+    stations: [['浅草', 'あさくさ', '銀座線'], ['浅草橋', 'あさくさばし', '中央・総武線'], ['百草園', 'もぐさえん', '京王線']],
+    quiz: []
   },
   {
     id: 'hana', name: 'ハナリン', kanji: '花', grade: 1, kaku: 7, group: 'sizen', rare: 2,
@@ -268,10 +286,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'take', name: 'タケノコ', kanji: '竹', grade: 1, kaku: 6, group: 'sizen', rare: 2,
-    on: 'チク', kun: 'たけ', color: '#1f9d86', tint: '#dcf4ee', hand: false,
+    on: 'チク', kun: 'たけ', color: '#1d5c3a', tint: '#e2f5e6', hand: true,
     about: 'ふしの ある からだが まっすぐ のびる。せが のびるのが とても はやい。',
     words: [{ w: '竹', y: 'たけ' }, { w: '竹馬', y: 'たけうま' }, { w: '竹林', y: 'たけばやし' }],
-    stations: [['竹橋', 'たけばし', '東西線'], ['小竹向原', 'こたけむかいはら', '有楽町線']]
+    stations: [['竹橋', 'たけばし', '東西線'], ['小竹向原', 'こたけむかいはら', '有楽町線']],
+    quiz: []
   },
   {
     id: 'inu', name: 'ワンタ', kanji: '犬', grade: 1, kaku: 4, group: 'ikimono', rare: 1,
@@ -283,24 +302,27 @@ const ALL_MONSTERS = [
   },
   {
     id: 'mushi', name: 'ムシキチ', kanji: '虫', grade: 1, kaku: 6, group: 'ikimono', rare: 2,
-    on: 'チュウ', kun: 'むし', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: '草むらに すんでいる。石の 下を のぞくのが とくい。',
+    on: 'チュウ', kun: 'むし', color: '#5c3a18', tint: '#f0e4d4', hand: true,
+    about: 'つのが じまんの、かぶとむしの すがた。石の 下を のぞくのが とくい。',
     words: [{ w: '虫', y: 'むし' }, { w: '虫めがね', y: 'むしめがね' }, { w: 'こん虫', y: 'こんちゅう' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'kai', name: 'カイベエ', kanji: '貝', grade: 1, kaku: 7, group: 'ikimono', rare: 2,
-    on: 'バイ', kun: 'かい', color: '#ef6f96', tint: '#fde4ec', hand: false,
-    about: 'かたい からを あけたり しめたり。中に しんじゅが あるとか ないとか。',
+    on: 'バイ', kun: 'かい', color: '#b8506c', tint: '#fbe4ea', hand: true,
+    about: 'ほたて貝の すがた。かたい からを あけたり しめたり。中に しんじゅが あるとか ないとか。',
     words: [{ w: '貝', y: 'かい' }, { w: '貝がら', y: 'かいがら' }, { w: 'ほら貝', y: 'ほらがい' }],
-    stations: [['貝塚', 'かいづか', '南海本線']]
+    stations: [['貝塚', 'かいづか', '南海本線']],
+    quiz: []
   },
   {
     id: 'sei', name: 'イキマル', kanji: '生', grade: 1, kaku: 5, group: 'ikimono', rare: 2,
-    on: 'セイ・ショウ', kun: 'い(きる)・う(まれる)', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'どんな タマゴからでも 生まれてくる。いのちの まんなかに いる モンスター。',
+    on: 'セイ・ショウ', kun: 'い(きる)・う(まれる)', color: '#c9a010', tint: '#fdf6d8', hand: true,
+    about: 'ふたばの めばえの すがた。どんな タマゴからでも 生まれてくる。',
     words: [{ w: '生きる', y: 'いきる' }, { w: '先生', y: 'せんせい' }, { w: '一生', y: 'いっしょう' }],
-    stations: [['弥生台', 'やよいだい', 'いずみ野線'], ['生田', 'いくた', '小田原線'], ['柿生', 'かきお', '小田原線'], ['生麦', 'なまむぎ', '京急本線']]
+    stations: [['弥生台', 'やよいだい', 'いずみ野線'], ['生田', 'いくた', '小田原線'], ['柿生', 'かきお', '小田原線'], ['生麦', 'なまむぎ', '京急本線']],
+    quiz: []
   },
   {
     id: 'uma', name: 'ウマタロ', kanji: '馬', grade: 2, kaku: 10, group: 'ikimono', rare: 3,
@@ -328,10 +350,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'kuchi', name: 'クチパク', kanji: '口', grade: 1, kaku: 3, group: 'karada', rare: 1,
-    on: 'コウ', kun: 'くち', color: '#d64b2c', tint: '#fde6e0', hand: false,
+    on: 'コウ', kun: 'くち', color: '#a8323a', tint: '#fde4e6', hand: true,
     about: 'よく しゃべって よく 食べる。あくびも とっても 大きい。',
     words: [{ w: '口', y: 'くち' }, { w: '出口', y: 'でぐち' }, { w: '入口', y: 'いりぐち' }],
-    stations: [['西川口', 'にしかわぐち', '京浜東北・根岸線'], ['川口', 'かわぐち', '京浜東北・根岸線'], ['溝の口', 'みぞのくち', '田園都市線'], ['矢口渡', 'やぐちのわたし', '東急多摩川線'], ['大口', 'おおぐち', '横浜線']]
+    stations: [['西川口', 'にしかわぐち', '京浜東北・根岸線'], ['川口', 'かわぐち', '京浜東北・根岸線'], ['溝の口', 'みぞのくち', '田園都市線'], ['矢口渡', 'やぐちのわたし', '東急多摩川線'], ['大口', 'おおぐち', '横浜線']],
+    quiz: []
   },
   {
     id: 'te', name: 'テノリン', kanji: '手', grade: 1, kaku: 4, group: 'karada', rare: 1,
@@ -343,10 +366,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'ashi', name: 'アシスケ', kanji: '足', grade: 1, kaku: 7, group: 'karada', rare: 2,
-    on: 'ソク', kun: 'あし・た(りる)', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: '走るのが とくい。とまるのは にがて。',
+    on: 'ソク', kun: 'あし・た(りる)', color: '#0f6b5c', tint: '#e4fbf5', hand: true,
+    about: '走るのが とくい。とまるのは にがて。5本の ゆびで しっかり ふみだす。',
     words: [{ w: '足', y: 'あし' }, { w: '足あと', y: 'あしあと' }, { w: '一足', y: 'いっそく' }],
-    stations: [['洗足', 'せんぞく', '目黒線'], ['洗足池', 'せんぞくいけ', '池上線'], ['足柄', 'あしがら', '小田原線']]
+    stations: [['洗足', 'せんぞく', '目黒線'], ['洗足池', 'せんぞくいけ', '池上線'], ['足柄', 'あしがら', '小田原線']],
+    quiz: []
   },
   {
     id: 'chikara', name: 'チカラン', kanji: '力', grade: 1, kaku: 2, group: 'karada', rare: 1,
@@ -358,17 +382,19 @@ const ALL_MONSTERS = [
   },
   {
     id: 'hito', name: 'ヒトマル', kanji: '人', grade: 1, kaku: 2, group: 'hito', rare: 1,
-    on: 'ジン・ニン', kun: 'ひと', color: '#b8944f', tint: '#f6eddb', hand: false,
-    about: '二本の あしで しっかり 立つ。みんなの まねを するのが すき。',
+    on: 'ジン・ニン', kun: 'ひと', color: '#8a6a3c', tint: '#fff4e0', hand: true,
+    about: '二本の あしで しっかり 立つ。「人」の字そのままの すがた。みんなの まねを するのが すき。',
     words: [{ w: '人', y: 'ひと' }, { w: '一人', y: 'ひとり' }, { w: '大人', y: 'おとな' }],
-    stations: [['人形町', 'にんぎょうちょう', '日比谷線']]
+    stations: [['人形町', 'にんぎょうちょう', '日比谷線']],
+    quiz: []
   },
   {
     id: 'otoko', name: 'ダンキチ', kanji: '男', grade: 1, kaku: 7, group: 'hito', rare: 2,
-    on: 'ダン・ナン', kun: 'おとこ', color: '#31a3dd', tint: '#dcf1fb', hand: false,
-    about: '田んぼで はたらく 力もち。げんきな こえで あいさつ する。',
+    on: 'ダン・ナン', kun: 'おとこ', color: '#1f4f7a', tint: '#eaf5fd', hand: true,
+    about: '田んぼで はたらく 力もち。はちまきを しめて、こしに 手を あてるのが きまりポーズ。',
     words: [{ w: '男', y: 'おとこ' }, { w: '男の子', y: 'おとこのこ' }, { w: '男子', y: 'だんし' }],
-    stations: [['男鹿', 'おが', 'JR男鹿線']]
+    stations: [['男鹿', 'おが', 'JR男鹿線']],
+    quiz: []
   },
   {
     id: 'onna', name: 'ジョリン', kanji: '女', grade: 1, kaku: 3, group: 'hito', rare: 1,
@@ -404,31 +430,35 @@ const ALL_MONSTERS = [
   },
   {
     id: 'machi', name: 'マチマル', kanji: '町', grade: 1, kaku: 7, group: 'machi', rare: 2,
-    on: 'チョウ', kun: 'まち', color: '#b8944f', tint: '#f6eddb', hand: false,
-    about: 'おうちが ならんだ 町の モンスター。まいにち だれかと すれちがう。',
+    on: 'チョウ', kun: 'まち', color: '#6b4a1e', tint: '#fff6de', hand: true,
+    about: '町かどに立つ がいとうの すがた。あたりを あたたかく 照らしてくれる。',
     words: [{ w: '町', y: 'まち' }, { w: '下町', y: 'したまち' }, { w: '町なみ', y: 'まちなみ' }],
-    stations: [['御徒町', 'おかちまち', '山手線'], ['田町', 'たまち', '山手線'], ['浜松町', 'はままつちょう', '山手線'], ['有楽町', 'ゆうらくちょう', '山手線'], ['大井町', 'おおいまち', '京浜東北・根岸線'], ['桜木町', 'さくらぎちょう', '京浜東北・根岸線']]
+    stations: [['御徒町', 'おかちまち', '山手線'], ['田町', 'たまち', '山手線'], ['浜松町', 'はままつちょう', '山手線'], ['有楽町', 'ゆうらくちょう', '山手線'], ['大井町', 'おおいまち', '京浜東北・根岸線'], ['桜木町', 'さくらぎちょう', '京浜東北・根岸線']],
+    quiz: []
   },
   {
     id: 'mura', name: 'ムラマル', kanji: '村', grade: 1, kaku: 7, group: 'machi', rare: 2,
-    on: 'ソン', kun: 'むら', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: '木の そばの 小さな 村。ゆうがたに なると みんなで あつまる。',
+    on: 'ソン', kun: 'むら', color: '#5c3a1e', tint: '#fdf1de', hand: true,
+    about: '木の そばの 小さな わらぶきの いえ。えんとつから けむりを ふわりと 出す。',
     words: [{ w: '村', y: 'むら' }, { w: '村人', y: 'むらびと' }, { w: '山村', y: 'さんそん' }],
-    stations: [['中村橋', 'なかむらばし', '西武池袋線'], ['村上', 'むらかみ', 'JR羽越本線']]
+    stations: [['中村橋', 'なかむらばし', '西武池袋線'], ['村上', 'むらかみ', 'JR羽越本線']],
+    quiz: []
   },
   {
     id: 'kou', name: 'コウマル', kanji: '校', grade: 1, kaku: 10, group: 'machi', rare: 3,
-    on: 'コウ', kun: '―', color: '#3f649b', tint: '#e0e9f6', hand: false,
-    about: '学校の たてものの モンスター。チャイムの まねが とくい。',
+    on: 'コウ', kun: '―', color: '#7a5c14', tint: '#fffbe8', hand: true,
+    about: '学校の ハンドベルの すがた。チャイムの まねが とくい。',
     words: [{ w: '学校', y: 'がっこう' }, { w: '校てい', y: 'こうてい' }, { w: '校長', y: 'こうちょう' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'gaku', name: 'マナブン', kanji: '学', grade: 1, kaku: 8, group: 'machi', rare: 3,
-    on: 'ガク', kun: 'まな(ぶ)', color: '#3f649b', tint: '#e0e9f6', hand: false,
+    on: 'ガク', kun: 'まな(ぶ)', color: '#1c3a6b', tint: '#eaf1fc', hand: true,
     about: 'ぼうしを かぶった べんきょう だいすきっ子。しつもんされると よろこぶ。',
     words: [{ w: '学校', y: 'がっこう' }, { w: '学ぶ', y: 'まなぶ' }, { w: '学年', y: 'がくねん' }],
-    stations: [['学芸大学', 'がくげいだいがく', '東横線'], ['都立大学', 'とりつだいがく', '東横線'], ['駒沢大学', 'こまざわだいがく', '田園都市線'], ['成城学園前', 'せいじょうがくえんまえ', '小田原線'], ['玉川学園前', 'たまがわがくえんまえ', '小田原線'], ['東海大学前', 'とうかいだいがくまえ', '小田原線']]
+    stations: [['学芸大学', 'がくげいだいがく', '東横線'], ['都立大学', 'とりつだいがく', '東横線'], ['駒沢大学', 'こまざわだいがく', '田園都市線'], ['成城学園前', 'せいじょうがくえんまえ', '小田原線'], ['玉川学園前', 'たまがわがくえんまえ', '小田原線'], ['東海大学前', 'とうかいだいがくまえ', '小田原線']],
+    quiz: []
   },
   {
     id: 'ji', name: 'モジロー', kanji: '字', grade: 1, kaku: 6, group: 'machi', rare: 2,
@@ -440,10 +470,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'bun', name: 'ブンタ', kanji: '文', grade: 1, kaku: 4, group: 'machi', rare: 1,
-    on: 'ブン・モン', kun: 'ふみ', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'ことばを つなげて お話を つくる。おてがみを 書くのが とくい。',
+    on: 'ブン・モン', kun: 'ふみ', color: '#8a5c2c', tint: '#fdf3de', hand: true,
+    about: 'おてがみ そのものの すがた。ろうの ふうかんが じまん。おてがみを 書くのが とくい。',
     words: [{ w: '文', y: 'ぶん' }, { w: '文字', y: 'もじ' }, { w: '文しょう', y: 'ぶんしょう' }],
-    stations: [['金沢文庫', 'かなざわぶんこ', '京急本線']]
+    stations: [['金沢文庫', 'かなざわぶんこ', '京急本線']],
+    quiz: []
   },
   {
     id: 'hon', name: 'ホンマル', kanji: '本', grade: 1, kaku: 5, group: 'machi', rare: 2,
@@ -463,38 +494,43 @@ const ALL_MONSTERS = [
   },
   {
     id: 'kin', name: 'キンピカ', kanji: '金', grade: 1, kaku: 8, group: 'machi', rare: 3,
-    on: 'キン・コン', kun: 'かね', color: '#c99310', tint: '#fdf1cf', hand: false,
-    about: 'ぴかぴか 光る からだ。じつは とても かたい。',
+    on: 'キン・コン', kun: 'かね', color: '#8a6408', tint: '#fffbe0', hand: true,
+    about: 'きらきら光る きんかいの すがた。じつは とても かたい。',
     words: [{ w: '金', y: 'きん' }, { w: 'お金', y: 'おかね' }, { w: '金よう日', y: 'きんようび' }],
-    stations: [['白金台', 'しろかねだい', '南北線'], ['白金高輪', 'しろかねたかなわ', '南北線'], ['小金井', 'こがねい', '宇都宮線'], ['金沢', 'かなざわ', '北陸新幹線'], ['黄金町', 'こがねちょう', '京急本線'], ['金沢文庫', 'かなざわぶんこ', '京急本線']]
+    stations: [['白金台', 'しろかねだい', '南北線'], ['白金高輪', 'しろかねたかなわ', '南北線'], ['小金井', 'こがねい', '宇都宮線'], ['金沢', 'かなざわ', '北陸新幹線'], ['黄金町', 'こがねちょう', '京急本線'], ['金沢文庫', 'かなざわぶんこ', '京急本線']],
+    quiz: []
   },
   {
     id: 'tama', name: 'タマリン', kanji: '玉', grade: 1, kaku: 5, group: 'machi', rare: 2,
-    on: 'ギョク', kun: 'たま', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: 'まんまるで つるつる。ころころ ころがって あそぶ。',
+    on: 'ギョク', kun: 'たま', color: '#1a6b6b', tint: '#eafffb', hand: true,
+    about: 'まんまるで つるつるの ガラス玉。ころころ ころがって あそぶ。',
     words: [{ w: '玉', y: 'たま' }, { w: '目玉', y: 'めだま' }, { w: '十円玉', y: 'じゅうえんだま' }],
-    stations: [['二子玉川', 'ふたこたまがわ', '田園都市線'], ['玉川学園前', 'たまがわがくえんまえ', '小田原線']]
+    stations: [['二子玉川', 'ふたこたまがわ', '田園都市線'], ['玉川学園前', 'たまがわがくえんまえ', '小田原線']],
+    quiz: []
   },
   {
     id: 'ito', name: 'イトマキ', kanji: '糸', grade: 1, kaku: 6, group: 'machi', rare: 2,
-    on: 'シ', kun: 'いと', color: '#ef6f96', tint: '#fde4ec', hand: false,
-    about: 'からだが 一本の 糸で できている。ほどけると ちょっと あわてる。',
+    on: 'シ', kun: 'いと', color: '#8a2c5c', tint: '#fff0f6', hand: true,
+    about: 'からだが 一本の 糸で できている いとまき。ほどけると ちょっと あわてる。',
     words: [{ w: '糸', y: 'いと' }, { w: '毛糸', y: 'けいと' }, { w: '糸まき', y: 'いとまき' }],
-    stations: [['錦糸町', 'きんしちょう', '半蔵門線'], ['糸魚川', 'いといがわ', '北陸新幹線']]
+    stations: [['錦糸町', 'きんしちょう', '半蔵門線'], ['糸魚川', 'いといがわ', '北陸新幹線']],
+    quiz: []
   },
   {
     id: 'ue', name: 'ウエマル', kanji: '上', grade: 1, kaku: 3, group: 'muki', rare: 1,
-    on: 'ジョウ', kun: 'うえ・あ(がる)', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: 'いつも 上を 見ている。たかい ところが 大すき。',
+    on: 'ジョウ', kun: 'うえ・あ(がる)', color: '#1a5c9c', tint: '#eaf5ff', hand: true,
+    about: 'まっすぐ 上を めざす ロケットの すがた。たかい ところが 大すき。',
     words: [{ w: '上', y: 'うえ' }, { w: '川上', y: 'かわかみ' }, { w: '上る', y: 'のぼる' }],
-    stations: [['上野', 'うえの', '山手線'], ['上中里', 'かみなかざと', '京浜東北・根岸線'], ['上野毛', 'かみのげ', '大井町線'], ['池上', 'いけがみ', '池上線'], ['上町', 'かみまち', '世田谷線'], ['三ツ沢上町', 'みつざわかみちょう', 'ブルーライン']]
+    stations: [['上野', 'うえの', '山手線'], ['上中里', 'かみなかざと', '京浜東北・根岸線'], ['上野毛', 'かみのげ', '大井町線'], ['池上', 'いけがみ', '池上線'], ['上町', 'かみまち', '世田谷線'], ['三ツ沢上町', 'みつざわかみちょう', 'ブルーライン']],
+    quiz: []
   },
   {
     id: 'shita', name: 'シタマル', kanji: '下', grade: 1, kaku: 3, group: 'muki', rare: 1,
-    on: 'カ・ゲ', kun: 'した・さ(がる)', color: '#3f649b', tint: '#e0e9f6', hand: false,
-    about: '下を のぞきこむのが すき。じめんの ちかくが おちつく。',
+    on: 'カ・ゲ', kun: 'した・さ(がる)', color: '#1c3a7a', tint: '#e8f0fd', hand: true,
+    about: 'したへ ふわりと おちる しずくの すがた。じめんの ちかくが おちつく。',
     words: [{ w: '下', y: 'した' }, { w: '川下', y: 'かわしも' }, { w: '下がる', y: 'さがる' }],
-    stations: [['下神明', 'しもしんめい', '大井町線'], ['下丸子', 'しもまるこ', '東急多摩川線'], ['山下', 'やました', '世田谷線'], ['下高井戸', 'しもたかいど', '世田谷線'], ['三ツ沢下町', 'みつざわしもちょう', 'ブルーライン'], ['下永谷', 'しもながや', 'ブルーライン']]
+    stations: [['下神明', 'しもしんめい', '大井町線'], ['下丸子', 'しもまるこ', '東急多摩川線'], ['山下', 'やました', '世田谷線'], ['下高井戸', 'しもたかいど', '世田谷線'], ['三ツ沢下町', 'みつざわしもちょう', 'ブルーライン'], ['下永谷', 'しもながや', 'ブルーライン']],
+    quiz: []
   },
   {
     id: 'hidari', name: 'ヒダリン', kanji: '左', grade: 1, kaku: 5, group: 'muki', rare: 2,
@@ -514,10 +550,11 @@ const ALL_MONSTERS = [
   },
   {
     id: 'naka', name: 'ナカマル', kanji: '中', grade: 1, kaku: 4, group: 'muki', rare: 1,
-    on: 'チュウ', kun: 'なか', color: '#d64b2c', tint: '#fde6e0', hand: false,
-    about: 'どまん中が すきな モンスター。ならぶと まん中に わりこむ。',
+    on: 'チュウ', kun: 'なか', color: '#8a2418', tint: '#fff0ea', hand: true,
+    about: 'まん中を 棒が つらぬく はこの すがた。ならぶと まん中に わりこむ。',
     words: [{ w: '中', y: 'なか' }, { w: '空中', y: 'くうちゅう' }, { w: '中学', y: 'ちゅうがく' }],
-    stations: [['上中里', 'かみなかざと', '京浜東北・根岸線'], ['中目黒', 'なかめぐろ', '東横線'], ['中央林間', 'ちゅうおうりんかん', '田園都市線'], ['中延', 'なかのぶ', '大井町線'], ['荏原中延', 'えばらなかのぶ', '池上線'], ['中川', 'なかがわ', 'ブルーライン']]
+    stations: [['上中里', 'かみなかざと', '京浜東北・根岸線'], ['中目黒', 'なかめぐろ', '東横線'], ['中央林間', 'ちゅうおうりんかん', '田園都市線'], ['中延', 'なかのぶ', '大井町線'], ['荏原中延', 'えばらなかのぶ', '池上線'], ['中川', 'なかがわ', 'ブルーライン']],
+    quiz: []
   },
   {
     id: 'dai', name: 'オオマル', kanji: '大', grade: 1, kaku: 3, group: 'muki', rare: 1,
@@ -529,80 +566,91 @@ const ALL_MONSTERS = [
   },
   {
     id: 'shou', name: 'チビスケ', kanji: '小', grade: 1, kaku: 3, group: 'muki', rare: 1,
-    on: 'ショウ', kun: 'ちい(さい)・こ・お', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'てのひらに のる ちいさな 子。オオマルの かたに のって おでかけ。',
+    on: 'ショウ', kun: 'ちい(さい)・こ・お', color: '#8a6c04', tint: '#fffbe0', hand: true,
+    about: 'ちいさな 3つぼしの ひかりの すがた。オオマルの かたに のって おでかけ。',
     words: [{ w: '小さい', y: 'ちいさい' }, { w: '小学校', y: 'しょうがっこう' }, { w: '小川', y: 'おがわ' }],
-    stations: [['武蔵小杉', 'むさしこすぎ', '東横線'], ['武蔵小山', 'むさしこやま', '目黒線'], ['西小山', 'にしこやま', '目黒線'], ['大崎広小路', 'おおさきひろこうじ', '池上線'], ['小田急相模原', 'おだきゅうさがみはら', '小田原線'], ['小田原', 'おだわら', '小田原線']]
+    stations: [['武蔵小杉', 'むさしこすぎ', '東横線'], ['武蔵小山', 'むさしこやま', '目黒線'], ['西小山', 'にしこやま', '目黒線'], ['大崎広小路', 'おおさきひろこうじ', '池上線'], ['小田急相模原', 'おだきゅうさがみはら', '小田原線'], ['小田原', 'おだわら', '小田原線']],
+    quiz: []
   },
   {
     id: 'saki', name: 'センパイ', kanji: '先', grade: 1, kaku: 6, group: 'muki', rare: 2,
-    on: 'セン', kun: 'さき', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'いつも みんなの 先を あるく。ふりかえって 手を ふってくれる。',
+    on: 'セン', kun: 'さき', color: '#5c2c8a', tint: '#f4e6fd', hand: true,
+    about: 'いちばん先を すすむ はたの すがた。ふりかえって 手を ふってくれる。',
     words: [{ w: '先生', y: 'せんせい' }, { w: '先', y: 'さき' }, { w: '先月', y: 'せんげつ' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'tachi', name: 'タチマル', kanji: '立', grade: 1, kaku: 5, group: 'muki', rare: 2,
-    on: 'リツ', kun: 'た(つ)', color: '#9c6633', tint: '#f2e3d0', hand: false,
-    about: 'すわらずに ずっと 立っている。だから あしが とても じょうぶ。',
+    on: 'リツ', kun: 'た(つ)', color: '#6b4418', tint: '#faf0dc', hand: true,
+    about: 'すっと 立った はしらの すがた。すわらずに ずっと 立っている。',
     words: [{ w: '立つ', y: 'たつ' }, { w: '立ち木', y: 'たちき' }, { w: '夕立', y: 'ゆうだち' }],
-    stations: [['都立大学', 'とりつだいがく', '東横線'], ['立場', 'たてば', 'ブルーライン'], ['立会川', 'たちあいがわ', '京急本線'], ['県立大学', 'けんりつだいがく', '京急本線']]
+    stations: [['都立大学', 'とりつだいがく', '東横線'], ['立場', 'たてば', 'ブルーライン'], ['立会川', 'たちあいがわ', '京急本線'], ['県立大学', 'けんりつだいがく', '京急本線']],
+    quiz: []
   },
   {
     id: 'hairu', name: 'イリマル', kanji: '入', grade: 1, kaku: 2, group: 'muki', rare: 1,
-    on: 'ニュウ', kun: 'はい(る)・い(れる)', color: '#3f9c46', tint: '#e4f5dd', hand: false,
-    about: 'どんな すきまにも すっと 入っていく。かくれんぼの 名人。',
+    on: 'ニュウ', kun: 'はい(る)・い(れる)', color: '#1a6b3a', tint: '#eafbe8', hand: true,
+    about: 'あなに すっぽり 入っていく。かくれんぼの 名人。',
     words: [{ w: '入る', y: 'はいる' }, { w: '入口', y: 'いりぐち' }, { w: '入学', y: 'にゅうがく' }],
-    stations: [['入谷', 'いりや', '日比谷線'], ['汐入', 'しおいり', '京急本線']]
+    stations: [['入谷', 'いりや', '日比谷線'], ['汐入', 'しおいり', '京急本線']],
+    quiz: []
   },
   {
     id: 'deru', name: 'デマル', kanji: '出', grade: 1, kaku: 5, group: 'muki', rare: 2,
-    on: 'シュツ', kun: 'で(る)・だ(す)', color: '#c99310', tint: '#fdf1cf', hand: false,
-    about: 'あなから ひょっこり 出てくる。おどろかすのが すき。',
+    on: 'シュツ', kun: 'で(る)・だ(す)', color: '#8a5c14', tint: '#fdf3de', hand: true,
+    about: 'はこから ひょっこり 出てくる。おどろかすのが すき。',
     words: [{ w: '出る', y: 'でる' }, { w: '出口', y: 'でぐち' }, { w: '日の出', y: 'ひので' }],
-    stations: [['日ノ出町', 'ひのでちょう', '京急本線']]
+    stations: [['日ノ出町', 'ひのでちょう', '京急本線']],
+    quiz: []
   },
   {
     id: 'miru', name: 'ミッケ', kanji: '見', grade: 1, kaku: 7, group: 'yosu', rare: 2,
-    on: 'ケン', kun: 'み(る)', color: '#3f9fd8', tint: '#e2f2fc', hand: false,
-    about: '大きな 目で なんでも 見つける。かくれんぼでは いつも おに。',
+    on: 'ケン', kun: 'み(る)', color: '#1c5c8a', tint: '#eefaff', hand: true,
+    about: '虫めがねで なんでも 見つける。かくれんぼでは いつも おに。',
     words: [{ w: '見る', y: 'みる' }, { w: '見学', y: 'けんがく' }, { w: '花見', y: 'はなみ' }],
-    stations: [['鶴見', 'つるみ', '京浜東北・根岸線'], ['喜多見', 'きたみ', '小田原線'], ['赤坂見附', 'あかさかみつけ', '銀座線'], ['中野富士見町', 'なかのふじみちょう', '丸ノ内線 方南町支線'], ['潮見', 'しおみ', '京葉線'], ['検見川浜', 'けみがわはま', '京葉線']]
+    stations: [['鶴見', 'つるみ', '京浜東北・根岸線'], ['喜多見', 'きたみ', '小田原線'], ['赤坂見附', 'あかさかみつけ', '銀座線'], ['中野富士見町', 'なかのふじみちょう', '丸ノ内線 方南町支線'], ['潮見', 'しおみ', '京葉線'], ['検見川浜', 'けみがわはま', '京葉線']],
+    quiz: []
   },
   {
     id: 'yasumi', name: 'ヤスミン', kanji: '休', grade: 1, kaku: 6, group: 'yosu', rare: 2,
-    on: 'キュウ', kun: 'やす(む)', color: '#3f9c46', tint: '#e4f5dd', hand: false,
+    on: 'キュウ', kun: 'やす(む)', color: '#1a6b4c', tint: '#eafdf0', hand: true,
     about: '木に よりかかって ひとやすみ。となりに すわると ねむくなる。',
     words: [{ w: '休む', y: 'やすむ' }, { w: '休日', y: 'きゅうじつ' }, { w: '一休み', y: 'ひとやすみ' }],
-    stations: []
+    stations: [],
+    quiz: []
   },
   {
     id: 'haya', name: 'ハヤマル', kanji: '早', grade: 1, kaku: 6, group: 'yosu', rare: 2,
-    on: 'ソウ', kun: 'はや(い)', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'あさ いちばんに おきる。おひさまより 早い ことも ある。',
+    on: 'ソウ', kun: 'はや(い)', color: '#a8620a', tint: '#fffbe6', hand: true,
+    about: 'あさ いちばんの めざましどけいの すがた。おひさまより 早い ことも ある。',
     words: [{ w: '早い', y: 'はやい' }, { w: '早口', y: 'はやくち' }, { w: '早耳', y: 'はやみみ' }],
-    stations: [['早稲田', 'わせだ', '東西線'], ['西早稲田', 'にしわせだ', '副都心線'], ['早川', 'はやかわ', '東海道線'], ['本庄早稲田', 'ほんじょうわせだ', '上越新幹線']]
+    stations: [['早稲田', 'わせだ', '東西線'], ['西早稲田', 'にしわせだ', '副都心線'], ['早川', 'はやかわ', '東海道線'], ['本庄早稲田', 'ほんじょうわせだ', '上越新幹線']],
+    quiz: []
   },
   {
     id: 'tadashi', name: 'タダシ', kanji: '正', grade: 1, kaku: 5, group: 'yosu', rare: 2,
-    on: 'セイ・ショウ', kun: 'ただ(しい)・まさ', color: '#1f9d86', tint: '#dcf4ee', hand: false,
-    about: 'まっすぐで きちんとした なかま。正かいすると うれしそうに ひかる。',
+    on: 'セイ・ショウ', kun: 'ただ(しい)・まさ', color: '#a8241c', tint: '#fff0ec', hand: true,
+    about: '正かいの ハンコの すがた。正かいすると うれしそうに ひかる。',
     words: [{ w: '正しい', y: 'ただしい' }, { w: '正月', y: 'しょうがつ' }, { w: '正かい', y: 'せいかい' }],
-    stations: [['正雀', 'しょうじゃく', '阪急京都線']]
+    stations: [['正雀', 'しょうじゃく', '阪急京都線']],
+    quiz: []
   },
   {
     id: 'oto', name: 'オトマル', kanji: '音', grade: 1, kaku: 9, group: 'yosu', rare: 3,
-    on: 'オン', kun: 'おと・ね', color: '#8a53c0', tint: '#efe4fa', hand: false,
-    about: 'からだから きれいな 音が 鳴る。しずかな ところが にがて。',
+    on: 'オン', kun: 'おと・ね', color: '#5c2c8a', tint: '#f4ecfd', hand: true,
+    about: 'おんぷ そのものの すがた。からだから きれいな 音が 鳴る。',
     words: [{ w: '音', y: 'おと' }, { w: '音がく', y: 'おんがく' }, { w: '足音', y: 'あしおと' }],
-    stations: [['音更', 'おとふけ', 'JR根室本線']]
+    stations: [['音更', 'おとふけ', 'JR根室本線']],
+    quiz: []
   },
   {
     id: 'en', name: 'エンマル', kanji: '円', grade: 1, kaku: 4, group: 'yosu', rare: 1,
-    on: 'エン', kun: 'まる(い)', color: '#c9ad14', tint: '#fdf8d5', hand: false,
-    about: 'まんまるで つるん。おかいものの ときに たよりに なる。',
+    on: 'エン', kun: 'まる(い)', color: '#8a6408', tint: '#fffbe6', hand: true,
+    about: 'まんまるの コインの すがた。おかいものの ときに たよりに なる。',
     words: [{ w: '円', y: 'えん' }, { w: '百円', y: 'ひゃくえん' }, { w: '円い', y: 'まるい' }],
-    stations: [['東高円寺', 'ひがしこうえんじ', '丸ノ内線'], ['新高円寺', 'しんこうえんじ', '丸ノ内線'], ['高円寺', 'こうえんじ', '中央・総武線']]
+    stations: [['東高円寺', 'ひがしこうえんじ', '丸ノ内線'], ['新高円寺', 'しんこうえんじ', '丸ノ内線'], ['高円寺', 'こうえんじ', '中央・総武線']],
+    quiz: []
   },
   {
     id: 'aka', name: 'アカリン', kanji: '赤', grade: 1, kaku: 7, group: 'iro', rare: 2,
@@ -632,54 +680,7 @@ const ALL_MONSTERS = [
 
 /* 絵のレシピ。b=からだ p=いろ f=かざり k=プリントする字 */
 const ART = {
-  'ni': { b: 'bar', p: 'sky', k: '二', f: ['bar2', 'armsShort', 'feetTwo'] },
-  'san': { b: 'bar', p: 'orange', k: '三', f: ['bar3', 'armsShort', 'feetTwo'] },
-  'yon': { b: 'box', p: 'purple', k: '四', f: ['stripe', 'armsShort', 'legsShort'] },
-  'nana': { b: 'bug', p: 'red', k: '七', f: ['dots7', 'antenna', 'legsShort'] },
-  'hachi': { b: 'bug', p: 'yellow', k: '八', f: ['wingsBee', 'antenna', 'stripe'] },
-  'hyaku': { b: 'disc', p: 'gold', k: '百', f: ['coin', 'armsShort', 'feetTwo'] },
-  'sen': { b: 'tall', p: 'sky', k: '千', f: ['bar3', 'armsShort', 'feetTwo'] },
-  'ten': { b: 'cloud', p: 'sky', k: '天', f: ['sparkTop', 'armsShort'] },
-  'sora': { b: 'cloud', p: 'snow', k: '空', f: ['sparkTop', 'armsShort', 'feetTwo'] },
-  'ame': { b: 'blob', p: 'sky', k: '雨', f: ['raincloud', 'feetTwo'] },
-  'kimochi': { b: 'blob', p: 'teal', k: '気', f: ['sparkTop', 'armsShort', 'feetTwo'] },
-  'yuu': { b: 'disc', p: 'orange', k: '夕', f: ['moonC', 'armsShort', 'feetTwo'] },
-  'toshi': { b: 'blob', p: 'pink', k: '年', f: ['ribbon', 'armsShort', 'feetTwo'] },
-  'tsuchi': { b: 'mound', p: 'brown', k: '土', f: ['grass', 'armsShort'] },
-  'ishi': { b: 'blob', p: 'gray', k: '石', f: ['stone', 'armsShort', 'feetTwo'] },
-  'ta': { b: 'box', p: 'green', k: '田', f: ['bar2', 'armsShort', 'legsShort'] },
-  'hayashi': { b: 'stalk', p: 'green', k: '林', f: ['leaf3', 'feetTwo'] },
-  'kusa': { b: 'stalk', p: 'green', k: '草', f: ['leaf3', 'grass'] },
-  'take': { b: 'stalk', p: 'teal', k: '竹', f: ['bamboo', 'leaf1', 'feetTwo'] },
-  'mushi': { b: 'bug', p: 'green', k: '虫', f: ['antenna', 'legsShort'] },
-  'kai': { b: 'shell', p: 'pink', k: '貝', f: ['shellLines', 'feetTwo'] },
-  'sei': { b: 'stalk', p: 'yellow', k: '生', f: ['leaf1', 'sparkTop', 'feetTwo'] },
-  'kuchi': { b: 'blob', p: 'red', k: '口', f: ['armsShort', 'feetTwo'], fc: { r: 13, g: 26 }, mo: 1.9 },
-  'ashi': { b: 'blob', p: 'teal', k: '足', f: ['legsShort', 'speed'] },
-  'hito': { b: 'tall', p: 'sand', k: '人', f: ['armsShort', 'legsShort'] },
-  'otoko': { b: 'box', p: 'blue', k: '男', f: ['armsShort', 'legsShort', 'stripe'] },
-  'machi': { b: 'box', p: 'sand', k: '町', f: ['window', 'legsShort'] },
-  'mura': { b: 'mound', p: 'green', k: '村', f: ['window', 'grass'] },
-  'kou': { b: 'box', p: 'navy', k: '校', f: ['window', 'legsShort'] },
-  'gaku': { b: 'tall', p: 'navy', k: '学', f: ['cap', 'armsShort', 'feetTwo'] },
-  'bun': { b: 'box', p: 'purple', k: '文', f: ['thread', 'armsShort', 'feetTwo'] },
-  'kin': { b: 'disc', p: 'gold', k: '金', f: ['coin', 'sparkTop', 'feetTwo'] },
-  'tama': { b: 'disc', p: 'teal', k: '玉', f: ['coin', 'feetTwo'] },
-  'ito': { b: 'tall', p: 'pink', k: '糸', f: ['thread', 'armsShort', 'feetTwo'] },
-  'ue': { b: 'bar', p: 'sky', k: '上', f: ['arrowUp', 'feetTwo'] },
-  'shita': { b: 'bar', p: 'navy', k: '下', f: ['arrowDown', 'feetTwo'] },
-  'naka': { b: 'disc', p: 'red', k: '中', f: ['coin', 'armsShort', 'feetTwo'] },
-  'shou': { b: 'blob', p: 'yellow', k: '小', f: ['armsShort', 'feetTwo'], fc: { r: 13, g: 18 } },
-  'saki': { b: 'tall', p: 'purple', k: '先', f: ['antenna', 'armsShort', 'feetTwo'] },
-  'tachi': { b: 'stalk', p: 'brown', k: '立', f: ['legsShort'] },
-  'hairu': { b: 'shell', p: 'green', k: '入', f: ['feetTwo'] },
-  'deru': { b: 'mound', p: 'gold', k: '出', f: ['armsShort'] },
-  'miru': { b: 'blob', p: 'sky', k: '見', f: ['armsShort', 'feetTwo'], fc: { r: 23, g: 28 } },
-  'yasumi': { b: 'tall', p: 'green', k: '休', f: ['sleepZ', 'armsShort'] },
-  'haya': { b: 'disc', p: 'yellow', k: '早', f: ['speed', 'armsShort', 'feetTwo'] },
-  'tadashi': { b: 'box', p: 'teal', k: '正', f: ['cross', 'armsShort', 'feetTwo'] },
-  'oto': { b: 'blob', p: 'purple', k: '音', f: ['note', 'antenna', 'feetTwo'] },
-  'en': { b: 'disc', p: 'yellow', k: '円', f: ['coin', 'armsShort', 'feetTwo'] }
+
 };
 
 const KANJI_PATH = {
