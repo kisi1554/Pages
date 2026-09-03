@@ -65,9 +65,18 @@ const store = {
   },
 };
 
+/** 状態の定義。'' は未設定。skip（興味なし）は「すべて」から隠す。 */
+const STATUSES = [
+  { id: 'want', label: '行きたい', flag: '☆' },
+  { id: 'been', label: '行った',   flag: '✓' },
+  { id: 'skip', label: '興味なし', flag: '✕' },
+];
+const STATUS_IDS = STATUSES.map((s) => s.id);
+const statusOf = (id) => STATUSES.find((s) => s.id === id);
+
 function normalizeRecord(r) {
   r = r && typeof r === 'object' ? r : {};
-  const status = r.status === 'been' || r.status === 'want' ? r.status : '';
+  const status = STATUS_IDS.includes(r.status) ? r.status : '';
   let stars = Number(r.stars);
   if (!Number.isFinite(stars) || stars < 0) stars = 0;
   stars = Math.min(5, Math.round(stars));
@@ -244,9 +253,10 @@ function renderPins() {
       pinsEl.appendChild(el);
     }
     const rec = store.get(spot.id);
+    const st = statusOf(rec.status);
     const flag = el.querySelector('.pin__flag');
-    flag.textContent = rec.status === 'been' ? '✓' : rec.status === 'want' ? '☆' : '';
-    flag.hidden = !rec.status;
+    flag.textContent = st ? st.flag : '';
+    flag.hidden = !st;
     el.className =
       'pin pin--' + (rec.status || 'none') + (ui.selected === spot.id ? ' pin--sel' : '');
     el.style.left = x + 'px';
@@ -285,8 +295,10 @@ function fitArea(areaId) {
   const { w, h } = mapSize();
   const availW = Math.max(80, w - Math.min(100, w * 0.2)); // 右上のボタンぶん
   const availH = Math.max(80, h - Math.min(90, h * 0.2));   // ピンの高さぶん
-  const FIT_MIN = 16.3; // これ以上引くと通りの名前が読めないので止める
-                        // （小さい画面では端の数店が画面外に出るが、リストから飛べる）
+  // 引きすぎの下限はエリアごと（data.js の fitMin）。密集した街ほど大きく、
+  // 広く散った街ほど小さくする。小さい画面では端の数店が画面外から始まるが、
+  // リストのカードをタップすればその店へ地図が飛ぶ。
+  const FIT_MIN = typeof a.fitMin === 'number' ? a.fitMin : 16.0;
   let z = MAX_Z;
   for (; z > FIT_MIN; z -= 0.1) {
     const dx = Math.abs(lngToX(maxLng, z) - lngToX(minLng, z));
@@ -425,15 +437,25 @@ window.addEventListener('resize', () => scheduleRender());
 /* =========================================================
  * しぼりこみ・並べかえ
  * =======================================================*/
+/** 状態のしぼりこみに合うか。'all' のときは「興味なし」だけ外す。 */
+function matchesStatus(status) {
+  if (ui.status === 'all') return status !== 'skip';
+  if (ui.status === 'none') return !status;
+  return status === ui.status;
+}
+
+/** エリアと状態だけを見た、ジャンルチップの母集団 */
+function baseSpots() {
+  return SPOTS.filter((s) => s.area === ui.area && matchesStatus(store.get(s.id).status));
+}
+
 function visibleSpots() {
   const q = ui.q.trim().toLowerCase();
   let list = SPOTS.filter((s) => {
     if (s.area !== ui.area) return false;
     if (ui.genres.size && !ui.genres.has(s.genre)) return false;
     const rec = store.get(s.id);
-    if (ui.status === 'been' && rec.status !== 'been') return false;
-    if (ui.status === 'want' && rec.status !== 'want') return false;
-    if (ui.status === 'none' && rec.status) return false;
+    if (!matchesStatus(rec.status)) return false;
     if (q) {
       const hay = (s.name + ' ' + (s.note || '') + ' ' + rec.memo + ' ' + genreOf(s.genre).name).toLowerCase();
       if (!hay.includes(q)) return false;
@@ -481,14 +503,19 @@ function renderFilters() {
   const sf = $('#statusFilter');
   sf.innerHTML = '';
   const inArea = SPOTS.filter((s) => s.area === ui.area);
-  const n = { all: inArea.length, been: 0, want: 0, none: 0 };
-  for (const s of inArea) n[store.get(s.id).status || 'none']++;
+  const n = { all: 0, been: 0, want: 0, none: 0, skip: 0 };
+  for (const s of inArea) {
+    const st = store.get(s.id).status;
+    n[st || 'none']++;
+    if (st !== 'skip') n.all++; // 「すべて」に興味なしは入れない
+  }
 
   const states = [
     ['all', 'すべて', 'var(--accent)'],
     ['want', '行きたい', 'var(--want)'],
     ['been', '行った', 'var(--been)'],
     ['none', '未設定', 'var(--fg3)'],
+    ['skip', '興味なし', 'var(--skip)'],
   ];
   for (const [v, label, color] of states) {
     const b = document.createElement('button');
@@ -518,9 +545,11 @@ function renderFilters() {
   });
   gf.appendChild(all);
 
+  const base = baseSpots();
+  const inAreaAll = SPOTS.filter((s) => s.area === ui.area);
   for (const g of GENRES) {
-    const n = SPOTS.filter((s) => s.area === ui.area && s.genre === g.id).length;
-    if (!n) continue;
+    if (!inAreaAll.some((s) => s.genre === g.id)) continue; // このエリアに無いジャンルは出さない
+    const n = base.filter((s) => s.genre === g.id).length;
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip';
@@ -550,12 +579,8 @@ function renderList() {
     card.type = 'button';
     card.className = 'card' + (ui.selected === s.id ? ' card--sel' : '');
     card.style.setProperty('--c', g.color);
-    const badge =
-      rec.status === 'been'
-        ? '<span class="badge badge--been">行った</span>'
-        : rec.status === 'want'
-        ? '<span class="badge badge--want">行きたい</span>'
-        : '';
+    const st = statusOf(rec.status);
+    const badge = st ? `<span class="badge badge--${st.id}">${st.label}</span>` : '';
     card.innerHTML =
       `<span class="card__mark">${g.emoji}</span>` +
       `<span class="card__body">` +
@@ -573,9 +598,10 @@ function renderList() {
 }
 
 function renderCounts() {
-  const inArea = SPOTS.filter((s) => s.area === ui.area);
-  const been = inArea.filter((s) => store.get(s.id).status === 'been').length;
-  $('#counts').innerHTML = `行った <b>${been}</b>／${inArea.length}`;
+  // 興味なしにした店は分母から外す（状態チップの「すべて」と数をそろえる）
+  const target = SPOTS.filter((s) => s.area === ui.area && store.get(s.id).status !== 'skip');
+  const been = target.filter((s) => store.get(s.id).status === 'been').length;
+  $('#counts').innerHTML = `行った <b>${been}</b>／${target.length}`;
 }
 
 function renderAll() {

@@ -7,11 +7,14 @@
  * id は一度決めたら変えないこと（localStorage の記録が id で紐づいているため）。
  */
 
+// fitMin … 起動時に「店がぜんぶ入るように」縮小するときの下限ズーム。
+// これ以上引くと通りの名前が読めなくなるので止める（＝端の数件は画面外から始まる）。
+// 店が狭い範囲に密集しているエリアほど大きく、広く散っているエリアほど小さくする。
 const AREAS = [
-  { id: 'noge',   name: '野毛',         center: [35.4478, 139.6296], zoom: 16.6 },
-  { id: 'kannai', name: '関内',         center: [35.4437, 139.6385], zoom: 16.4 },
-  { id: 'mm',     name: 'みなとみらい', center: [35.4576, 139.6320], zoom: 15.6 },
-  { id: 'ykhm',   name: '横浜駅周辺',   center: [35.4660, 139.6220], zoom: 16.0 },
+  { id: 'noge',   name: '野毛',         center: [35.4478, 139.6296], zoom: 16.6, fitMin: 16.3 },
+  { id: 'kannai', name: '関内',         center: [35.4437, 139.6385], zoom: 16.4, fitMin: 16.0 },
+  { id: 'mm',     name: 'みなとみらい', center: [35.4576, 139.6320], zoom: 15.6, fitMin: 14.6 },
+  { id: 'ykhm',   name: '横浜駅周辺',   center: [35.4660, 139.6220], zoom: 16.0, fitMin: 15.5 },
 ];
 
 const GENRES = [
@@ -180,4 +183,78 @@ const SPOTS = [
   { id: 'kannai-049', area: 'kannai', genre: 'other',    name: '荒井屋 万国橋店',         lat: 35.45074, lng: 139.63836, note: '明治28年創業の牛鍋屋。' },
   { id: 'kannai-050', area: 'kannai', genre: 'other',    name: 'ブラフベーカリー',        lat: 35.44799, lng: 139.64086, note: '横浜発のベーカリー。食パンが人気。' },
   { id: 'kannai-051', area: 'kannai', genre: 'other',    name: 'Soup Curry らっきょ',     lat: 35.44817, lng: 139.63603, note: '札幌発のスープカレー。馬車道。' },
+  // ================= みなとみらい（桜木町東口〜新高島・赤レンガ・ハンマーヘッド） =================
+  // 商業施設のなかに店が集まる街なので、「施設そのもの」と「わざわざ行く価値のある店」の両方を入れている。
+  // ---- 施設・その他 ----
+  { id: 'mm-001', area: 'mm', genre: 'other',    name: '横浜赤レンガ倉庫',        lat: 35.45240, lng: 139.64292, note: '1号館・2号館にカフェとレストランがずらり。イベントも多い。' },
+  { id: 'mm-002', area: 'mm', genre: 'other',    name: '横浜ハンマーヘッド',      lat: 35.45624, lng: 139.64204, note: '新港ふ頭の商業施設。食のブランドが集まっている。' },
+  { id: 'mm-003', area: 'mm', genre: 'other',    name: '横浜ワールドポーターズ',  lat: 35.45389, lng: 139.63830, note: '飲食フロアが広い。映画のついでにも。' },
+  { id: 'mm-004', area: 'mm', genre: 'other',    name: 'ランドマークプラザ',      lat: 35.45512, lng: 139.63134, note: 'ランドマークタワーの足元。地下〜5階に飲食。' },
+  { id: 'mm-005', area: 'mm', genre: 'other',    name: 'クイーンズスクエア横浜',  lat: 35.45645, lng: 139.63382, note: 'みなとみらい駅直結。飲食が最も集まるところ。' },
+  { id: 'mm-006', area: 'mm', genre: 'other',    name: 'MARK IS みなとみらい',    lat: 35.45772, lng: 139.63179, note: 'みなとみらい駅直結。地下1階と4階に飲食。' },
+  { id: 'mm-007', area: 'mm', genre: 'other',    name: 'コレットマーレ',          lat: 35.45230, lng: 139.63052, note: '桜木町駅直結。上層階がレストラン街。' },
+  { id: 'mm-008', area: 'mm', genre: 'other',    name: 'MARINE & WALK YOKOHAMA',  lat: 35.45463, lng: 139.64219, note: '海沿いのオープンモール。カフェとレストラン。' },
+  { id: 'mm-009', area: 'mm', genre: 'other',    name: 'みなとみらいグランドセントラルテラス', lat: 35.45886, lng: 139.62930, note: '新高島寄り。ベーカリーやカフェ。' },
+  { id: 'mm-010', area: 'mm', genre: 'other',    name: '電光石火',                lat: 35.45242, lng: 139.63075, note: '広島風のお好み焼き。コレットマーレ。' },
+  { id: 'mm-011', area: 'mm', genre: 'other',    name: 'LA MERE POULARD',         lat: 35.45688, lng: 139.63210, note: 'モン・サン・ミッシェルのふわふわオムレツ。' },
+
+  // ---- カフェ・甘味 ----
+  { id: 'mm-012', area: 'mm', genre: 'cafe',     name: 'bills 横浜赤レンガ倉庫',  lat: 35.45266, lng: 139.64353, note: 'リコッタパンケーキ。朝から並ぶことも。' },
+  { id: 'mm-013', area: 'mm', genre: 'cafe',     name: 'chano-ma 横浜',           lat: 35.45269, lng: 139.64296, note: '赤レンガ倉庫。ベッド席でのんびり。' },
+  { id: 'mm-014', area: 'mm', genre: 'cafe',     name: 'Granny Smith',            lat: 35.45250, lng: 139.64268, note: 'アップルパイの専門店。' },
+  { id: 'mm-015', area: 'mm', genre: 'cafe',     name: 'ZEBRA Coffee & Croissant', lat: 35.45491, lng: 139.64198, note: 'クロワッサンとコーヒー。ハンマーヘッド寄り。' },
+  { id: 'mm-016', area: 'mm', genre: 'cafe',     name: 'THE CITY BAKERY',         lat: 35.45792, lng: 139.62698, note: 'ニューヨーク発のベーカリーカフェ。' },
+  { id: 'mm-017', area: 'mm', genre: 'cafe',     name: 'シルスマリア',            lat: 35.45743, lng: 139.63196, note: '生チョコで知られる神奈川発の店。' },
+  { id: 'mm-018', area: 'mm', genre: 'cafe',     name: 'VANILLABEANS THE ROASTERY', lat: 35.45654, lng: 139.64195, note: '横浜発のチョコレート専門店。' },
+  { id: 'mm-019', area: 'mm', genre: 'cafe',     name: 'ありあけ ハーバースタジオ', lat: 35.45622, lng: 139.64212, note: '横浜土産「ハーバー」の工房つきの店。' },
+
+  // ---- ハンバーグ・洋食 ----
+  { id: 'mm-020', area: 'mm', genre: 'hamburg',  name: 'いしがまやハンバーグ',    lat: 35.45733, lng: 139.63177, note: '石窯で焼くハンバーグ。' },
+  { id: 'mm-021', area: 'mm', genre: 'hamburg',  name: 'Shake Shack みなとみらい', lat: 35.45605, lng: 139.63259, note: 'ニューヨーク発のバーガー。' },
+  { id: 'mm-022', area: 'mm', genre: 'hamburg',  name: 'KUA AINA 横浜赤レンガ倉庫店', lat: 35.45257, lng: 139.64295, note: 'ハワイのハンバーガー。' },
+  { id: 'mm-023', area: 'mm', genre: 'hamburg',  name: '横浜 元町ドリア',         lat: 35.45364, lng: 139.63887, note: 'ドリア専門の洋食。ワールドポーターズ。' },
+  { id: 'mm-024', area: 'mm', genre: 'hamburg',  name: 'BISTRO 石川亭',           lat: 35.45708, lng: 139.63216, note: 'カジュアルなフレンチ・洋食。' },
+
+  // ---- イタリアン ----
+  { id: 'mm-025', area: 'mm', genre: 'italian',  name: 'PORTICELLO',              lat: 35.45419, lng: 139.63804, note: 'ワールドポーターズのイタリアン。' },
+  { id: 'mm-026', area: 'mm', genre: 'italian',  name: 'ATIMO',                   lat: 35.45932, lng: 139.63647, note: '海側のイタリアン。' },
+  { id: 'mm-027', area: 'mm', genre: 'italian',  name: 'ペッシェドーロ 横浜店',   lat: 35.45553, lng: 139.63236, note: '魚介のイタリアン。ランドマーク。' },
+  { id: 'mm-028', area: 'mm', genre: 'italian',  name: 'goodspoon',               lat: 35.45456, lng: 139.64251, note: 'チーズとグリル。MARINE & WALK。' },
+
+  // ---- 中華 ----
+  { id: 'mm-029', area: 'mm', genre: 'chinese',  name: '梅蘭',                    lat: 35.45203, lng: 139.63107, note: '中華街発。あんで固めた「梅蘭焼きそば」。' },
+  { id: 'mm-030', area: 'mm', genre: 'chinese',  name: 'Din Tai Fung',            lat: 35.45542, lng: 139.63232, note: '台湾の小籠包。ランドマークプラザ。' },
+  { id: 'mm-031', area: 'mm', genre: 'chinese',  name: '陳麻婆豆腐 クイーンズスクエア店', lat: 35.45677, lng: 139.63363, note: '本場の麻婆豆腐。' },
+  { id: 'mm-032', area: 'mm', genre: 'chinese',  name: '麻婆専門店 福満園',       lat: 35.45742, lng: 139.63233, note: '麻婆豆腐の専門店。' },
+  { id: 'mm-033', area: 'mm', genre: 'chinese',  name: '中国美食 唐苑酒楼',       lat: 35.46053, lng: 139.62747, note: '新高島寄りの中華。' },
+
+  // ---- ラーメン ----
+  { id: 'mm-034', area: 'mm', genre: 'ramen',    name: 'AFURI',                   lat: 35.45562, lng: 139.63206, note: '柚子塩ラーメン。ランドマークプラザ。' },
+  { id: 'mm-035', area: 'mm', genre: 'ramen',    name: 'Tsukemen TETSU',          lat: 35.45535, lng: 139.63158, note: 'つけ麺。焼き石でスープを温め直せる。' },
+  { id: 'mm-036', area: 'mm', genre: 'ramen',    name: '博多だるま',              lat: 35.45731, lng: 139.63252, note: '博多とんこつ。' },
+  { id: 'mm-037', area: 'mm', genre: 'ramen',    name: '麵屋 甍',                 lat: 35.45754, lng: 139.63333, note: '二郎系のラーメン。' },
+
+  // ---- 寿司 ----
+  { id: 'mm-038', area: 'mm', genre: 'sushi',    name: '銀座沼津港',              lat: 35.45641, lng: 139.63271, note: '回転寿司。クイーンズスクエア。' },
+  { id: 'mm-039', area: 'mm', genre: 'sushi',    name: 'まぐろ問屋 めぐみ水産',   lat: 35.45694, lng: 139.63227, note: 'まぐろ中心の回転寿司。' },
+  { id: 'mm-040', area: 'mm', genre: 'sushi',    name: '海風季',                  lat: 35.45204, lng: 139.63097, note: 'コレットマーレの寿司。' },
+
+  // ---- 定食 ----
+  { id: 'mm-041', area: 'mm', genre: 'teishoku', name: '銀座天國',                lat: 35.45529, lng: 139.63209, note: '天ぷらの老舗。天丼も。' },
+  { id: 'mm-042', area: 'mm', genre: 'teishoku', name: '鎌倉かつ亭 あら珠',       lat: 35.45703, lng: 139.63217, note: 'とんかつ。クイーンズスクエア。' },
+  { id: 'mm-043', area: 'mm', genre: 'teishoku', name: 'やわらかとんかつ かつ泉', lat: 35.45238, lng: 139.63093, note: 'とんかつ。コレットマーレ。' },
+  { id: 'mm-044', area: 'mm', genre: 'teishoku', name: 'ローストビーフ星',        lat: 35.45461, lng: 139.63832, note: 'ローストビーフ丼。ワールドポーターズ。' },
+
+  // ---- 居酒屋 ----
+  { id: 'mm-045', area: 'mm', genre: 'izakaya',  name: '博多 もつ鍋 おおやま',    lat: 35.45520, lng: 139.63213, note: 'もつ鍋。ランドマークプラザ。' },
+  { id: 'mm-046', area: 'mm', genre: 'izakaya',  name: '美食米門 横浜店',         lat: 35.45402, lng: 139.63856, note: '和食と釜炊きごはん。夜景の見える席も。' },
+  { id: 'mm-047', area: 'mm', genre: 'izakaya',  name: 'たる平',                  lat: 35.45634, lng: 139.62958, note: 'みなとみらいの和風居酒屋。' },
+
+  // ---- そば・うどん ----
+  { id: 'mm-048', area: 'mm', genre: 'soba',     name: '石英',                    lat: 35.45713, lng: 139.63191, note: 'そば処。クイーンズスクエア。' },
+  { id: 'mm-049', area: 'mm', genre: 'soba',     name: '田舎そば のぶや',         lat: 35.45896, lng: 139.62954, note: '新高島寄りのそば。' },
+
+  // ---- 焼肉 / 焼き鳥 ----
+  { id: 'mm-050', area: 'mm', genre: 'yakiniku', name: '山形牛焼肉・韓国料理 土古里', lat: 35.45220, lng: 139.63105, note: '山形牛の焼肉。コレットマーレ。' },
+  { id: 'mm-051', area: 'mm', genre: 'yakitori', name: '郷どり燦鶏',              lat: 35.45253, lng: 139.63073, note: '地鶏の炭火焼き。コレットマーレ。' },
 ];
