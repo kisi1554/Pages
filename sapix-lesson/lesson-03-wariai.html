@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>第3回 割合と相当算 — もとにする量はどこか</title>
+<style>
+  :root{
+    --bg:#fbfaf7; --fg:#1d1c1a; --muted:#6b6862; --line:#e2ded4;
+    --card:#ffffff; --accent:#9a4a2e; --accent-soft:#f6ece6;
+    --math:#2c5f7c; --math-soft:#e4eef5;
+    --kid:#40702f; --kid-soft:#eaf3e6;
+    --warn:#8a6a12; --warn-soft:#f8f1de;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#171614; --fg:#eae7e0; --muted:#a09b91; --line:#33302b;
+      --card:#201e1b; --accent:#e0916f; --accent-soft:#33241c;
+      --math:#7fb4d4; --math-soft:#1b2833;
+      --kid:#9ccb8c; --kid-soft:#1e2a1a;
+      --warn:#dcb959; --warn-soft:#2b2413;
+    }
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--fg);
+    font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic Medium","Noto Sans JP",system-ui,sans-serif;
+    font-size:16px; line-height:1.9; letter-spacing:.01em;
+  }
+  .wrap{max-width:820px; margin:0 auto; padding:32px 20px 96px}
+  header.top{border-bottom:2px solid var(--accent); padding-bottom:20px; margin-bottom:36px}
+  .kicker{font-size:13px; color:var(--accent); font-weight:700; letter-spacing:.14em; margin:0 0 6px}
+  h1{font-size:28px; line-height:1.4; margin:0 0 10px; letter-spacing:.01em}
+  .lead{color:var(--muted); font-size:14px; margin:0}
+  h2{font-size:20px; margin:52px 0 14px; padding-left:12px; border-left:5px solid var(--accent); line-height:1.5}
+  p{margin:0 0 14px}
+  ul,ol{margin:0 0 14px; padding-left:1.5em}
+  li{margin-bottom:6px}
+
+  .box{border-radius:10px; padding:16px 18px; margin:20px 0; font-size:15px; line-height:1.85}
+  .box p:last-child,.box ul:last-child,.box ol:last-child,.box figure:last-child{margin-bottom:0}
+  .box .label{display:inline-block; font-size:12px; font-weight:700; letter-spacing:.1em; padding:2px 9px; border-radius:99px; margin-bottom:10px}
+  .math{background:var(--math-soft); border:1px solid color-mix(in srgb,var(--math) 32%, transparent)}
+  .math .label{background:var(--math); color:var(--bg)}
+  .kid{background:var(--kid-soft); border:1px solid color-mix(in srgb,var(--kid) 32%, transparent)}
+  .kid .label{background:var(--kid); color:var(--bg)}
+  .warn{background:var(--warn-soft); border:1px solid color-mix(in srgb,var(--warn) 35%, transparent)}
+  .warn .label{background:var(--warn); color:var(--bg)}
+  .tool{background:var(--card); border:1px solid var(--line)}
+
+  .q{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:18px 20px; margin:26px 0}
+  .q .head{display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap}
+  .q .no{font-weight:700; font-size:15px}
+  .q .lv{font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; background:var(--accent-soft); color:var(--accent); letter-spacing:.06em}
+  .q .body{font-size:15px; margin:0}
+  details{margin-top:14px; border-top:1px dashed var(--line); padding-top:12px}
+  summary{cursor:pointer; font-size:14px; font-weight:700; color:var(--accent); list-style:none; user-select:none}
+  summary::-webkit-details-marker{display:none}
+  summary::before{content:"▶ "; font-size:11px}
+  details[open] summary::before{content:"▼ "}
+  details .ans{margin-top:12px; font-size:15px}
+
+  .frac{white-space:nowrap}
+  .maru{display:inline-block; min-width:1.4em; text-align:center; font-weight:700; color:var(--accent)}
+  code{font-family:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace; font-size:.92em;
+       background:var(--accent-soft); color:var(--accent); padding:1px 5px; border-radius:4px}
+  .tblwrap{overflow-x:auto; margin:16px 0}
+  table{border-collapse:collapse; width:100%; font-size:14px; min-width:440px}
+  th,td{border:1px solid var(--line); padding:8px 10px; text-align:left}
+  th{background:var(--accent-soft); color:var(--accent); font-weight:700; white-space:nowrap}
+  footer.end{margin-top:64px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--muted)}
+
+  /* ---- 図 ---- */
+  figure.dg{margin:24px 0; background:var(--card); border:1px solid var(--line);
+            border-radius:10px; padding:18px 18px 14px}
+  figure.dg svg{display:block; width:100%; height:auto; color:var(--fg)}
+  figure.dg figcaption{font-size:13px; color:var(--muted); line-height:1.7;
+                       margin-top:12px; padding-top:10px; border-top:1px solid var(--line)}
+  .box figure.dg{background:var(--bg)}
+  svg text{fill:currentColor; font-family:inherit; font-size:13px}
+  svg .s{stroke:currentColor; fill:none; stroke-width:1.5}
+  svg .la{stroke:var(--accent); fill:none; stroke-width:2.6}
+  svg .lm{stroke:var(--math); fill:none; stroke-width:2.6}
+  svg .s2{stroke:currentColor; fill:none; stroke-width:2.6}
+  svg .sd{stroke:currentColor; fill:none; stroke-width:1.2; stroke-dasharray:4 4; opacity:.5}
+  svg .bxa{fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.4}
+  svg .bxm{fill:var(--math-soft); stroke:var(--math); stroke-width:1.4}
+  svg .bxk{fill:var(--kid-soft); stroke:var(--kid); stroke-width:1.4}
+  svg .fila{fill:var(--accent)}
+  svg .film{fill:var(--math)}
+  svg .ta{fill:var(--accent)}
+  svg .tm{fill:var(--math)}
+  svg .tb{fill:var(--bg)}
+  svg .mu{fill:var(--muted); font-size:12px}
+  svg .bd{font-weight:700}
+  svg .sm{font-size:11px}
+</style></head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <p class="kicker">SAPIX 難関校クラス／保護者のための算数</p>
+  <h1>第3回　割合と相当算<br>— 「もとにする量」はどこか</h1>
+  <p class="lead">対象：保護者／所要 50分＋演習　｜　前提：<a href="lesson-01-hi.html" style="color:var(--accent)">第1回「比」</a></p>
+</header>
+
+<h2>0. 今回の位置づけ</h2>
+<p>第1回で「比とは、絶対的な大きさを捨てて関係だけを残したもの」と書きました。割合はその<strong>第2の顔</strong>です。違いは1点だけ。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>比</strong>は <span class="maru">①</span> を好きなところに置いてよかった。<br>
+  <strong>割合</strong>は「<strong>もとにする量を 1（100%）と置く</strong>」と決め打ちする。</p>
+</div>
+<p>自由度をひとつ捨てたぶん、割合には固有の落とし穴が生まれます。<strong>「もとにする量」が問題文の中で動く</strong>ことです。「全体の3分の1」と「残りの3分の1」は違う。「2割増し」と「2割引き」は打ち消し合わない。今回はここを潰します。</p>
+<p>この回で扱うのは、割合の3用法・相当算・売買損益。<strong>失点はほぼ全部「もとにする量の取り違え」ひとつに集約されます。</strong></p>
+
+<h2>1. 割合は「数」ではなく「数ともとにする量のセット」</h2>
+<p>いきなり核心です。同じ「女子30人」が、もとにする量しだいで別の値になります。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 220" role="img" aria-label="男子20人と女子30人のクラス。全体50人をもとにすると女子は6割、男子20人をもとにすると女子は1.5倍になることを示す図">
+  <text x="330" y="30" text-anchor="middle" class="mu">同じ「女子 30人」でも……</text>
+  <line x1="100" y1="62" x2="560" y2="62" class="s"/>
+  <line x1="100" y1="56" x2="100" y2="68" class="s"/>
+  <line x1="560" y1="56" x2="560" y2="68" class="s"/>
+  <rect x="288" y="52" width="84" height="20" fill="var(--card)"/>
+  <text x="330" y="67" text-anchor="middle" class="bd">全体 50人</text>
+
+  <rect x="100" y="80" width="184" height="38" class="bxm"/>
+  <text x="192" y="104" text-anchor="middle" class="bd tm">男子 20人</text>
+  <rect x="284" y="80" width="276" height="38" class="fila"/>
+  <text x="422" y="104" text-anchor="middle" class="bd tb">女子 30人</text>
+
+  <line x1="100" y1="136" x2="284" y2="136" class="s"/>
+  <line x1="100" y1="130" x2="100" y2="142" class="s"/>
+  <line x1="284" y1="130" x2="284" y2="142" class="s"/>
+  <rect x="150" y="126" width="84" height="20" fill="var(--card)"/>
+  <text x="192" y="141" text-anchor="middle" class="bd">男子 20人</text>
+
+  <text x="320" y="176" text-anchor="middle" class="bd ta">全体をもとにすると　30 ÷ 50 ＝ 0.6　→　6割</text>
+  <text x="320" y="202" text-anchor="middle" class="bd tm">男子をもとにすると　30 ÷ 20 ＝ 1.5　→　1.5倍</text>
+</svg>
+<figcaption><strong>図1　割合は「くらべる量 ÷ もとにする量」。</strong>分母が変われば答えが変わるので、<strong>割合は数字だけでは意味を持ちません</strong>。お子さんが割合の問題で詰まったら、まず「もとにするのは何？」と聞いてください。それが解けない原因のほぼすべてです。</figcaption>
+</figure>
+
+<div class="box warn">
+  <span class="label">つまずきポイント</span>
+  <p><strong>「くもわ」（くらべる量・もとにする量・割合の丸い図）も、第2回の「みはじ」と同じ扱いにしてください。</strong>覚え方であって理解ではありません。<br>
+  そもそも、くもわが使えるのは<strong>「もとにする量がどれか分かったあと</strong>」です。難関校が問うのはその手前——文章のどこがもとにする量かを見抜けるか——なので、くもわは肝心なところで役に立ちません。</p>
+</div>
+
+<p>「もとにする量」の見つけ方は、日本語の側にルールがあります。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>「<span style="color:var(--accent)">A</span> の <span style="color:var(--math)">B</span>」と書いてあったら、もとにする量は <span style="color:var(--accent)">A</span>。</strong><br>
+  「全体<strong>の</strong> 3分の1」→ もとにするのは全体。「残り<strong>の</strong> 3分の1」→ もとにするのは残り。<br>
+  「定価<strong>の</strong> 1割引き」→ もとにするのは定価。「原価<strong>の</strong> 2割の利益」→ もとにするのは原価。</p>
+</div>
+<p>お子さんには<strong>「『の』の前に線を引く」</strong>と教えてください。それだけで正答率が変わります。</p>
+
+<h2>2. 道具① — 線分図（3用法は1本の図から出る）</h2>
+<p>割合の「3用法」を公式として3つ覚える必要はありません。第1回の線分図がそのまま使えます。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 214" role="img" aria-label="もとにする量を全体とする1本の帯に、割合0.6ぶんのくらべる量を示し、そこから3つの用法がすべて読み取れることを示す図">
+  <line x1="80" y1="48" x2="560" y2="48" class="s"/>
+  <line x1="80" y1="42" x2="80" y2="54" class="s"/>
+  <line x1="560" y1="42" x2="560" y2="54" class="s"/>
+  <rect x="238" y="38" width="164" height="20" fill="var(--card)"/>
+  <text x="320" y="53" text-anchor="middle" class="bd">もとにする量 ＝ ①（100%）</text>
+
+  <rect x="80" y="68" width="288" height="40" class="fila"/>
+  <text x="224" y="93" text-anchor="middle" class="bd tb">0.6（60%）</text>
+  <rect x="368" y="68" width="192" height="40" class="bxa"/>
+
+  <line x1="80" y1="130" x2="368" y2="130" class="s"/>
+  <line x1="80" y1="124" x2="80" y2="136" class="s"/>
+  <line x1="368" y1="124" x2="368" y2="136" class="s"/>
+  <rect x="180" y="120" width="88" height="20" fill="var(--card)"/>
+  <text x="224" y="135" text-anchor="middle" class="bd">くらべる量</text>
+
+  <text x="320" y="162" text-anchor="middle" class="sm">くらべる量　＝　もとにする量 × 割合</text>
+  <text x="320" y="182" text-anchor="middle" class="sm">もとにする量　＝　くらべる量 ÷ 割合</text>
+  <text x="320" y="202" text-anchor="middle" class="sm">割合　＝　くらべる量 ÷ もとにする量</text>
+</svg>
+<figcaption><strong>図2　3用法は、1本の帯の読み方3通りにすぎない。</strong>上の目盛りが比の世界（<span class="maru">①</span>＝100%）、下が実数の世界。<strong>どれか2つが分かれば残り1つが決まる</strong>——それだけのことです。第1回の図1とまったく同じ構造なので、比が入っていれば新しく覚えることはありません。</figcaption>
+</figure>
+
+<h2>3. 道具② — 「の」で基準が乗り換わる</h2>
+<p>ここが今回いちばん大事な節です。<strong>「全体の 1/3」と「残りの 1/3」は別物</strong>。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 246" role="img" aria-label="全体の3分の1と、4分の1を使った残りの3分の1を並べて比べ、後者が全体の4分の1にあたることを示す図">
+  <text x="90" y="44" class="bd ta">「全体の 1/3」</text>
+  <rect x="90" y="56" width="480" height="38" class="bxa"/>
+  <rect x="90" y="56" width="160" height="38" class="fila"/>
+  <text x="170" y="80" text-anchor="middle" class="bd tb">1/3</text>
+  <line x1="250" y1="56" x2="250" y2="94" class="s"/>
+  <line x1="410" y1="56" x2="410" y2="94" class="s"/>
+  <text x="330" y="112" text-anchor="middle" class="mu">全体を 3等分した 1つぶん</text>
+
+  <text x="90" y="150" class="bd tm">「残りの 1/3」（先に 1/4 を使ったあと）</text>
+  <rect x="90" y="162" width="480" height="38" class="bxa"/>
+  <rect x="90" y="162" width="120" height="38" class="s" fill="none"/>
+  <text x="150" y="186" text-anchor="middle" class="sm mu">使った 1/4</text>
+  <rect x="210" y="162" width="120" height="38" class="film"/>
+  <text x="270" y="186" text-anchor="middle" class="bd tb">1/3</text>
+  <line x1="330" y1="162" x2="330" y2="200" class="s"/>
+  <line x1="450" y1="162" x2="450" y2="200" class="s"/>
+  <text x="390" y="218" text-anchor="middle" class="mu">残り（3/4）を 3等分した 1つぶん ＝ 全体の 1/4</text>
+
+  <text x="320" y="240" text-anchor="middle" class="bd ta">「の」の前が変われば、もとにする量が変わる</text>
+</svg>
+<figcaption><strong>図3　同じ「1/3」でも幅が違う。</strong>上の濃い部分は全体の 1/3、下の濃い部分は残りの 1/3。後者は<strong>全体でいえば 1/4</strong> にしかなりません。この取り違えが、割合の失点の最大要因です。</figcaption>
+</figure>
+
+<p>「残りの」が続くときは、<strong>残る割合を掛け算していく</strong>のが定石です。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 264" role="img" aria-label="本を1日目に全体の4分の1、2日目に残りの3分の1読むと、残りが全体の2分の1になり、それが60ページにあたることを示す4段の帯図">
+  <text x="112" y="70" text-anchor="end" class="mu">はじめ</text>
+  <rect x="120" y="50" width="460" height="32" class="bxa"/>
+  <text x="350" y="71" text-anchor="middle" class="bd">全体 ①（？ページ）</text>
+
+  <text x="112" y="120" text-anchor="end" class="mu">1日目のあと</text>
+  <rect x="120" y="100" width="115" height="32" class="fila"/>
+  <text x="177" y="121" text-anchor="middle" class="bd tb sm">1/4</text>
+  <rect x="235" y="100" width="345" height="32" class="bxa"/>
+  <text x="407" y="121" text-anchor="middle" class="bd">残り 3/4</text>
+
+  <text x="112" y="170" text-anchor="end" class="mu">2日目のあと</text>
+  <rect x="120" y="150" width="115" height="32" class="fila"/>
+  <text x="177" y="171" text-anchor="middle" class="bd tb sm">1/4</text>
+  <rect x="235" y="150" width="115" height="32" class="film"/>
+  <text x="292" y="171" text-anchor="middle" class="bd tb sm">2日目</text>
+  <rect x="350" y="150" width="230" height="32" class="bxa"/>
+  <text x="465" y="171" text-anchor="middle" class="bd">残り 1/2</text>
+
+  <line x1="350" y1="182" x2="350" y2="204" class="sd"/>
+  <line x1="580" y1="182" x2="580" y2="204" class="sd"/>
+  <line x1="350" y1="204" x2="580" y2="204" class="s"/>
+  <line x1="350" y1="198" x2="350" y2="210" class="s"/>
+  <line x1="580" y1="198" x2="580" y2="210" class="s"/>
+  <rect x="428" y="194" width="74" height="20" fill="var(--card)"/>
+  <text x="465" y="209" text-anchor="middle" class="bd ta">60ページ</text>
+
+  <text x="320" y="242" text-anchor="middle" class="bd ta">残り ＝ 3/4 × 2/3 ＝ 1/2　→　60 ÷ 1/2 ＝ 全体 120ページ</text>
+</svg>
+<figcaption><strong>図4　「残りの」が続いたら、残る割合を掛けていく。</strong>1日目のあとは 3/4 が残り、2日目に残りの 1/3 を読むので <strong>残りの 2/3</strong> が残る。よって <code>3/4 × 2/3 = 1/2</code>。読んだ割合を足し算しようとして <code>1/4 + 1/3</code> とやるのが典型的な誤りです。</figcaption>
+</figure>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>「残りの <code>1/k</code> を取り除く」は、残量に <code>(1 − 1/k)</code> を掛ける操作です。だから連鎖すれば単なる積になります。</p>
+  <p style="text-align:center"><code>(1 − 1/4)(1 − 1/3) = (3/4)(2/3) = 1/2</code></p>
+  <p>面白いのはここからです。分母が <code>k, k+1, k+2, …</code> と<strong>1ずつ増える</strong>形で出題されると、</p>
+  <p style="text-align:center"><code>(1 − 1/5)(1 − 1/4)(1 − 1/3) = (4/5)(3/4)(2/3) = 2/5</code></p>
+  <p>のように<strong>次々に約分されて消えます</strong>（telescoping product）。中学受験の「残りの〜」問題の答えが必ずきれいな分数になるのはこのためで、出題者はこの構造を使って作問しています。<strong>逆に言えば、途中で汚い分数が出たら計算を間違えています</strong>——これは検算の指針としてお子さんに渡せます。</p>
+</div>
+
+<h2>4. 道具③ — 売買損益（基準が2回動く）</h2>
+<p>売買損益は、原価 → 定価 → 売価 と<strong>基準が2回乗り換わる</strong>だけの分野です。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>定価 ＝ 原価 ×（1 ＋ 見込む利益の割合）</strong>　… もとにするのは<strong>原価</strong><br>
+  <strong>売価 ＝ 定価 ×（1 − 値引きの割合）</strong>　… もとにするのは<strong>定価</strong><br>
+  <strong>利益 ＝ 売価 − 原価</strong>　… 引き算はここだけ</p>
+</div>
+<p>そして最大のコツは <span class="maru">①</span> の置き方です。<strong>原価を 100 と置く。</strong>そうすれば割合がそのままパーセントの数字になり、小数が消えます。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 236" role="img" aria-label="原価100に2割の利益を見込んで定価120、その1割引きで売価108となり、利益が8になることを示す3段の帯図">
+  <text x="102" y="71" text-anchor="end" class="bd tm">原価</text>
+  <rect x="110" y="50" width="400" height="32" class="bxm"/>
+  <text x="310" y="71" text-anchor="middle" class="bd tm">100</text>
+
+  <text x="120" y="100" class="sm ta">↓ ×1.2（原価 の 2割増し）</text>
+
+  <text x="102" y="131" text-anchor="end" class="bd ta">定価</text>
+  <rect x="110" y="110" width="480" height="32" class="bxa"/>
+  <text x="310" y="131" text-anchor="middle" class="bd ta">120</text>
+  <rect x="510" y="110" width="80" height="32" class="fila"/>
+  <text x="550" y="131" text-anchor="middle" class="tb sm">+20</text>
+
+  <text x="120" y="160" class="sm ta">↓ ×0.9（定価 の 1割引き）</text>
+
+  <text x="102" y="191" text-anchor="end" class="bd ta">売価</text>
+  <rect x="110" y="170" width="432" height="32" class="bxa"/>
+  <text x="310" y="191" text-anchor="middle" class="bd ta">108</text>
+
+  <line x1="510" y1="50" x2="510" y2="214" class="sd"/>
+  <line x1="542" y1="202" x2="542" y2="214" class="sd"/>
+  <line x1="510" y1="214" x2="542" y2="214" class="s"/>
+  <text x="552" y="219" class="bd ta">利益 8</text>
+</svg>
+<figcaption><strong>図5　原価を 100 と置けば、全部が整数で進む。</strong>点線は原価 100 の位置。売価 108 がそれをどれだけ超えたかが利益です。<strong>×1.2 の基準は原価、×0.9 の基準は定価</strong>——矢印ごとに、もとにする量が乗り換わっていることに注意してください。</figcaption>
+</figure>
+
+<p>この「基準の乗り換え」がはっきり見えるのが、次の現象です。</p>
+
+<figure class="dg">
+<svg viewBox="0 0 640 230" role="img" aria-label="100を2割増して120にし、その2割を引くと96になり、もとの100より4小さくなることを示す3段の帯図">
+  <line x1="510" y1="46" x2="510" y2="210" class="sd"/>
+  <text x="510" y="40" text-anchor="middle" class="mu">もとの 100</text>
+
+  <rect x="110" y="50" width="400" height="32" class="bxm"/>
+  <text x="310" y="71" text-anchor="middle" class="bd tm">100</text>
+
+  <rect x="110" y="105" width="480" height="32" class="bxa"/>
+  <text x="290" y="126" text-anchor="middle" class="bd ta">120</text>
+  <rect x="510" y="105" width="80" height="32" class="fila"/>
+  <text x="550" y="126" text-anchor="middle" class="tb sm">+20</text>
+  <text x="102" y="126" text-anchor="end" class="sm ta">2割増し</text>
+
+  <rect x="110" y="160" width="384" height="32" class="bxa"/>
+  <text x="290" y="181" text-anchor="middle" class="bd ta">96</text>
+  <rect x="494" y="160" width="96" height="32" class="s" fill="none" stroke-dasharray="4 3"/>
+  <text x="542" y="181" text-anchor="middle" class="sm">−24</text>
+  <text x="102" y="181" text-anchor="end" class="sm ta">2割引き</text>
+
+  <text x="320" y="222" text-anchor="middle" class="mu">増やすときの2割は 100 の2割＝20、減らすときの2割は 120 の2割＝24</text>
+</svg>
+<figcaption><strong>図6　2割増して2割引きは、もとに戻らない。</strong>100 → 120 → <strong>96</strong>。点線（もとの100）に届いていません。増やすときと減らすときで<strong>もとにする量が違う</strong>ためです。「割引率のほうが得に見える」錯覚の正体でもあるので、大人にとっても実用的な図です。</figcaption>
+</figure>
+
+<div class="box math">
+  <span class="label">数学の目で見ると</span>
+  <p>売買損益は<strong>乗法的</strong>な構造です。<code>売価 = 原価 × (1+r)(1−d)</code>。図6は <code>r = d = 0.2</code> の場合で、</p>
+  <p style="text-align:center"><code>(1+r)(1−r) = 1 − r² = 1 − 0.04 = 0.96</code></p>
+  <p><strong>差ではなく積で効くので、必ず <code>r²</code> のぶんだけ目減りします</strong>。1割ずつなら 0.99、3割ずつなら 0.91。r が小さいほど「戻ったように見える」のは、2次の項だからです。</p>
+  <p>また <code>(1+r)(1−d)</code> は掛け算なので<strong>順序を入れ替えても同じ</strong>。「先に値引きしてから利益を乗せる」でも結果は変わりません。お子さんが順序に迷ったら、これを教えてあげてください。</p>
+</div>
+
+<h2>5. 道具④ — 相当算（部分から全体を復元する）</h2>
+<p>相当算とは、要するに<strong>「割合で書かれた部分と、実数で書かれた部分をつないで、全体を逆算する」</strong>問題です。方程式を立てれば一瞬ですが、小学生は線分図で右から左へたどります。</p>
+<div class="box tool">
+  <p style="margin:0"><strong>手順は3つ。</strong>① 全体を <span class="maru">①</span>（または扱いやすい整数）と置く　→　② 実数がわかっている部分が、比でいくつにあたるかを図から読む　→　③ 対応させて <span class="maru">①</span> を出す</p>
+</div>
+<p>図4がまさにこれでした（残り <code>1/2</code> ＝ 60ページ → 全体 120ページ）。難しくなるのは、<strong>「〜より○円多く」のように実数が割合に混ざる</strong>ときです。例題4で扱います。</p>
+
+<h2>6. 演習</h2>
+<p>今回も図を描いてから解いてください。特に<strong>「の」の前に線を引く</strong>ことを意識して読んでみてください。</p>
+
+<div class="q">
+  <div class="head"><span class="no">例題 1</span><span class="lv">基礎・もとにする量</span></div>
+  <p class="body">あるクラスは男子20人、女子30人です。<br>
+  (1) 女子はクラス全体の何％ですか。　(2) 女子は男子の何倍ですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：(1) 60%　(2) 1.5倍</strong></p>
+    <p>図1そのものです。もとにする量が違うだけ。</p>
+    <p>(1) 「クラス全体<strong>の</strong>何％」→ もとにするのは全体50人。30 ÷ 50 ＝ 0.6 → <strong>60%</strong><br>
+    (2) 「男子<strong>の</strong>何倍」→ もとにするのは男子20人。30 ÷ 20 ＝ <strong>1.5倍</strong></p>
+    <p style="color:var(--muted);font-size:14px">※これができない子はいません。しかし文章が長くなった途端、同じことができなくなります。<strong>問題文のどこが「もとにする量」かを指で押さえる</strong>習慣を、簡単なうちに付けておいてください。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 2</span><span class="lv">標準・相当算の連鎖</span></div>
+  <p class="body">ある本を、1日目に全体の <span class="frac">1/4</span> を、2日目に残りの <span class="frac">1/3</span> を読んだところ、まだ60ページ残っていました。この本は全部で何ページですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：120ページ</strong></p>
+    <p>図4のとおりです。</p>
+    <p>1日目のあとに残るのは <span class="frac">3/4</span>。<br>
+    2日目は「<strong>残りの</strong> <span class="frac">1/3</span>」なので、残りの <span class="frac">2/3</span> が残ります。<br>
+    よって最終的に残るのは <code>3/4 × 2/3 = 1/2</code>。</p>
+    <p><span class="frac">1/2</span> ＝ 60ページ → 全体 ＝ <strong>120ページ</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※最頻出の誤答は <code>1/4 + 1/3 = 7/12</code> と足してしまうもの（残り <span class="frac">5/12</span> と考える）。<strong>2日目の <span class="frac">1/3</span> は全体の <span class="frac">1/3</span> ではない</strong>——図3で潰したところです。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 3</span><span class="lv">標準・売買損益</span></div>
+  <p class="body">原価800円の品物に、原価の2割の利益を見込んで定価をつけました。しかし売れないので、定価の1割引きで売りました。利益はいくらですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：64円</strong></p>
+    <p><strong>原価を 100 と置きます</strong>（図5）。</p>
+    <ul>
+      <li>定価 ＝ 100 × 1.2 ＝ <strong>120</strong>（もとにするのは原価）</li>
+      <li>売価 ＝ 120 × 0.9 ＝ <strong>108</strong>（もとにするのは定価）</li>
+      <li>利益 ＝ 108 − 100 ＝ <strong>8</strong></li>
+    </ul>
+    <p>実際の原価は800円なので、100 → 800 は<strong>8倍</strong>。<br>
+    利益 ＝ 8 × 8 ＝ <strong>64円</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※「2割の利益を見込んで、1割引いたのだから、差し引き1割の利益で80円」——これが最頻出の誤答です。図6のとおり、増やす2割と減らす1割は<strong>もとにする量が違う</strong>ので引き算できません。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 4</span><span class="lv">やや難・相当算（割合と実数が混ざる）</span></div>
+  <p class="body">はじめに持っていたお金の <span class="frac">1/3</span> より 200円多く使ったところ、残りは1000円になりました。はじめに持っていたお金はいくらですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：1800円</strong></p>
+    <p>「<span class="maru">①</span>の何倍」と「200円」が混ざっています。こういうときは<strong>線分図で、割合の部分と実数の部分を横に並べる</strong>のが定石です。</p>
+
+    <figure class="dg">
+    <svg viewBox="0 0 640 210" role="img" aria-label="全体を3等分した帯。使ったのは3分の1と200円ぶん、残りは3分の2から200円を引いた1000円であることを示す線分図">
+      <line x1="90" y1="50" x2="290" y2="50" class="s"/>
+      <line x1="90" y1="44" x2="90" y2="56" class="s"/>
+      <line x1="290" y1="44" x2="290" y2="56" class="s"/>
+      <rect x="158" y="40" width="64" height="20" fill="var(--card)"/>
+      <text x="190" y="55" text-anchor="middle" class="bd">使った</text>
+      <line x1="290" y1="50" x2="570" y2="50" class="s"/>
+      <line x1="570" y1="44" x2="570" y2="56" class="s"/>
+      <rect x="382" y="40" width="96" height="20" fill="var(--card)"/>
+      <text x="430" y="55" text-anchor="middle" class="bd ta">残り 1000円</text>
+
+      <rect x="90" y="70" width="160" height="40" class="fila"/>
+      <text x="170" y="95" text-anchor="middle" class="bd tb">①</text>
+      <rect x="250" y="70" width="40" height="40" class="film"/>
+      <rect x="290" y="70" width="280" height="40" class="bxa"/>
+      <text x="430" y="95" text-anchor="middle" class="bd">② − 200円</text>
+
+      <line x1="270" y1="112" x2="270" y2="130" class="s"/>
+      <text x="270" y="146" text-anchor="middle" class="sm tm">200円</text>
+
+      <text x="320" y="178" text-anchor="middle" class="bd ta">② − 200円 ＝ 1000円　→　② ＝ 1200円</text>
+      <text x="320" y="202" text-anchor="middle" class="bd">① ＝ 600円　→　全体 ③ ＝ 1800円</text>
+    </svg>
+    <figcaption><strong>図7　割合の部分と実数の部分を、同じ線分の上に並べる。</strong>使ったのは <span class="maru">①</span>＋200円なので、残りは <span class="maru">②</span>−200円。これが1000円だから <span class="maru">②</span>＝1200円。<strong>200円のぶんだけ、区切りが <span class="maru">①</span> の境界からはみ出している</strong>のが図の要点です。</figcaption>
+    </figure>
+
+    <p>全体を <span class="maru">③</span> と置くと、使ったのは <span class="maru">①</span> ＋ 200円。<br>
+    残り ＝ <span class="maru">③</span> −（<span class="maru">①</span> ＋ 200円）＝ <span class="maru">②</span> − 200円 ＝ 1000円<br>
+    よって <span class="maru">②</span> ＝ 1200円、<span class="maru">①</span> ＝ 600円、全体 <span class="maru">③</span> ＝ <strong>1800円</strong>。</p>
+    <p>検算：1800 の <span class="frac">1/3</span> は600円。600 ＋ 200 ＝ 800円使って、残り1000円 ✓</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">例題 5</span><span class="lv">難関校レベル・売買損益 × 個数</span></div>
+  <p class="body">ある商品を100個仕入れ、1個につき原価の4割の利益を見込んで定価をつけました。50個は定価で売れましたが、残りの50個は定価の3割引きで売りました。全体の利益は3800円でした。この商品1個の原価はいくらですか。</p>
+  <details><summary>解答と考え方</summary><div class="ans">
+    <p><strong>答え：200円</strong></p>
+    <p>例題3と同じく<strong>1個の原価を 100 と置きます</strong>。</p>
+    <ul>
+      <li>定価 ＝ 100 × 1.4 ＝ <strong>140</strong>　→ 定価で売れば 1個あたり <strong>＋40</strong> の利益</li>
+      <li>3割引き ＝ 140 × 0.7 ＝ <strong>98</strong>　→ 原価100 を下回るので 1個あたり <strong>−2</strong>、つまり赤字</li>
+    </ul>
+
+    <figure class="dg">
+    <svg viewBox="0 0 640 258" role="img" aria-label="横軸を個数、縦軸を1個あたりの利益とした面積図。定価で売った50個がプラス2000、3割引きで売った50個がマイナス100になることを示す図">
+      <text x="120" y="28" class="mu">↑ 1個あたりの利益（1個の原価を 100 としたとき）</text>
+      <rect x="120" y="40" width="200" height="100" class="fila"/>
+      <text x="220" y="86" text-anchor="middle" class="bd tb">50個 × ＋40</text>
+      <text x="220" y="108" text-anchor="middle" class="bd tb">＝ ＋2000</text>
+      <line x1="110" y1="140" x2="540" y2="140" class="s"/>
+      <rect x="320" y="140" width="200" height="6" class="film" stroke="var(--math)" stroke-width="1"/>
+      <text x="104" y="144" text-anchor="end" class="mu">0</text>
+      <line x1="420" y1="146" x2="420" y2="162" class="s"/>
+      <text x="420" y="178" text-anchor="middle" class="bd tm">50個 × −2 ＝ −100</text>
+      <text x="420" y="196" text-anchor="middle" class="sm tm">98 で売るので 1個 2 の赤字（0 の線より下）</text>
+      <text x="220" y="222" text-anchor="middle" class="mu">定価 140 で 50個</text>
+      <text x="420" y="222" text-anchor="middle" class="mu">3割引き 98 で 50個</text>
+      <text x="320" y="250" text-anchor="middle" class="bd ta">合計 ＋2000 − 100 ＝ ＋1900　これが 3800円 → ① ＝ 2 → 原価 200円</text>
+    </svg>
+    <figcaption><strong>図8　面積図（横＝個数、縦＝1個あたりの利益）。</strong>プラスの面積からマイナスの面積を引くと全体の利益。<strong>3割引きが原価割れしている</strong>のがこの問題の仕掛けで、気づかずに「＋」で計算すると合いません。</figcaption>
+    </figure>
+
+    <p>比の世界での全体の利益 ＝ 40 × 50 − 2 × 50 ＝ 2000 − 100 ＝ <strong>1900</strong>。<br>
+    これが実際の 3800円 にあたるので、3800 ÷ 1900 ＝ <strong>2倍</strong>。<br>
+    1個の原価 ＝ 100 × 2 ＝ <strong>200円</strong>。</p>
+    <p>検算：原価200、定価280。定価で50個 → 14000円。3割引き196円で50個 → 9800円。売上23800円、仕入20000円、利益3800円 ✓</p>
+
+    <div class="box math" style="margin-top:16px">
+      <span class="label">ここが難関校</span>
+      <p>この問題の急所は<strong>「3割引きすると原価を割る」</strong>ことに気づけるかです。<code>1.4 × 0.7 = 0.98 &lt; 1</code>。4割の利益を見込んでも3割引けば赤字——図6で見た「増やす基準と減らす基準の違い」が、そのまま効いています。</p>
+      <p>お子さんが値引き後の98を出せたのに符号を間違えたら、<strong>「98 は 100 より大きい？小さい？」</strong>とだけ聞いてください。それで気づきます。</p>
+    </div>
+  </div></details>
+</div>
+
+<h2>7. 子どもへの仕込み（幼児〜低学年）</h2>
+<div class="box kid">
+  <span class="label">今すぐ日常でできること</span>
+  <p>割合の芽は<strong>「〜の」という言葉の感覚</strong>です。分数の計算ではありません。</p>
+  <ol>
+    <li><strong>「はんぶんの はんぶん」を体で知る</strong> — 折り紙でも、おやつを分けるのでも。次の図をそのまま実演してください。</li>
+  </ol>
+
+  <figure class="dg">
+  <svg viewBox="0 0 640 210" role="img" aria-label="正方形の折り紙を、ぜんぶ、はんぶん、はんぶんのはんぶんと折っていき、最後が4分の1になることを示す図">
+    <defs><marker id="c1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="currentColor"/></marker></defs>
+    <rect x="90" y="46" width="110" height="110" class="bxk"/>
+    <text x="145" y="176" text-anchor="middle" class="bd">ぜんぶ</text>
+
+    <line x1="208" y1="101" x2="242" y2="101" class="s" marker-end="url(#c1)"/>
+
+    <rect x="250" y="46" width="110" height="110" class="bxk"/>
+    <rect x="250" y="46" width="55" height="110" fill="var(--kid)"/>
+    <text x="277" y="106" text-anchor="middle" class="bd tb">1/2</text>
+    <text x="305" y="176" text-anchor="middle" class="bd">はんぶん</text>
+
+    <line x1="368" y1="101" x2="402" y2="101" class="s" marker-end="url(#c1)"/>
+
+    <rect x="410" y="46" width="110" height="110" class="bxk"/>
+    <rect x="410" y="46" width="55" height="55" fill="var(--kid)"/>
+    <text x="437" y="79" text-anchor="middle" class="bd tb">1/4</text>
+    <text x="465" y="176" text-anchor="middle" class="bd">はんぶんの はんぶん</text>
+
+    <text x="320" y="200" text-anchor="middle" class="mu">2回めの「はんぶん」は、ぜんぶ ではなく はんぶん を もとにしている</text>
+  </svg>
+  <figcaption><strong>図9　これが図3・図4の原体験。</strong>「はんぶんの はんぶん」が「ぜんぶの はんぶん」でないことを手で知っている子は、高学年で「残りの <span class="frac">1/3</span>」に引っかかりません。<strong>言葉にして確認するのがポイント</strong>で、「いま はんぶんにしたのは、なにを はんぶんにした？」と聞いてください。</figcaption>
+  </figure>
+
+  <ol start="2">
+    <li><strong>「〜の」を口癖にする</strong> — 「これは<strong>おやつの</strong>はんぶん」「きょうは<strong>のこりの</strong>ぜんぶ」。もとにするものを毎回言葉に出す。</li>
+    <li><strong>買い物で「もとのねだん」を見せる</strong> — 「200円のものが半額で100円」。割引の実物は、割合のいちばん身近な教材です。低学年なら「半額」「2つで1つぶんおまけ」程度で十分。</li>
+    <li><strong>3人で分ける経験</strong> — 2等分は直感で分かりますが、3等分は難しい。「ぴったり同じに分ける」を試行錯誤させる経験が、分数と割合の土台になります。</li>
+  </ol>
+  <p><strong>やらないほうがいいこと：</strong>「%」の記号と計算を先に教えること。<strong>「〜の」で基準が乗り換わる感覚</strong>のほうが先です。順番を逆にすると、図3で見た取り違えが高学年まで残ります。</p>
+</div>
+
+<h2>8. 宿題</h2>
+<p>次回までに3問。「の」の前に線を引いてから解いてください。</p>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 1</span><span class="lv">相当算の連鎖</span></div>
+  <p class="body">ある水そうに水が入っています。1回目に全体の <span class="frac">1/5</span> を、2回目に残りの <span class="frac">1/4</span> を、3回目に残りの <span class="frac">1/3</span> を汲み出したところ、24L 残りました。はじめに入っていた水は何L ですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>60L</strong></p>
+    <p>残る割合を掛けていきます（図4と同じ）。</p>
+    <p style="text-align:center"><code>(1 − 1/5)(1 − 1/4)(1 − 1/3) = 4/5 × 3/4 × 2/3 = 2/5</code></p>
+    <p><span class="frac">2/5</span> ＝ 24L → <span class="frac">1/5</span> ＝ 12L → 全体 ＝ <strong>60L</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※途中で 4 と 3 が約分で消えるのが分かりますか。<span class="frac">4/5</span> の 4 が <span class="frac">3/4</span> の 4 と、<span class="frac">3/4</span> の 3 が <span class="frac">2/3</span> の 3 と消えて、<code>2/5</code> だけが残ります。この節で書いた telescoping です。<strong>約分が起きなかったら計算ミス</strong>だと思ってください。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 2</span><span class="lv">売買損益</span></div>
+  <p class="body">ある品物に、原価の3割の利益を見込んで定価をつけました。売れないので定価の2割引きで売ったところ、利益は40円でした。この品物の原価はいくらですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>1000円</strong></p>
+    <p>原価を 100 と置きます（図5と同じ）。</p>
+    <ul>
+      <li>定価 ＝ 100 × 1.3 ＝ 130</li>
+      <li>売価 ＝ 130 × 0.8 ＝ 104</li>
+      <li>利益 ＝ 104 − 100 ＝ <strong>4</strong></li>
+    </ul>
+    <p>比の 4 が実際の 40円 なので <strong>10倍</strong>。原価 ＝ 100 × 10 ＝ <strong>1000円</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※「3割増して2割引いたから1割の利益」とすると 400円 になってしまいます。<code>1.3 × 0.8 = 1.04</code> であって <code>1.1</code> ではありません。</p>
+  </div></details>
+</div>
+
+<div class="q">
+  <div class="head"><span class="no">宿題 3</span><span class="lv">難関校レベル・割合の比較</span></div>
+  <p class="body">A店とB店で、同じ品物を同じ原価で仕入れて売っています。<br>
+  A店は原価の2割増しの定価をつけ、その定価の1割引きで売ります。<br>
+  B店は原価の1割増しの定価をつけ、定価どおりに売ります。<br>
+  どちらの店が安いですか。また、その差は原価の何％ですか。</p>
+  <details><summary>答え</summary><div class="ans">
+    <p><strong>A店のほうが安い。差は原価の 2%</strong></p>
+    <p>原価を 100 と置いて、それぞれの売価を出します。</p>
+
+    <figure class="dg">
+    <svg viewBox="0 0 640 232" role="img" aria-label="原価100に対し、A店の売価108はもうけプラス8、B店の売価110はもうけプラス10で、A店のほうが2だけ安いことを示す図">
+      <text x="520" y="34" text-anchor="middle" class="mu">原価 100</text>
+      <line x1="520" y1="40" x2="520" y2="190" class="sd"/>
+
+      <text x="120" y="36" class="bd ta">A店</text>
+      <rect x="120" y="44" width="480" height="26" class="bxa"/>
+      <text x="300" y="62" text-anchor="middle" class="sm ta">定価 120（原価の 2割増し）</text>
+      <rect x="120" y="76" width="432" height="26" class="fila"/>
+      <text x="300" y="94" text-anchor="middle" class="bd tb">売価 108（定価の 1割引き）</text>
+      <line x1="552" y1="102" x2="552" y2="112" class="sd"/>
+      <line x1="520" y1="112" x2="552" y2="112" class="s"/>
+      <line x1="520" y1="107" x2="520" y2="117" class="s"/>
+      <line x1="552" y1="107" x2="552" y2="117" class="s"/>
+      <text x="560" y="117" class="bd ta">＋8</text>
+
+      <text x="120" y="140" class="bd tm">B店</text>
+      <rect x="120" y="148" width="440" height="26" class="film"/>
+      <text x="300" y="166" text-anchor="middle" class="bd tb">定価＝売価 110（原価の 1割増し）</text>
+      <line x1="560" y1="174" x2="560" y2="186" class="sd"/>
+      <line x1="520" y1="186" x2="560" y2="186" class="s"/>
+      <line x1="520" y1="181" x2="520" y2="191" class="s"/>
+      <line x1="560" y1="181" x2="560" y2="191" class="s"/>
+      <text x="568" y="191" class="bd tm">＋10</text>
+
+      <text x="320" y="222" text-anchor="middle" class="bd ta">原価より A は ＋8、B は ＋10　→　A店のほうが 原価の 2% 安い</text>
+    </svg>
+    <figcaption><strong>図10　「2割増しの1割引き」は「1割増し」より安い。</strong><code>1.2 × 0.9 = 1.08</code> に対して <code>1.1</code>。差は 0.02 で、<strong>原価の 2%</strong>。値引き幅の大きいA店のほうが、定価が高いにもかかわらず安く買えます。</figcaption>
+    </figure>
+
+    <ul>
+      <li>A店：定価 ＝ 100 × 1.2 ＝ 120　→　売価 ＝ 120 × 0.9 ＝ <strong>108</strong></li>
+      <li>B店：定価 ＝ 100 × 1.1 ＝ <strong>110</strong>（そのまま売価）</li>
+    </ul>
+    <p>108 &lt; 110 なので <strong>A店のほうが安く</strong>、その差は 110 − 108 ＝ 2。原価100に対して <strong>2%</strong>。</p>
+    <p style="color:var(--muted);font-size:14px">※「2割増して1割引きなら、差し引き1割増し」と考えるとB店と同じになってしまい、比べられません。<strong>割合は足し引きできない、掛けるもの</strong>——今回の全体を通した結論です。</p>
+  </div></details>
+</div>
+
+<footer class="end">
+  <p><strong><a href="lesson-04-heimen.html" style="color:var(--accent)">次回 — 第4回「平面図形（面積比と相似）」</a></strong>：底辺の比・高さの比から面積比へ。相似の発見のしかたと、第2回のダイヤグラムで使った相似がここで正面から出てきます。比が図形に化ける回です。</p>
+  <p>SAPIX 難関校クラス／保護者のための算数　第3回　｜　<a href="lesson-01-hi.html" style="color:var(--accent)">← 第1回 比</a>　｜　<a href="lesson-02-hayasa.html" style="color:var(--accent)">← 第2回 速さ</a>　｜　<a href="lesson-04-heimen.html" style="color:var(--accent)">第4回 平面図形 →</a></p>
+</footer>
+
+</div>
+</body>
+</html>
