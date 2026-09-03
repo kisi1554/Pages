@@ -12,9 +12,11 @@
 // 店が狭い範囲に密集しているエリアほど大きく、広く散っているエリアほど小さくする。
 const AREAS = [
   { id: 'noge',   name: '野毛',         center: [35.4478, 139.6296], zoom: 16.6, fitMin: 16.3 },
-  { id: 'kannai', name: '関内',         center: [35.4437, 139.6385], zoom: 16.4, fitMin: 16.0 },
+  { id: 'kannai', name: '関内',         center: [35.4437, 139.6385], zoom: 16.4, fitMin: 15.4 },
   { id: 'mm',     name: 'みなとみらい', center: [35.4576, 139.6320], zoom: 15.6, fitMin: 14.6 },
-  { id: 'ykhm',   name: '横浜駅周辺',   center: [35.4660, 139.6220], zoom: 16.0, fitMin: 15.5 },
+  { id: 'ykhm',   name: '横浜駅周辺',   center: [35.4660, 139.6220], zoom: 16.0, fitMin: 14.7 },
+  { id: 'chuka',  name: '中華街',       center: [35.4430, 139.6455], zoom: 16.8, fitMin: 15.4 },
+  { id: 'moto',   name: '元町・山手',   center: [35.4410, 139.6505], zoom: 16.2, fitMin: 15.1 },
 ];
 
 const GENRES = [
@@ -257,4 +259,210 @@ const SPOTS = [
   // ---- 焼肉 / 焼き鳥 ----
   { id: 'mm-050', area: 'mm', genre: 'yakiniku', name: '山形牛焼肉・韓国料理 土古里', lat: 35.45220, lng: 139.63105, note: '山形牛の焼肉。コレットマーレ。' },
   { id: 'mm-051', area: 'mm', genre: 'yakitori', name: '郷どり燦鶏',              lat: 35.45253, lng: 139.63073, note: '地鶏の炭火焼き。コレットマーレ。' },
+  // ================= 横浜駅周辺（西口・東口・きた東口・鶴屋町） =================
+  // ここも駅ビルと地下街のテナントが多いので、みなとみらいと同じく
+  // 「施設そのもの」と「わざわざ行く価値のある店」の両方を入れている。
+  // ---- 施設・その他 ----
+  { id: 'ykhm-001', area: 'ykhm', genre: 'other',    name: '横浜ベイクォーター',      lat: 35.46695, lng: 139.62642, note: '東口の海沿い。テラス席のある店が多い。' },
+  { id: 'ykhm-002', area: 'ykhm', genre: 'other',    name: '相鉄ジョイナス',          lat: 35.46550, lng: 139.62103, note: '西口の地下街。飲食店がぎっしり。' },
+  { id: 'ykhm-003', area: 'ykhm', genre: 'other',    name: 'ニュウマン横浜',          lat: 35.46614, lng: 139.62177, note: 'JR横浜タワー。上層階にレストラン。' },
+  { id: 'ykhm-004', area: 'ykhm', genre: 'other',    name: 'ルミネ横浜',              lat: 35.46542, lng: 139.62297, note: '駅直結。手軽に入れる店が多い。' },
+  { id: 'ykhm-005', area: 'ykhm', genre: 'other',    name: 'そごう横浜店',            lat: 35.46532, lng: 139.62508, note: '東口。10階のレストラン街と地下の食品売り場。' },
+  { id: 'ykhm-006', area: 'ykhm', genre: 'other',    name: '横浜髙島屋',              lat: 35.46590, lng: 139.62058, note: '西口。デパ地下とレストラン街。' },
+  { id: 'ykhm-007', area: 'ykhm', genre: 'other',    name: '横浜ポルタ',              lat: 35.46500, lng: 139.62380, note: '東口の地下街。サッと食べたいときに。' },
+  { id: 'ykhm-008', area: 'ykhm', genre: 'other',    name: '横浜駅西口五番街',        lat: 35.46450, lng: 139.62000, note: '西口の飲み屋が集まる通り。' },
+  { id: 'ykhm-009', area: 'ykhm', genre: 'other',    name: '料亭 田中家',             lat: 35.47040, lng: 139.62378, note: '1863年創業の老舗料亭。坂本龍馬の妻おりょうが働いていたと伝わる。' },
+  { id: 'ykhm-010', area: 'ykhm', genre: 'other',    name: '崎陽軒 横浜駅',           lat: 35.46450, lng: 139.62315, note: 'シウマイ。横浜の顔。' },
+  { id: 'ykhm-011', area: 'ykhm', genre: 'other',    name: 'カレーハウスリオ',        lat: 35.46484, lng: 139.62085, note: '横浜の老舗カレー。' },
+
+  // ---- 居酒屋 ----
+  { id: 'ykhm-012', area: 'ykhm', genre: 'izakaya',  name: '豚の味珍',                lat: 35.46733, lng: 139.62268, note: '西口の名物。豚足・ミミ・ハツを三品で。' },
+  { id: 'ykhm-013', area: 'ykhm', genre: 'izakaya',  name: '炭屋串兵衛',              lat: 35.46809, lng: 139.62320, note: '串焼きの大箱。ひとりでも入りやすい。' },
+  { id: 'ykhm-014', area: 'ykhm', genre: 'izakaya',  name: '魚寅本店',                lat: 35.46749, lng: 139.62259, note: '魚がしっかりした酒場。' },
+  { id: 'ykhm-015', area: 'ykhm', genre: 'izakaya',  name: '82 Ale House 横浜西口店',  lat: 35.46386, lng: 139.61855, note: 'ビアパブ。関内の 82 の系列。' },
+  { id: 'ykhm-016', area: 'ykhm', genre: 'izakaya',  name: '立呑み魚参',              lat: 35.46408, lng: 139.61821, note: '西口の立ち飲み。魚がいい。' },
+
+  // ---- 焼き鳥 ----
+  { id: 'ykhm-017', area: 'ykhm', genre: 'yakitori', name: 'やきとり お加代 本店',    lat: 35.46765, lng: 139.62238, note: '西口で長く続く焼き鳥。' },
+  { id: 'ykhm-018', area: 'ykhm', genre: 'yakitori', name: '炭火やきとり 伝兵衛',      lat: 35.46641, lng: 139.61760, note: '炭火の焼き鳥。' },
+  { id: 'ykhm-019', area: 'ykhm', genre: 'yakitori', name: '一鶴',                    lat: 35.46474, lng: 139.61880, note: '香川の骨付鳥。おやどりとひなどり。' },
+  { id: 'ykhm-020', area: 'ykhm', genre: 'yakitori', name: 'とり一',                  lat: 35.46452, lng: 139.62000, note: '五番街の焼き鳥。' },
+
+  // ---- 焼肉 ----
+  { id: 'ykhm-021', area: 'ykhm', genre: 'yakiniku', name: '焼肉 伽倻廊 横浜西口店',   lat: 35.46886, lng: 139.62144, note: '鶴屋町寄りの焼肉。' },
+  { id: 'ykhm-022', area: 'ykhm', genre: 'yakiniku', name: '焼肉うしごろ',            lat: 35.46792, lng: 139.62311, note: '和牛の焼肉。' },
+
+  // ---- 中華 ----
+  { id: 'ykhm-023', area: 'ykhm', genre: 'chinese',  name: '龍味',                    lat: 35.46775, lng: 139.62154, note: '西口の町中華。餃子とタンメン。' },
+  { id: 'ykhm-024', area: 'ykhm', genre: 'chinese',  name: '中国料理 煌蘭',           lat: 35.46820, lng: 139.62157, note: '西口の中華。' },
+  { id: 'ykhm-025', area: 'ykhm', genre: 'chinese',  name: '四川料理 京華楼',         lat: 35.46790, lng: 139.62315, note: '本格的な四川料理。麻婆豆腐が辛い。' },
+  { id: 'ykhm-026', area: 'ykhm', genre: 'chinese',  name: '東天閣',                  lat: 35.46927, lng: 139.61929, note: '鶴屋町の中華。' },
+
+  // ---- ラーメン ----
+  { id: 'ykhm-027', area: 'ykhm', genre: 'ramen',    name: '吉村家',                  lat: 35.46303, lng: 139.61507, note: '家系ラーメンの総本山。行列は覚悟。' },
+  { id: 'ykhm-028', area: 'ykhm', genre: 'ramen',    name: '麺場 浜虎',               lat: 35.46893, lng: 139.62331, note: '鶴屋町の人気店。醤油と塩。' },
+  { id: 'ykhm-029', area: 'ykhm', genre: 'ramen',    name: '横濱丿貫',                lat: 35.46411, lng: 139.62210, note: '煮干しの丿貫の駅前店。' },
+  { id: 'ykhm-030', area: 'ykhm', genre: 'ramen',    name: '本丸亭 鶴屋町店',         lat: 35.46940, lng: 139.62398, note: '塩ラーメン。あっさりめ。' },
+  { id: 'ykhm-031', area: 'ykhm', genre: 'ramen',    name: 'らーめん 山頭火',         lat: 35.46308, lng: 139.61663, note: '旭川の塩とんこつ。' },
+
+  // ---- そば・うどん ----
+  { id: 'ykhm-032', area: 'ykhm', genre: 'soba',     name: 'そば・天ぷら 角平',       lat: 35.46068, lng: 139.62016, note: 'つけ天そばの名店。平沼寄り。' },
+  { id: 'ykhm-033', area: 'ykhm', genre: 'soba',     name: '更科一休 本店',           lat: 35.46615, lng: 139.61585, note: '西口の老舗そば。' },
+  { id: 'ykhm-034', area: 'ykhm', genre: 'soba',     name: '味奈登庵 横浜天理ビル店', lat: 35.46728, lng: 139.61957, note: '「富士山盛り」の大盛りそば。' },
+
+  // ---- 定食 ----
+  { id: 'ykhm-035', area: 'ykhm', genre: 'teishoku', name: '勝烈庵 横浜西口店',       lat: 35.46578, lng: 139.62120, note: '馬車道の勝烈庵の駅前店。とんかつ。' },
+  { id: 'ykhm-036', area: 'ykhm', genre: 'teishoku', name: '博多天ぷら たかお',       lat: 35.46476, lng: 139.62053, note: '揚げたての天ぷら定食。ジョイナス。' },
+  { id: 'ykhm-037', area: 'ykhm', genre: 'teishoku', name: 'ねぎし',                  lat: 35.46443, lng: 139.61875, note: '牛たんととろろの定食。' },
+
+  // ---- ハンバーグ・洋食 ----
+  { id: 'ykhm-038', area: 'ykhm', genre: 'hamburg',  name: 'ハングリータイガー',      lat: 35.46720, lng: 139.62232, note: '横浜発のハンバーグ。目の前で仕上げてくれる。' },
+  { id: 'ykhm-039', area: 'ykhm', genre: 'hamburg',  name: '横浜チーズカフェ',        lat: 35.46624, lng: 139.61769, note: 'チーズ料理と洋食。' },
+  { id: 'ykhm-040', area: 'ykhm', genre: 'hamburg',  name: 'CALIFORNIA PLAYERS DINER', lat: 35.46382, lng: 139.61864, note: 'アメリカンなバーガーとダイナー。' },
+
+  // ---- 寿司 ----
+  { id: 'ykhm-041', area: 'ykhm', genre: 'sushi',    name: '鮨 こいづみ',             lat: 35.46924, lng: 139.62422, note: '鶴屋町の寿司。' },
+  { id: 'ykhm-042', area: 'ykhm', genre: 'sushi',    name: '伸寿し',                  lat: 35.46743, lng: 139.62255, note: '西口の寿司屋。' },
+  { id: 'ykhm-043', area: 'ykhm', genre: 'sushi',    name: '回し寿司 活',             lat: 35.46469, lng: 139.62491, note: '三浦三崎の回転寿司。' },
+
+  // ---- イタリアン ----
+  { id: 'ykhm-044', area: 'ykhm', genre: 'italian',  name: 'トラットリア ビコローレ ヨコハマ', lat: 35.46170, lng: 139.61958, note: '横浜を代表するイタリアンのひとつ。' },
+  { id: 'ykhm-045', area: 'ykhm', genre: 'italian',  name: 'Osteria da Takashima',    lat: 35.46258, lng: 139.62257, note: '高島町寄りのオステリア。' },
+  { id: 'ykhm-046', area: 'ykhm', genre: 'italian',  name: 'トラットリア フランコ',   lat: 35.46677, lng: 139.61759, note: '西口のイタリアン。' },
+
+  // ---- カフェ・甘味 ----
+  { id: 'ykhm-047', area: 'ykhm', genre: 'cafe',     name: 'サモアール 横浜髙島屋店', lat: 35.46534, lng: 139.62085, note: '紅茶の専門店。' },
+  { id: 'ykhm-048', area: 'ykhm', genre: 'cafe',     name: '横濱珈琲店 五番街',       lat: 35.46450, lng: 139.62011, note: '五番街の喫茶。朝から開いている。' },
+  { id: 'ykhm-049', area: 'ykhm', genre: 'cafe',     name: '珈琲問屋',                lat: 35.46742, lng: 139.61714, note: '豆を選んでその場で焙煎してもらえる。' },
+  { id: 'ykhm-050', area: 'ykhm', genre: 'cafe',     name: 'THE CITY BAKERY ニュウマン横浜', lat: 35.46715, lng: 139.62281, note: 'ベーカリーカフェ。' },
+  { id: 'ykhm-051', area: 'ykhm', genre: 'cafe',     name: '和菓子 伊勢屋',           lat: 35.46078, lng: 139.61487, note: '平沼の和菓子屋。' },
+  // ================= 中華街（山下町） =================
+  // ---- 中華 ----
+  { id: 'chuka-001', area: 'chuka', genre: 'chinese',  name: '海員閣',            lat: 35.44304, lng: 139.64574, note: '1936年創業。牛肉飯とワンタンめん。' },
+  { id: 'chuka-002', area: 'chuka', genre: 'chinese',  name: '清風楼',            lat: 35.44241, lng: 139.64651, note: '焼売の名店。皮が薄い。' },
+  { id: 'chuka-003', area: 'chuka', genre: 'chinese',  name: '保昌',              lat: 35.44261, lng: 139.64575, note: '牛肉の腐乳炒めが看板。' },
+  { id: 'chuka-004', area: 'chuka', genre: 'chinese',  name: '山東 一号店',       lat: 35.44378, lng: 139.64593, note: '水餃子。よく行列ができる。' },
+  { id: 'chuka-005', area: 'chuka', genre: 'chinese',  name: '謝甜記 本店',       lat: 35.44364, lng: 139.64690, note: '中華粥の老舗。朝から開いている。' },
+  { id: 'chuka-006', area: 'chuka', genre: 'chinese',  name: '南粤美食',          lat: 35.44375, lng: 139.64693, note: '本格的な広東料理。' },
+  { id: 'chuka-007', area: 'chuka', genre: 'chinese',  name: '華正樓 新館',       lat: 35.44367, lng: 139.64662, note: '広東料理の老舗。' },
+  { id: 'chuka-008', area: 'chuka', genre: 'chinese',  name: '重慶飯店',          lat: 35.44401, lng: 139.64701, note: '四川料理の老舗。番餅も有名。' },
+  { id: 'chuka-009', area: 'chuka', genre: 'chinese',  name: '中華菜館 同發 本館', lat: 35.44336, lng: 139.64605, note: '焼味（チャーシューなど）が名物。' },
+  { id: 'chuka-010', area: 'chuka', genre: 'chinese',  name: '菜香',              lat: 35.44312, lng: 139.64688, note: '点心の広東料理。' },
+  { id: 'chuka-011', area: 'chuka', genre: 'chinese',  name: '四五六菜館 本館',   lat: 35.44280, lng: 139.64635, note: '上海料理。' },
+  { id: 'chuka-012', area: 'chuka', genre: 'chinese',  name: '京華樓 本館',       lat: 35.44233, lng: 139.64594, note: '四川料理。麻婆豆腐。' },
+  { id: 'chuka-013', area: 'chuka', genre: 'chinese',  name: '招福門',            lat: 35.44283, lng: 139.64791, note: '飲茶の食べ放題。' },
+  { id: 'chuka-014', area: 'chuka', genre: 'chinese',  name: '鵬天閣',            lat: 35.44347, lng: 139.64677, note: '焼き小籠包。食べ歩きにも。' },
+  { id: 'chuka-015', area: 'chuka', genre: 'chinese',  name: '王府井 本店',       lat: 35.44343, lng: 139.64645, note: '焼き小籠包の食べ歩き。' },
+  { id: 'chuka-016', area: 'chuka', genre: 'chinese',  name: '慶華飯店',          lat: 35.44373, lng: 139.64535, note: '生煎包（焼き小籠包）。' },
+  { id: 'chuka-017', area: 'chuka', genre: 'chinese',  name: '安記',              lat: 35.44313, lng: 139.64560, note: '老舗の広東料理。' },
+  { id: 'chuka-018', area: 'chuka', genre: 'chinese',  name: '三和楼',            lat: 35.44243, lng: 139.64665, note: '上海料理の老舗。' },
+  { id: 'chuka-019', area: 'chuka', genre: 'chinese',  name: '秀味園',            lat: 35.44233, lng: 139.64685, note: '魯肉飯（ルーロー飯）。' },
+  { id: 'chuka-020', area: 'chuka', genre: 'chinese',  name: '萬来亭',            lat: 35.44144, lng: 139.64672, note: '上海焼きそば。中華街の南のはずれ。' },
+  { id: 'chuka-021', area: 'chuka', genre: 'chinese',  name: '馬さんの店 龍仙 本館', lat: 35.44245, lng: 139.64404, note: '朝がゆ。早い時間から開いている。' },
+  { id: 'chuka-022', area: 'chuka', genre: 'chinese',  name: '福満園 本店',       lat: 35.44333, lng: 139.64324, note: '四川料理。' },
+  { id: 'chuka-023', area: 'chuka', genre: 'chinese',  name: '景徳鎮',            lat: 35.44274, lng: 139.64637, note: '四川料理。麻婆豆腐が辛い。' },
+  { id: 'chuka-024', area: 'chuka', genre: 'chinese',  name: '広東料理 吉兆',     lat: 35.44369, lng: 139.64608, note: '広東料理。' },
+  { id: 'chuka-025', area: 'chuka', genre: 'chinese',  name: '東光飯店 本館',     lat: 35.44316, lng: 139.64362, note: '中華街の西寄り。' },
+  { id: 'chuka-026', area: 'chuka', genre: 'chinese',  name: '大珍楼',            lat: 35.44301, lng: 139.64452, note: '大通りの大箱。食べ放題も。' },
+  { id: 'chuka-027', area: 'chuka', genre: 'chinese',  name: '翠鳳 本店',         lat: 35.44287, lng: 139.64692, note: '広東料理。' },
+  { id: 'chuka-028', area: 'chuka', genre: 'chinese',  name: '東天紅',            lat: 35.44661, lng: 139.64577, note: '山下町の北寄り。' },
+
+  // ---- ラーメン ----
+  { id: 'chuka-029', area: 'chuka', genre: 'ramen',    name: '一楽',              lat: 35.44341, lng: 139.64551, note: '中華街の中華そば。' },
+  { id: 'chuka-030', area: 'chuka', genre: 'ramen',    name: '長崎ちゃんぽん 長崎屋', lat: 35.44371, lng: 139.64688, note: 'ちゃんぽんと皿うどん。' },
+
+  // ---- カフェ・甘味 ----
+  { id: 'chuka-031', area: 'chuka', genre: 'cafe',     name: '悟空茶荘',          lat: 35.44193, lng: 139.64554, note: '中国茶館。2階でゆっくりお茶を。' },
+  { id: 'chuka-032', area: 'chuka', genre: 'cafe',     name: 'Cafe Giang',        lat: 35.44384, lng: 139.64727, note: 'ベトナムのエッグコーヒー。' },
+  { id: 'chuka-033', area: 'chuka', genre: 'cafe',     name: 'MeetFresh 鮮芋仙',  lat: 35.44330, lng: 139.64898, note: '台湾スイーツ。豆花や芋圓。' },
+  { id: 'chuka-034', area: 'chuka', genre: 'cafe',     name: '幸せのパンケーキ',  lat: 35.44280, lng: 139.64812, note: 'ふわふわのパンケーキ。' },
+  { id: 'chuka-035', area: 'chuka', genre: 'cafe',     name: 'かをり',            lat: 35.44560, lng: 139.64353, note: 'レーズンサンドで知られる洋菓子店。' },
+  { id: 'chuka-036', area: 'chuka', genre: 'cafe',     name: 'ストラスブール',    lat: 35.44647, lng: 139.64352, note: '山下町の洋菓子店。' },
+
+  // ---- そば・うどん ----
+  { id: 'chuka-037', area: 'chuka', genre: 'soba',     name: '横浜 晋山',         lat: 35.44179, lng: 139.64818, note: '中華街のなかのそば屋。' },
+  { id: 'chuka-038', area: 'chuka', genre: 'soba',     name: '花津月',            lat: 35.44489, lng: 139.64520, note: '山下町のそばと和食。' },
+
+  // ---- 焼き鳥 ----
+  { id: 'chuka-039', area: 'chuka', genre: 'yakitori', name: 'おさ亭',            lat: 35.44283, lng: 139.64866, note: '中華街の東門寄りの鶏料理。' },
+  { id: 'chuka-040', area: 'chuka', genre: 'yakitori', name: '友酒家',            lat: 35.44185, lng: 139.64853, note: '炭火の鶏。' },
+
+  // ---- イタリアン ----
+  { id: 'chuka-041', area: 'chuka', genre: 'italian',  name: 'SALONE 2007',       lat: 35.44301, lng: 139.64867, note: '中華街のはずれのイタリアン。' },
+  { id: 'chuka-042', area: 'chuka', genre: 'italian',  name: 'Roma Statione',     lat: 35.44553, lng: 139.64728, note: '山下町のイタリアン。' },
+
+  // ---- 焼肉 / ハンバーグ / 居酒屋 / 定食 ----
+  { id: 'chuka-043', area: 'chuka', genre: 'yakiniku', name: 'Lonestar Smoke House', lat: 35.44442, lng: 139.64262, note: 'アメリカ式のスモークバーベキュー。' },
+  { id: 'chuka-044', area: 'chuka', genre: 'hamburg',  name: 'Flashback Cafe',    lat: 35.44412, lng: 139.64243, note: '山下公園寄りのバーガー。' },
+  { id: 'chuka-045', area: 'chuka', genre: 'izakaya',  name: '海乃家',            lat: 35.44430, lng: 139.64401, note: '山下町の酒場。' },
+  { id: 'chuka-046', area: 'chuka', genre: 'teishoku', name: 'どん八 山下町店',   lat: 35.44700, lng: 139.64578, note: '丼と定食。' },
+
+  // ---- その他 ----
+  { id: 'chuka-047', area: 'chuka', genre: 'other',    name: '江戸清',            lat: 35.44233, lng: 139.64582, note: '中華街のブタまん。食べ歩きの定番。' },
+  { id: 'chuka-048', area: 'chuka', genre: 'other',    name: '聘珍大甘栗',        lat: 35.44389, lng: 139.64805, note: '甘栗。おみやげにも。' },
+  { id: 'chuka-049', area: 'chuka', genre: 'other',    name: 'ちまき屋',          lat: 35.44303, lng: 139.64718, note: 'ちまきの専門店。' },
+  { id: 'chuka-050', area: 'chuka', genre: 'other',    name: 'ホフブロウ',        lat: 35.44586, lng: 139.64672, note: '1949年創業のドイツ料理。' },
+  { id: 'chuka-051', area: 'chuka', genre: 'other',    name: 'Alte Liebe',        lat: 35.44613, lng: 139.64249, note: '山下公園寄りの一軒。' },
+
+  // ================= 元町・山手（元町商店街・山手・石川町） =================
+  // ---- カフェ・甘味 ----
+  { id: 'moto-001', area: 'moto', genre: 'cafe',     name: 'ウチキパン',          lat: 35.44092, lng: 139.65064, note: '1888年創業。イングランド食パン。' },
+  { id: 'moto-002', area: 'moto', genre: 'cafe',     name: '喜久家洋菓子舗',      lat: 35.44070, lng: 139.64876, note: '1946年創業。ラムボール。' },
+  { id: 'moto-003', area: 'moto', genre: 'cafe',     name: 'えの木てい',          lat: 35.43756, lng: 139.65200, note: '山手の洋館カフェ。チェリーサンド。' },
+  { id: 'moto-004', area: 'moto', genre: 'cafe',     name: 'Café the Rose',       lat: 35.43880, lng: 139.65483, note: '山手111番館の中。バラ園を見ながら。' },
+  { id: 'moto-005', area: 'moto', genre: 'cafe',     name: 'BLUFF BAKERY',        lat: 35.43906, lng: 139.64977, note: '山手のベーカリー。' },
+  { id: 'moto-006', area: 'moto', genre: 'cafe',     name: 'ブラフベーカリー 元町', lat: 35.43843, lng: 139.64970, note: 'もう一軒のブラフベーカリー。' },
+  { id: 'moto-007', area: 'moto', genre: 'cafe',     name: 'ミカフェート',        lat: 35.44056, lng: 139.64943, note: 'コーヒーの専門店。' },
+  { id: 'moto-008', area: 'moto', genre: 'cafe',     name: '昭和ベーカリー',      lat: 35.44070, lng: 139.64962, note: '元町のパン屋。' },
+  { id: 'moto-009', area: 'moto', genre: 'cafe',     name: 'サンドグラス',        lat: 35.44064, lng: 139.64907, note: '紅茶とサンドイッチ。' },
+  { id: 'moto-010', area: 'moto', genre: 'cafe',     name: 'オリーブ',            lat: 35.44042, lng: 139.64874, note: '元町の喫茶。' },
+  { id: 'moto-011', area: 'moto', genre: 'cafe',     name: '茶倉',                lat: 35.43995, lng: 139.64987, note: '日本茶のカフェ。' },
+  { id: 'moto-012', area: 'moto', genre: 'cafe',     name: 'キャラバンコーヒースタンド', lat: 35.44225, lng: 139.65036, note: '自家焙煎のコーヒースタンド。' },
+  { id: 'moto-013', area: 'moto', genre: 'cafe',     name: 'パブロフ',            lat: 35.44230, lng: 139.64938, note: 'プリンで知られる洋菓子店。' },
+  { id: 'moto-014', area: 'moto', genre: 'cafe',     name: 'カフェエリオットアヴェニュー', lat: 35.44338, lng: 139.65218, note: 'スペシャルティコーヒー。' },
+  { id: 'moto-015', area: 'moto', genre: 'cafe',     name: 'フリッパーズ',        lat: 35.44123, lng: 139.65011, note: 'スフレパンケーキ。' },
+  { id: 'moto-016', area: 'moto', genre: 'cafe',     name: '炭火焙煎珈琲 無',     lat: 35.44121, lng: 139.64998, note: '炭火で焙煎するコーヒー。' },
+  { id: 'moto-017', area: 'moto', genre: 'cafe',     name: 'バイミー スタンド',   lat: 35.43942, lng: 139.64983, note: '山手のコーヒースタンド。' },
+  { id: 'moto-018', area: 'moto', genre: 'cafe',     name: 'パティ・カフェ',      lat: 35.43898, lng: 139.64974, note: '山手のカフェ。' },
+  { id: 'moto-019', area: 'moto', genre: 'cafe',     name: 'Marks house Cafe',    lat: 35.43920, lng: 139.65266, note: '山手の洋館まわりのカフェ。' },
+  { id: 'moto-020', area: 'moto', genre: 'cafe',     name: 'しょうゆ・きゃふぇ',  lat: 35.43753, lng: 139.65131, note: '山手の小さなカフェ。' },
+  { id: 'moto-021', area: 'moto', genre: 'cafe',     name: 'ラ・テイエール',      lat: 35.44259, lng: 139.65369, note: '紅茶の店。' },
+  { id: 'moto-022', area: 'moto', genre: 'cafe',     name: 'Marine Bakery',       lat: 35.44261, lng: 139.65375, note: '石川町寄りのベーカリー。' },
+  { id: 'moto-023', area: 'moto', genre: 'cafe',     name: '茶つぼ',              lat: 35.43884, lng: 139.64806, note: '山手の甘味処。' },
+
+  // ---- その他（フレンチ・洋館・カレーなど） ----
+  { id: 'moto-024', area: 'moto', genre: 'other',    name: '仏蘭西料亭 横濱元町 霧笛楼', lat: 35.44031, lng: 139.64910, note: '1981年創業。元町のフランス料理。' },
+  { id: 'moto-025', area: 'moto', genre: 'other',    name: '霧笛楼 カフェ・ネクストドア', lat: 35.44024, lng: 139.64903, note: '霧笛楼の隣。ケーキと軽食。' },
+  { id: 'moto-026', area: 'moto', genre: 'other',    name: 'コーヒーハウス ザ・カフェ', lat: 35.44482, lng: 139.64999, note: 'ホテルニューグランド。ドリアとナポリタンの発祥の店。' },
+  { id: 'moto-027', area: 'moto', genre: 'other',    name: 'ロビーラウンジ ラ・テラス', lat: 35.44489, lng: 139.64949, note: 'ホテルニューグランドのラウンジ。' },
+  { id: 'moto-028', area: 'moto', genre: 'other',    name: '山手十番館',          lat: 35.43885, lng: 139.65258, note: '山手の洋館レストラン。外人墓地のとなり。' },
+  { id: 'moto-029', area: 'moto', genre: 'other',    name: 'アルペンジロー',      lat: 35.44240, lng: 139.64920, note: '横浜のカレーの名店。' },
+  { id: 'moto-030', area: 'moto', genre: 'other',    name: 'ビストロ エルエラ',   lat: 35.43999, lng: 139.64838, note: '元町のビストロ。' },
+  { id: 'moto-031', area: 'moto', genre: 'other',    name: 'ブラッスリー アルティザン', lat: 35.44098, lng: 139.65036, note: '元町のブラッスリー。' },
+  { id: 'moto-032', area: 'moto', genre: 'other',    name: 'ST',                  lat: 35.43883, lng: 139.64970, note: '山手のフランス料理。' },
+  { id: 'moto-033', area: 'moto', genre: 'other',    name: 'ドゥ エピセ',         lat: 35.44046, lng: 139.64887, note: '元町の中国料理。落ち着いた一軒。' },
+  { id: 'moto-034', area: 'moto', genre: 'other',    name: 'JH Cafe',             lat: 35.43929, lng: 139.64794, note: '山手のカフェ＆バー。' },
+  { id: 'moto-035', area: 'moto', genre: 'other',    name: 'うるうるま',          lat: 35.44187, lng: 139.65548, note: '石川町寄りの一軒。' },
+
+  // ---- イタリアン ----
+  { id: 'moto-036', area: 'moto', genre: 'italian',  name: 'イル・ジャルディーノ', lat: 35.44466, lng: 139.64991, note: 'ホテルニューグランドのイタリアン。' },
+  { id: 'moto-037', area: 'moto', genre: 'italian',  name: 'Ristorante Papa Davide', lat: 35.44264, lng: 139.65054, note: '元町のイタリアン。' },
+  { id: 'moto-038', area: 'moto', genre: 'italian',  name: 'リオス ボングスタイオ', lat: 35.44126, lng: 139.64968, note: '元町のイタリアン。' },
+  { id: 'moto-039', area: 'moto', genre: 'italian',  name: 'チーチョス',          lat: 35.43949, lng: 139.64707, note: '山手のピッツェリア。' },
+  { id: 'moto-040', area: 'moto', genre: 'italian',  name: 'KANDY',               lat: 35.43942, lng: 139.64793, note: '山手のイタリアン。' },
+  { id: 'moto-041', area: 'moto', genre: 'italian',  name: 'ラ・タッパ フィッサ', lat: 35.43936, lng: 139.64710, note: '山手のイタリアン。' },
+
+  // ---- ハンバーグ・洋食 ----
+  { id: 'moto-042', area: 'moto', genre: 'hamburg',  name: 'フィッシャーマンズワーフ', lat: 35.44135, lng: 139.65070, note: '元町の洋食。海の見えるつくり。' },
+  { id: 'moto-043', area: 'moto', genre: 'hamburg',  name: "Cinnamon's Restaurant", lat: 35.44285, lng: 139.65071, note: 'ハワイのパンケーキとロコモコ。' },
+  { id: 'moto-044', area: 'moto', genre: 'hamburg',  name: "Egg'n Things",        lat: 35.44464, lng: 139.65029, note: 'ハワイのパンケーキとオムレツ。' },
+  { id: 'moto-045', area: 'moto', genre: 'hamburg',  name: "codie's",             lat: 35.44205, lng: 139.65479, note: '石川町寄りのバーガー。' },
+
+  // ---- ラーメン / 寿司 / 焼肉 / 居酒屋 / 中華 ----
+  { id: 'moto-046', area: 'moto', genre: 'ramen',    name: '塩らー麺 本丸亭',     lat: 35.44033, lng: 139.64997, note: '塩ラーメン。元町。' },
+  { id: 'moto-047', area: 'moto', genre: 'ramen',    name: '下前商店',            lat: 35.44044, lng: 139.65094, note: 'ラーメンとカレー。' },
+  { id: 'moto-048', area: 'moto', genre: 'sushi',    name: '三郎寿司',            lat: 35.44036, lng: 139.65059, note: '元町の寿司。' },
+  { id: 'moto-049', area: 'moto', genre: 'yakiniku', name: '肉山 横浜',           lat: 35.44080, lng: 139.64972, note: '肉をどんと。予約制。' },
+  { id: 'moto-050', area: 'moto', genre: 'izakaya',  name: 'たまや',              lat: 35.43976, lng: 139.64785, note: '山手の炭火焼きの酒場。' },
+  { id: 'moto-051', area: 'moto', genre: 'chinese',  name: '興華菜館',            lat: 35.44257, lng: 139.65468, note: '石川町寄りの中華。' },
 ];
