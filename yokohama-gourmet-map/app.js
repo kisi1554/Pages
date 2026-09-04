@@ -645,6 +645,8 @@ function select(id, moveMap) {
   $('#gmapName').href = `https://www.google.com/maps/search/?api=1&query=${q}`;
   $('#gmapPin').href = `https://www.google.com/maps/search/?api=1&query=${spot.lat},${spot.lng}`;
 
+  clearTimeout(closeTimer);
+  closeTimer = 0;
   $('#saved').hidden = true;
   sheet.hidden = false;
 
@@ -672,13 +674,38 @@ function flashSaved(ok) {
 }
 
 function patch(p) {
-  if (!current) return;
+  if (!current) return false;
   const ok = store.set(current.id, p);
   flashSaved(ok);
   renderFilters();
   renderList();
   renderCounts();
   scheduleRender();
+  return ok;
+}
+
+/* --- 状態を押したあと、少し待ってから自動でとじる ---
+ * 待っているあいだに★・訪問日・メモに触れたら、とじるのをやめる。
+ * サッと記録したいときと、じっくり書きたいときの両方に効く。 */
+const AUTO_CLOSE_MS = 800;
+let closeTimer = 0;
+
+function armAutoClose() {
+  clearTimeout(closeTimer);
+  closeTimer = setTimeout(() => {
+    closeTimer = 0;
+    closeSheet();
+  }, AUTO_CLOSE_MS);
+  const el = $('#saved');
+  if (!el.hidden && !el.classList.contains('err')) el.textContent = '保存しました · とじます';
+}
+
+function cancelAutoClose() {
+  if (!closeTimer) return;
+  clearTimeout(closeTimer);
+  closeTimer = 0;
+  const el = $('#saved');
+  if (!el.hidden && !el.classList.contains('err')) el.textContent = '保存しました';
 }
 
 $('#fStatus').addEventListener('click', (e) => {
@@ -687,7 +714,7 @@ $('#fStatus').addEventListener('click', (e) => {
   const v = b.dataset.v;
   const next = store.get(current.id).status === v ? '' : v;
   for (const x of $('#fStatus').children) x.setAttribute('aria-pressed', String(x.dataset.v === next));
-  patch({ status: next });
+  if (patch({ status: next })) armAutoClose();
 });
 
 $('#fStars').addEventListener('click', (e) => {
@@ -708,8 +735,21 @@ $('#fMemo').addEventListener('input', (e) => {
   memoTimer = setTimeout(() => patch({ memo: v }), 400);
 });
 
+/* 状態ボタン以外をさわったら、自動でとじるのをやめる */
+{
+  const panel = sheet.querySelector('.sheet__panel');
+  const keepOpen = (e) => {
+    if (!e.target.closest('#fStatus')) cancelAutoClose();
+  };
+  panel.addEventListener('pointerdown', keepOpen);
+  panel.addEventListener('focusin', keepOpen);
+  panel.addEventListener('scroll', cancelAutoClose, { passive: true });
+}
+
 /* シートを閉じる */
 function closeSheet() {
+  clearTimeout(closeTimer);
+  closeTimer = 0;
   sheet.hidden = true;
   ui.selected = null;
   renderList();
