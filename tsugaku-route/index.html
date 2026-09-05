@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>通学ルート比較</title>
+<style>
+  :root {
+    --paper:      #F5F6F2;
+    --surface:    #FFFFFF;
+    --surface-2:  #EDEFE9;
+    --ink:        #15191A;
+    --ink-soft:   #434B49;
+    --ink-mute:   #646C69;
+    --rule:       #D7DBD3;
+    --rule-soft:  #E5E8E1;
+    --gate:       #9C3A22;
+    --gate-bg:    #F3E5DF;
+    --ok:         #2C6A4D;
+    --ok-bg:      #E3EDE6;
+
+    --c-seiko:  #2C6A4D;
+    --c-shibu:  #1E4C8A;
+    --c-hiroo:  #6B4A9E;
+    --c-mita:   #0F6E77;
+    --c-asano:  #9A5A12;
+    --c-kanto:  #A03A5E;
+    --c-seiryo: #5E6B14;
+    --c-yamate: #8E3B87;
+    --c-shibak: #37596B;
+
+    --shadow: 0 1px 2px rgba(20,30,26,.05), 0 8px 24px -16px rgba(20,30,26,.28);
+
+    --font-display: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+    --font-body: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", YuGothic, "Noto Sans JP", Meiryo, sans-serif;
+    --font-util: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+    --step-0: 1rem;
+    --step-1: 1.125rem;
+    --step-2: 1.375rem;
+    --step-3: 1.7rem;
+    --step-4: 2.2rem;
+    --step-5: clamp(2.1rem, 5.2vw, 3.1rem);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#121514; --surface:#1A1E1D; --surface-2:#232827;
+      --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
+      --rule:#2E3432; --rule-soft:#262B29;
+      --gate:#E2907A; --gate-bg:#2E211C;
+      --ok:#74C39A; --ok-bg:#1B2A22;
+      --c-seiko:#74C39A; --c-shibu:#85B0EC; --c-hiroo:#B79BE0;
+      --c-mita:#5FC3CC; --c-asano:#DFA45E; --c-kanto:#E894B0;
+      --c-seiryo:#C3CE72; --c-yamate:#DA9BD4; --c-shibak:#93B6C6;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#121514; --surface:#1A1E1D; --surface-2:#232827;
+    --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
+    --rule:#2E3432; --rule-soft:#262B29;
+    --gate:#E2907A; --gate-bg:#2E211C;
+    --ok:#74C39A; --ok-bg:#1B2A22;
+    --c-seiko:#74C39A; --c-shibu:#85B0EC; --c-hiroo:#B79BE0;
+    --c-mita:#5FC3CC; --c-asano:#DFA45E; --c-kanto:#E894B0;
+    --c-seiryo:#C3CE72; --c-yamate:#DA9BD4; --c-shibak:#93B6C6;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light dark; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: var(--step-0);
+    line-height: 1.8; -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 64rem; margin: 0 auto;
+    padding: clamp(1.5rem, 4vw, 3.5rem) clamp(1.1rem, 4vw, 2.5rem) 6rem;
+    display: flex; flex-direction: column; gap: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .eyebrow {
+    font-family: var(--font-util); font-size: .7rem;
+    letter-spacing: .18em; text-transform: uppercase;
+    color: var(--ink-mute); margin: 0 0 .9rem;
+  }
+  h1 {
+    font-family: var(--font-display); font-size: var(--step-5);
+    line-height: 1.24; font-weight: 600; margin: 0 0 1rem;
+    letter-spacing: .01em; text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 46rem; }
+  h2 {
+    font-family: var(--font-display); font-size: var(--step-3);
+    font-weight: 600; letter-spacing: .01em; margin: 0 0 .25rem;
+  }
+  h3 { font-size: var(--step-1); font-weight: 600; margin: 0 0 .6rem; }
+  .sec-note { color: var(--ink-mute); font-size: .875rem; margin: 0 0 1.4rem; }
+
+  /* links & focus */
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  a:focus-visible, .vcard:focus-visible {
+    outline: 2px solid var(--accent, var(--ink));
+    outline-offset: 3px; border-radius: 6px;
+  }
+  [id] { scroll-margin-top: 1.5rem; }
+
+  /* 目次 */
+  .toc {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 14px; padding: 1rem 1.2rem; box-shadow: var(--shadow);
+  }
+  .toc h2 { font-size: var(--step-1); margin: 0 0 .7rem; font-family: var(--font-body); }
+  .toc ol {
+    list-style: none; padding: 0; margin: 0;
+    display: flex; flex-wrap: wrap; gap: .45rem .5rem;
+  }
+  .toc a {
+    display: inline-flex; align-items: baseline; gap: .45rem;
+    text-decoration: none; color: var(--ink);
+    border: 1px solid var(--rule); border-left: 3px solid var(--accent, var(--rule));
+    border-radius: 8px; padding: .3rem .7rem; font-size: .88rem;
+    background: var(--surface-2);
+  }
+  .toc a:hover { border-color: var(--accent, var(--ink)); }
+  .toc a .tm {
+    font-family: var(--font-util); font-size: .82rem;
+    color: var(--accent, var(--ink-soft)); font-weight: 600;
+  }
+
+  /* verdict cards */
+  .verdict { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fit, minmax(13.5rem, 1fr)); }
+  .vcard {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 14px; padding: 1.2rem 1.3rem; box-shadow: var(--shadow);
+    border-top: 3px solid var(--accent);
+    display: block; text-decoration: none; color: inherit;
+    transition: border-color .12s, transform .12s;
+  }
+  a.vcard:hover { border-color: var(--accent); transform: translateY(-2px); }
+  @media (prefers-reduced-motion: reduce) { a.vcard { transition: none; } a.vcard:hover { transform: none; } }
+  .vcard .go {
+    display: block; margin: .7rem 0 0; font-size: .78rem;
+    color: var(--accent); font-weight: 600;
+  }
+  .vcard .name { font-weight: 600; font-size: var(--step-1); margin: 0 0 .1rem; }
+  .vcard .sub { color: var(--ink-mute); font-size: .78rem; margin: 0 0 .8rem; line-height: 1.5; }
+  .vcard .time {
+    font-family: var(--font-util); font-size: var(--step-4); font-weight: 600;
+    line-height: 1.1; color: var(--accent); letter-spacing: -.02em; margin: 0;
+  }
+  .vcard .time small {
+    font-size: .75rem; font-family: var(--font-body); color: var(--ink-mute);
+    font-weight: 400; margin-left: .5rem; letter-spacing: 0;
+  }
+  .vcard .meta { font-size: .8rem; color: var(--ink-soft); margin: .6rem 0 0; line-height: 1.6; }
+
+  .seiko { --accent: var(--c-seiko); }
+  .shibu { --accent: var(--c-shibu); }
+  .hiroo { --accent: var(--c-hiroo); }
+  .mita  { --accent: var(--c-mita); }
+  .asano { --accent: var(--c-asano); }
+  .kanto { --accent: var(--c-kanto); }
+  .seiryo { --accent: var(--c-seiryo); }
+  .yamate { --accent: var(--c-yamate); }
+  .shibak { --accent: var(--c-shibak); }
+
+  .pill {
+    display: inline-block; font-size: .7rem; font-family: var(--font-util);
+    letter-spacing: .06em; padding: .16em .65em; border-radius: 999px;
+    background: var(--ok-bg); color: var(--ok); font-weight: 600;
+  }
+
+  /* tables — 角丸と枠はラッパー側。table に overflow:hidden を置くと sticky が効かない */
+  .tw {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    border: 1px solid var(--rule); border-radius: 12px;
+    background: var(--surface);
+  }
+  table {
+    border-collapse: separate; border-spacing: 0;
+    width: 100%; min-width: 40rem;
+    background: var(--surface); font-size: .9rem;
+  }
+  th, td { text-align: left; padding: .65rem .85rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  thead th {
+    background: var(--surface-2); font-size: .76rem; letter-spacing: .04em;
+    color: var(--ink-soft); font-weight: 600; white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.t, th.t { font-family: var(--font-util); white-space: nowrap; }
+  .sch { font-weight: 600; white-space: nowrap; border-left: 3px solid var(--accent); }
+  .best td { background: color-mix(in srgb, var(--surface-2) 60%, var(--surface)); font-weight: 600; }
+  .dim { color: var(--ink-mute); font-size: .8rem; }
+
+  /* 1列目を固定して、横スクロールしても行の主語を見失わないようにする */
+  .tw th:first-child, .tw td:first-child {
+    position: sticky; left: 0; z-index: 1;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--rule);
+  }
+  .tw thead th:first-child { z-index: 3; background: var(--surface-2); }
+  .tw tbody tr.best td:first-child {
+    background: color-mix(in srgb, var(--surface-2) 60%, var(--surface));
+  }
+
+  /* 狭い画面では表をカードに組み替える（一覧表は min-width 40rem のため 44rem で切替） */
+  @media (max-width: 44rem) {
+    .tw--cards {
+      overflow: visible; border: 0; border-radius: 0; background: none;
+    }
+    .tw--cards table { min-width: 0; display: block; background: none; }
+    .tw--cards thead { display: none; }
+    .tw--cards tbody, .tw--cards tr, .tw--cards td { display: block; }
+    .tw--cards tr {
+      background: var(--surface);
+      border: 1px solid var(--rule); border-left: 4px solid var(--accent);
+      border-radius: 12px; padding: .9rem 1.1rem; margin-bottom: .7rem;
+    }
+    .tw--cards tr:last-child { margin-bottom: 0; }
+    .tw--cards tr.best { background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+    .tw--cards td, .tw--cards tr.best td {
+      background: none; box-shadow: none; position: static;
+      border: 0; padding: .2rem 0;
+      display: grid; grid-template-columns: 5.5rem 1fr; gap: .8rem;
+      align-items: baseline;
+    }
+    .tw--cards td::before {
+      content: attr(data-label);
+      color: var(--ink-mute); font-size: .78rem; line-height: 1.6;
+    }
+    .tw--cards td:first-child {
+      grid-template-columns: 1fr; gap: 0;
+      font-size: 1.02rem; white-space: normal; border-left: 0;
+      margin-bottom: .5rem; padding-bottom: .5rem;
+      border-bottom: 1px solid var(--rule-soft);
+    }
+    .tw--cards td:first-child::before { content: none; }
+    .tw--cards td:empty { display: none; }
+  }
+
+  /* school block */
+  .school {
+    background: var(--surface); border: 1px solid var(--rule);
+    border-left: 4px solid var(--accent); border-radius: 14px;
+    padding: clamp(1.3rem, 3vw, 2rem); box-shadow: var(--shadow);
+    display: flex; flex-direction: column; gap: 1.5rem;
+  }
+  .school > header h2 { color: var(--accent); }
+  .facts { list-style: none; padding: 0; margin: .4rem 0 0; font-size: .9rem; color: var(--ink-soft); }
+  .facts b { color: var(--ink); font-weight: 600; }
+
+  ol.route { list-style: none; padding: 0; margin: 0; }
+  ol.route li {
+    display: grid; grid-template-columns: 4.2rem 1fr; gap: .9rem;
+    padding: .5rem 0; border-bottom: 1px dashed var(--rule-soft);
+  }
+  ol.route li:last-child { border-bottom: 0; }
+  ol.route .t { font-family: var(--font-util); font-weight: 600; font-size: .95rem; color: var(--accent); white-space: nowrap; }
+  ol.route .d { margin: 0; }
+  ol.route .d em { font-style: normal; color: var(--ink-mute); font-size: .85rem; display: block; }
+
+  .box { background: var(--surface-2); border-radius: 10px; padding: .9rem 1.2rem; font-size: .9rem; }
+  .box.warn { background: var(--gate-bg); color: var(--gate); }
+  .box p { margin: 0; }
+
+  .kv { display: flex; flex-wrap: wrap; gap: .4rem .6rem; margin: .8rem 0 0; font-size: .8rem; font-family: var(--font-util); color: var(--ink-soft); }
+  .kv span { background: var(--surface-2); border-radius: 6px; padding: .15em .6em; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 1.6rem; font-size: .85rem; color: var(--ink-soft); }
+  footer h3 { color: var(--ink); font-size: .9rem; }
+  footer ul { padding-left: 1.2rem; margin: .4rem 0 1.2rem; }
+  footer a { color: var(--ink); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+
+  /* 先頭へ戻る */
+  .totop {
+    align-self: flex-start; display: inline-flex; align-items: center; gap: .4rem;
+    text-decoration: none; color: var(--ink-soft); font-size: .85rem;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .35rem .9rem; background: var(--surface);
+  }
+  .totop:hover { color: var(--ink); border-color: var(--ink-mute); }
+
+  @media (max-width: 30rem) {
+    ol.route li { grid-template-columns: 3.6rem 1fr; gap: .6rem; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header id="top">
+    <p class="eyebrow">Commute Route Guidance — 9 schools</p>
+    <h1>通学ルート比較<br>横浜市内の自宅から</h1>
+    <p class="lede">
+      各校の登校時刻に間に合う「いちばん遅い便」から逆算した、家を出る時刻の比較です。
+      対象は<b>出発が 7:05 以降になる学校のみ</b>。ダイヤは平日（2026-09-07 月曜）基準。
+    </p>
+  </header>
+
+  <!-- ============ 目次 ============ -->
+  <nav class="toc" id="toc" aria-label="学校へのもくじ">
+    <h2>学校ごとの詳しいルート</h2>
+    <ol>
+      <li><a class="mita"  href="#s-mita"><span class="tm">7:09</span>三田国際科学学園</a></li>
+      <li><a class="shibu" href="#s-shibu"><span class="tm">7:14</span>渋谷教育学園渋谷</a></li>
+      <li><a class="hiroo" href="#s-hiroo"><span class="tm">7:14</span>広尾学園</a></li>
+      <li><a class="shibak" href="#s-shibak"><span class="tm">7:17</span>芝国際</a></li>
+      <li><a class="seiryo" href="#s-seiryo"><span class="tm">7:23</span>青稜</a></li>
+      <li><a class="yamate" href="#s-yamate"><span class="tm">7:28</span>山手学院</a></li>
+      <li><a class="seiko" href="#s-seiko"><span class="tm">7:45</span>聖光学院</a></li>
+      <li><a class="kanto" href="#s-kanto"><span class="tm">7:45</span>関東学院</a></li>
+      <li><a class="asano" href="#s-asano"><span class="tm">7:57</span>浅野</a></li>
+    </ol>
+  </nav>
+
+  <!-- ============ 結論 ============ -->
+  <section>
+    <h2>結論</h2>
+    <p class="sec-note">9校とも 7:05 以降に出発できるため、すべて対象に残ります。家を出る時刻が早い順。カードを押すと、その学校の詳しいルートへ移動します。</p>
+    <div class="verdict">
+      <a class="vcard mita" href="#s-mita">
+        <p class="name">三田国際科学学園</p>
+        <p class="sub">登校 8:30 ／ 用賀駅 徒歩5分</p>
+        <p class="time">7:09<small>家を出る</small></p>
+        <p class="meta">高島町→あざみ野→用賀<br>1時間14分・乗換1回・562円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard shibu" href="#s-shibu">
+        <p class="name">渋谷教育学園渋谷</p>
+        <p class="sub">登校 8:15 ／ 渋谷駅 徒歩7分</p>
+        <p class="time">7:14<small>家を出る</small></p>
+        <p class="meta">高島町→横浜→渋谷<br>54分・乗換1回・650円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard hiroo" href="#s-hiroo">
+        <p class="name">広尾学園</p>
+        <p class="sub">登校 8:15 ／ 広尾駅 徒歩1分</p>
+        <p class="time">7:14<small>家を出る</small></p>
+        <p class="meta">高島町→横浜→恵比寿→広尾<br>55分・乗換2回・828円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard shibak" href="#s-shibak">
+        <p class="name">芝国際</p>
+        <p class="sub">登校 8:20 ／ 田町駅 徒歩5分</p>
+        <p class="time">7:17<small>家を出る</small></p>
+        <p class="meta">桜木町→京浜東北線→田町<br>58分・乗換0回・528円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard seiryo" href="#s-seiryo">
+        <p class="name">青稜</p>
+        <p class="sub">登校 8:20 ／ 大井町駅 徒歩7分</p>
+        <p class="time">7:23<small>家を出る</small></p>
+        <p class="meta">桜木町→京浜東北線→大井町<br>52分・乗換0回・440円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard yamate" href="#s-yamate">
+        <p class="name">山手学院</p>
+        <p class="sub">登校 8:30 ／ 港南台駅 徒歩12分</p>
+        <p class="time">7:28<small>家を出る</small></p>
+        <p class="meta">桜木町→根岸線→港南台<br>49分・乗換0回・253円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard seiko" href="#s-seiko">
+        <p class="name">聖光学院</p>
+        <p class="sub">登校 8:20 ／ 山手駅 徒歩10分</p>
+        <p class="time">7:45<small>家を出る</small></p>
+        <p class="meta">桜木町→山手<br>31分・乗換0回・155円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard kanto" href="#s-kanto">
+        <p class="name">関東学院</p>
+        <p class="sub">登校 8:30 ／ 霞ケ丘バス停 徒歩2分</p>
+        <p class="time">7:45<small>家を出る</small></p>
+        <p class="meta">戸部警察署前→市営バス102系統→霞ケ丘<br>26分・乗換0回・220円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+      <a class="vcard asano" href="#s-asano">
+        <p class="name">浅野</p>
+        <p class="sub">登校 8:35 ／ 京急新子安駅 徒歩8分</p>
+        <p class="time">7:57<small>家を出る</small></p>
+        <p class="meta">戸部→京急新子安<br>33分・乗換0回・180円 <span class="pill">対象</span></p>
+        <span class="go">くわしく見る →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ============ 一覧 ============ -->
+  <section>
+    <h2>一覧</h2>
+    <p class="sec-note">「推奨」は数分の余裕を見た便。「最遅」は登校時刻ちょうどに着く理論上の限界です。以降の各校セクションも、この表と同じ順に並んでいます。</p>
+    <div class="tw tw--cards">
+        <table>
+        <thead>
+          <tr>
+            <th>学校</th><th class="t">出発<br>推奨</th><th class="t">出発<br>最遅</th>
+            <th class="t">学校着</th><th class="t">登校</th><th class="t">余裕</th>
+            <th class="t">所要</th><th class="t">乗換</th><th class="t">IC運賃</th><th>主なルート</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="mita">
+            <td class="sch" data-label="学校">三田国際科学学園</td>
+            <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:23</td><td class="t" data-label="登校">8:30</td>
+            <td class="t" data-label="余裕">7分</td><td class="t" data-label="所要">1:14</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">562円</td>
+            <td data-label="主なルート">徒歩10分→高島町→ブルーライン→あざみ野→田園都市線準急→用賀→徒歩5分</td>
+          </tr>
+          <tr class="shibu">
+            <td class="sch" data-label="学校">渋谷教育学園渋谷<br><span class="dim">渋渋</span></td>
+            <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="登校">8:15</td>
+            <td class="t" data-label="余裕">7分</td><td class="t" data-label="所要">54分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">650円</td>
+            <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→湘南新宿ライン快速→渋谷→徒歩7分</td>
+          </tr>
+          <tr class="hiroo">
+            <td class="sch" data-label="学校">広尾学園</td>
+            <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:09</td><td class="t" data-label="登校">8:15</td>
+            <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">55分</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">828円</td>
+            <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→湘南新宿ライン快速→恵比寿→日比谷線→広尾→徒歩1分</td>
+          </tr>
+          <tr class="shibak">
+            <td class="sch" data-label="学校">芝国際</td>
+            <td class="t" data-label="出発（推奨）">7:17</td><td class="t" data-label="出発（最遅）">7:23</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="登校">8:20</td>
+            <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">58分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">528円</td>
+            <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→田町→徒歩5分</td>
+          </tr>
+          <tr class="seiryo">
+            <td class="sch" data-label="学校">青稜</td>
+            <td class="t" data-label="出発（推奨）">7:23</td><td class="t" data-label="出発（最遅）">7:28</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="登校">8:20</td>
+            <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">52分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">440円</td>
+            <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→大井町→徒歩7分</td>
+          </tr>
+          <tr class="yamate">
+            <td class="sch" data-label="学校">山手学院</td>
+            <td class="t" data-label="出発（推奨）">7:28</td><td class="t" data-label="出発（最遅）">7:39</td><td class="t" data-label="学校着">8:17</td><td class="t" data-label="登校">8:30</td>
+            <td class="t" data-label="余裕">13分</td><td class="t" data-label="所要">49分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">253円</td>
+            <td data-label="主なルート">徒歩15分→桜木町→JR根岸線→港南台→徒歩12分</td>
+          </tr>
+          <tr class="seiko">
+            <td class="sch" data-label="学校">聖光学院</td>
+            <td class="t" data-label="出発（推奨）">7:45</td><td class="t" data-label="出発（最遅）">7:49</td><td class="t" data-label="学校着">8:16</td><td class="t" data-label="登校">8:20</td>
+            <td class="t" data-label="余裕">4分</td><td class="t" data-label="所要">31分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">155円</td>
+            <td data-label="主なルート">徒歩15分→桜木町→JR根岸線→山手→徒歩10分</td>
+          </tr>
+          <tr class="kanto">
+            <td class="sch" data-label="学校">関東学院<br><span class="dim">バス通学</span></td>
+            <td class="t" data-label="出発（推奨）">7:45</td><td class="t" data-label="出発（最遅）">7:57</td><td class="t" data-label="学校着">8:11</td><td class="t" data-label="登校">8:30</td>
+            <td class="t" data-label="余裕">19分</td><td class="t" data-label="所要">26分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">220円</td>
+            <td data-label="主なルート">徒歩10分→戸部警察署前→市営バス102系統 滝頭ゆき→霞ケ丘→徒歩2分</td>
+          </tr>
+          <tr class="asano">
+            <td class="sch" data-label="学校">浅野</td>
+            <td class="t" data-label="出発（推奨）">7:57</td><td class="t" data-label="出発（最遅）">8:01</td><td class="t" data-label="学校着">8:30</td><td class="t" data-label="登校">8:35</td>
+            <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">33分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">180円</td>
+            <td data-label="主なルート">徒歩12分→戸部→京急本線→京急新子安→徒歩8分</td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+    <p class="sec-note" style="margin-top:1rem">
+      いちばん早い 7:09 といちばん遅い 7:57 の差は <b>48分</b>。
+      渋渋・広尾・三田国際は <b>高島町発のブルーライン</b>が起点、
+      芝国際・青稜・山手学院・聖光は <b>桜木町から JR 一本</b>、
+      関東学院・浅野は <b>戸部</b>から。9校中6校が<b>乗換0回</b>で収まります。
+    </p>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 三田国際 ============ -->
+  <section class="school mita" id="s-mita">
+    <header>
+      <h2>三田国際科学学園中学校高等学校</h2>
+      <ul class="facts">
+        <li>東京都世田谷区用賀2-16-1</li>
+        <li>最寄り：<b>用賀 徒歩5分</b>（東急田園都市線）</li>
+        <li>登校 <b>8:30</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― ブルーラインであざみ野まで一本</h3>
+      <ol class="route">
+        <li><span class="t">7:09</span><p class="d">自宅 を出発<em>徒歩10分</em></p></li>
+        <li><span class="t">7:19</span><p class="d">高島町 発／ブルーライン あざみ野行<em>乗り換えなしで約35分</em></p></li>
+        <li><span class="t">〜</span><p class="d">あざみ野 で東急田園都市線に乗り換え<em>準急 南栗橋行</em></p></li>
+        <li><span class="t">8:18</span><p class="d">用賀 着<em>徒歩5分</em></p></li>
+        <li><span class="t">8:23</span><p class="d">学校 着<em>登校時刻の7分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 1時間14分</span><span>乗換 1回</span><span>IC 562円</span><span>余裕 7分</span></div>
+    </div>
+
+    <div class="box warn"><p>
+      <b>最遅は 7:14 発</b> — 高島町 7:24 → あざみ野 → 用賀 8:22 → 学校 8:27 着（3分前）。
+      余裕3分なので、日常は上の 7:09 発を基準にしてください。
+    </p></div>
+
+    <div class="box"><p>
+      <b>5校で唯一、通学時間が1時間を超えます</b>（ドア to ドア 約1時間14分）。
+      一方でブルーラインはあざみ野まで1本、しかも高島町は始発の横浜から2駅目なので、<b>座れる可能性は高い</b>ルートです。
+    </p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:09</td><td data-label="経路">高島町 7:19 → あざみ野 → 用賀 8:18</td><td class="t" data-label="学校着">8:23</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">562円</td><td data-label="ひとこと">乗換1回・座りやすい</td></tr>
+            <tr><td class="t" data-label="出発">7:08</td><td data-label="経路">戸部 7:20 → 横浜 → 自由が丘 → 二子玉川 → 用賀 8:20</td><td class="t" data-label="学校着">8:25</td><td class="t" data-label="乗換">3回</td><td class="t" data-label="運賃">459円</td><td data-label="ひとこと">最安だが<b>乗換3回</b>。中学生にはつらい</td></tr>
+            <tr><td class="t" data-label="出発">7:09</td><td data-label="経路">高島町 7:19 → 横浜 → 自由が丘 → 二子玉川 → 用賀 8:20</td><td class="t" data-label="学校着">8:25</td><td class="t" data-label="乗換">3回</td><td class="t" data-label="運賃">519円</td><td data-label="ひとこと">同上</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 渋渋 ============ -->
+  <section class="school shibu" id="s-shibu">
+    <header>
+      <h2>渋谷教育学園渋谷中学高等学校</h2>
+      <ul class="facts">
+        <li>東京都渋谷区東2-21-1</li>
+        <li>最寄り：<b>渋谷 徒歩7分</b>／明治神宮前 徒歩8分／原宿 徒歩8分</li>
+        <li>登校 <b>8:15</b>（朝礼 8:20 ／ 第1校時 8:35〜9:20）</li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 高島町から湘南新宿ライン</h3>
+      <ol class="route">
+        <li><span class="t">7:14</span><p class="d">自宅 を出発<em>徒歩10分</em></p></li>
+        <li><span class="t">7:24</span><p class="d">高島町 発／ブルーライン<em>次駅・横浜へ</em></p></li>
+        <li><span class="t">〜</span><p class="d">横浜 で JR に乗り換え<em>地下鉄改札 → JR中央通路、徒歩7〜8分みておく</em></p></li>
+        <li><span class="t">8:01</span><p class="d">渋谷 着／JR湘南新宿ライン快速 高崎行<em>徒歩7分</em></p></li>
+        <li><span class="t">8:08</span><p class="d">学校 着<em>登校時刻の7分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 54分</span><span>乗換 1回</span><span>IC 650円</span><span>余裕 7分</span></div>
+    </div>
+
+    <div class="box"><p><b>ひとつ前の便：7:04 発</b> — 同じ経路の1本前で 8:00 学校着（15分前）。雨の日はこちら。</p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:14</td><td data-label="経路">高島町 7:24 → 横浜 → 渋谷 8:01</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">650円</td><td data-label="ひとこと">いちばん遅く出られる</td></tr>
+            <tr><td class="t" data-label="出発">7:08</td><td data-label="経路">戸部 7:20 → 横浜 → 渋谷 8:01</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">590円</td><td data-label="ひとこと">京急1駅ぶん安い</td></tr>
+            <tr><td class="t" data-label="出発">7:08</td><td data-label="経路">桜木町 7:23 → 横浜 → 渋谷 8:01</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">616円</td><td data-label="ひとこと">始発ホームで座れることも</td></tr>
+            <tr><td class="t" data-label="出発">6:57</td><td data-label="経路">みなとみらい 7:15 通勤特急 → 明治神宮前 7:59</td><td class="t" data-label="学校着">8:07</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">680円</td><td data-label="ひとこと"><b>乗換なし</b>だが17分早出</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="box warn" style="margin-top:1rem"><p>
+        <b>みなとみらい直通の落とし穴</b> — 次の みなとみらい 7:29 発（通勤特急）は明治神宮前 8:15 着＝学校着 8:23 で<b>間に合いません</b>。直通を使うなら 7:15 発が最終です。
+      </p></div>
+    </div>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 広尾学園 ============ -->
+  <section class="school hiroo" id="s-hiroo">
+    <header>
+      <h2>広尾学園中学校高等学校</h2>
+      <ul class="facts">
+        <li>東京都港区南麻布5-1-14</li>
+        <li>最寄り：<b>広尾 徒歩1分</b>（東京メトロ日比谷線）</li>
+        <li>登校 <b>8:15</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 恵比寿で日比谷線に乗り換え</h3>
+      <ol class="route">
+        <li><span class="t">7:14</span><p class="d">自宅 を出発<em>徒歩10分</em></p></li>
+        <li><span class="t">7:24</span><p class="d">高島町 発／ブルーライン → 横浜<em>横浜で JR に乗り換え</em></p></li>
+        <li><span class="t">〜</span><p class="d">JR湘南新宿ライン快速 → 恵比寿<em>恵比寿で日比谷線に乗り換え</em></p></li>
+        <li><span class="t">8:08</span><p class="d">広尾 着<em>徒歩1分</em></p></li>
+        <li><span class="t">8:09</span><p class="d">学校 着<em>登校時刻の6分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 55分</span><span>乗換 2回</span><span>IC 828円</span><span>余裕 6分</span></div>
+    </div>
+
+    <div class="box"><p>
+      <b>駅から徒歩1分</b>が効いて、渋渋とほぼ同じ時刻に出られます。ただし<b>乗換2回・828円</b>と、5校で最も高い運賃です。
+    </p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:14</td><td data-label="経路">高島町 7:24 → 横浜 → 恵比寿 → 広尾 8:08</td><td class="t" data-label="学校着">8:09</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="運賃">828円</td><td data-label="ひとこと">いちばん遅く出られる</td></tr>
+            <tr><td class="t" data-label="出発">7:06</td><td data-label="経路">みなとみらい 7:24 急行 → 中目黒 → 広尾 8:11</td><td class="t" data-label="学校着">8:12</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">680円</td><td data-label="ひとこと"><b>乗換1回・安い</b>。東横線直通で座りやすい</td></tr>
+            <tr><td class="t" data-label="出発">7:08</td><td data-label="経路">戸部 7:20 → 横浜 → 恵比寿 → 広尾 8:08</td><td class="t" data-label="学校着">8:09</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="運賃">768円</td><td data-label="ひとこと">高島町ルートより60円安い</td></tr>
+            <tr><td class="t" data-label="出発">6:57</td><td data-label="経路">みなとみらい 7:15 通勤特急 → 中目黒 → 広尾 8:03</td><td class="t" data-label="学校着">8:04</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">680円</td><td data-label="ひとこと">余裕11分。混雑を避けたい日に</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        日常的には <b>みなとみらい 7:06 発</b>（乗換1回・680円）のほうが乗り換えの負担が小さく、中学生には現実的です。
+      </p>
+    </div>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 芝国際 ============ -->
+  <section class="school shibak" id="s-shibak">
+    <header>
+      <h2>芝国際中学校高等学校</h2>
+      <ul class="facts">
+        <li>東京都港区芝4-1-30</li>
+        <li>最寄り：<b>三田 徒歩2分</b>（都営浅草線・三田線）／田町 徒歩5分（JR山手線・京浜東北線）</li>
+        <li>登校 <b>8:20</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 桜木町から京浜東北線一本</h3>
+      <ol class="route">
+        <li><span class="t">7:17</span><p class="d">自宅 を出発<em>徒歩15分</em></p></li>
+        <li><span class="t">7:32</span><p class="d">桜木町 発／JR京浜東北・根岸線 南浦和行<em>当駅始発。乗り換えなしで38分</em></p></li>
+        <li><span class="t">8:10</span><p class="d">田町 着<em>徒歩5分</em></p></li>
+        <li><span class="t">8:15</span><p class="d">学校 着<em>登校時刻の5分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 58分</span><span>乗換 0回</span><span>IC 528円</span><span>余裕 5分</span></div>
+    </div>
+
+    <div class="box"><p>
+      <b>桜木町始発の便を選べるのが利点です。</b>推奨便（7:32発）は当駅始発なので、38分の乗車を座って過ごせる可能性があります。
+      乗り換えもありません。
+    </p></div>
+
+    <div class="box warn"><p>
+      <b>最遅は 7:23 発</b> — 戸部 7:35 発の京急に乗り、神奈川新町・京急蒲田で乗り換えて 三田 8:18 着、徒歩2分で <b>8:20 ちょうど</b>。
+      <b>乗換2回で余裕ゼロ</b>なので、実用にはなりません。JR 一本で 5 分前に着く推奨便を基準にしてください。
+    </p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:17</td><td data-label="経路">桜木町 7:32 → 田町 8:10（京浜東北線・当駅始発）</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">528円</td><td data-label="ひとこと">乗換なし・座れる可能性</td></tr>
+            <tr><td class="t" data-label="出発">7:17</td><td data-label="経路">戸部 7:29 → 神奈川新町 → 三田 8:13（京急・都営浅草線）</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">525円</td><td data-label="ひとこと">3円安いだけ。乗換ぶん不利</td></tr>
+            <tr><td class="t" data-label="出発">7:19</td><td data-label="経路">高島町 7:29 → 横浜 → 田町 8:13（京浜東北線）</td><td class="t" data-label="学校着">8:18</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">650円</td><td data-label="ひとこと">徒歩は5分短いが122円高い</td></tr>
+            <tr><td class="t" data-label="出発">7:20</td><td data-label="経路">桜木町 7:35 → 田町 8:13（京浜東北線）</td><td class="t" data-label="学校着">8:18</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">528円</td><td data-label="ひとこと">JR での最遅。余裕2分</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        三田（徒歩2分）と田町（徒歩5分）は隣接しています。京急からの都営浅草線直通は本数が限られ、朝は神奈川新町などでの乗り換えが入るため、JR の乗換なしを基本に据えました。
+      </p>
+    </div>
+
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 青稜 ============ -->
+  <section class="school seiryo" id="s-seiryo">
+    <header>
+      <h2>青稜中学校・高等学校</h2>
+      <ul class="facts">
+        <li>東京都品川区二葉1-6-6</li>
+        <li>最寄り：<b>下神明 徒歩1分</b>（東急大井町線）／大井町 徒歩7分（JR京浜東北線・りんかい線）／西大井 徒歩10分（JR横須賀線・湘南新宿ライン）</li>
+        <li>登校 <b>8:20</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 桜木町から京浜東北線一本</h3>
+      <ol class="route">
+        <li><span class="t">7:23</span><p class="d">自宅 を出発<em>徒歩15分</em></p></li>
+        <li><span class="t">7:38</span><p class="d">桜木町 発／JR京浜東北・根岸線 南浦和行<em>乗り換えなしで30分</em></p></li>
+        <li><span class="t">8:08</span><p class="d">大井町 着<em>徒歩7分</em></p></li>
+        <li><span class="t">8:15</span><p class="d">学校 着<em>登校時刻の5分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 52分</span><span>乗換 0回</span><span>IC 440円</span><span>余裕 5分</span></div>
+    </div>
+
+    <div class="box"><p>
+      <b>最遅は 7:28 発</b> — 高島町 7:38 → 横浜で JR横須賀線に乗り換え → 西大井 8:05、徒歩10分で 8:15 着。
+      推奨便と<b>到着は同じ 8:15 なのに、家を出るのは5分遅くて済みます</b>（横須賀線のほうが速いため）。
+      ただし乗換1回・551円と、111円高くなります。
+    </p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:23</td><td data-label="経路">桜木町 7:38 → 大井町 8:08（京浜東北線）</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">440円</td><td data-label="ひとこと">最安・乗換なし</td></tr>
+            <tr class="best"><td class="t" data-label="出発">7:28</td><td data-label="経路">高島町 7:38 → 横浜 → 西大井 8:05（横須賀線）</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">551円</td><td data-label="ひとこと"><b>いちばん遅く出られる</b>。同じ8:15着</td></tr>
+            <tr><td class="t" data-label="出発">7:26</td><td data-label="経路">桜木町 7:41 → 大井町 8:13（京浜東北線）</td><td class="t" data-label="学校着">8:20</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">440円</td><td data-label="ひとこと">京浜東北での最遅。余裕ゼロ</td></tr>
+            <tr><td class="t" data-label="出発">7:23</td><td data-label="経路">高島町 7:33 → 横浜 → 西大井 8:02（横須賀線）</td><td class="t" data-label="学校着">8:12</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">551円</td><td data-label="ひとこと">余裕8分。混雑を避けたい日に</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        下神明は徒歩1分ですが、大井町から大井町線に乗り継ぐことになり、大井町から歩いたほうが速く着きます。学校前まで座って行きたいときの選択肢です。
+      </p>
+    </div>
+
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 山手学院 ============ -->
+  <section class="school yamate" id="s-yamate">
+    <header>
+      <h2>山手学院中学校・高等学校</h2>
+      <ul class="facts">
+        <li>神奈川県横浜市栄区上郷町</li>
+        <li>最寄り：<b>港南台 徒歩12分</b>（JR根岸線）</li>
+        <li>登校 <b>8:30</b>（高校は 8:40）</li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 桜木町から根岸線一本</h3>
+      <ol class="route">
+        <li><span class="t">7:28</span><p class="d">自宅 を出発<em>徒歩15分</em></p></li>
+        <li><span class="t">7:43</span><p class="d">桜木町 発／JR京浜東北・根岸線 大船行<em>乗り換えなしで22分</em></p></li>
+        <li><span class="t">8:05</span><p class="d">港南台 着<em>徒歩12分</em></p></li>
+        <li><span class="t">8:17</span><p class="d">学校 着<em>登校時刻の13分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 49分</span><span>乗換 0回</span><span>IC 253円</span><span>余裕 13分</span></div>
+    </div>
+
+    <div class="box"><p>
+      <b>聖光学院と同じ根岸線を、そのまま先まで乗るだけ</b>です（山手の6駅先）。乗換なし・253円で、
+      都内の学校と比べると運賃も所要時間もはっきり軽くなります。
+    </p></div>
+
+    <div class="box warn"><p>
+      <b>最遅は 7:39 発</b> — 桜木町 7:54 → 港南台 8:15、徒歩12分で 8:27 着（3分前）。
+      これが間に合う最後の便で、次に乗ると学校着が 8:37 前後になり<b>遅刻</b>します。
+      駅から12分歩くぶん、推奨の 7:28 発を基準にしたほうが安全です。
+    </p></div>
+
+    <div>
+      <h3>根岸線 大船方面（平日・朝）</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr><td class="t" data-label="出発">7:18</td><td data-label="経路">桜木町 7:33 → 港南台 7:55</td><td class="t" data-label="学校着">8:07</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">253円</td><td data-label="ひとこと">余裕23分。朝練のある日に</td></tr>
+            <tr class="best"><td class="t" data-label="出発">7:28</td><td data-label="経路">桜木町 7:43 → 港南台 8:05</td><td class="t" data-label="学校着">8:17</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">253円</td><td data-label="ひとこと">推奨。余裕13分</td></tr>
+            <tr class="best"><td class="t" data-label="出発">7:39</td><td data-label="経路">桜木町 7:54 → 港南台 8:15</td><td class="t" data-label="学校着">8:27</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">253円</td><td data-label="ひとこと">最終便。余裕3分</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        高島町・戸部・みなとみらいからは桜木町へ戻る形になり、実用的な代替になりません。港南台からはバス便もあるため、雨の日の選択肢として確認しておく価値があります。
+      </p>
+    </div>
+
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 聖光 ============ -->
+  <section class="school seiko" id="s-seiko">
+    <header>
+      <h2>聖光学院中学校高等学校</h2>
+      <ul class="facts">
+        <li>神奈川県横浜市中区滝之上100</li>
+        <li>最寄り：<b>JR根岸線 山手 徒歩10分</b>（公式案内。資料により徒歩8分表記もあり／駅からは上り坂）</li>
+        <li>登校 <b>8:20</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 桜木町から根岸線一本</h3>
+      <ol class="route">
+        <li><span class="t">7:45</span><p class="d">自宅 を出発<em>徒歩15分</em></p></li>
+        <li><span class="t">8:00</span><p class="d">桜木町 発／JR根岸線 磯子・大船方面<em>関内・石川町の2駅先</em></p></li>
+        <li><span class="t">8:06</span><p class="d">山手 着<em>徒歩10分・上り坂</em></p></li>
+        <li><span class="t">8:16</span><p class="d">学校 着<em>登校時刻の4分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 31分</span><span>乗換 0回</span><span>IC 155円</span><span>余裕 4分</span></div>
+    </div>
+
+    <div class="box"><p><b>余裕をとるなら 7:39 発</b> — 桜木町 7:54 → 山手 8:00 → 学校 8:10 着（10分前）。坂道と混雑を考えると実際はこの1本が使いやすいはずです。</p></div>
+    <div class="box warn"><p><b>最遅は 7:49 発（推奨しません）</b> — 桜木町 8:04 → 山手 8:10 → 徒歩10分で <b>8:20 ちょうど</b>。根岸線が1本乱れると即遅刻です。</p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:45</td><td data-label="経路">桜木町 8:00 → 山手 8:06</td><td class="t" data-label="学校着">8:16</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">155円</td><td data-label="ひとこと">安い・速い・乗換なし</td></tr>
+            <tr><td class="t" data-label="出発">7:44</td><td data-label="経路">高島町 7:54 → 桜木町 → 山手 8:10</td><td class="t" data-label="学校着">8:20</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="運賃">365円</td><td data-label="ひとこと">徒歩は5分短いが運賃2倍以上・余裕なし</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">戸部（京急）・みなとみらい（みなとみらい線）からは山手方面へ遠回りになるため、実用的な選択肢になりません。</p>
+    </div>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 関東学院 ============ -->
+  <section class="school kanto" id="s-kanto">
+    <header>
+      <h2>関東学院中学校高等学校</h2>
+      <ul class="facts">
+        <li>神奈川県横浜市南区三春台4</li>
+        <li>バス最寄り：<b>霞ケ丘 徒歩2分</b>（横浜市営バス 32・68・102系統）／乗車は <b>戸部警察署前</b>（家から徒歩10分）</li>
+        <li>鉄道最寄り：黄金町 徒歩5〜8分／阪東橋 徒歩8〜12分（いずれも上り坂）</li>
+        <li>登校 <b>8:30</b></li>
+      </ul>
+    </header>
+
+    <div class="box"><p>
+      <b>乗り換えなしで行けます（確認済み）。</b>
+      横浜市営バス <b>102系統 滝頭ゆき</b> が「戸部警察署前 → 戸部駅前 → 藤棚 → 久保山 → <b>霞ケ丘</b>」と走っており、
+      自宅から乗り継ぎなしの1本で学校前まで着きます。霞ケ丘からは<b>徒歩2分・坂を登りません</b>。
+    </p></div>
+
+    <div>
+      <h3>推奨ルート ― 市営バス102系統 一本</h3>
+      <ol class="route">
+        <li><span class="t">7:45</span><p class="d">自宅 を出発<em>徒歩10分・戸部警察署前バス停へ</em></p></li>
+        <li><span class="t">7:55</span><p class="d">戸部警察署前 発／横浜市営バス 102系統 滝頭ゆき<em>戸部駅前・西平沼橋・浜松町・藤棚・久保山 経由（9停留所）</em></p></li>
+        <li><span class="t">8:09</span><p class="d">霞ケ丘 着<em>徒歩2分</em></p></li>
+        <li><span class="t">8:11</span><p class="d">学校 着<em>登校時刻の19分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 26分</span><span>乗換 0回</span><span>IC 220円</span><span>余裕 19分</span><span>乗車 14分</span></div>
+    </div>
+
+    <div class="box warn"><p>
+      <b>最終便は 8:07 発（家を 7:57 に出る）</b> — 霞ケ丘 8:21 着、学校 8:23 着で余裕7分。
+      その次の 102系統は 戸部警察署前 8:29 発 → 学校 8:45 着で<b>遅刻</b>です。
+      朝の路線バスは道路状況で遅れるうえ、遅れても次の便で挽回できません。
+      日常は上の <b>7:45 発</b>を基準に、余裕7分の最終便は寝坊した日の保険と考えてください。
+    </p></div>
+
+    <div>
+      <h3>102系統 滝頭ゆき（平日・朝）</h3>
+      <div class="tw">
+        <table style="min-width:30rem">
+          <thead><tr><th class="t">家を出る</th><th class="t">戸部警察署前 発</th><th class="t">霞ケ丘 着</th><th class="t">学校 着</th><th>判定</th></tr></thead>
+          <tbody>
+            <tr><td class="t">6:48</td><td class="t">6:58</td><td class="t">7:09</td><td class="t">7:11</td><td class="dim">早すぎ</td></tr>
+            <tr><td class="t">7:03</td><td class="t">7:13</td><td class="t">7:27</td><td class="t">7:29</td><td class="dim">61分前</td></tr>
+            <tr><td class="t">7:13</td><td class="t">7:23</td><td class="t">7:37</td><td class="t">7:39</td><td class="dim">51分前</td></tr>
+            <tr><td class="t">7:23</td><td class="t">7:33</td><td class="t">7:47</td><td class="t">7:49</td><td class="dim">41分前</td></tr>
+            <tr class="best"><td class="t">7:45</td><td class="t">7:55</td><td class="t">8:09</td><td class="t">8:11</td><td>推奨（19分前）</td></tr>
+            <tr class="best"><td class="t">7:57</td><td class="t">8:07</td><td class="t">8:21</td><td class="t">8:23</td><td>最終便（7分前）</td></tr>
+            <tr><td class="t">8:19</td><td class="t">8:29</td><td class="t">8:43</td><td class="t">8:45</td><td>遅刻</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        乗車時間は朝ラッシュで14分（早朝は11分）。土曜・休日は同一ダイヤで、戸部警察署前 6:33／6:58／7:23／7:44／8:05／8:25／8:45 発です。
+      </p>
+    </div>
+
+    <div>
+      <h3>電車ルート（参考）</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr><td class="t" data-label="出発">8:01</td><td data-label="経路">戸部 8:13 → 黄金町 8:17（京急本線）→ 徒歩7分</td><td class="t" data-label="学校着">8:24</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">150円</td><td data-label="ひとこと">最安・最速だが<b>黄金町から上り坂</b></td></tr>
+            <tr><td class="t" data-label="出発">7:58</td><td data-label="経路">高島町 8:08 → 阪東橋 8:15（ブルーライン）→ 徒歩10分</td><td class="t" data-label="学校着">8:25</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">242円</td><td data-label="ひとこと">こちらも坂道</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">
+        電車のほうが70円安く、最遅で見れば4分ほど遅く出られますが、駅からは急な上り坂。
+        バスは<b>霞ケ丘から徒歩2分の平坦路</b>で、雨の日・荷物の多い日の差は大きいはずです。
+      </p>
+    </div>
+
+    <div class="box warn"><p>
+      <b>学校名の確認を</b> — ここで扱っているのは <b>三春台の関東学院中学校高等学校</b>（南区）です。
+      金沢区六浦東の <b>関東学院六浦中学校・高等学校</b> は別の学校で、ルートも所要時間もまったく異なります。
+    </p></div>
+    <a class="totop" href="#toc">↑ もくじへもどる</a>
+  </section>
+
+  <!-- ============ 浅野 ============ -->
+  <section class="school asano" id="s-asano">
+    <header>
+      <h2>浅野中学校・浅野高等学校</h2>
+      <ul class="facts">
+        <li>神奈川県横浜市神奈川区子安台1-3-1</li>
+        <li>最寄り：<b>京急新子安 徒歩8分</b>／新子安（JR京浜東北線）徒歩8分</li>
+        <li>登校 <b>8:35</b></li>
+      </ul>
+    </header>
+
+    <div>
+      <h3>推奨ルート ― 戸部から京急一本</h3>
+      <ol class="route">
+        <li><span class="t">7:57</span><p class="d">自宅 を出発<em>徒歩12分</em></p></li>
+        <li><span class="t">8:09</span><p class="d">戸部 発／京急本線 品川行<em>横浜・神奈川新町・子安を経て4駅</em></p></li>
+        <li><span class="t">8:22</span><p class="d">京急新子安 着<em>徒歩8分</em></p></li>
+        <li><span class="t">8:30</span><p class="d">学校 着<em>登校時刻の5分前</em></p></li>
+      </ol>
+      <div class="kv"><span>所要 33分</span><span>乗換 0回</span><span>IC 180円</span><span>余裕 5分</span></div>
+    </div>
+
+    <div class="box"><p>
+      <b>5校でいちばん遅く出られて、いちばん安い</b>（180円・乗換0回）。登校が 8:35 と遅めなのも効いています。
+      さらに余裕をとるなら <b>7:49 発</b>（戸部 8:01 → 京急新子安 8:16 → 学校 8:24 着、11分前）。
+    </p></div>
+
+    <div class="box warn"><p><b>最遅は 8:01 発</b> — 戸部 8:13 → 京急新子安 8:26 → 徒歩8分で 8:34 着。余裕1分です。</p></div>
+
+    <div>
+      <h3>代替ルート</h3>
+      <div class="tw tw--cards">
+        <table>
+          <thead><tr><th class="t">出発</th><th>経路</th><th class="t">学校着</th><th class="t">乗換</th><th class="t">運賃</th><th>ひとこと</th></tr></thead>
+          <tbody>
+            <tr class="best"><td class="t" data-label="出発">7:57</td><td data-label="経路">戸部 8:09 → 京急新子安 8:22</td><td class="t" data-label="学校着">8:30</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">180円</td><td data-label="ひとこと">最安・乗換なし</td></tr>
+            <tr><td class="t" data-label="出発">7:59</td><td data-label="経路">桜木町 8:14 → 新子安 8:23（JR京浜東北線）</td><td class="t" data-label="学校着">8:31</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">199円</td><td data-label="ひとこと">JR派ならこちら。ダイヤ本数が多い</td></tr>
+            <tr><td class="t" data-label="出発">8:01</td><td data-label="経路">桜木町 8:16 → 新子安 8:27（JR京浜東北線）</td><td class="t" data-label="学校着">8:35</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="運賃">199円</td><td data-label="ひとこと">JRでの最遅。余裕ゼロ</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="sec-note" style="margin-top:.8rem">京急・JRどちらの駅からも徒歩8分。京急のほうが安く、JRのほうが本数が多いので、遅れたときの振替が利きます。</p>
+    </div>
+  </section>
+
+
+
+
+
+
+  <!-- ============ 前提 ============ -->
+  <section>
+    <h2>計算の前提</h2>
+    <div class="tw">
+      <table style="min-width:28rem">
+        <thead><tr><th>駅・バス停</th><th>路線</th><th class="t">自宅からの徒歩</th></tr></thead>
+        <tbody>
+          <tr><td>高島町</td><td>横浜市営地下鉄ブルーライン</td><td class="t">10分</td></tr>
+          <tr><td>戸部警察署前 <span class="dim">バス停</span></td><td>横浜市営バス 102系統ほか</td><td class="t">10分</td></tr>
+          <tr><td>戸部</td><td>京急本線</td><td class="t">12分</td></tr>
+          <tr><td>桜木町</td><td>JR根岸線／市営地下鉄</td><td class="t">15分</td></tr>
+          <tr><td>みなとみらい</td><td>みなとみらい線</td><td class="t">18分</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="sec-note" style="margin-top:1rem">徒歩時間は実際に歩いた時間を使っています。このほかに徒歩圏の駅がありますが、日常的に使わないため除外しています。</p>
+  </section>
+
+  <a class="totop" href="#top">↑ ページの先頭へ</a>
+
+  <footer>
+    <h3>注意</h3>
+    <ul>
+      <li>ダイヤは <b>2026年9月7日（月・平日）</b> の検索結果に基づきます。ダイヤ改正・遅延で変わります。</li>
+      <li>登校時刻は 渋渋＝公式サイト、ほか8校＝四谷大塚の学校データに基づきます（聖光 8:20／広尾学園 8:15／三田国際 8:30／浅野 8:35／関東学院 8:30／芝国際 8:20／青稜 8:20／山手学院 8:30）。説明会等での確認をおすすめします。</li>
+      <li>「最遅」は理論値です。実際の通学では最低でも5〜10分の余裕を見込んでください。</li>
+      <li>運賃はIC・大人普通運賃。通学定期はこれとは別計算になります。横浜市営バスは中学生から大人運賃です。</li>
+      <li>関東学院のバスダイヤは横浜市交通局の平日時刻表（戸部警察署前・霞ケ丘）で照合しています。路線バスは道路状況で遅れるため、鉄道より余裕を厚めにとってください。</li>
+    </ul>
+    <h3>出典</h3>
+    <ul>
+      <li><a href="https://www.shibushibu.jp/schoollife/time_schedule.html">渋渋生の一日 — 渋谷教育学園渋谷中学高等学校</a></li>
+      <li><a href="https://www.seiko.ac.jp/access">学院へのアクセス — 聖光学院中学校高等学校</a></li>
+      <li><a href="https://www.hiroogakuen.ed.jp/info/access.html">アクセスマップ — 広尾学園</a></li>
+      <li><a href="https://www.mita-is.ed.jp/about/access.html">交通アクセス — 三田国際科学学園</a></li>
+      <li><a href="https://www.asano.ed.jp/">浅野中学校・浅野高等学校</a></li>
+      <li><a href="https://kantogakuin.ed.jp/school-introduction/access/">交通案内 — 関東学院中学校高等学校</a></li>
+      <li><a href="https://navi.hamabus.city.yokohama.lg.jp/koutuu/pc/diagram/BusDiagram?orvCode=00090703&amp;course=0001600780&amp;stopNo=3">横浜市交通局 — 戸部駅前 102系統 滝頭ゆき 時刻表</a></li>
+      <li><a href="https://navi.hamabus.city.yokohama.lg.jp/koutuu/pc/diagram/BusDiagram?orvCode=00090704&amp;course=0001600780&amp;stopNo=2">横浜市交通局 — 戸部警察署前 102系統 滝頭ゆき 時刻表</a></li>
+      <li><a href="https://navi.hamabus.city.yokohama.lg.jp/koutuu/pc/diagram/BusCourseSearch?busstopId=00090175">横浜市交通局 — 霞ケ丘 系統一覧・時刻表</a></li>
+      <li><a href="https://www.yamate-gakuin.ac.jp/accessmap/">アクセスマップ — 山手学院中学校・高等学校</a></li>
+      <li><a href="https://www.seiryo-js.ed.jp/access">アクセス — 青稜中学校・高等学校</a></li>
+      <li><a href="https://www.yotsuyaotsuka.com/juken/data/?code=370">四谷大塚 中学案内（登校時刻・最寄り駅データ）</a></li>
+      <li><a href="https://transit.yahoo.co.jp/">Yahoo!路線情報（経路・時刻の照会）</a></li>
+    </ul>
+  </footer>
+
+</div>
+</body>
+</html>
