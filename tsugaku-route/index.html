@@ -442,13 +442,14 @@
   <!-- ============ 結論 ============ -->
   <section class="sec-verdict">
     <h2>結論</h2>
-    <p class="sec-note">15校とも 7:05 以降に出発できるため、すべて対象に残ります。<b>並び順は上のボタンで切り替えられます</b>（カード・一覧表・目次・各校の詳細が同時に並び替わり、選んだ順はブラウザに保存されます）。<b>★を押すと志望度（1〜3）が保存されます</b>（同じ★をもう一度押すと未設定に戻る）。カードのそれ以外の場所を押すと、詳しいルートへ移動します。</p>
+    <p class="sec-note">15校とも 7:05 以降に出発できるため、すべて対象に残ります。<b>並び順は上の5つのボタンで切り替えられます</b>（カード・一覧表・目次・各校の詳細が同時に並び替わり、選んだ順はブラウザに保存されます）。<b>★を押すと志望度（1〜3）が保存されます</b>（同じ★をもう一度押すと未設定に戻る）。カードのそれ以外の場所を押すと、詳しいルートへ移動します。</p>
     <div class="sortbar" role="group" aria-label="表示順">
       <span class="lbl">並び順</span>
       <button type="button" data-sort="dep-asc">朝早い順</button>
       <button type="button" data-sort="dep-desc">朝遅い順</button>
       <button type="button" data-sort="sx-desc">サピ偏差値順</button>
       <button type="button" data-sort="yt-desc">四谷偏差値順</button>
+      <button type="button" data-sort="wish-desc">志望度順</button>
       <p class="hint"></p>
     </div>
     <div class="verdict">
@@ -1722,7 +1723,12 @@
       g.setAttribute('data-value', v);
       var out = g.querySelector('.stars-out');
       if (out) out.textContent = v ? '志望度 ' + v : '未設定';
+
+      // 並べ替えで使えるよう、同じ学校のカード・表の行・目次・詳細に配る
+      var kin = document.querySelectorAll('[data-key="' + g.getAttribute('data-school') + '"]');
+      for (var m = 0; m < kin.length; m++) kin[m].setAttribute('data-wish', v);
     }
+    document.dispatchEvent(new CustomEvent('wish-change'));
   }
 
   document.addEventListener('click', function (e) {
@@ -1750,7 +1756,8 @@
     'dep-asc':  { attr: 'dep', dir: 1,  hint: '家を出る時刻が早い順。' },
     'dep-desc': { attr: 'dep', dir: -1, hint: '家を出る時刻が遅い順。朝に余裕のある学校から並びます。' },
     'sx-desc':  { attr: 'sx',  dir: -1, hint: 'サピックス偏差値の高い順。関東学院はサピの数値がないため末尾になります。' },
-    'yt-desc':  { attr: 'yt',  dir: -1, hint: '四谷大塚偏差値の高い順。' }
+    'yt-desc':  { attr: 'yt',  dir: -1, hint: '四谷大塚偏差値の高い順。' },
+    'wish-desc':{ attr: 'wish', dir: -1, hint: '志望度（★）の高い順。★が同じ学校どうしは、家を出る時刻が早い順に並びます。' }
   };
   var DEFAULT = 'dep-asc';
 
@@ -1799,15 +1806,22 @@
     if (hint) hint.textContent = MODES[mode].hint;
   }
 
+  var current = load();
+
   document.addEventListener('click', function (e) {
     var b = e.target.closest && e.target.closest('.sortbar button');
     if (!b) return;
-    var mode = b.getAttribute('data-sort');
-    save(mode);
-    apply(mode);
+    current = b.getAttribute('data-sort');
+    save(current);
+    apply(current);
   });
 
-  apply(load());
+  // 志望度順で表示しているときに★が変わったら、その場で並べ直す
+  document.addEventListener('wish-change', function () {
+    if (current === 'wish-desc') apply(current);
+  });
+
+  apply(current);
 })();
 </script>
 </body>
