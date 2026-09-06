@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>併願プランをつくる</title>
+<meta name="description" content="2月1日から5日までの午前・午後に受験校を並べ、合格の有無で次の受験校を切り替える併願プランを組み立てます。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗓️</text></svg>">
+<style>
+  :root {
+    --paper:      #F5F6F2;
+    --surface:    #FFFFFF;
+    --surface-2:  #EDEFE9;
+    --ink:        #15191A;
+    --ink-soft:   #434B49;
+    --ink-mute:   #646C69;
+    --rule:       #D7DBD3;
+    --rule-soft:  #E5E8E1;
+
+    --a:      #8E1226;   /* まだ合格なしレーン */
+    --a-bg:   #FBEDEF;
+    --b:      #1A4E8C;   /* 合格済みレーン */
+    --b-bg:   #E9F0F9;
+    --gate:   #9C3A22;
+    --gate-bg:#F3E5DF;
+
+    --shadow: 0 1px 2px rgba(20,30,26,.05), 0 8px 24px -16px rgba(20,30,26,.28);
+    --font-display: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP", serif;
+    --font-body: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Yu Gothic", YuGothic, "Noto Sans JP", Meiryo, sans-serif;
+    --font-util: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:#121514; --surface:#1A1E1D; --surface-2:#232827;
+      --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
+      --rule:#2E3432; --rule-soft:#262B29;
+      --a:#EE9AA4; --a-bg:#2C1E21;
+      --b:#8DBBEA; --b-bg:#1A2330;
+      --gate:#E2907A; --gate-bg:#2E211C;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper:#121514; --surface:#1A1E1D; --surface-2:#232827;
+    --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
+    --rule:#2E3432; --rule-soft:#262B29;
+    --a:#EE9AA4; --a-bg:#2C1E21;
+    --b:#8DBBEA; --b-bg:#1A2330;
+    --gate:#E2907A; --gate-bg:#2E211C;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: light dark; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: var(--font-body); font-size: 1rem; line-height: 1.8;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page {
+    max-width: 62rem; margin: 0 auto;
+    padding: clamp(1.5rem,4vw,3.5rem) clamp(1.1rem,4vw,2.5rem) 6rem;
+    display: flex; flex-direction: column; gap: clamp(2.2rem,4vw,3rem);
+  }
+  .eyebrow {
+    font-family: var(--font-util); font-size: .7rem; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--ink-mute); margin: 0 0 .8rem;
+  }
+  h1 {
+    font-family: var(--font-display); font-size: clamp(1.9rem,5vw,2.8rem);
+    line-height: 1.28; font-weight: 600; margin: 0 0 .9rem; text-wrap: balance;
+  }
+  .lede { color: var(--ink-soft); margin: 0; max-width: 46rem; }
+  h2 {
+    font-family: var(--font-display); font-size: 1.55rem;
+    font-weight: 600; margin: 0 0 .25rem;
+  }
+  .sec-note { color: var(--ink-mute); font-size: .875rem; margin: 0 0 1.3rem; }
+
+  .box { background: var(--surface-2); border-radius: 10px; padding: 1rem 1.2rem; font-size: .92rem; }
+  .box p { margin: 0; }
+  .box + .box { margin-top: .7rem; }
+  .box.warn { background: var(--gate-bg); }
+  .box.warn b { color: var(--gate); }
+  .s-a { color: var(--a); }
+  .s-b { color: var(--b); }
+
+  /* ---------- 入力グリッド ---------- */
+  .grid {
+    display: grid;
+    grid-template-columns: 5.5rem 1fr 1fr;
+    gap: .5rem;
+    align-items: center;
+  }
+  .grid .head {
+    font-size: .78rem; font-weight: 600; letter-spacing: .04em;
+    color: var(--ink-soft); padding: 0 .2rem .3rem;
+  }
+  .grid .head.a { color: var(--a); }
+  .grid .head.b { color: var(--b); }
+  .grid .day {
+    font-family: var(--font-util); font-size: .9rem; font-weight: 600;
+    color: var(--ink-soft); white-space: nowrap;
+  }
+  .grid .day em { display: block; font-style: normal; font-size: .78rem; color: var(--ink-mute); }
+  .grid .cell { display: block; min-width: 0; }
+  .grid .cell .lab { display: none; }
+  .grid select {
+    font: inherit; font-size: .88rem; width: 100%;
+    padding: .45rem .6rem; border-radius: 8px;
+    border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+  }
+  .grid select:disabled { opacity: .45; cursor: not-allowed; }
+  .grid select.set-a { border-left: 4px solid var(--a); background: var(--a-bg); }
+  .grid select.set-b { border-left: 4px solid var(--b); background: var(--b-bg); }
+  .grid .rowsep { grid-column: 1 / -1; border-top: 1px dashed var(--rule-soft); margin: .15rem 0; }
+
+  .bar { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1.2rem; }
+  .bar button {
+    font: inherit; font-size: .85rem; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .35rem .95rem; background: var(--surface); color: var(--ink-soft);
+  }
+  .bar button:hover { border-color: var(--ink-mute); color: var(--ink); }
+  .saved { font-size: .8rem; color: var(--ink-mute); align-self: center; }
+
+  /* ---------- 樹形図（2レーン） ---------- */
+  .flow { display: flex; flex-direction: column; gap: 0; }
+  .flow .lanehead {
+    display: grid; grid-template-columns: 5.5rem 1fr 1fr; gap: .5rem;
+    margin-bottom: .5rem;
+  }
+  .flow .lanehead span { font-size: .8rem; font-weight: 600; padding: 0 .2rem; }
+  .flow .lanehead .la { color: var(--a); }
+  .flow .lanehead .lb { color: var(--b); }
+  .slot {
+    display: grid; grid-template-columns: 5.5rem 1fr 1fr; gap: .5rem;
+    align-items: stretch; padding: .3rem 0;
+  }
+  .slot .when {
+    font-family: var(--font-util); font-size: .85rem; font-weight: 600;
+    color: var(--ink-soft); display: flex; align-items: center;
+  }
+  .node {
+    border-radius: 10px; padding: .6rem .8rem; font-size: .9rem;
+    border: 1px solid var(--rule); background: var(--surface);
+    display: flex; flex-direction: column; justify-content: center; min-height: 3.1rem;
+  }
+  .node.a { border-left: 4px solid var(--a); background: var(--a-bg); }
+  .node.b { border-left: 4px solid var(--b); background: var(--b-bg); }
+  .node.none { border-style: dashed; background: none; color: var(--ink-mute); }
+  .node .nm { font-weight: 600; }
+  .node .sub { font-size: .75rem; color: var(--ink-mute); font-family: var(--font-util); }
+  .node .cross {
+    font-size: .74rem; color: var(--b); font-weight: 600; margin-top: .25rem;
+  }
+  .flow .empty { color: var(--ink-mute); font-size: .9rem; padding: 1.4rem 0; }
+
+  /* ---------- まとめ ---------- */
+  .stats { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(11rem,1fr)); }
+  .stat {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 1rem 1.1rem; box-shadow: var(--shadow);
+  }
+  .stat .k { font-size: .78rem; color: var(--ink-mute); margin: 0 0 .2rem; }
+  .stat .v { font-family: var(--font-util); font-size: 1.7rem; font-weight: 600; line-height: 1.15; margin: 0; }
+  .stat .v small { font-size: .8rem; font-family: var(--font-body); color: var(--ink-mute); margin-left: .3rem; font-weight: 400; }
+  .stat .n { font-size: .78rem; color: var(--ink-soft); margin: .3rem 0 0; }
+
+  ul.notes { padding-left: 1.2rem; margin: .4rem 0 0; font-size: .875rem; color: var(--ink-soft); }
+  ul.notes li { margin: .2rem 0; }
+
+  footer { border-top: 1px solid var(--rule); padding-top: 1.5rem; font-size: .85rem; color: var(--ink-soft); }
+  footer a { color: var(--ink); }
+
+  @media (max-width: 34rem) {
+    .grid, .flow .lanehead, .slot { grid-template-columns: 1fr; }
+    .grid .day { padding-top: .5rem; }
+    .grid .head { display: none; }
+    .grid .cell .lab {
+      display: block; font-size: .72rem; font-weight: 600; margin-bottom: .15rem;
+    }
+    .grid .cell.a .lab { color: var(--a); }
+    .grid .cell.b .lab { color: var(--b); }
+    .flow .lanehead { display: none; }
+    .slot .when { padding-top: .4rem; }
+    .node::before {
+      content: attr(data-lane); display: block;
+      font-size: .72rem; font-weight: 600; margin-bottom: .15rem;
+    }
+    .node.a::before { color: var(--a); }
+    .node.b::before { color: var(--b); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <p class="eyebrow">Exam Schedule Planner</p>
+    <h1>併願プランをつくる</h1>
+    <p class="lede">
+      2月1日から5日までの午前・午後に受験校を並べ、
+      <b>それまでに合格が出ているかどうか</b>で次に受ける学校を切り替えます。
+      入力はこの端末のブラウザに保存されます。
+    </p>
+  </header>
+
+  <!-- ============ 入力 ============ -->
+  <section>
+    <h2>日程を組む</h2>
+    <p class="sec-note">
+      各枠に2通りを設定します。<b class="s-a">まだ合格なし</b>のときに受ける学校と、
+      <b class="s-b">すでに合格あり</b>のときに受ける学校。同じ学校を入れても構いません。
+      受けない枠は空のままにしてください。
+    </p>
+    <div class="grid" id="grid"></div>
+    <div class="bar">
+      <button type="button" id="clear">ぜんぶ消す</button>
+      <button type="button" id="copyA">「合格あり」列に左をコピー</button>
+      <span class="saved" id="saved"></span>
+    </div>
+  </section>
+
+  <!-- ============ 樹形図 ============ -->
+  <section>
+    <h2>流れを確かめる</h2>
+    <p class="sec-note">
+      左が「まだ合格が出ていない」ルート、右が「合格が出たあと」のルートです。
+      左の枠で合格すると、その次の枠から右へ移ります。受験しない枠は出しません。
+    </p>
+    <div class="flow" id="flow"></div>
+  </section>
+
+  <!-- ============ まとめ ============ -->
+  <section>
+    <h2>まとめ</h2>
+    <div class="stats" id="stats"></div>
+    <div class="box" style="margin-top:1rem">
+      <p><b>この図の考え方。</b>一度どこかに合格したら、以降は「合格あり」のルートを進みます。
+      どの学校に合格したかまでは区別しません。まず<b>押さえが取れるかどうか</b>で日程が変わる、
+      という実際の組み立て方に合わせています。</p>
+    </div>
+    <div class="box warn">
+      <p><b>入試日は学校ごとに複数あります。</b>ここでは日程の妥当性を検査していません。
+      「その学校がその日のその時間帯に入試を行うか」は、かならず各校の募集要項で確認してください。
+      同じ学校が2月1日と2月4日に入試を行う、といったことは珍しくありません。</p>
+    </div>
+  </section>
+
+  <footer>
+    学校は<a href="../tsugaku-route/">通学ルート比較</a>に載せている19校から選べます。偏差値は四谷大塚の予想（男子・80%）。<br>
+    入力内容はこの端末のブラウザにのみ保存され、ほかの端末には引き継がれません。
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // 通学ルート比較に載せている19校。yt = 四谷大塚（男子・80%）
+  var SCHOOLS = [
+    { k:'kaisei',   n:'開成',                       t:'男子校', yt:72 },
+    { k:'seiko',    n:'聖光学院',                   t:'男子校', yt:71 },
+    { k:'shibu',    n:'渋谷教育学園渋谷',           t:'共学',   yt:67 },
+    { k:'eiko',     n:'栄光学園',                   t:'男子校', yt:66 },
+    { k:'hiroo',    n:'広尾学園',                   t:'共学',   yt:65 },
+    { k:'sfc',      n:'慶應義塾湘南藤沢',           t:'共学',   yt:65 },
+    { k:'futsubu',  n:'慶應義塾普通部',             t:'男子校', yt:65 },
+    { k:'asano',    n:'浅野',                       t:'男子校', yt:64 },
+    { k:'ysf',      n:'横浜サイエンスフロンティア高附属', t:'公立・共学', yt:63 },
+    { k:'salesio',  n:'サレジオ学院',               t:'男子校', yt:61 },
+    { k:'mita',     n:'三田国際科学学園',           t:'共学',   yt:60 },
+    { k:'minami',   n:'横浜市立南高附属',           t:'公立・共学', yt:59 },
+    { k:'gyoku',    n:'攻玉社',                     t:'男子校', yt:57 },
+    { k:'yokoeiwa', n:'青山学院横浜英和',           t:'共学',   yt:56 },
+    { k:'takanawa', n:'高輪',                       t:'男子校', yt:55 },
+    { k:'shibak',   n:'芝国際',                     t:'共学',   yt:54 },
+    { k:'seiryo',   n:'青稜',                       t:'共学',   yt:54 },
+    { k:'yamate',   n:'山手学院',                   t:'共学',   yt:52 },
+    { k:'kanto',    n:'関東学院',                   t:'共学',   yt:48 }
+  ];
+  var BY_KEY = {};
+  SCHOOLS.forEach(function (s) { BY_KEY[s.k] = s; });
+
+  var SLOTS = [];
+  [1,2,3,4,5].forEach(function (d) {
+    SLOTS.push({ id:'d'+d+'am', day:'2/'+d, half:'午前' });
+    SLOTS.push({ id:'d'+d+'pm', day:'2/'+d, half:'午後' });
+  });
+
+  var KEY = 'heigan-plan:v1';
+  var state = load();
+
+  function load() {
+    try {
+      var o = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+      return (o && typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(state));
+      flash('保存しました');
+    } catch (e) { flash('保存できませんでした'); }
+  }
+  var flashTimer = null;
+  function flash(msg) {
+    var el = document.getElementById('saved');
+    el.textContent = msg;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { el.textContent = ''; }, 1600);
+  }
+
+  function get(id, lane) { return (state[id] || {})[lane] || ''; }
+  function set(id, lane, v) {
+    if (!state[id]) state[id] = {};
+    if (v) state[id][lane] = v; else delete state[id][lane];
+    if (!state[id].a && !state[id].b) delete state[id];
+  }
+
+  function optionsHtml(sel) {
+    var out = '<option value="">受けない</option>';
+    SCHOOLS.forEach(function (s) {
+      out += '<option value="' + s.k + '"' + (s.k === sel ? ' selected' : '') + '>'
+           + s.n + '（四谷' + s.yt + '）</option>';
+    });
+    return out;
+  }
+
+  // ---------- 入力グリッド ----------
+  function renderGrid() {
+    var g = document.getElementById('grid');
+    var h = '<div class="head"></div>'
+          + '<div class="head a">まだ合格なし</div>'
+          + '<div class="head b">すでに合格あり</div>';
+    SLOTS.forEach(function (s, i) {
+      var first = (i === 0);   // 2/1午前は必ず「合格なし」から始まる
+      h += '<div class="day">' + s.day + '<em>' + s.half + '</em></div>';
+      h += '<label class="cell a"><span class="lab">まだ合格なし</span>'
+         + '<select data-slot="' + s.id + '" data-lane="a" aria-label="'
+         + s.day + s.half + ' まだ合格なしのとき">' + optionsHtml(get(s.id,'a')) + '</select></label>';
+      h += '<label class="cell b"><span class="lab">すでに合格あり</span>'
+         + '<select data-slot="' + s.id + '" data-lane="b"' + (first ? ' disabled' : '')
+         + ' aria-label="' + s.day + s.half + ' すでに合格ありのとき">'
+         + (first ? '<option value="">—</option>' : optionsHtml(get(s.id,'b'))) + '</select></label>';
+      if (s.half === '午後' && i !== SLOTS.length - 1) h += '<div class="rowsep"></div>';
+    });
+    g.innerHTML = h;
+    [].forEach.call(g.querySelectorAll('select'), paintSelect);
+  }
+  function paintSelect(sel) {
+    sel.classList.remove('set-a', 'set-b');
+    if (sel.value) sel.classList.add(sel.getAttribute('data-lane') === 'a' ? 'set-a' : 'set-b');
+  }
+
+  // ---------- 樹形図 ----------
+  function node(key, lane, showCross) {
+    var s = key ? BY_KEY[key] : null;
+    if (!s) {
+      return '<div class="node none" data-lane="' + (lane === 'a' ? 'まだ合格なし' : '合格あり') + '">'
+           + '<span class="nm">受けない</span></div>';
+    }
+    return '<div class="node ' + lane + '" data-lane="' + (lane === 'a' ? 'まだ合格なし' : '合格あり') + '">'
+         + '<span class="nm">' + s.n + '</span>'
+         + '<span class="sub">' + s.t + '・四谷' + s.yt + '</span>'
+         + (showCross ? '<span class="cross">合格したら → 次から右のルートへ</span>' : '')
+         + '</div>';
+  }
+
+  function renderFlow() {
+    var f = document.getElementById('flow');
+    var used = SLOTS.some(function (s) { return get(s.id,'a') || get(s.id,'b'); });
+    if (!used) {
+      f.innerHTML = '<p class="empty">上の日程表に学校を入れると、ここに流れが出ます。</p>';
+      return;
+    }
+    // 受ける枠だけを並べる（両方とも空の枠は出さない）
+    var lastUsed = -1;
+    SLOTS.forEach(function (s, i) { if (get(s.id,'a') || get(s.id,'b')) lastUsed = i; });
+
+    var h = '<div class="lanehead"><span></span>'
+          + '<span class="la">まだ合格なし</span><span class="lb">すでに合格あり</span></div>';
+    SLOTS.forEach(function (s, i) {
+      var a = get(s.id,'a'), b = get(s.id,'b');
+      if (!a && !b) return;
+      var last = (i === lastUsed);
+      h += '<div class="slot">'
+         + '<div class="when">' + s.day + ' ' + s.half + '</div>'
+         + node(a, 'a', !!a && !last)
+         + (i === 0 ? '<div class="node none" data-lane="合格あり"><span class="nm">—</span>'
+                    + '<span class="sub">初日の午前は必ず未合格</span></div>'
+                    : node(b, 'b', false))
+         + '</div>';
+    });
+    f.innerHTML = h;
+  }
+
+  // ---------- まとめ ----------
+  function renderStats() {
+    var aCount = 0, bCount = 0, firstA = null;
+    SLOTS.forEach(function (s, i) {
+      if (get(s.id,'a')) { aCount++; if (firstA === null) firstA = i; }
+      if (i > 0 && get(s.id,'b')) bCount++;
+    });
+
+    // 最少 = 最初の受験で合格し、以降は「合格あり」ルートを進む場合
+    var min = 0;
+    if (firstA !== null) {
+      min = 1;
+      for (var i = firstA + 1; i < SLOTS.length; i++) if (get(SLOTS[i].id,'b')) min++;
+    }
+
+    var cards = [
+      { k:'ぜんぶ不合格だった場合', v:aCount, u:'回', n:'左のルートを最後まで進んだときの受験回数' },
+      { k:'最初の受験で合格した場合', v:min, u:'回', n:'そのあと右のルートに移ったときの受験回数' },
+      { k:'「合格あり」で受ける枠', v:bCount, u:'枠', n:'押さえが取れたあとに残している受験' }
+    ];
+    document.getElementById('stats').innerHTML = cards.map(function (c) {
+      return '<div class="stat"><p class="k">' + c.k + '</p>'
+           + '<p class="v">' + c.v + '<small>' + c.u + '</small></p>'
+           + '<p class="n">' + c.n + '</p></div>';
+    }).join('');
+  }
+
+  function renderAll() { renderFlow(); renderStats(); }
+
+  // ---------- 操作 ----------
+  document.getElementById('grid').addEventListener('change', function (e) {
+    var sel = e.target;
+    if (sel.tagName !== 'SELECT') return;
+    set(sel.getAttribute('data-slot'), sel.getAttribute('data-lane'), sel.value);
+    paintSelect(sel);
+    save();
+    renderAll();
+  });
+
+  document.getElementById('clear').addEventListener('click', function () {
+    if (!confirm('入力した日程をぜんぶ消します。よろしいですか。')) return;
+    state = {};
+    save();
+    renderGrid();
+    renderAll();
+  });
+
+  document.getElementById('copyA').addEventListener('click', function () {
+    SLOTS.forEach(function (s, i) {
+      if (i === 0) return;                 // 初日の午前に「合格あり」はない
+      var a = get(s.id,'a');
+      if (a) set(s.id,'b', a);
+    });
+    save();
+    renderGrid();
+    renderAll();
+  });
+
+  renderGrid();
+  renderAll();
+})();
+</script>
+</body>
+</html>
