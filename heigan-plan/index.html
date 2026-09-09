@@ -133,6 +133,8 @@
   .mx td { min-width: 6.6rem; }
   .mx td.am { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
   .mx td.off { opacity: .3; }
+  .mx th.hs .nosx { color: var(--ink-mute); }
+  .mx tr.nosx-row th.hs, .mx tr.nosx-row td { border-top: 1px solid var(--rule); }
   .chip {
     display: block; width: 100%; text-align: left; font: inherit;
     font-size: .74rem; line-height: 1.35; cursor: pointer;
@@ -247,6 +249,8 @@
       縦がサピックス偏差値、横が2月1日から5日までの10枠。表に出ている学校は、その枠に入試があります。
       まず下のボタンで<b>どちらのルートを組むか</b>を選び、表の学校を押してください。
       もう一度押すと外れます。同じ枠に選べるのは1校だけです。
+      いちばん下の<b>「—」の行</b>は、手元の一覧表にサピックス偏差値がない学校。
+      かわりに四谷大塚の値を出しています。
     </p>
 
     <div class="lanepick">
@@ -292,14 +296,14 @@
       という実際の組み立て方に合わせています。</p>
     </div>
     <div class="box warn">
-      <p><b>日程は手元の一覧表から入れたものです。</b>20校・のべ52枠。
+      <p><b>日程は手元の一覧表と、各校の入試要項から入れたものです。</b>24校・のべ67枠。
       出願の前には、かならず各校の募集要項で日程・出願期間・発表時刻を確認してください。
       年度によって日程が動くことがあります。</p>
     </div>
   </section>
 
   <footer>
-    学校は<a href="../tsugaku-route/">通学ルート比較</a>に載せている20校、のべ52枠。
+    学校は<a href="../tsugaku-route/">通学ルート比較</a>に載せている24校、のべ67枠。
     表の数字は各回の<b>サピックス偏差値</b>。学校そのものの目安として四谷大塚の予想（男子・80%）も併記しますが、
     2つは尺度が違うので直接くらべないでください。<br>
     入力内容はこの端末のブラウザにのみ保存され、ほかの端末には引き継がれません。
@@ -311,7 +315,7 @@
 (function () {
   'use strict';
 
-  // 通学ルート比較に載せている20校。
+  // 通学ルート比較に載せている24校。
   //   sn = 表に出す短い名前
   //   yt = 四谷大塚（男子・80%）＝学校そのものの目安
   //   s  = 入試を行う枠。slot: [サピックス偏差値, 回次の呼び名]
@@ -356,7 +360,17 @@
     { k:'yamate',   n:'山手学院',                   sn:'山手学院',   t:'共学',   yt:52,
       s:{ d1am:[40], d1pm:[47,'特待'], d3am:[41] } },
     { k:'kanto',    n:'関東学院',                   sn:'関東学院',   t:'共学',   yt:48,
-      s:{ d1pm:[37], d3am:[38], d5pm:[40] } }
+      s:{ d1pm:[37], d3am:[38], d5pm:[40] } },
+    // ここから下は、手元の一覧表にサピックス偏差値が載っていない学校。
+    // サピ値は -1（表では「—」の行にまとめる）。日程は各校の入試要項から。
+    { k:'kumon',    n:'公文国際学園',               sn:'公文国際',   t:'共学',   yt:51,
+      s:{ d1am:[-1,'A'], d3pm:[38,'B'] } },
+    { k:'shonan',   n:'湘南学園',                   sn:'湘南学園',   t:'共学',   yt:46,
+      s:{ d1am:[-1,'A'], d1pm:[-1,'ESD'], d2am:[-1,'B'], d3am:[-1,'C'], d4pm:[-1,'D'] } },
+    { k:'haneda',   n:'羽田国際',                   sn:'羽田国際',   t:'共学',   yt:35,
+      s:{ d1am:[-1], d1pm:[-1], d2am:[-1], d2pm:[-1] } },
+    { k:'joseph',   n:'聖ヨゼフ学園',               sn:'聖ヨゼフ',   t:'共学',   yt:33,
+      s:{ d1am:[-1,'1回'], d1pm:[-1,'総合型'], d2am:[-1,'2回'], d3am:[-1,'3回'] } }
   ];
   var BY_KEY = {};
   SCHOOLS.forEach(function (s) { BY_KEY[s.k] = s; });
@@ -402,6 +416,11 @@
     return s.n + (q && q[1] ? '・' + q[1] : '');
   }
   function esc(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // その回の難度をどの尺度で示すか。表にサピ値がない学校は四谷で代用する。
+  function scale(s, slotId) {
+    var sx = s.s[slotId][0];
+    return sx >= 0 ? 'サピ' + sx : '四谷' + s.yt;
+  }
 
   var KEY = 'heigan-plan:v1';
   var loaded = load();
@@ -461,7 +480,8 @@
     });
     h += '</tr></thead><tbody>';
     ROWS.forEach(function (hs) {
-      h += '<tr><th class="hs">' + hs + '</th>';
+      h += '<tr' + (hs < 0 ? ' class="nosx-row"' : '') + '><th class="hs">'
+         + (hs < 0 ? '<span class="nosx">—</span>' : hs) + '</th>';
       SLOTS.forEach(function (sl, i) {
         var list = AT[hs + '|' + sl.id] || [];
         h += '<td data-slot="' + sl.id + '" class="' + (i % 2 ? '' : 'am') + '">';
@@ -469,7 +489,7 @@
           var q = s.s[sl.id][1];
           h += '<button type="button" class="chip"'
              + ' data-slot="' + sl.id + '" data-k="' + s.k + '"'
-             + ' title="' + esc(fullName(s.k, sl.id)) + '（サピ' + s.s[sl.id][0] + '）">'
+             + ' title="' + esc(fullName(s.k, sl.id)) + '（' + scale(s, sl.id) + '）">'
              + esc(s.sn) + (q ? '<span class="q">・' + esc(q) + '</span>' : '')
              + '</button>';
         });
@@ -515,7 +535,8 @@
     if (!s || !q) return '<div class="cell none"><span class="nm">受けない</span></div>';
     return '<div class="cell ' + ln + '">'
          + '<span class="nm">' + esc(fullName(key, slotId)) + '</span>'
-         + '<span class="sub">' + esc(s.t) + '・サピ' + q[0] + ' / 四谷' + s.yt + '</span>'
+         + '<span class="sub">' + esc(s.t)
+         + (q[0] >= 0 ? '・サピ' + q[0] + ' / 四谷' + s.yt : '・四谷' + s.yt + '（サピ値なし）') + '</span>'
          + (hop ? '<span class="hop" aria-hidden="true">↘</span>' : '')
          + '</div>';
   }
