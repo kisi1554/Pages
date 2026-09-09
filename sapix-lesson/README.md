@@ -23,6 +23,7 @@
 | `lesson-05-baai.html` | 第5回 場合の数 |
 | `lesson-06-rittai.html` | 第6回 立体図形（展開図と切断） |
 | `lesson-07-kazu.html` | 第7回 数の性質 |
+| `lesson-08-kisokusei.html` | 第8回 規則性 |
 
 各回の `<style>` は全回で同一に保つ（第1回からコピーする）。図のクラスを共有しているため、
 片方だけ直すと図の見え方がずれる。
