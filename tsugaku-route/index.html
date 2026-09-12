@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>通学ルート比較</title>
+<title>志望校くらべと併願プラン</title>
+<meta name="description" content="各校の登校時刻から家を出る時刻を逆算して39校を比べ、★を付けた学校で2月1日から5日までの併願プランを組みます。">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎒</text></svg>">
 <style>
   :root {
     --paper:      #F5F6F2;
@@ -16,6 +18,10 @@
     --rule-soft:  #E5E8E1;
     --gate:       #9C3A22;
     --gate-bg:    #F3E5DF;
+
+    /* 併願プランのレーン */
+    --a:    #8E1226;   --a-bg: #FBEDEF;  --a-on: #FFFFFF;   /* まだ合格なし */
+    --b:    #1A4E8C;   --b-bg: #E9F0F9;  --b-on: #FFFFFF;   /* すでに合格あり */
 
     /* 男子校 = 青系 */
     --c-seiko:     #123C74;
@@ -79,6 +85,7 @@
       --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
       --rule:#2E3432; --rule-soft:#262B29;
       --gate:#E2907A; --gate-bg:#2E211C;
+      --a:#EE9AA4; --a-bg:#2C1E21; --a-on:#1A0E11; --b:#8DBBEA; --b-bg:#1A2330; --b-on:#0D1420;
       --c-seiko:#8DBBEA; --c-asano:#8AC0EE; --c-gyoku:#95CBEC; --c-takanawa:#A6ADEE; --c-salesio:#7FC6E4; --c-eiko:#8CC4E2; --c-futsubu:#9FBFF0; --c-kaisei:#A8C6F0; --c-azabu:#8FC4E6; --c-komaba:#9CBEEA; --c-shiba:#86C0E2; --c-kaijo:#A2C2EF; --c-tsukukoma:#95BCE8; --c-zushi:#7FC3E4; --c-kamagaku:#8DC2E4; --c-nichidai:#F0A3AD; --c-hosei2:#EC9BAA; --c-yokokoku:#F2A7B1;
       --c-shibu:#EE9AA4; --c-hiroo:#F4A9A4; --c-mita:#F2A5AF; --c-shibak:#F5AFA2;
       --c-seiryo:#EFA0A6; --c-yamate:#F5B2AC; --c-yokoeiwa:#E894A0; --c-kanto:#F0A6B6; --c-sfc:#F0A3B2; --c-minami:#EFA79E; --c-ysf:#E091A0; --c-kaichi:#F0A0AB; --c-kumon:#EC9BA6; --c-shonan:#F0A2A9; --c-haneda:#F2A8B4; --c-joseph:#E997A3; --c-kanadai:#EF9CA7; --c-chuoyoko:#F1A4B2; --c-todoroki:#ED96A0; --c-soei:#F3AAB5; --c-morimura:#EE9AAC;
@@ -90,6 +97,7 @@
     --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
     --rule:#2E3432; --rule-soft:#262B29;
     --gate:#E2907A; --gate-bg:#2E211C;
+    --a:#EE9AA4; --a-bg:#2C1E21; --a-on:#1A0E11; --b:#8DBBEA; --b-bg:#1A2330; --b-on:#0D1420;
     --c-seiko:#8DBBEA; --c-asano:#8AC0EE; --c-gyoku:#95CBEC; --c-takanawa:#A6ADEE; --c-salesio:#7FC6E4; --c-eiko:#8CC4E2; --c-futsubu:#9FBFF0; --c-kaisei:#A8C6F0; --c-azabu:#8FC4E6; --c-komaba:#9CBEEA; --c-shiba:#86C0E2; --c-kaijo:#A2C2EF; --c-tsukukoma:#95BCE8; --c-zushi:#7FC3E4; --c-kamagaku:#8DC2E4; --c-nichidai:#F0A3AD; --c-hosei2:#EC9BAA; --c-yokokoku:#F2A7B1;
     --c-shibu:#EE9AA4; --c-hiroo:#F4A9A4; --c-mita:#F2A5AF; --c-shibak:#F5AFA2;
     --c-seiryo:#EFA0A6; --c-yamate:#F5B2AC; --c-yokoeiwa:#E894A0; --c-kanto:#F0A6B6; --c-sfc:#F0A3B2; --c-minami:#EFA79E; --c-ysf:#E091A0; --c-kaichi:#F0A0AB; --c-kumon:#EC9BA6; --c-shonan:#F0A2A9; --c-haneda:#F2A8B4; --c-joseph:#E997A3; --c-kanadai:#EF9CA7; --c-chuoyoko:#F1A4B2; --c-todoroki:#ED96A0; --c-soei:#F3AAB5; --c-morimura:#EE9AAC;
@@ -341,6 +349,7 @@
   .page > .toc        { order: 1; }
   .page > .sec-verdict{ order: 2; }
   .page > .sec-list   { order: 3; }
+  .page > .planapp    { order: 4; }
   .page > .school     { order: 10; }
   .page > .sec-assume { order: 900; }
   .page > .totop      { order: 901; }
@@ -398,6 +407,207 @@
   }
   .wishio .msg { margin: .5rem 0 0; font-size: .8rem; color: var(--ink-mute); min-height: 1.2em; }
   .wishio .msg.ng { color: var(--gate); }
+
+  /* ページ内の行き先 */
+  .jump { display: flex; flex-wrap: wrap; gap: .45rem; margin: 1.1rem 0 0; }
+  .jump a {
+    font-family: var(--font-util); font-size: .78rem; font-weight: 600;
+    text-decoration: none; color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .3rem .9rem; background: var(--surface);
+  }
+  .jump a:hover { border-color: var(--ink-mute); color: var(--ink); }
+
+  /* ============ 併願プラン（もと heigan-plan）============
+     クラス名が本体とぶつからないよう、box→pbox のように付け替えたうえで
+     すべての規則を .planapp の下に閉じ込めてある。 */
+  .planapp > h2 {
+    font-family: var(--font-display); font-size: var(--step-3);
+    font-weight: 600; margin: 0 0 .3rem; letter-spacing: -.01em;
+  }
+  .planapp .plan-lede { color: var(--ink-soft); margin: 0 0 1.6rem; max-width: 46rem; font-size: .95rem; }
+  .planapp > section { margin: 0 0 2.4rem; }
+  .planapp > section:last-of-type { margin-bottom: 1.2rem; }
+  .planapp > section > h3 {
+    font-family: var(--font-display); font-size: var(--step-2);
+    font-weight: 600; margin: 0 0 .25rem;
+  }
+  .planapp > .plan-foot {
+    font-size: .8rem; color: var(--ink-mute); line-height: 1.9;
+    border-top: 1px solid var(--rule-soft); padding-top: 1rem; margin: 0;
+  }
+
+  @media (prefers-color-scheme: dark) {
+  }
+  .planapp .pnote { color: var(--ink-mute); font-size: .875rem; margin: 0 0 1.1rem; max-width: 52rem; }
+
+  .planapp .pbox { background: var(--surface-2); border-radius: 10px; padding: 1rem 1.2rem; font-size: .92rem; }
+  .planapp .pbox p { margin: 0; }
+  .planapp .pbox + .pbox { margin-top: .7rem; }
+  .planapp .pbox.pwarn { background: var(--gate-bg); }
+  .planapp .pbox.pwarn b { color: var(--gate); }
+  .planapp .s-a { color: var(--a); }
+  .planapp .s-b { color: var(--b); }
+
+  .planapp /* ---------- レーン切り替え ---------- */
+  .lanepick {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+    margin-bottom: .9rem;
+  }
+  .planapp .lanepick .plbl { font-size: .8rem; color: var(--ink-mute); margin-right: .2rem; }
+  .planapp .lanepick button {
+    font: inherit; font-size: .85rem; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .3rem 1rem; background: var(--surface); color: var(--ink-soft);
+  }
+  .planapp .lanepick button[aria-pressed="true"][data-lane="a"] {
+    background: var(--a); border-color: var(--a); color: var(--a-on); font-weight: 600;
+  }
+  .planapp .lanepick button[aria-pressed="true"][data-lane="b"] {
+    background: var(--b); border-color: var(--b); color: var(--b-on); font-weight: 600;
+  }
+  .planapp .lanepick .now { font-size: .8rem; color: var(--ink-mute); }
+
+  .planapp /* ---------- 日程別 偏差値マトリクス ---------- */
+  .mx {
+    overflow: auto; max-height: clamp(20rem, 66vh, 42rem);
+    border: 1px solid var(--rule); border-radius: 12px; background: var(--surface);
+  }
+  .planapp .mx table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+  .planapp .mx th, .planapp .mx td {
+    border-bottom: 1px solid var(--rule-soft); padding: .25rem .3rem;
+    vertical-align: top; text-align: left;
+  }
+  .planapp .mx thead th {
+    position: sticky; top: 0; z-index: 3; background: var(--surface-2);
+    font-size: .72rem; font-weight: 600; white-space: nowrap; line-height: 1.5;
+    border-bottom: 1px solid var(--rule); padding: .4rem .45rem;
+  }
+  .planapp .mx thead th.am { color: var(--ink); }
+  .planapp .mx thead th.pm { color: var(--ink-soft); }
+  .planapp .mx thead th i { display: block; font-style: normal; font-weight: 400; font-size: .66rem; color: var(--ink-mute); }
+  .planapp .mx th.hs {
+    position: sticky; left: 0; z-index: 2; background: var(--surface-2);
+    font-family: var(--font-util); font-size: .75rem; text-align: center;
+    width: 3rem; min-width: 3rem; color: var(--ink-soft); padding-top: .4rem;
+  }
+  .planapp .mx thead th.hs { z-index: 4; }
+  .planapp .mx td { min-width: 6.6rem; }
+  .planapp .mx td.am { background: color-mix(in srgb, var(--surface-2) 45%, transparent); }
+  .planapp .mx td.off { opacity: .3; }
+  .planapp .mx th.hs .nosx { color: var(--ink-mute); }
+  .planapp .mx tr.nosx-row th.hs, .planapp .mx tr.nosx-row td { border-top: 1px solid var(--rule); }
+  .planapp .chip {
+    display: block; width: 100%; text-align: left; font: inherit;
+    font-size: .74rem; line-height: 1.35; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 7px;
+    padding: .2rem .35rem; margin: .1rem 0;
+    background: var(--surface); color: var(--ink-soft);
+  }
+  .planapp .chip:hover:not(:disabled) { border-color: var(--ink-mute); color: var(--ink); }
+  .planapp .chip:disabled { cursor: not-allowed; }
+  .planapp /* 通学ルート比較で★が未設定＝候補から外した学校。選べない */
+  .chip.nowish {
+    background: var(--surface-2); border-color: var(--rule);
+    color: var(--ink-mute); opacity: .55; text-decoration: line-through;
+    text-decoration-thickness: 1px; text-decoration-color: var(--ink-mute);
+  }
+  .planapp .chip.nowish .q, .planapp .chip.nowish .sx { text-decoration: none; }
+  .planapp .chip .q { font-size: .66rem; opacity: .75; }
+  .planapp .chip .sx { font-family: var(--font-util); font-size: .66rem; opacity: .6; margin-left: .2rem; }
+  .planapp .chip.pa { background: var(--a); border-color: var(--a); color: var(--a-on); font-weight: 600; }
+  .planapp .chip.pb { background: var(--b); border-color: var(--b); color: var(--b-on); font-weight: 600; }
+  .planapp .chip.pa.pb {
+    background: linear-gradient(105deg, var(--a) 0 50%, var(--b) 50% 100%);
+    border-color: var(--b); color: var(--a-on);
+  }
+  .planapp .chip.pa .sx, .planapp .chip.pb .sx { opacity: .85; }
+  .planapp /* いま編集していないレーンの選択は控えめに */
+  .mx[data-lane="a"] .chip.pb:not(.pa) { background: var(--b-bg); border-color: var(--b); color: var(--b); font-weight: 600; }
+  .planapp .mx[data-lane="b"] .chip.pa:not(.pb) { background: var(--a-bg); border-color: var(--a); color: var(--a); font-weight: 600; }
+
+  .planapp /* ★による絞り込みの状態 */
+  .wishnote {
+    border: 1px solid var(--rule); border-left: 4px solid var(--ink-mute);
+    border-radius: 10px; background: var(--surface);
+    padding: .7rem .95rem; margin: 0 0 .9rem; font-size: .84rem; line-height: 1.8;
+    color: var(--ink-soft);
+  }
+  .planapp .wishnote.on { border-left-color: var(--a); }
+  .planapp .wishnote b { color: var(--ink); }
+  .planapp .wishnote .drop { display: block; margin-top: .35rem; color: var(--a); }
+  .planapp .wishnote a { color: inherit; }
+
+  .planapp .bar { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; align-items: center; }
+  .planapp .bar button {
+    font: inherit; font-size: .85rem; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .35rem .95rem; background: var(--surface); color: var(--ink-soft);
+  }
+  .planapp .bar button:hover { border-color: var(--ink-mute); color: var(--ink); }
+  .planapp .saved { font-size: .8rem; color: var(--ink-mute); }
+  .planapp .legend { display: flex; flex-wrap: wrap; gap: .9rem; font-size: .78rem; color: var(--ink-mute); margin-top: .7rem; }
+  .planapp .legend .sw { display: inline-block; width: .8rem; height: .8rem; border-radius: 3px; vertical-align: -1px; margin-right: .3rem; }
+  .planapp .legend .sw.a { background: var(--a); }
+  .planapp .legend .sw.b { background: var(--b); }
+
+  .planapp /* ---------- 流れ（横に進む） ---------- */
+  .fw { overflow-x: auto; border: 1px solid var(--rule); border-radius: 12px; background: var(--surface); }
+  .planapp .fw table { border-collapse: separate; border-spacing: 0; width: max-content; min-width: 100%; }
+  .planapp .fw th, .planapp .fw td { padding: .5rem .55rem; text-align: left; vertical-align: top; }
+  .planapp .fw thead th {
+    background: var(--surface-2); font-size: .74rem; font-weight: 600; white-space: nowrap;
+    border-bottom: 1px solid var(--rule); color: var(--ink-soft);
+  }
+  .planapp .fw th.lane {
+    position: sticky; left: 0; z-index: 2; background: var(--surface-2);
+    width: 6.4rem; min-width: 6.4rem; font-size: .76rem; font-weight: 600; white-space: nowrap;
+  }
+  .planapp .fw thead th.lane { z-index: 3; }
+  .planapp .fw tr.la th.lane { color: var(--a); }
+  .planapp .fw tr.lb th.lane { color: var(--b); }
+  .planapp .fw tr.la td { border-bottom: 1px solid var(--rule); }
+  .planapp .fw td { min-width: 8.4rem; }
+  .planapp .cell {
+    border-radius: 9px; padding: .4rem .55rem; min-height: 3.2rem;
+    border: 1px solid var(--rule); background: var(--surface);
+    display: flex; flex-direction: column; justify-content: center; position: relative;
+  }
+  .planapp .cell.a { border-left: 4px solid var(--a); background: var(--a-bg); }
+  .planapp .cell.b { border-left: 4px solid var(--b); background: var(--b-bg); }
+  .planapp .cell.none { border-style: dashed; background: none; color: var(--ink-mute); }
+  .planapp .cell .nm { font-size: .84rem; font-weight: 600; line-height: 1.4; }
+  .planapp .cell .psub { font-size: .7rem; color: var(--ink-mute); font-family: var(--font-util); }
+  .planapp .cell .hop {
+    position: absolute; right: .2rem; bottom: -.86rem; z-index: 1;
+    font-size: 1rem; line-height: 1; font-weight: 700; color: var(--b);
+    background: var(--surface); border-radius: 999px; padding: 0 .12rem;
+  }
+  .planapp .fw .empty { color: var(--ink-mute); font-size: .9rem; padding: 1.3rem 1rem; }
+  .planapp .hopnote { font-size: .8rem; color: var(--ink-mute); margin: .7rem 0 0; }
+  .planapp .hopnote b { color: var(--b); }
+
+  .planapp /* ---------- まとめ ---------- */
+  .stats { display: grid; gap: .8rem; grid-template-columns: repeat(auto-fit, minmax(11rem,1fr)); }
+  .planapp .stat {
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 12px;
+    padding: 1rem 1.1rem; box-shadow: var(--shadow);
+  }
+  .planapp .stat .k { font-size: .78rem; color: var(--ink-mute); margin: 0 0 .2rem; }
+  .planapp .stat .v { font-family: var(--font-util); font-size: 1.7rem; font-weight: 600; line-height: 1.15; margin: 0; }
+  .planapp .stat .v small { font-size: .8rem; font-family: var(--font-body); color: var(--ink-mute); margin-left: .3rem; font-weight: 400; }
+  .planapp .stat .n { font-size: .78rem; color: var(--ink-soft); margin: .3rem 0 0; }
+
+  .planapp footer { border-top: 1px solid var(--rule); padding-top: 1.5rem; font-size: .85rem; color: var(--ink-soft); }
+  .planapp footer a { color: var(--ink); }
+
+  @media (max-width: 34rem) {
+    .planapp .mx td { min-width: 5.9rem; }
+    .planapp .mx th.hs { width: 2.5rem; min-width: 2.5rem; }
+    .planapp .chip { font-size: .7rem; }
+    .planapp .fw th.lane { width: 5.2rem; min-width: 5.2rem; font-size: .72rem; }
+    .planapp .fw td { min-width: 7.6rem; }
+  }
 
   /* tables — 角丸と枠はラッパー側。table に overflow:hidden を置くと sticky が効かない */
   .tw {
@@ -518,12 +728,17 @@
 <div class="page">
 
   <header id="top">
-    <p class="eyebrow">Commute Route Guidance — 39 schools</p>
-    <h1>通学ルート比較<br>横浜市内の自宅から</h1>
+    <p class="eyebrow">Commute &amp; Exam Schedule — 39 schools</p>
+    <h1>志望校くらべと併願プラン<br>横浜市内の自宅から</h1>
     <p class="lede">
       各校の登校時刻に間に合う「いちばん遅い便」から逆算した、家を出る時刻の比較です。カードの★で志望度を記録でき、この端末のブラウザに保存されます。
       <b>★が未設定の学校はグレー表示</b>になります（★を付けた学校＝検討中、という見え方）。ダイヤは平日（2026-09-07 月曜）基準。
     </p>
+    <nav class="jump" aria-label="ページ内の行き先">
+      <a href="#toc">学校の一覧</a>
+      <a href="#plan">併願プランを組む</a>
+      <a href="#assume">前提とルール</a>
+    </nav>
   </header>
 
   <!-- ============ 目次 ============ -->
@@ -1529,6 +1744,87 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
+  <!-- ============ 併願プラン ============ -->
+  <section class="planapp" id="plan">
+    <h2>併願プランを組む</h2>
+    <p class="plan-lede">
+      日程別の偏差値表から受験校を選び、<b>それまでに合格が出ているかどうか</b>で
+      次に受ける学校を切り替えます。<b>選べるのは★を付けた学校だけ</b>で、
+      ★のない学校は取り消し線つきのグレーになります。入力はこの端末のブラウザに保存されます。
+    </p>
+
+<!-- ============ 入力：日程別 偏差値表 ============ -->
+  <section>
+    <h3>日程表からえらぶ</h3>
+    <p class="pnote">
+      縦がサピックス偏差値、横が2月1日から5日までの10枠。表に出ている学校は、その枠に入試があります。
+      まず下のボタンで<b>どちらのルートを組むか</b>を選び、表の学校を押してください。
+      もう一度押すと外れます。同じ枠に選べるのは1校だけです。
+      <b>選べるのは、上で★を付けた学校だけ</b>で、
+      ★のない学校は取り消し線つきのグレーになり、押せません。
+      いちばん下の<b>「—」の行</b>は、手元の一覧表にサピックス偏差値がない学校。
+      かわりに四谷大塚の値を出しています。
+    </p>
+
+    <div class="lanepick">
+      <span class="plbl">いま組んでいるのは</span>
+      <button type="button" data-lane="a" aria-pressed="true">まだ合格なし</button>
+      <button type="button" data-lane="b" aria-pressed="false">すでに合格あり</button>
+      <span class="now" id="lanenow"></span>
+    </div>
+
+    <p class="wishnote" id="wishnote"></p>
+
+    <div class="mx" id="mx" data-lane="a"></div>
+
+    <div class="legend">
+      <span><span class="sw a"></span>まだ合格なしで受ける</span>
+      <span><span class="sw b"></span>すでに合格ありで受ける</span>
+      <span>2/1午前は必ず未合格から始まるので、「合格あり」では選べません</span>
+    </div>
+
+    <div class="bar">
+      <button type="button" id="clear">ぜんぶ消す</button>
+      <button type="button" id="copyA">「合格あり」に左を写す</button>
+      <span class="saved" id="saved"></span>
+    </div>
+  </section>
+
+  <!-- ============ 流れ（横に進む） ============ -->
+  <section>
+    <h3>流れを確かめる</h3>
+    <p class="pnote">
+      日程表と同じ向きで、<b>左から右へ日が進みます</b>。上段が「まだ合格が出ていない」ルート、
+      下段が「合格が出たあと」のルート。受験しない枠は出しません。
+    </p>
+    <div class="fw" id="flow"></div>
+    <p class="hopnote">上段の枠で合格したら、<b>次の枠から下段へ移ります</b>（矢印 ↘ の向き）。</p>
+  </section>
+
+  <!-- ============ まとめ ============ -->
+  <section>
+    <h3>まとめ</h3>
+    <div class="stats" id="stats"></div>
+    <div class="pbox" style="margin-top:1rem">
+      <p><b>この表の考え方。</b>一度どこかに合格したら、以降は「合格あり」のルートを進みます。
+      どの学校に合格したかまでは区別しません。まず<b>押さえが取れるかどうか</b>で日程が変わる、
+      という実際の組み立て方に合わせています。</p>
+    </div>
+    <div class="pbox pwarn">
+      <p><b>日程は手元の一覧表と、各校の入試要項から入れたものです。</b>39校・のべ102枠。
+      出願の前には、かならず各校の募集要項で日程・出願期間・発表時刻を確認してください。
+      年度によって日程が動くことがあります。</p>
+    </div>
+  </section>
+
+    <p class="plan-foot">このページに載せている39校、のべ102枠から選びます。
+    表の数字は各回の<b>サピックス偏差値</b>。学校そのものの目安として四谷大塚の予想（男子・80%）も併記しますが、
+    2つは尺度が違うので直接くらべないでください。<br>
+    入力内容はこの端末のブラウザにのみ保存され、ほかの端末には引き継がれません。</p>
+    <a class="totop" href="#top">↑ ページの先頭へ</a>
+  </section>
+
+  <!-- ============ 各校の詳細 ============ -->
   <!-- ============ 三田国際 ============ -->
   <!-- ============ 開智日本橋学園中学校 ============ -->
   <section class="school kaichi" id="s-kaichi" data-key="kaichi" data-wish="0" data-dep="420" data-sx="46" data-yt="57">
@@ -3688,7 +3984,7 @@
   </section>
 
   <!-- ============ 前提 ============ -->
-  <section class="sec-assume">
+  <section class="sec-assume" id="assume">
     <h2>計算の前提</h2>
     <div class="tw">
       <table style="min-width:28rem">
@@ -3781,7 +4077,13 @@
 
   // ★★ はじめて開いたときの志望度。ブラウザの閲覧データを消しても、ここに書いてある値まで戻る。
   // 書き換えるときはパネルの「いまの★をコピー」で出た文字列を、そのまま貼り替える。
-  var DEFAULT_WISH = {};
+  var DEFAULT_WISH = {
+    shibu: 5, seiko: 5,   // ★5 …… 渋谷教育学園渋谷、聖光学院
+    hiroo: 4, asano: 4,   // ★4 …… 広尾学園、浅野
+    mita: 3, sfc: 3, futsubu: 3,   // ★3 …… 三田国際科学学園、慶應義塾湘南藤沢、慶應義塾普通部
+    seiryo: 2, yamate: 2, salesio: 2, kanto: 2,   // ★2 …… 青稜、山手学院、サレジオ学院、関東学院
+    gyoku: 1, eiko: 1, kanadai: 1, shibak: 1, takanawa: 1, kamagaku: 1, yokoeiwa: 1, minami: 1, ysf: 1, chuoyoko: 1, yokokoku: 1   // ★1 …… 攻玉社、栄光学園、神奈川大学附属、芝国際、高輪、鎌倉学園、青山学院横浜英和、横浜市立南高附属、横浜サイエンスフロンティア高附属、中央大学附属横浜、横浜国大附属横浜
+  };
 
   function copyOf(o) { var r = {}; for (var k in o) if (o[k]) r[k] = o[k]; return r; }
 
@@ -3796,6 +4098,10 @@
     try { localStorage.setItem(KEY, JSON.stringify(copyOf(o))); } catch (e) { /* 保存できなくても表示は続ける */ }
   }
   var state = load();
+
+  // 初期値で始まったときは、その場で保存しておく。そうしないと localStorage が空のままで、
+  // 併願プランなど「この★を読む側のページ」には初期値が届かない（DEFAULT_WISH はこのページにしかない）。
+  try { if (!localStorage.getItem(KEY)) save(state); } catch (e) { /* 保存できなくても表示は続ける */ }
 
   function paint() {
     var groups = document.querySelectorAll('.stars');
@@ -3988,6 +4294,448 @@
   });
 
   apply(current);
+})();
+</script>
+
+<script>
+// ============ 併願プラン ============
+// 上の★（tsugaku-route:wish）を読んで、選べる学校を絞る。
+// ★の書き込みは上のスクリプトが済ませているので、かならずそのあとに置くこと。
+(function () {
+  'use strict';
+
+  // 通学ルート比較に載せている39校。
+  //   sn = 表に出す短い名前
+  //   yt = 四谷大塚（男子・80%）＝学校そのものの目安
+  //   s  = 入試を行う枠。slot: [サピックス偏差値, 回次の呼び名]
+  // 同じ学校でも回次ごとに日程も偏差値も違うので、枠ごとに持たせている。
+  var SCHOOLS = [
+    { k:'kaisei',   n:'開成',                       sn:'開成',       t:'男子校', yt:72,
+      s:{ d1am:[68] } },
+    { k:'seiko',    n:'聖光学院',                   sn:'聖光',       t:'男子校', yt:71,
+      s:{ d2am:[66], d4am:[67] } },
+    { k:'shibu',    n:'渋谷教育学園渋谷',           sn:'渋渋',       t:'共学',   yt:67,
+      s:{ d1am:[62], d2am:[64], d5am:[66] } },
+    { k:'eiko',     n:'栄光学園',                   sn:'栄光',       t:'男子校', yt:66,
+      s:{ d2am:[60] } },
+    { k:'hiroo',    n:'広尾学園',                   sn:'広尾',       t:'共学',   yt:65,
+      s:{ d1am:[58], d1pm:[59], d2pm:[62,'医進'], d5am:[57] } },
+    { k:'sfc',      n:'慶應義塾湘南藤沢',           sn:'慶應SFC',    t:'共学',   yt:65,
+      s:{ d2am:[58] } },
+    { k:'futsubu',  n:'慶應義塾普通部',             sn:'慶應普通部', t:'男子校', yt:65,
+      s:{ d1am:[58] } },
+    { k:'asano',    n:'浅野',                       sn:'浅野',       t:'男子校', yt:64,
+      s:{ d3am:[57] } },
+    { k:'ysf',      n:'横浜サイエンスフロンティア高附属', sn:'YSF附属', t:'公立・共学', yt:63,
+      s:{ d3am:[53] } },
+    { k:'salesio',  n:'サレジオ学院',               sn:'サレジオ',   t:'男子校', yt:61,
+      s:{ d1am:[50], d4am:[53] } },
+    { k:'mita',     n:'三田国際科学学園',           sn:'三田国際',   t:'共学',   yt:60,
+      s:{ d1am:[49], d1pm:[52], d2pm:[51], d3pm:[55,'MST'], d4pm:[55] } },
+    { k:'minami',   n:'横浜市立南高附属',           sn:'南高附属',   t:'公立・共学', yt:59,
+      s:{ d3am:[48] } },
+    { k:'gyoku',    n:'攻玉社',                     sn:'攻玉社',     t:'男子校', yt:57,
+      s:{ d1am:[48], d2am:[54], d5am:[54,'特別'] } },
+    { k:'kaichi',   n:'開智日本橋学園',             sn:'開智日本橋', t:'共学',   yt:57,
+      s:{ d1am:[46], d1pm:[49,'特待'], d2pm:[51], d3pm:[51], d4am:[42] } },
+    { k:'yokoeiwa', n:'青山学院横浜英和',           sn:'青学横浜英和', t:'共学', yt:56,
+      s:{ d1am:[45], d3pm:[49] } },
+    { k:'takanawa', n:'高輪',                       sn:'高輪',       t:'男子校', yt:55,
+      s:{ d1am:[45], d2am:[48], d2pm:[55,'算数'], d4am:[46] } },
+    { k:'shibak',   n:'芝国際',                     sn:'芝国際',     t:'共学',   yt:54,
+      s:{ d1am:[37], d1pm:[45,'特待'], d2pm:[45,'特待'], d3pm:[45,'特待'], d5pm:[44] } },
+    { k:'seiryo',   n:'青稜',                       sn:'青稜',       t:'共学',   yt:54,
+      s:{ d1am:[42], d1pm:[45], d2am:[42], d2pm:[42] } },
+    { k:'yamate',   n:'山手学院',                   sn:'山手学院',   t:'共学',   yt:52,
+      s:{ d1am:[40], d1pm:[47,'特待'], d3am:[41] } },
+    { k:'kanto',    n:'関東学院',                   sn:'関東学院',   t:'共学',   yt:48,
+      s:{ d1pm:[37], d3am:[38], d5pm:[40] } },
+    // ここから下は、手元の一覧表にサピックス偏差値が載っていない学校。
+    // サピ値は -1（表では「—」の行にまとめる）。日程は各校の入試要項から。
+    { k:'kumon',    n:'公文国際学園',               sn:'公文国際',   t:'共学',   yt:51,
+      s:{ d1am:[-1,'A'], d3pm:[38,'B'] } },
+    { k:'shonan',   n:'湘南学園',                   sn:'湘南学園',   t:'共学',   yt:46,
+      s:{ d1am:[-1,'A'], d1pm:[-1,'ESD'], d2am:[-1,'B'], d3am:[-1,'C'], d4pm:[-1,'D'] } },
+    { k:'haneda',   n:'羽田国際',                   sn:'羽田国際',   t:'共学',   yt:35,
+      s:{ d1am:[-1], d1pm:[-1], d2am:[-1], d2pm:[-1] } },
+    { k:'joseph',   n:'聖ヨゼフ学園',               sn:'聖ヨゼフ',   t:'共学',   yt:33,
+      s:{ d1am:[-1,'1回'], d1pm:[-1,'総合型'], d2am:[-1,'2回'], d3am:[-1,'3回'] } },
+    { k:'kanadai',  n:'神奈川大学附属',             sn:'神大附属',   t:'共学',   yt:59,
+      s:{ d1pm:[51,'1回'], d2am:[49,'2回'], d4am:[51,'3回'] } },
+    { k:'chuoyoko', n:'中央大学附属横浜',           sn:'中大横浜',   t:'共学',   yt:59,
+      s:{ d1am:[49,'1回'], d2pm:[50,'2回'] } },
+    { k:'todoroki', n:'東京都市大学等々力',         sn:'都市大等々力', t:'共学', yt:55,
+      s:{ d1am:[41,'特選'], d1pm:[46,'S特選'], d2pm:[49], d3pm:[46] } },
+    { k:'morimura', n:'森村学園中等部',             sn:'森村学園',   t:'共学',   yt:50,
+      s:{ d1am:[-1,'1回'], d2am:[-1,'2回'], d4am:[-1,'3回'] } },
+    { k:'soei',     n:'横浜創英',                   sn:'横浜創英',   t:'共学',   yt:41,
+      s:{ d1am:[-1,'1回'], d2am:[-1,'3回'] } },
+    { k:'tsukukoma',n:'筑波大学附属駒場',           sn:'筑駒',       t:'男子校', yt:74,
+      s:{ d3am:[70] } },
+    { k:'komaba',   n:'駒場東邦',                   sn:'駒場東邦',   t:'男子校', yt:66,
+      s:{ d1am:[59] } },
+    { k:'azabu',    n:'麻布',                       sn:'麻布',       t:'男子校', yt:65,
+      s:{ d1am:[59] } },
+    { k:'kaijo',    n:'海城',                       sn:'海城',       t:'男子校', yt:65,
+      s:{ d1am:[59,'1回'], d3am:[61,'2回'] } },
+    { k:'shiba',    n:'芝',                         sn:'芝',         t:'男子校', yt:59,
+      s:{ d1am:[49,'1回'], d4am:[56,'2回'] } },
+    { k:'zushi',    n:'逗子開成',                   sn:'逗子開成',   t:'男子校', yt:58,
+      s:{ d1am:[-1,'1次'], d3am:[-1,'2次'], d5am:[-1,'3次'] } },
+    { k:'kamagaku', n:'鎌倉学園',                   sn:'鎌倉学園',   t:'男子校', yt:52,
+      s:{ d1am:[43,'1次'], d1pm:[54,'算数'], d2am:[48,'2次'], d4am:[48,'3次'] } },
+    { k:'hosei2',   n:'法政大学第二',               sn:'法政二',     t:'共学',   yt:58,
+      s:{ d2am:[48,'1回'], d4am:[47,'2回'] } },
+    { k:'yokokoku', n:'横浜国大附属横浜',           sn:'横国横浜',   t:'共学',   yt:48,
+      s:{ d3am:[41] } },
+    { k:'nichidai', n:'日本大学中学校',             sn:'日大',       t:'共学',   yt:51,
+      s:{ d1am:[-1,'A1'], d1pm:[-1,'A2'], d2am:[-1,'B'], d5am:[-1,'C'] } }
+  ];
+  var BY_KEY = {};
+  SCHOOLS.forEach(function (s) { BY_KEY[s.k] = s; });
+
+  var SLOTS = [];
+  [1,2,3,4,5].forEach(function (d) {
+    SLOTS.push({ id:'d'+d+'am', day:'2/'+d, half:'午前' });
+    SLOTS.push({ id:'d'+d+'pm', day:'2/'+d, half:'午後' });
+  });
+  var SLOT_IX = {};
+  SLOTS.forEach(function (s, i) { SLOT_IX[s.id] = i; });
+
+  // 枠 → その枠に入試がある学校（サピックス偏差値の高い順）
+  var IN_SLOT = {};
+  SLOTS.forEach(function (sl) {
+    IN_SLOT[sl.id] = SCHOOLS.filter(function (s) { return s.s[sl.id]; })
+      .sort(function (a, b) { return b.s[sl.id][0] - a.s[sl.id][0]; });
+  });
+  // 表に出す偏差値の行（実際に学校がある値だけ・降順）
+  var ROWS = (function () {
+    var set = {};
+    SCHOOLS.forEach(function (s) {
+      for (var id in s.s) if (s.s.hasOwnProperty(id)) set[s.s[id][0]] = 1;
+    });
+    return Object.keys(set).map(Number).sort(function (a, b) { return b - a; });
+  })();
+  // 偏差値 × 枠 → その位置にある学校
+  var AT = {};
+  SCHOOLS.forEach(function (s) {
+    for (var id in s.s) {
+      if (!s.s.hasOwnProperty(id)) continue;
+      var key = s.s[id][0] + '|' + id;
+      (AT[key] || (AT[key] = [])).push(s);
+    }
+  });
+
+  function sits(key, slotId) {
+    var s = BY_KEY[key];
+    return (s && s.s[slotId]) || null;   // [サピ偏差値, 回次] または null
+  }
+  function fullName(key, slotId) {
+    var s = BY_KEY[key], q = sits(key, slotId);
+    return s.n + (q && q[1] ? '・' + q[1] : '');
+  }
+  function esc(t) { return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // その回の難度をどの尺度で示すか。表にサピ値がない学校は四谷で代用する。
+  function scale(s, slotId) {
+    var sx = s.s[slotId][0];
+    return sx >= 0 ? 'サピ' + sx : '四谷' + s.yt;
+  }
+
+  // ---------- 通学ルート比較で付けた★を読む ----------
+  // localStorage は同じサイト（オリジン）で共有されるので、別ページの値をそのまま読める。
+  // ★が1つも無い端末では絞り込みをせず、全校から選べるようにしておく（何も選べない画面を出さない）。
+  var WISH_KEY = 'tsugaku-route:wish';
+  var WISH = {}, WISH_ON = false, WISH_N = 0;
+  function readWish() {
+    var o = {};
+    try {
+      var raw = JSON.parse(localStorage.getItem(WISH_KEY) || '{}') || {};
+      for (var k in raw) if (BY_KEY[k] && +raw[k] >= 1) o[k] = +raw[k];
+    } catch (e) { o = {}; }
+    WISH = o;
+    WISH_N = Object.keys(o).length;
+    WISH_ON = WISH_N > 0;
+  }
+  function allowed(k) { return !WISH_ON || !!WISH[k]; }
+  readWish();
+
+  var KEY = 'heigan-plan:v1';
+  var dropped = [];          // 直近の prune で落とした学校
+  var droppedSeen = [];      // このページを開いてから落としたぶん（案内に出しつづける）
+  function mergeDropped() {
+    dropped.forEach(function (k) { if (droppedSeen.indexOf(k) < 0) droppedSeen.push(k); });
+  }
+  var loaded = load();
+  var state = prune(loaded);
+  mergeDropped();
+  // 落とした値があれば、そのぶんを黙って書き戻しておく
+  if (JSON.stringify(state) !== JSON.stringify(loaded)) persist();
+  var lane = 'a';   // いま編集しているレーン
+
+  function load() {
+    try {
+      var o = JSON.parse(localStorage.getItem(KEY) || '{}') || {};
+      return (o && typeof o === 'object') ? o : {};
+    } catch (e) { return {}; }
+  }
+  // 保存済みの値が、その枠に入試のない学校／★が外れた学校を指していたら落とす
+  // （日程データを入れる前に組んだプランや、あとで日程や★を直した場合）
+  function prune(o) {
+    var out = {};
+    dropped = [];
+    SLOTS.forEach(function (sl, i) {
+      var v = o[sl.id]; if (!v) return;
+      var keep = {};
+      ['a','b'].forEach(function (ln) {
+        if (ln === 'b' && i === 0) return;      // 初日の午前に「合格あり」はない
+        if (!v[ln] || !sits(v[ln], sl.id)) return;
+        if (!allowed(v[ln])) {                  // ★が無いので候補から外れている
+          if (dropped.indexOf(v[ln]) < 0) dropped.push(v[ln]);
+          return;
+        }
+        keep[ln] = v[ln];
+      });
+      if (keep.a || keep.b) out[sl.id] = keep;
+    });
+    return out;
+  }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); return true; }
+    catch (e) { return false; }
+  }
+  function save() { flash(persist() ? '保存しました' : '保存できませんでした'); }
+  var flashTimer = null;
+  function flash(msg) {
+    var el = document.getElementById('saved');
+    el.textContent = msg;
+    clearTimeout(flashTimer);
+    flashTimer = setTimeout(function () { el.textContent = ''; }, 1600);
+  }
+
+  function get(id, ln) { return (state[id] || {})[ln] || ''; }
+  function set(id, ln, v) {
+    if (!state[id]) state[id] = {};
+    if (v) state[id][ln] = v; else delete state[id][ln];
+    if (!state[id].a && !state[id].b) delete state[id];
+  }
+  function laneOpen(slotId, ln) { return !(ln === 'b' && SLOT_IX[slotId] === 0); }
+
+  // ---------- 入力：日程別 偏差値マトリクス ----------
+  function renderMatrix() {
+    var h = '<table><thead><tr><th class="hs">サピ</th>';
+    SLOTS.forEach(function (sl, i) {
+      h += '<th class="' + (i % 2 ? 'pm' : 'am') + '">' + sl.day + ' ' + sl.half
+         + '<i data-slot="' + sl.id + '">' + IN_SLOT[sl.id].length + '校</i></th>';
+    });
+    h += '</tr></thead><tbody>';
+    ROWS.forEach(function (hs) {
+      h += '<tr' + (hs < 0 ? ' class="nosx-row"' : '') + '><th class="hs">'
+         + (hs < 0 ? '<span class="nosx">—</span>' : hs) + '</th>';
+      SLOTS.forEach(function (sl, i) {
+        var list = AT[hs + '|' + sl.id] || [];
+        h += '<td data-slot="' + sl.id + '" class="' + (i % 2 ? '' : 'am') + '">';
+        list.forEach(function (s) {
+          var q = s.s[sl.id][1];
+          h += '<button type="button" class="chip"'
+             + ' data-slot="' + sl.id + '" data-k="' + s.k + '"'
+             + ' title="' + esc(fullName(s.k, sl.id)) + '（' + scale(s, sl.id) + '）">'
+             + esc(s.sn) + (q ? '<span class="q">・' + esc(q) + '</span>' : '')
+             + '</button>';
+        });
+        h += '</td>';
+      });
+      h += '</tr>';
+    });
+    h += '</tbody></table>';
+    document.getElementById('mx').innerHTML = h;
+  }
+
+  // 選択状態だけを塗り替える。表そのものは作り直さないので、
+  // 横スクロールの位置もキーボードのフォーカスも動かない。
+  function paintChips() {
+    var mx = document.getElementById('mx');
+    mx.setAttribute('data-lane', lane);
+    [].forEach.call(mx.querySelectorAll('.chip'), function (b) {
+      var slot = b.getAttribute('data-slot'), k = b.getAttribute('data-k');
+      var open = laneOpen(slot, lane), ok = allowed(k);
+      b.classList.toggle('pa', get(slot,'a') === k);
+      b.classList.toggle('pb', get(slot,'b') === k);
+      b.classList.toggle('nowish', !ok);
+      b.disabled = !open || !ok;
+      if (!ok) b.title = BY_KEY[k].n + '：通学ルート比較で★が付いていないため選べません';
+      b.setAttribute('aria-pressed', String(open && ok && get(slot, lane) === k));
+    });
+    // ヘッダの「N校」は、いま選べる数で出す
+    [].forEach.call(mx.querySelectorAll('th i[data-slot]'), function (el) {
+      var list = IN_SLOT[el.getAttribute('data-slot')];
+      var n = list.filter(function (x) { return allowed(x.k); }).length;
+      el.textContent = (WISH_ON && n !== list.length) ? n + '/' + list.length + '校' : list.length + '校';
+    });
+    [].forEach.call(mx.querySelectorAll('td[data-slot]'), function (td) {
+      td.classList.toggle('off', !laneOpen(td.getAttribute('data-slot'), lane));
+    });
+  }
+
+  function renderWishNote() {
+    var el = document.getElementById('wishnote');
+    var total = SCHOOLS.length;
+    if (!WISH_ON) {
+      el.className = 'wishnote';
+      el.innerHTML = '<b>いまは' + total + '校すべてから選べます。</b>'
+        + '上の<a href="#toc">学校の一覧</a>で★を付けると、'
+        + 'ここでは★を付けた学校だけが選べるようになります（★のない学校＝候補から外した学校）。';
+      return;
+    }
+    el.className = 'wishnote on';
+    var html = '<b>★を付けた ' + WISH_N + '校から選べます。</b>'
+      + '残る ' + (total - WISH_N) + '校は候補から外した扱いで、取り消し線つきのグレーになり押せません。'
+      + '増やすときは<a href="#toc">上の一覧</a>で★を付けてください。';
+    if (droppedSeen.length) {
+      html += '<span class="drop">★が外れていたため、'
+        + droppedSeen.map(function (k) { return BY_KEY[k] ? BY_KEY[k].n : k; }).join('・')
+        + ' を日程から外しました。</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  // 別タブで★を変えたときに追随する
+  function refreshWish() {
+    var before = JSON.stringify(WISH);
+    readWish();
+    if (JSON.stringify(WISH) === before) return;
+    var next = prune(state);
+    mergeDropped();
+    var changed = JSON.stringify(next) !== JSON.stringify(state);
+    state = next;
+    if (changed) persist();
+    renderWishNote();
+    renderAll();
+  }
+  // 同じページの★（上のカード）が変わったとき。通学ルート比較側が投げるイベント
+  document.addEventListener('wish-change', refreshWish);
+  // 別タブで同じページを開いている場合
+  window.addEventListener('storage', function (e) {
+    if (!e.key || e.key === WISH_KEY) refreshWish();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refreshWish();
+  });
+
+  function renderLanePick() {
+    var n = 0;
+    SLOTS.forEach(function (sl) { if (get(sl.id, lane)) n++; });
+    document.getElementById('lanenow').textContent =
+      'のルート（' + n + '枠を選択中）';
+    [].forEach.call(document.querySelectorAll('.lanepick button'), function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-lane') === lane));
+    });
+  }
+
+  // ---------- 流れ：日程が横に進む ----------
+  function cell(key, slotId, ln, hop) {
+    var s = key ? BY_KEY[key] : null, q = key ? sits(key, slotId) : null;
+    if (!s || !q) return '<div class="cell none"><span class="nm">受けない</span></div>';
+    return '<div class="cell ' + ln + '">'
+         + '<span class="nm">' + esc(fullName(key, slotId)) + '</span>'
+         + '<span class="psub">' + esc(s.t)
+         + (q[0] >= 0 ? '・サピ' + q[0] + ' / 四谷' + s.yt : '・四谷' + s.yt + '（サピ値なし）') + '</span>'
+         + (hop ? '<span class="hop" aria-hidden="true">↘</span>' : '')
+         + '</div>';
+  }
+
+  function renderFlow() {
+    var f = document.getElementById('flow');
+    var used = SLOTS.filter(function (sl) { return get(sl.id,'a') || get(sl.id,'b'); });
+    if (!used.length) {
+      f.innerHTML = '<p class="empty">上の日程表で学校を選ぶと、ここに流れが出ます。</p>';
+      return;
+    }
+    var last = used[used.length - 1].id;
+    var h = '<table><thead><tr><th class="lane"></th>';
+    used.forEach(function (sl) { h += '<th>' + sl.day + ' ' + sl.half + '</th>'; });
+    h += '</tr></thead><tbody><tr class="la"><th class="lane">まだ合格なし</th>';
+    used.forEach(function (sl) {
+      var a = get(sl.id,'a');
+      h += '<td>' + cell(a, sl.id, 'a', !!a && sl.id !== last) + '</td>';
+    });
+    h += '</tr><tr class="lb"><th class="lane">すでに合格あり</th>';
+    used.forEach(function (sl) {
+      if (SLOT_IX[sl.id] === 0) {
+        h += '<td><div class="cell none"><span class="nm">—</span>'
+           + '<span class="psub">初日の午前は必ず未合格</span></div></td>';
+      } else {
+        h += '<td>' + cell(get(sl.id,'b'), sl.id, 'b', false) + '</td>';
+      }
+    });
+    h += '</tr></tbody></table>';
+    f.innerHTML = h;
+  }
+
+  // ---------- まとめ ----------
+  function renderStats() {
+    var aCount = 0, bCount = 0, firstA = null;
+    SLOTS.forEach(function (sl, i) {
+      if (get(sl.id,'a')) { aCount++; if (firstA === null) firstA = i; }
+      if (i > 0 && get(sl.id,'b')) bCount++;
+    });
+    // 最少 = 最初の受験で合格し、以降は「合格あり」ルートを進む場合
+    var min = 0;
+    if (firstA !== null) {
+      min = 1;
+      for (var i = firstA + 1; i < SLOTS.length; i++) if (get(SLOTS[i].id,'b')) min++;
+    }
+    var cards = [
+      { k:'ぜんぶ不合格だった場合', v:aCount, u:'回', n:'上段のルートを最後まで進んだときの受験回数' },
+      { k:'最初の受験で合格した場合', v:min, u:'回', n:'そのあと下段のルートに移ったときの受験回数' },
+      { k:'「合格あり」で受ける枠', v:bCount, u:'枠', n:'押さえが取れたあとに残している受験' }
+    ];
+    document.getElementById('stats').innerHTML = cards.map(function (c) {
+      return '<div class="stat"><p class="k">' + c.k + '</p>'
+           + '<p class="v">' + c.v + '<small>' + c.u + '</small></p>'
+           + '<p class="n">' + c.n + '</p></div>';
+    }).join('');
+  }
+
+  function renderAll() { paintChips(); renderLanePick(); renderFlow(); renderStats(); }
+
+  // ---------- 操作 ----------
+  document.getElementById('mx').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.chip') : null;
+    if (!b || b.disabled) return;
+    var slot = b.getAttribute('data-slot'), k = b.getAttribute('data-k');
+    if (!allowed(k)) return;          // ★が無い学校は、表示が古くても入れない
+    set(slot, lane, get(slot, lane) === k ? '' : k);   // 同じものを押したら外す
+    save();
+    renderAll();
+  });
+
+  [].forEach.call(document.querySelectorAll('.lanepick button'), function (b) {
+    b.addEventListener('click', function () {
+      lane = b.getAttribute('data-lane');
+      renderAll();
+    });
+  });
+
+  document.getElementById('clear').addEventListener('click', function () {
+    if (!confirm('選んだ日程をぜんぶ消します。よろしいですか。')) return;
+    state = {};
+    save();
+    renderAll();
+  });
+
+  document.getElementById('copyA').addEventListener('click', function () {
+    SLOTS.forEach(function (sl, i) {
+      if (i === 0) return;                 // 初日の午前に「合格あり」はない
+      var a = get(sl.id,'a');
+      if (a) set(sl.id,'b', a);
+    });
+    save();
+    renderAll();
+  });
+
+  renderMatrix();   // 表そのものは最初の一度だけ組み立てる
+  renderWishNote();
+  renderAll();
 })();
 </script>
 </body>
