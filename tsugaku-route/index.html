@@ -16,8 +16,6 @@
     --rule-soft:  #E5E8E1;
     --gate:       #9C3A22;
     --gate-bg:    #F3E5DF;
-    --ok:         #2C6A4D;
-    --ok-bg:      #E3EDE6;
 
     /* 男子校 = 青系 */
     --c-seiko:     #123C74;
@@ -81,7 +79,6 @@
       --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
       --rule:#2E3432; --rule-soft:#262B29;
       --gate:#E2907A; --gate-bg:#2E211C;
-      --ok:#74C39A; --ok-bg:#1B2A22;
       --c-seiko:#8DBBEA; --c-asano:#8AC0EE; --c-gyoku:#95CBEC; --c-takanawa:#A6ADEE; --c-salesio:#7FC6E4; --c-eiko:#8CC4E2; --c-futsubu:#9FBFF0; --c-kaisei:#A8C6F0; --c-azabu:#8FC4E6; --c-komaba:#9CBEEA; --c-shiba:#86C0E2; --c-kaijo:#A2C2EF; --c-tsukukoma:#95BCE8; --c-zushi:#7FC3E4; --c-kamagaku:#8DC2E4; --c-nichidai:#F0A3AD; --c-hosei2:#EC9BAA; --c-yokokoku:#F2A7B1;
       --c-shibu:#EE9AA4; --c-hiroo:#F4A9A4; --c-mita:#F2A5AF; --c-shibak:#F5AFA2;
       --c-seiryo:#EFA0A6; --c-yamate:#F5B2AC; --c-yokoeiwa:#E894A0; --c-kanto:#F0A6B6; --c-sfc:#F0A3B2; --c-minami:#EFA79E; --c-ysf:#E091A0; --c-kaichi:#F0A0AB; --c-kumon:#EC9BA6; --c-shonan:#F0A2A9; --c-haneda:#F2A8B4; --c-joseph:#E997A3; --c-kanadai:#EF9CA7; --c-chuoyoko:#F1A4B2; --c-todoroki:#ED96A0; --c-soei:#F3AAB5; --c-morimura:#EE9AAC;
@@ -93,7 +90,6 @@
     --ink:#E7EAE5; --ink-soft:#BFC6C2; --ink-mute:#98A09C;
     --rule:#2E3432; --rule-soft:#262B29;
     --gate:#E2907A; --gate-bg:#2E211C;
-    --ok:#74C39A; --ok-bg:#1B2A22;
     --c-seiko:#8DBBEA; --c-asano:#8AC0EE; --c-gyoku:#95CBEC; --c-takanawa:#A6ADEE; --c-salesio:#7FC6E4; --c-eiko:#8CC4E2; --c-futsubu:#9FBFF0; --c-kaisei:#A8C6F0; --c-azabu:#8FC4E6; --c-komaba:#9CBEEA; --c-shiba:#86C0E2; --c-kaijo:#A2C2EF; --c-tsukukoma:#95BCE8; --c-zushi:#7FC3E4; --c-kamagaku:#8DC2E4; --c-nichidai:#F0A3AD; --c-hosei2:#EC9BAA; --c-yokokoku:#F2A7B1;
     --c-shibu:#EE9AA4; --c-hiroo:#F4A9A4; --c-mita:#F2A5AF; --c-shibak:#F5AFA2;
     --c-seiryo:#EFA0A6; --c-yamate:#F5B2AC; --c-yokoeiwa:#E894A0; --c-kanto:#F0A6B6; --c-sfc:#F0A3B2; --c-minami:#EFA79E; --c-ysf:#E091A0; --c-kaichi:#F0A0AB; --c-kumon:#EC9BA6; --c-shonan:#F0A2A9; --c-haneda:#F2A8B4; --c-joseph:#E997A3; --c-kanadai:#EF9CA7; --c-chuoyoko:#F1A4B2; --c-todoroki:#ED96A0; --c-soei:#F3AAB5; --c-morimura:#EE9AAC;
@@ -230,16 +226,35 @@
   .minami { --accent: var(--c-minami); }
   .ysf { --accent: var(--c-ysf); }
 
-  .pill {
-    display: inline-block; font-size: .7rem; font-family: var(--font-util);
-    letter-spacing: .06em; padding: .16em .65em; border-radius: 999px;
-    background: var(--ok-bg); color: var(--ok); font-weight: 600;
-  }
-  .pill.out { background: var(--gate-bg); color: var(--gate); }
-  .vcard.is-out { opacity: .72; }
-  .vcard.is-out:hover, .sortbar + * .vcard.is-out:focus-within { opacity: 1; }
-  tr.is-out td { color: var(--ink-soft); }
+  /* 志望度★1＝候補から外した学校。消さずに、色を落として（グレーアウト）残す。
+     --accent を上書きするだけなので、カードの線・校名・時刻・見出し・目次・表の
+     すべてが同時にグレーになる。filter は sticky を壊すので使わない。 */
+  [data-wish="0"] { --accent: var(--ink-mute); }
+  /* 薄くしすぎると本文が読めなくなる。.8 なら本文（--ink / --ink-soft）は
+     ライト・ダークとも 4.5:1 を保てる。バッジと目次の時刻だけ、灰アクセントでは
+     小さい文字の比が足りないので --ink-soft に逃がす。 */
+  .vcard[data-wish="0"] { opacity: .8; }
+  .vcard[data-wish="0"]:hover, .vcard[data-wish="0"]:focus-within { opacity: 1; }
+  .vcard[data-wish="0"] .badge { background: var(--surface-2); color: var(--ink-soft); }
+  /* 目次は <a> 自身が .azabu などで --accent を持つので、li からの上書きでは届かない */
+  .toc li[data-wish="0"] a { --accent: var(--ink-mute); opacity: .8; }
+  .toc li[data-wish="0"] a .tm { color: var(--ink-soft); }
+  .toc li[data-wish="0"] a:hover, .toc li[data-wish="0"] a:focus-visible { opacity: 1; }
+  tr[data-wish="0"] td { color: var(--ink-soft); }
 
+
+  /* 学校名でのGoogle検索と、住所のGoogle Map。詳細セクションの見出し直下に置く */
+  .ext { display: flex; flex-wrap: wrap; gap: .45rem; margin: .75rem 0 0; }
+  .ext a {
+    display: inline-flex; align-items: center; gap: .35rem;
+    font-family: var(--font-util); font-size: .78rem; font-weight: 600;
+    letter-spacing: .02em; text-decoration: none; color: var(--accent);
+    background: var(--surface); border: 1px solid var(--rule);
+    border-radius: 999px; padding: .3rem .85rem;
+  }
+  .ext a::after { content: "\2197"; font-size: .8em; opacity: .65; }
+  .ext a:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+  .ext a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* 志望度（★5つ・localStorage 保存） */
   .vcard { position: relative; }
@@ -266,6 +281,16 @@
     color: var(--ink-mute); margin-left: .45rem; white-space: nowrap;
   }
   .stars[data-value="0"] .stars-out { opacity: .8; }
+  /* ★は押した数がそのまま入る（同じ★を押しても消えない）。
+     消すのはこの×だけ。★が付いているときしか出さない。 */
+  .stars .clr {
+    font: inherit; font-size: .95rem; line-height: 1;
+    margin-left: .35rem; padding: .1rem .42rem;
+    border: 1px solid var(--rule); border-radius: 999px;
+    background: var(--surface); color: var(--ink-mute); cursor: pointer;
+  }
+  .stars .clr:hover { border-color: var(--gate); color: var(--gate); }
+  .stars[data-value="0"] .clr { display: none; }
   @media (prefers-reduced-motion: reduce) {
     .stars button { transition: none; }
     .stars button:hover { transform: none; }
@@ -341,6 +366,38 @@
   .sortbar .hint {
     flex-basis: 100%; font-size: .8rem; color: var(--ink-mute); margin: .2rem 0 0;
   }
+
+  /* 志望度の控え・復元 */
+  .wishio {
+    border: 1px solid var(--rule); border-radius: 12px;
+    background: var(--surface); margin: 0 0 1.2rem; font-size: .85rem;
+  }
+  .wishio > summary {
+    cursor: pointer; padding: .6rem .95rem; font-weight: 600; color: var(--ink-soft);
+    list-style: none;
+  }
+  .wishio > summary::-webkit-details-marker { display: none; }
+  .wishio > summary::before { content: "▸ "; color: var(--ink-mute); }
+  .wishio[open] > summary::before { content: "▾ "; }
+  .wishio > summary:hover { color: var(--ink); }
+  .wishio .body { padding: 0 .95rem .95rem; }
+  .wishio p { margin: 0 0 .6rem; color: var(--ink-soft); line-height: 1.8; }
+  .wishio .btns { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .6rem; }
+  .wishio button {
+    font: inherit; font-size: .82rem; cursor: pointer;
+    border: 1px solid var(--rule); border-radius: 999px;
+    padding: .3rem .9rem; background: var(--surface-2); color: var(--ink-soft);
+  }
+  .wishio button:hover { border-color: var(--ink-mute); color: var(--ink); }
+  .wishio textarea {
+    display: block; width: 100%; box-sizing: border-box;
+    font-family: var(--font-util); font-size: .78rem; line-height: 1.6;
+    border: 1px solid var(--rule); border-radius: 8px;
+    padding: .5rem .6rem; background: var(--paper); color: var(--ink);
+    resize: vertical;
+  }
+  .wishio .msg { margin: .5rem 0 0; font-size: .8rem; color: var(--ink-mute); min-height: 1.2em; }
+  .wishio .msg.ng { color: var(--gate); }
 
   /* tables — 角丸と枠はラッパー側。table に overflow:hidden を置くと sticky が効かない */
   .tw {
@@ -465,7 +522,7 @@
     <h1>通学ルート比較<br>横浜市内の自宅から</h1>
     <p class="lede">
       各校の登校時刻に間に合う「いちばん遅い便」から逆算した、家を出る時刻の比較です。カードの★で志望度を記録でき、この端末のブラウザに保存されます。
-      対象は<b>出発が 7:05 以降になる学校のみ</b>。ダイヤは平日（2026-09-07 月曜）基準。
+      <b>★が未設定の学校はグレー表示</b>になります（★を付けた学校＝検討中、という見え方）。ダイヤは平日（2026-09-07 月曜）基準。
     </p>
   </header>
 
@@ -473,52 +530,52 @@
   <nav class="toc" id="toc" aria-label="学校へのもくじ">
     <h2>学校ごとの詳しいルート</h2>
     <ol>
-      <li data-key="kaichi" data-dep="420" data-sx="46" data-yt="57" data-out="1"><a class="kaichi" href="#s-kaichi"><span class="tm">7:00</span>開智日本橋学園<span class="dim">対象外</span></a></li>
-      <li data-key="komaba" data-dep="425" data-sx="59" data-yt="66" data-out="0"><a class="komaba" href="#s-komaba"><span class="tm">7:05</span>駒場東邦</a></li>
-      <li data-key="kaijo" data-dep="425" data-sx="59" data-yt="65" data-out="0"><a class="kaijo" href="#s-kaijo"><span class="tm">7:05</span>海城</a></li>
-      <li data-key="zushi" data-dep="425" data-sx="-1" data-yt="58" data-out="0"><a class="zushi" href="#s-zushi"><span class="tm">7:05</span>逗子開成</a></li>
-      <li data-key="kumon" data-dep="425" data-sx="-1" data-yt="51" data-out="0"><a class="kumon" href="#s-kumon"><span class="tm">7:05</span>公文国際学園</a></li>
-      <li data-key="todoroki" data-dep="429" data-sx="41" data-yt="55" data-out="0"><a class="todoroki" href="#s-todoroki"><span class="tm">7:09</span>東京都市大学等々力</a></li>
-      <li data-key="morimura" data-dep="429" data-sx="-1" data-yt="50" data-out="0"><a class="morimura" href="#s-morimura"><span class="tm">7:09</span>森村学園中等部</a></li>
-      <li data-key="nichidai" data-dep="429" data-sx="-1" data-yt="51" data-out="0"><a class="nichidai" href="#s-nichidai"><span class="tm">7:09</span>日本大学中学校</a></li>
-      <li data-key="mita" data-dep="429" data-sx="49" data-yt="60"><a class="mita"  href="#s-mita"><span class="tm">7:09</span>三田国際科学学園</a></li>
-      <li data-key="gyoku" data-dep="429" data-sx="48" data-yt="57"><a class="gyoku" href="#s-gyoku"><span class="tm">7:09</span>攻玉社</a></li>
-      <li data-key="eiko" data-dep="431" data-sx="60" data-yt="66" data-out="0"><a class="eiko" href="#s-eiko"><span class="tm">7:11</span>栄光学園</a></li>
-      <li data-key="shibu" data-dep="434" data-sx="62" data-yt="67"><a class="shibu" href="#s-shibu"><span class="tm">7:14</span>渋谷教育学園渋谷</a></li>
-      <li data-key="hiroo" data-dep="434" data-sx="58" data-yt="65"><a class="hiroo" href="#s-hiroo"><span class="tm">7:14</span>広尾学園</a></li>
-      <li data-key="kanadai" data-dep="434" data-sx="51" data-yt="59" data-out="0"><a class="kanadai" href="#s-kanadai"><span class="tm">7:14</span>神奈川大学附属</a></li>
-      <li data-key="tsukukoma" data-dep="434" data-sx="70" data-yt="74" data-out="0"><a class="tsukukoma" href="#s-tsukukoma"><span class="tm">7:14</span>筑波大学附属駒場</a></li>
-      <li data-key="shibak" data-dep="437" data-sx="45" data-yt="54"><a class="shibak" href="#s-shibak"><span class="tm">7:17</span>芝国際</a></li>
-      <li data-key="takanawa" data-dep="437" data-sx="45" data-yt="55"><a class="takanawa" href="#s-takanawa"><span class="tm">7:17</span>高輪</a></li>
-      <li data-key="kamagaku" data-dep="440" data-sx="43" data-yt="52" data-out="0"><a class="kamagaku" href="#s-kamagaku"><span class="tm">7:20</span>鎌倉学園</a></li>
-      <li data-key="sfc" data-dep="442" data-sx="58" data-yt="65"><a class="sfc" href="#s-sfc"><span class="tm">7:22</span>慶應義塾湘南藤沢</a></li>
-      <li data-key="seiryo" data-dep="443" data-sx="42" data-yt="54"><a class="seiryo" href="#s-seiryo"><span class="tm">7:23</span>青稜</a></li>
-      <li data-key="haneda" data-dep="443" data-sx="-1" data-yt="35" data-out="0"><a class="haneda" href="#s-haneda"><span class="tm">7:23</span>羽田国際</a></li>
-      <li data-key="joseph" data-dep="446" data-sx="-1" data-yt="33" data-out="0"><a class="joseph" href="#s-joseph"><span class="tm">7:26</span>聖ヨゼフ学園</a></li>
-      <li data-key="yamate" data-dep="448" data-sx="40" data-yt="52"><a class="yamate" href="#s-yamate"><span class="tm">7:28</span>山手学院</a></li>
-      <li data-key="soei" data-dep="459" data-sx="-1" data-yt="41" data-out="0"><a class="soei" href="#s-soei"><span class="tm">7:39</span>横浜創英</a></li>
-      <li data-key="yokoeiwa" data-dep="460" data-sx="45" data-yt="56"><a class="yokoeiwa" href="#s-yokoeiwa"><span class="tm">7:40</span>青山学院横浜英和</a></li>
-      <li data-key="minami" data-dep="460" data-sx="48" data-yt="59" data-out="0"><a class="minami" href="#s-minami"><span class="tm">7:40</span>横浜市立南高附属</a></li>
-      <li data-key="ysf" data-dep="462" data-sx="-1" data-yt="63" data-out="0"><a class="ysf" href="#s-ysf"><span class="tm">7:42</span>横浜サイエンスフロンティア高附属</a></li>
-      <li data-key="hosei2" data-dep="461" data-sx="48" data-yt="58" data-out="0"><a class="hosei2" href="#s-hosei2"><span class="tm">7:41</span>法政大学第二</a></li>
-      <li data-key="chuoyoko" data-dep="461" data-sx="49" data-yt="59" data-out="0"><a class="chuoyoko" href="#s-chuoyoko"><span class="tm">7:41</span>中央大学附属横浜</a></li>
-      <li data-key="salesio" data-dep="461" data-sx="50" data-yt="61"><a class="salesio" href="#s-salesio"><span class="tm">7:41</span>サレジオ学院</a></li>
-      <li data-key="seiko" data-dep="465" data-sx="66" data-yt="71"><a class="seiko" href="#s-seiko"><span class="tm">7:45</span>聖光学院</a></li>
-      <li data-key="kanto" data-dep="465" data-sx="-1" data-yt="48"><a class="kanto" href="#s-kanto"><span class="tm">7:45</span>関東学院</a></li>
-      <li data-key="shonan" data-dep="466" data-sx="-1" data-yt="46" data-out="0"><a class="shonan" href="#s-shonan"><span class="tm">7:46</span>湘南学園</a></li>
-      <li data-key="asano" data-dep="477" data-sx="58" data-yt="64"><a class="asano" href="#s-asano"><span class="tm">7:57</span>浅野</a></li>
-      <li data-key="yokokoku" data-dep="491" data-sx="41" data-yt="48" data-out="0"><a class="yokokoku" href="#s-yokokoku"><span class="tm">8:11</span>横浜国大附属横浜</a></li>
-      <li data-key="futsubu" data-dep="493" data-sx="58" data-yt="65"><a class="futsubu" href="#s-futsubu"><span class="tm">8:13</span>慶應義塾普通部</a></li>
-      <li data-key="azabu" data-dep="398" data-sx="59" data-yt="65" data-out="1"><a class="azabu" href="#s-azabu"><span class="tm">6:38</span>麻布<span class="dim">対象外</span></a></li>
-      <li data-key="shiba" data-dep="407" data-sx="49" data-yt="59" data-out="1"><a class="shiba" href="#s-shiba"><span class="tm">6:47</span>芝<span class="dim">対象外</span></a></li>
-      <li data-key="kaisei" data-dep="410" data-sx="68" data-yt="72" data-out="1"><a class="kaisei" href="#s-kaisei"><span class="tm">6:50</span>開成<span class="dim">対象外</span></a></li>
+      <li data-key="kaichi" data-wish="0" data-dep="420" data-sx="46" data-yt="57"><a class="kaichi" href="#s-kaichi"><span class="tm">7:00</span>開智日本橋学園</a></li>
+      <li data-key="komaba" data-wish="0" data-dep="425" data-sx="59" data-yt="66"><a class="komaba" href="#s-komaba"><span class="tm">7:05</span>駒場東邦</a></li>
+      <li data-key="kaijo" data-wish="0" data-dep="425" data-sx="59" data-yt="65"><a class="kaijo" href="#s-kaijo"><span class="tm">7:05</span>海城</a></li>
+      <li data-key="zushi" data-wish="0" data-dep="425" data-sx="-1" data-yt="58"><a class="zushi" href="#s-zushi"><span class="tm">7:05</span>逗子開成</a></li>
+      <li data-key="kumon" data-wish="0" data-dep="425" data-sx="-1" data-yt="51"><a class="kumon" href="#s-kumon"><span class="tm">7:05</span>公文国際学園</a></li>
+      <li data-key="todoroki" data-wish="0" data-dep="429" data-sx="41" data-yt="55"><a class="todoroki" href="#s-todoroki"><span class="tm">7:09</span>東京都市大学等々力</a></li>
+      <li data-key="morimura" data-wish="0" data-dep="429" data-sx="-1" data-yt="50"><a class="morimura" href="#s-morimura"><span class="tm">7:09</span>森村学園中等部</a></li>
+      <li data-key="nichidai" data-wish="0" data-dep="429" data-sx="-1" data-yt="51"><a class="nichidai" href="#s-nichidai"><span class="tm">7:09</span>日本大学中学校</a></li>
+      <li data-key="mita" data-wish="0" data-dep="429" data-sx="49" data-yt="60"><a class="mita"  href="#s-mita"><span class="tm">7:09</span>三田国際科学学園</a></li>
+      <li data-key="gyoku" data-wish="0" data-dep="429" data-sx="48" data-yt="57"><a class="gyoku" href="#s-gyoku"><span class="tm">7:09</span>攻玉社</a></li>
+      <li data-key="eiko" data-wish="0" data-dep="431" data-sx="60" data-yt="66"><a class="eiko" href="#s-eiko"><span class="tm">7:11</span>栄光学園</a></li>
+      <li data-key="shibu" data-wish="0" data-dep="434" data-sx="62" data-yt="67"><a class="shibu" href="#s-shibu"><span class="tm">7:14</span>渋谷教育学園渋谷</a></li>
+      <li data-key="hiroo" data-wish="0" data-dep="434" data-sx="58" data-yt="65"><a class="hiroo" href="#s-hiroo"><span class="tm">7:14</span>広尾学園</a></li>
+      <li data-key="kanadai" data-wish="0" data-dep="434" data-sx="51" data-yt="59"><a class="kanadai" href="#s-kanadai"><span class="tm">7:14</span>神奈川大学附属</a></li>
+      <li data-key="tsukukoma" data-wish="0" data-dep="434" data-sx="70" data-yt="74"><a class="tsukukoma" href="#s-tsukukoma"><span class="tm">7:14</span>筑波大学附属駒場</a></li>
+      <li data-key="shibak" data-wish="0" data-dep="437" data-sx="45" data-yt="54"><a class="shibak" href="#s-shibak"><span class="tm">7:17</span>芝国際</a></li>
+      <li data-key="takanawa" data-wish="0" data-dep="437" data-sx="45" data-yt="55"><a class="takanawa" href="#s-takanawa"><span class="tm">7:17</span>高輪</a></li>
+      <li data-key="kamagaku" data-wish="0" data-dep="440" data-sx="43" data-yt="52"><a class="kamagaku" href="#s-kamagaku"><span class="tm">7:20</span>鎌倉学園</a></li>
+      <li data-key="sfc" data-wish="0" data-dep="442" data-sx="58" data-yt="65"><a class="sfc" href="#s-sfc"><span class="tm">7:22</span>慶應義塾湘南藤沢</a></li>
+      <li data-key="seiryo" data-wish="0" data-dep="443" data-sx="42" data-yt="54"><a class="seiryo" href="#s-seiryo"><span class="tm">7:23</span>青稜</a></li>
+      <li data-key="haneda" data-wish="0" data-dep="443" data-sx="-1" data-yt="35"><a class="haneda" href="#s-haneda"><span class="tm">7:23</span>羽田国際</a></li>
+      <li data-key="joseph" data-wish="0" data-dep="446" data-sx="-1" data-yt="33"><a class="joseph" href="#s-joseph"><span class="tm">7:26</span>聖ヨゼフ学園</a></li>
+      <li data-key="yamate" data-wish="0" data-dep="448" data-sx="40" data-yt="52"><a class="yamate" href="#s-yamate"><span class="tm">7:28</span>山手学院</a></li>
+      <li data-key="soei" data-wish="0" data-dep="459" data-sx="-1" data-yt="41"><a class="soei" href="#s-soei"><span class="tm">7:39</span>横浜創英</a></li>
+      <li data-key="yokoeiwa" data-wish="0" data-dep="460" data-sx="45" data-yt="56"><a class="yokoeiwa" href="#s-yokoeiwa"><span class="tm">7:40</span>青山学院横浜英和</a></li>
+      <li data-key="minami" data-wish="0" data-dep="460" data-sx="48" data-yt="59"><a class="minami" href="#s-minami"><span class="tm">7:40</span>横浜市立南高附属</a></li>
+      <li data-key="ysf" data-wish="0" data-dep="462" data-sx="-1" data-yt="63"><a class="ysf" href="#s-ysf"><span class="tm">7:42</span>横浜サイエンスフロンティア高附属</a></li>
+      <li data-key="hosei2" data-wish="0" data-dep="461" data-sx="48" data-yt="58"><a class="hosei2" href="#s-hosei2"><span class="tm">7:41</span>法政大学第二</a></li>
+      <li data-key="chuoyoko" data-wish="0" data-dep="461" data-sx="49" data-yt="59"><a class="chuoyoko" href="#s-chuoyoko"><span class="tm">7:41</span>中央大学附属横浜</a></li>
+      <li data-key="salesio" data-wish="0" data-dep="461" data-sx="50" data-yt="61"><a class="salesio" href="#s-salesio"><span class="tm">7:41</span>サレジオ学院</a></li>
+      <li data-key="seiko" data-wish="0" data-dep="465" data-sx="66" data-yt="71"><a class="seiko" href="#s-seiko"><span class="tm">7:45</span>聖光学院</a></li>
+      <li data-key="kanto" data-wish="0" data-dep="465" data-sx="-1" data-yt="48"><a class="kanto" href="#s-kanto"><span class="tm">7:45</span>関東学院</a></li>
+      <li data-key="shonan" data-wish="0" data-dep="466" data-sx="-1" data-yt="46"><a class="shonan" href="#s-shonan"><span class="tm">7:46</span>湘南学園</a></li>
+      <li data-key="asano" data-wish="0" data-dep="477" data-sx="58" data-yt="64"><a class="asano" href="#s-asano"><span class="tm">7:57</span>浅野</a></li>
+      <li data-key="yokokoku" data-wish="0" data-dep="491" data-sx="41" data-yt="48"><a class="yokokoku" href="#s-yokokoku"><span class="tm">8:11</span>横浜国大附属横浜</a></li>
+      <li data-key="futsubu" data-wish="0" data-dep="493" data-sx="58" data-yt="65"><a class="futsubu" href="#s-futsubu"><span class="tm">8:13</span>慶應義塾普通部</a></li>
+      <li data-key="azabu" data-wish="0" data-dep="398" data-sx="59" data-yt="65"><a class="azabu" href="#s-azabu"><span class="tm">6:38</span>麻布</a></li>
+      <li data-key="shiba" data-wish="0" data-dep="407" data-sx="49" data-yt="59"><a class="shiba" href="#s-shiba"><span class="tm">6:47</span>芝</a></li>
+      <li data-key="kaisei" data-wish="0" data-dep="410" data-sx="68" data-yt="72"><a class="kaisei" href="#s-kaisei"><span class="tm">6:50</span>開成</a></li>
     </ol>
   </nav>
 
   <!-- ============ 結論 ============ -->
   <section class="sec-verdict">
     <h2>結論</h2>
-    <p class="sec-note">39校中35校が 7:05 以降に出発できます。<b>麻布・芝・開成・開智日本橋学園の4校が 7:05 より前</b>になるため対象外とし、末尾に置いています（時刻とルートは通常どおり掲載）。<b>並び順は上の5つのボタンで切り替えられます</b>（カード・一覧表・目次・各校の詳細が同時に並び替わり、選んだ順はブラウザに保存されます）。<b>★を押すと志望度（1〜5）が保存されます</b>（同じ★をもう一度押すと未設定に戻る）。カードのそれ以外の場所を押すと、詳しいルートへ移動します。</p>
+    <p class="sec-note">39校を、家を出る時刻の早い順に並べています（いちばん早いのは<b>麻布 6:38</b>、いちばん遅いのは<b>慶應義塾普通部 8:13</b>）。<b>並び順は上の5つのボタンで切り替えられます</b>（カード・一覧表・目次・各校の詳細が同時に並び替わり、選んだ順はブラウザに保存されます）。<b>★を押すと志望度（1〜5）が保存されます</b>（押した★の数がそのまま入ります。同じ★をもう一度押しても消えません）。<b>未設定に戻すときは★の右の「×」</b>を押してください。<b>★が未設定の学校は「候補から外した」扱いでグレー表示</b>になります——★を1つでも付ければ色が戻ります。カードのそれ以外の場所を押すと、詳しいルートへ移動します。</p>
     <div class="sortbar" role="group" aria-label="表示順">
       <span class="lbl">並び順</span>
       <button type="button" data-sort="dep-asc">朝早い順</button>
@@ -528,8 +585,25 @@
       <button type="button" data-sort="wish-desc">志望度順</button>
       <p class="hint"></p>
     </div>
+
+    <details class="wishio">
+      <summary>志望度の控えと復元</summary>
+      <div class="body">
+        <p>★はこの端末のブラウザにしか残りません。<b>閲覧データを消すと消えます。</b>
+        いまの★をコピーしてメモやメールに貼っておけば、あとから貼り戻せます。
+        <b>はじめの設定に戻す</b>を押すと、このページに書き込んである初期値に戻ります。</p>
+        <div class="btns">
+          <button type="button" id="wish-copy">いまの★をコピー</button>
+          <button type="button" id="wish-apply">下の内容で復元</button>
+          <button type="button" id="wish-reset">はじめの設定に戻す</button>
+        </div>
+        <textarea id="wish-io" rows="3" spellcheck="false" autocapitalize="off" autocorrect="off"
+          aria-label="志望度のデータ" placeholder='{"seiko":5,"asano":4} のような形'></textarea>
+        <p class="msg" id="wish-msg" role="status"></p>
+      </div>
+    </details>
     <div class="verdict">
-      <div class="vcard kaichi is-out" data-key="kaichi" data-dep="420" data-sx="46" data-yt="57" data-out="1">
+      <div class="vcard kaichi" data-key="kaichi" data-wish="0" data-dep="420" data-sx="46" data-yt="57">
         <div class="stars" data-school="kaichi" role="group" aria-label="開智日本橋学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -537,14 +611,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="開智日本橋学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 46<i>/</i>四谷 57</span></p>
         <p class="name"><a class="stretched" href="#s-kaichi">開智日本橋学園</a></p>
         <p class="sub">登校 8:10 ／ 馬喰町駅 徒歩3分</p>
         <p class="time">7:00<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→馬喰町<br>1時間5分・乗換1回・826円 <span class="pill out">対象外</span></p>
+        <p class="meta">高島町→横浜→馬喰町<br>1時間5分・乗換1回・826円</p>
       </div>
-      <div class="vcard komaba" data-key="komaba" data-dep="425" data-sx="59" data-yt="66" data-out="0">
+      <div class="vcard komaba" data-key="komaba" data-wish="0" data-dep="425" data-sx="59" data-yt="66">
         <div class="stars" data-school="komaba" role="group" aria-label="駒場東邦の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -552,14 +627,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="駒場東邦の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 66</span></p>
         <p class="name"><a class="stretched" href="#s-komaba">駒場東邦</a></p>
         <p class="sub">登校 8:20 ／ 駒場東大前駅 徒歩10分</p>
         <p class="time">7:05<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→渋谷→駒場東大前<br>1時間11分・乗換2回・790円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→渋谷→駒場東大前<br>1時間11分・乗換2回・790円</p>
       </div>
-      <div class="vcard kaijo" data-key="kaijo" data-dep="425" data-sx="59" data-yt="65" data-out="0">
+      <div class="vcard kaijo" data-key="kaijo" data-wish="0" data-dep="425" data-sx="59" data-yt="65">
         <div class="stars" data-school="kaijo" role="group" aria-label="海城の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -567,14 +643,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="海城の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 65</span></p>
         <p class="name"><a class="stretched" href="#s-kaijo">海城</a></p>
         <p class="sub">登校 8:15 ／ 新大久保駅 徒歩5分</p>
         <p class="time">7:05<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→恵比寿→新大久保<br>1時間7分・乗換2回・826円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→恵比寿→新大久保<br>1時間7分・乗換2回・826円</p>
       </div>
-      <div class="vcard zushi" data-key="zushi" data-dep="425" data-sx="-1" data-yt="58" data-out="0">
+      <div class="vcard zushi" data-key="zushi" data-wish="0" data-dep="425" data-sx="-1" data-yt="58">
         <div class="stars" data-school="zushi" role="group" aria-label="逗子開成の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -582,14 +659,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="逗子開成の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ —<i>/</i>四谷 58</span></p>
         <p class="name"><a class="stretched" href="#s-zushi">逗子開成</a></p>
         <p class="sub">登校 8:15 ／ 逗子駅 徒歩10分</p>
         <p class="time">7:05<small>家を出る</small></p>
-        <p class="meta">桜木町→横浜→逗子（横須賀線）<br>1時間6分・乗換1回・528円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→横浜→逗子（横須賀線）<br>1時間6分・乗換1回・528円</p>
       </div>
-      <div class="vcard kumon" data-key="kumon" data-dep="425" data-sx="-1" data-yt="51" data-out="0">
+      <div class="vcard kumon" data-key="kumon" data-wish="0" data-dep="425" data-sx="-1" data-yt="51">
         <div class="stars" data-school="kumon" role="group" aria-label="公文国際学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -597,14 +675,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="公文国際学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 51</span></p>
         <p class="name"><a class="stretched" href="#s-kumon">公文国際学園</a></p>
         <p class="sub">登校 8:20 ／ 大船駅からバス8分</p>
         <p class="time">7:05<small>家を出る</small></p>
-        <p class="meta">桜木町→横浜→大船→バス<br>1時間2分・乗換2回・641円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→横浜→大船→バス<br>1時間2分・乗換2回・641円</p>
       </div>
-      <div class="vcard todoroki" data-key="todoroki" data-dep="429" data-sx="41" data-yt="55" data-out="0">
+      <div class="vcard todoroki" data-key="todoroki" data-wish="0" data-dep="429" data-sx="41" data-yt="55">
         <div class="stars" data-school="todoroki" role="group" aria-label="東京都市大学等々力の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -612,14 +691,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="東京都市大学等々力の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 41<i>/</i>四谷 55</span></p>
         <p class="name"><a class="stretched" href="#s-todoroki">東京都市大学等々力</a></p>
         <p class="sub">登校 8:30 ／ 等々力駅 徒歩10分</p>
         <p class="time">7:09<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→自由が丘→等々力<br>1時間10分・乗換2回・498円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→自由が丘→等々力<br>1時間10分・乗換2回・498円</p>
       </div>
-      <div class="vcard morimura" data-key="morimura" data-dep="429" data-sx="-1" data-yt="50" data-out="0">
+      <div class="vcard morimura" data-key="morimura" data-wish="0" data-dep="429" data-sx="-1" data-yt="50">
         <div class="stars" data-school="morimura" role="group" aria-label="森村学園中等部の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -627,14 +707,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="森村学園中等部の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 50</span></p>
         <p class="name"><a class="stretched" href="#s-morimura">森村学園中等部</a></p>
         <p class="sub">登校 8:30 ／ つくし野駅 徒歩5分</p>
         <p class="time">7:09<small>家を出る</small></p>
-        <p class="meta">高島町→あざみ野→つくし野<br>1時間7分・乗換1回・562円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→あざみ野→つくし野<br>1時間7分・乗換1回・562円</p>
       </div>
-      <div class="vcard nichidai" data-key="nichidai" data-dep="429" data-sx="-1" data-yt="51" data-out="0">
+      <div class="vcard nichidai" data-key="nichidai" data-wish="0" data-dep="429" data-sx="-1" data-yt="51">
         <div class="stars" data-school="nichidai" role="group" aria-label="日本大学中学校の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -642,14 +723,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="日本大学中学校の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ &mdash;<i>/</i>四谷 51</span></p>
         <p class="name"><a class="stretched" href="#s-nichidai">日本大学中学校</a></p>
         <p class="sub">登校 8:10 ／ 日吉駅 徒歩12分</p>
         <p class="time">7:09<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→日吉（東横線）<br>50分・乗換1回・437円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→日吉（東横線）<br>50分・乗換1回・437円</p>
       </div>
-      <div class="vcard mita" data-key="mita" data-dep="429" data-sx="49" data-yt="60">
+      <div class="vcard mita" data-key="mita" data-wish="0" data-dep="429" data-sx="49" data-yt="60">
         <div class="stars" data-school="mita" role="group" aria-label="三田国際科学学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -657,14 +739,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="三田国際科学学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 49<i>/</i>四谷 60</span></p>
         <p class="name"><a class="stretched" href="#s-mita">三田国際科学学園</a></p>
         <p class="sub">登校 8:30 ／ 用賀駅 徒歩5分</p>
         <p class="time">7:09<small>家を出る</small></p>
-        <p class="meta">高島町→あざみ野→用賀<br>1時間14分・乗換1回・562円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→あざみ野→用賀<br>1時間14分・乗換1回・562円</p>
       </div>
-      <div class="vcard gyoku" data-key="gyoku" data-dep="429" data-sx="48" data-yt="57">
+      <div class="vcard gyoku" data-key="gyoku" data-wish="0" data-dep="429" data-sx="48" data-yt="57">
         <div class="stars" data-school="gyoku" role="group" aria-label="攻玉社の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -672,14 +755,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="攻玉社の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 48<i>/</i>四谷 57</span></p>
         <p class="name"><a class="stretched" href="#s-gyoku">攻玉社</a></p>
         <p class="sub">登校 8:20 ／ 不動前駅 徒歩2分</p>
         <p class="time">7:09<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→日吉→不動前<br>1時間5分・乗換2回・519円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→日吉→不動前<br>1時間5分・乗換2回・519円</p>
       </div>
-      <div class="vcard eiko" data-key="eiko" data-dep="431" data-sx="60" data-yt="66" data-out="0">
+      <div class="vcard eiko" data-key="eiko" data-wish="0" data-dep="431" data-sx="60" data-yt="66">
         <div class="stars" data-school="eiko" role="group" aria-label="栄光学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -687,14 +771,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="栄光学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 60<i>/</i>四谷 66</span></p>
         <p class="name"><a class="stretched" href="#s-eiko">栄光学園</a></p>
         <p class="sub">登校 8:15（夏）／ 大船駅 徒歩15分</p>
         <p class="time">7:11<small>家を出る</small></p>
-        <p class="meta">桜木町→根岸線→大船<br>58分・乗換0回・341円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→根岸線→大船<br>58分・乗換0回・341円</p>
       </div>
-      <div class="vcard shibu" data-key="shibu" data-dep="434" data-sx="62" data-yt="67">
+      <div class="vcard shibu" data-key="shibu" data-wish="0" data-dep="434" data-sx="62" data-yt="67">
         <div class="stars" data-school="shibu" role="group" aria-label="渋谷教育学園渋谷の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -702,14 +787,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="渋谷教育学園渋谷の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 62<i>/</i>四谷 67</span></p>
         <p class="name"><a class="stretched" href="#s-shibu">渋谷教育学園渋谷</a></p>
         <p class="sub">登校 8:15 ／ 渋谷駅 徒歩7分</p>
         <p class="time">7:14<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→渋谷<br>54分・乗換1回・650円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→渋谷<br>54分・乗換1回・650円</p>
       </div>
-      <div class="vcard hiroo" data-key="hiroo" data-dep="434" data-sx="58" data-yt="65">
+      <div class="vcard hiroo" data-key="hiroo" data-wish="0" data-dep="434" data-sx="58" data-yt="65">
         <div class="stars" data-school="hiroo" role="group" aria-label="広尾学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -717,14 +803,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="広尾学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 58<i>/</i>四谷 65</span></p>
         <p class="name"><a class="stretched" href="#s-hiroo">広尾学園</a></p>
         <p class="sub">登校 8:15 ／ 広尾駅 徒歩1分</p>
         <p class="time">7:14<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→恵比寿→広尾<br>55分・乗換2回・828円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→恵比寿→広尾<br>55分・乗換2回・828円</p>
       </div>
-      <div class="vcard kanadai" data-key="kanadai" data-dep="434" data-sx="51" data-yt="59" data-out="0">
+      <div class="vcard kanadai" data-key="kanadai" data-wish="0" data-dep="434" data-sx="51" data-yt="59">
         <div class="stars" data-school="kanadai" role="group" aria-label="神奈川大学附属の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -732,14 +819,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="神奈川大学附属の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 51<i>/</i>四谷 59</span></p>
         <p class="name"><a class="stretched" href="#s-kanadai">神奈川大学附属</a></p>
         <p class="sub">登校 8:20 ／ 中山駅 徒歩15分</p>
         <p class="time">7:14<small>家を出る</small></p>
-        <p class="meta">高島町→センター南→中山<br>1時間0分・乗換1回・367円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→センター南→中山<br>1時間0分・乗換1回・367円</p>
       </div>
-      <div class="vcard tsukukoma" data-key="tsukukoma" data-dep="434" data-sx="70" data-yt="74" data-out="0">
+      <div class="vcard tsukukoma" data-key="tsukukoma" data-wish="0" data-dep="434" data-sx="70" data-yt="74">
         <div class="stars" data-school="tsukukoma" role="group" aria-label="筑波大学附属駒場の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -747,14 +835,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="筑波大学附属駒場の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 70<i>/</i>四谷 74</span></p>
         <p class="name"><a class="stretched" href="#s-tsukukoma">筑波大学附属駒場</a></p>
         <p class="sub">登校 8:30 ／ 駒場東大前駅 徒歩7分</p>
         <p class="time">7:14<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→渋谷→駒場東大前<br>1時間5分・乗換2回・790円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→渋谷→駒場東大前<br>1時間5分・乗換2回・790円</p>
       </div>
-      <div class="vcard shibak" data-key="shibak" data-dep="437" data-sx="45" data-yt="54">
+      <div class="vcard shibak" data-key="shibak" data-wish="0" data-dep="437" data-sx="45" data-yt="54">
         <div class="stars" data-school="shibak" role="group" aria-label="芝国際の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -762,14 +851,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="芝国際の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 45<i>/</i>四谷 54</span></p>
         <p class="name"><a class="stretched" href="#s-shibak">芝国際</a></p>
         <p class="sub">登校 8:20 ／ 田町駅 徒歩5分</p>
         <p class="time">7:17<small>家を出る</small></p>
-        <p class="meta">桜木町→京浜東北線→田町<br>58分・乗換0回・528円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→京浜東北線→田町<br>58分・乗換0回・528円</p>
       </div>
-      <div class="vcard takanawa" data-key="takanawa" data-dep="437" data-sx="45" data-yt="55">
+      <div class="vcard takanawa" data-key="takanawa" data-wish="0" data-dep="437" data-sx="45" data-yt="55">
         <div class="stars" data-school="takanawa" role="group" aria-label="高輪の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -777,14 +867,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="高輪の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 45<i>/</i>四谷 55</span></p>
         <p class="name"><a class="stretched" href="#s-takanawa">高輪</a></p>
         <p class="sub">登校 8:20 ／ 高輪ゲートウェイ駅 徒歩6分</p>
         <p class="time">7:17<small>家を出る</small></p>
-        <p class="meta">桜木町→京浜東北線→高輪ゲートウェイ<br>57分・乗換0回・440円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→京浜東北線→高輪ゲートウェイ<br>57分・乗換0回・440円</p>
       </div>
-      <div class="vcard kamagaku" data-key="kamagaku" data-dep="440" data-sx="43" data-yt="52" data-out="0">
+      <div class="vcard kamagaku" data-key="kamagaku" data-wish="0" data-dep="440" data-sx="43" data-yt="52">
         <div class="stars" data-school="kamagaku" role="group" aria-label="鎌倉学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -792,14 +883,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="鎌倉学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 43<i>/</i>四谷 52</span></p>
         <p class="name"><a class="stretched" href="#s-kamagaku">鎌倉学園</a></p>
         <p class="sub">登校 8:25 ／ 北鎌倉駅 徒歩13分</p>
         <p class="time">7:20<small>家を出る</small></p>
-        <p class="meta">桜木町→横浜→北鎌倉（横須賀線）<br>57分・乗換1回・440円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→横浜→北鎌倉（横須賀線）<br>57分・乗換1回・440円</p>
       </div>
-      <div class="vcard sfc" data-key="sfc" data-dep="442" data-sx="58" data-yt="65">
+      <div class="vcard sfc" data-key="sfc" data-wish="0" data-dep="442" data-sx="58" data-yt="65">
         <div class="stars" data-school="sfc" role="group" aria-label="慶應義塾湘南藤沢の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -807,14 +899,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="慶應義塾湘南藤沢の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 58<i>/</i>四谷 65</span></p>
         <p class="name"><a class="stretched" href="#s-sfc">慶應義塾湘南藤沢</a></p>
         <p class="sub">登校 8:40 ／ 湘南台からバス15分</p>
         <p class="time">7:22<small>家を出る</small></p>
-        <p class="meta">高島町→ブルーライン→湘南台→バス<br>1時間10分・乗換1回・637円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→ブルーライン→湘南台→バス<br>1時間10分・乗換1回・637円</p>
       </div>
-      <div class="vcard seiryo" data-key="seiryo" data-dep="443" data-sx="42" data-yt="54">
+      <div class="vcard seiryo" data-key="seiryo" data-wish="0" data-dep="443" data-sx="42" data-yt="54">
         <div class="stars" data-school="seiryo" role="group" aria-label="青稜の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -822,14 +915,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="青稜の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 42<i>/</i>四谷 54</span></p>
         <p class="name"><a class="stretched" href="#s-seiryo">青稜</a></p>
         <p class="sub">登校 8:20 ／ 大井町駅 徒歩7分</p>
         <p class="time">7:23<small>家を出る</small></p>
-        <p class="meta">桜木町→京浜東北線→大井町<br>52分・乗換0回・440円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→京浜東北線→大井町<br>52分・乗換0回・440円</p>
       </div>
-      <div class="vcard haneda" data-key="haneda" data-dep="443" data-sx="-1" data-yt="35" data-out="0">
+      <div class="vcard haneda" data-key="haneda" data-wish="0" data-dep="443" data-sx="-1" data-yt="35">
         <div class="stars" data-school="haneda" role="group" aria-label="羽田国際の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -837,14 +931,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="羽田国際の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 35</span></p>
         <p class="name"><a class="stretched" href="#s-haneda">羽田国際</a></p>
         <p class="sub">登校 8:25 ／ 糀谷駅 徒歩7分</p>
         <p class="time">7:23<small>家を出る</small></p>
-        <p class="meta">戸部→神奈川新町→糀谷<br>48分・乗換1回・313円 <span class="pill">対象</span></p>
+        <p class="meta">戸部→神奈川新町→糀谷<br>48分・乗換1回・313円</p>
       </div>
-      <div class="vcard joseph" data-key="joseph" data-dep="446" data-sx="-1" data-yt="33" data-out="0">
+      <div class="vcard joseph" data-key="joseph" data-wish="0" data-dep="446" data-sx="-1" data-yt="33">
         <div class="stars" data-school="joseph" role="group" aria-label="聖ヨゼフ学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -852,14 +947,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="聖ヨゼフ学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 33</span></p>
         <p class="name"><a class="stretched" href="#s-joseph">聖ヨゼフ学園</a></p>
         <p class="sub">登校 8:15 ／ 鶴見駅 徒歩15分</p>
         <p class="time">7:26<small>家を出る</small></p>
-        <p class="meta">桜木町→鶴見（京浜東北線一本）<br>44分・乗換0回・209円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→鶴見（京浜東北線一本）<br>44分・乗換0回・209円</p>
       </div>
-      <div class="vcard yamate" data-key="yamate" data-dep="448" data-sx="40" data-yt="52">
+      <div class="vcard yamate" data-key="yamate" data-wish="0" data-dep="448" data-sx="40" data-yt="52">
         <div class="stars" data-school="yamate" role="group" aria-label="山手学院の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -867,14 +963,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="山手学院の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 40<i>/</i>四谷 52</span></p>
         <p class="name"><a class="stretched" href="#s-yamate">山手学院</a></p>
         <p class="sub">登校 8:30 ／ 港南台駅 徒歩12分</p>
         <p class="time">7:28<small>家を出る</small></p>
-        <p class="meta">桜木町→根岸線→港南台<br>49分・乗換0回・253円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→根岸線→港南台<br>49分・乗換0回・253円</p>
       </div>
-      <div class="vcard soei" data-key="soei" data-dep="459" data-sx="-1" data-yt="41" data-out="0">
+      <div class="vcard soei" data-key="soei" data-wish="0" data-dep="459" data-sx="-1" data-yt="41">
         <div class="stars" data-school="soei" role="group" aria-label="横浜創英の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -882,14 +979,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="横浜創英の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 41</span></p>
         <p class="name"><a class="stretched" href="#s-soei">横浜創英</a></p>
         <p class="sub">登校 8:25 ／ 大口駅 徒歩8分</p>
         <p class="time">7:39<small>家を出る</small></p>
-        <p class="meta">桜木町→大口（横浜線 直通）<br>34分・乗換0回・199円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→大口（横浜線 直通）<br>34分・乗換0回・199円</p>
       </div>
-      <div class="vcard yokoeiwa" data-key="yokoeiwa" data-dep="460" data-sx="45" data-yt="56">
+      <div class="vcard yokoeiwa" data-key="yokoeiwa" data-wish="0" data-dep="460" data-sx="45" data-yt="56">
         <div class="stars" data-school="yokoeiwa" role="group" aria-label="青山学院横浜英和の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -897,14 +995,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="青山学院横浜英和の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 45<i>/</i>四谷 56</span></p>
         <p class="name"><a class="stretched" href="#s-yokoeiwa">青山学院横浜英和</a></p>
         <p class="sub">登校 8:15 ／ 蒔田駅 徒歩8分</p>
         <p class="time">7:40<small>家を出る</small></p>
-        <p class="meta">高島町→ブルーライン→蒔田<br>28分・乗換0回・242円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→ブルーライン→蒔田<br>28分・乗換0回・242円</p>
       </div>
-      <div class="vcard minami" data-key="minami" data-dep="460" data-sx="48" data-yt="59" data-out="0">
+      <div class="vcard minami" data-key="minami" data-wish="0" data-dep="460" data-sx="48" data-yt="59">
         <div class="stars" data-school="minami" role="group" aria-label="横浜市立南高附属の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -912,14 +1011,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="横浜市立南高附属の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">公立・共学</span><span class="badge hen">サピ 48<i>/</i>四谷 59</span></p>
         <p class="name"><a class="stretched" href="#s-minami">横浜市立南高附属</a></p>
         <p class="sub">登校 8:30 ／ 上永谷駅 徒歩15分</p>
         <p class="time">7:40<small>家を出る</small></p>
-        <p class="meta">高島町→ブルーライン→上永谷<br>45分・乗換0回・272円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→ブルーライン→上永谷<br>45分・乗換0回・272円</p>
       </div>
-      <div class="vcard ysf" data-key="ysf" data-dep="462" data-sx="-1" data-yt="63" data-out="0">
+      <div class="vcard ysf" data-key="ysf" data-wish="0" data-dep="462" data-sx="-1" data-yt="63">
         <div class="stars" data-school="ysf" role="group" aria-label="横浜サイエンスフロンティア高附属の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -927,14 +1027,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="横浜サイエンスフロンティア高附属の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">公立・共学</span><span class="badge hen">サピ —<i>/</i>四谷 63</span></p>
         <p class="name"><a class="stretched" href="#s-ysf">横浜サイエンスフロンティア高附属</a></p>
         <p class="sub">登校 8:30 ／ 鶴見小野駅 徒歩3分</p>
         <p class="time">7:42<small>家を出る</small></p>
-        <p class="meta">桜木町→鶴見→鶴見線→鶴見小野<br>40分・乗換1回・253円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→鶴見→鶴見線→鶴見小野<br>40分・乗換1回・253円</p>
       </div>
-      <div class="vcard hosei2" data-key="hosei2" data-dep="461" data-sx="48" data-yt="58" data-out="0">
+      <div class="vcard hosei2" data-key="hosei2" data-wish="0" data-dep="461" data-sx="48" data-yt="58">
         <div class="stars" data-school="hosei2" role="group" aria-label="法政大学第二の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -942,14 +1043,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="法政大学第二の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 48<i>/</i>四谷 58</span></p>
         <p class="name"><a class="stretched" href="#s-hosei2">法政大学第二</a></p>
         <p class="sub">登校 8:30 ／ 武蔵小杉駅 徒歩10分</p>
         <p class="time">7:41<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→武蔵小杉<br>44分・乗換1回・463円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→武蔵小杉<br>44分・乗換1回・463円</p>
       </div>
-      <div class="vcard chuoyoko" data-key="chuoyoko" data-dep="461" data-sx="49" data-yt="59" data-out="0">
+      <div class="vcard chuoyoko" data-key="chuoyoko" data-wish="0" data-dep="461" data-sx="49" data-yt="59">
         <div class="stars" data-school="chuoyoko" role="group" aria-label="中央大学附属横浜の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -957,14 +1059,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="中央大学附属横浜の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 49<i>/</i>四谷 59</span></p>
         <p class="name"><a class="stretched" href="#s-chuoyoko">中央大学附属横浜</a></p>
         <p class="sub">登校 8:30 ／ センター北駅 徒歩7分</p>
         <p class="time">7:41<small>家を出る</small></p>
-        <p class="meta">高島町→センター北（ブルーライン一本）<br>43分・乗換0回・335円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→センター北（ブルーライン一本）<br>43分・乗換0回・335円</p>
       </div>
-      <div class="vcard salesio" data-key="salesio" data-dep="461" data-sx="50" data-yt="61">
+      <div class="vcard salesio" data-key="salesio" data-wish="0" data-dep="461" data-sx="50" data-yt="61">
         <div class="stars" data-school="salesio" role="group" aria-label="サレジオ学院の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -972,14 +1075,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="サレジオ学院の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 50<i>/</i>四谷 61</span></p>
         <p class="name"><a class="stretched" href="#s-salesio">サレジオ学院</a></p>
         <p class="sub">登校 8:35 ／ 北山田駅 徒歩5分</p>
         <p class="time">7:41<small>家を出る</small></p>
-        <p class="meta">高島町→センター北→北山田<br>49分・乗換1回・335円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→センター北→北山田<br>49分・乗換1回・335円</p>
       </div>
-      <div class="vcard seiko" data-key="seiko" data-dep="465" data-sx="66" data-yt="71">
+      <div class="vcard seiko" data-key="seiko" data-wish="0" data-dep="465" data-sx="66" data-yt="71">
         <div class="stars" data-school="seiko" role="group" aria-label="聖光学院の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -987,14 +1091,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="聖光学院の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 66<i>/</i>四谷 71</span></p>
         <p class="name"><a class="stretched" href="#s-seiko">聖光学院</a></p>
         <p class="sub">登校 8:20 ／ 山手駅 徒歩10分</p>
         <p class="time">7:45<small>家を出る</small></p>
-        <p class="meta">桜木町→山手<br>31分・乗換0回・155円 <span class="pill">対象</span></p>
+        <p class="meta">桜木町→山手<br>31分・乗換0回・155円</p>
       </div>
-      <div class="vcard kanto" data-key="kanto" data-dep="465" data-sx="-1" data-yt="48">
+      <div class="vcard kanto" data-key="kanto" data-wish="0" data-dep="465" data-sx="-1" data-yt="48">
         <div class="stars" data-school="kanto" role="group" aria-label="関東学院の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1002,14 +1107,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="関東学院の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 48</span></p>
         <p class="name"><a class="stretched" href="#s-kanto">関東学院</a></p>
         <p class="sub">登校 8:30 ／ 霞ケ丘バス停 徒歩2分</p>
         <p class="time">7:45<small>家を出る</small></p>
-        <p class="meta">戸部警察署前→市営バス102系統→霞ケ丘<br>26分・乗換0回・220円 <span class="pill">対象</span></p>
+        <p class="meta">戸部警察署前→市営バス102系統→霞ケ丘<br>26分・乗換0回・220円</p>
       </div>
-      <div class="vcard shonan" data-key="shonan" data-dep="466" data-sx="-1" data-yt="46" data-out="0">
+      <div class="vcard shonan" data-key="shonan" data-wish="0" data-dep="466" data-sx="-1" data-yt="46">
         <div class="stars" data-school="shonan" role="group" aria-label="湘南学園の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1017,14 +1123,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="湘南学園の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 46</span></p>
         <p class="name"><a class="stretched" href="#s-shonan">湘南学園</a></p>
         <p class="sub">登校 9:00 ／ 鵠沼海岸駅 徒歩8分</p>
         <p class="time">7:46<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→藤沢→鵠沼海岸<br>1時間4分・乗換2回・786円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→藤沢→鵠沼海岸<br>1時間4分・乗換2回・786円</p>
       </div>
-      <div class="vcard asano" data-key="asano" data-dep="477" data-sx="58" data-yt="64">
+      <div class="vcard asano" data-key="asano" data-wish="0" data-dep="477" data-sx="58" data-yt="64">
         <div class="stars" data-school="asano" role="group" aria-label="浅野の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1032,14 +1139,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="浅野の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 58<i>/</i>四谷 64</span></p>
         <p class="name"><a class="stretched" href="#s-asano">浅野</a></p>
         <p class="sub">登校 8:35 ／ 京急新子安駅 徒歩8分</p>
         <p class="time">7:57<small>家を出る</small></p>
-        <p class="meta">戸部→京急新子安<br>33分・乗換0回・180円 <span class="pill">対象</span></p>
+        <p class="meta">戸部→京急新子安<br>33分・乗換0回・180円</p>
       </div>
-      <div class="vcard yokokoku" data-key="yokokoku" data-dep="491" data-sx="41" data-yt="48" data-out="0">
+      <div class="vcard yokokoku" data-key="yokokoku" data-wish="0" data-dep="491" data-sx="41" data-yt="48">
         <div class="stars" data-school="yokokoku" role="group" aria-label="横浜国大附属横浜の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1047,14 +1155,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="横浜国大附属横浜の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 41<i>/</i>四谷 48</span></p>
         <p class="name"><a class="stretched" href="#s-yokokoku">横浜国大附属横浜</a></p>
         <p class="sub">登校 8:40 ／ 弘明寺駅 徒歩1分</p>
         <p class="time">8:11<small>家を出る</small></p>
-        <p class="meta">高島町→弘明寺（ブルーライン一本）<br>24分・乗換0回・242円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→弘明寺（ブルーライン一本）<br>24分・乗換0回・242円</p>
       </div>
-      <div class="vcard futsubu" data-key="futsubu" data-dep="493" data-sx="58" data-yt="65">
+      <div class="vcard futsubu" data-key="futsubu" data-wish="0" data-dep="493" data-sx="58" data-yt="65">
         <div class="stars" data-school="futsubu" role="group" aria-label="慶應義塾普通部の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1062,14 +1171,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="慶應義塾普通部の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 58<i>/</i>四谷 65</span></p>
         <p class="name"><a class="stretched" href="#s-futsubu">慶應義塾普通部</a></p>
         <p class="sub">登校 9:00 ／ 日吉駅 徒歩5分</p>
         <p class="time">8:13<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→東横線→日吉<br>41分・乗換1回・437円 <span class="pill">対象</span></p>
+        <p class="meta">高島町→横浜→東横線→日吉<br>41分・乗換1回・437円</p>
       </div>
-      <div class="vcard azabu is-out" data-key="azabu" data-dep="398" data-sx="59" data-yt="65" data-out="1">
+      <div class="vcard azabu" data-key="azabu" data-wish="0" data-dep="398" data-sx="59" data-yt="65">
         <div class="stars" data-school="azabu" role="group" aria-label="麻布の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1077,14 +1187,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="麻布の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 65</span></p>
         <p class="name"><a class="stretched" href="#s-azabu">麻布</a></p>
         <p class="sub">登校 夏 8:00 ／ 広尾駅 徒歩10分</p>
         <p class="time">6:38<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→中目黒→広尾<br>1時間19分・乗換2回・697円 <span class="pill out">対象外</span></p>
+        <p class="meta">高島町→横浜→中目黒→広尾<br>1時間19分・乗換2回・697円</p>
       </div>
-      <div class="vcard shiba is-out" data-key="shiba" data-dep="407" data-sx="49" data-yt="59" data-out="1">
+      <div class="vcard shiba" data-key="shiba" data-wish="0" data-dep="407" data-sx="49" data-yt="59">
         <div class="stars" data-school="shiba" role="group" aria-label="芝の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1092,14 +1203,15 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="芝の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 49<i>/</i>四谷 59</span></p>
         <p class="name"><a class="stretched" href="#s-shiba">芝</a></p>
         <p class="sub">登校 8:00 ／ 神谷町駅 徒歩5分</p>
         <p class="time">6:47<small>家を出る</small></p>
-        <p class="meta">高島町→横浜→新橋→神谷町<br>1時間10分・乗換3回・916円 <span class="pill out">対象外</span></p>
+        <p class="meta">高島町→横浜→新橋→神谷町<br>1時間10分・乗換3回・916円</p>
       </div>
-      <div class="vcard kaisei is-out" data-key="kaisei" data-dep="410" data-sx="68" data-yt="72" data-out="1">
+      <div class="vcard kaisei" data-key="kaisei" data-wish="0" data-dep="410" data-sx="68" data-yt="72">
         <div class="stars" data-school="kaisei" role="group" aria-label="開成の志望度">
           <button type="button" data-v="1" aria-label="志望度 1">★</button>
           <button type="button" data-v="2" aria-label="志望度 2">★</button>
@@ -1107,12 +1219,13 @@
           <button type="button" data-v="4" aria-label="志望度 4">★</button>
           <button type="button" data-v="5" aria-label="志望度 5">★</button>
           <span class="stars-out">未設定</span>
+        <button type="button" class="clr" aria-label="開成の志望度を未設定に戻す" title="未設定（対象外）に戻す">×</button>
         </div>
         <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 68<i>/</i>四谷 72</span></p>
         <p class="name"><a class="stretched" href="#s-kaisei">開成</a></p>
         <p class="sub">登校 8:10（夏）／ 西日暮里駅 徒歩2分</p>
         <p class="time">6:50<small>家を出る</small></p>
-        <p class="meta">桜木町→京浜東北線→西日暮里<br>1時間18分・乗換0回・715円 <span class="pill out">対象外</span></p>
+        <p class="meta">桜木町→京浜東北線→西日暮里<br>1時間18分・乗換0回・715円</p>
       </div>
     </div>
   </section>
@@ -1131,274 +1244,274 @@
           </tr>
         </thead>
         <tbody>
-          <tr class="kaichi is-out" data-key="kaichi" data-dep="420" data-sx="46" data-yt="57" data-out="1">
-            <td class="sch" data-label="学校">開智日本橋学園<br><span class="dim">対象外</span></td>
+          <tr class="kaichi" data-key="kaichi" data-wish="0" data-dep="420" data-sx="46" data-yt="57">
+            <td class="sch" data-label="学校">開智日本橋学園</td>
             <td class="t" data-label="サピ">46</td><td class="t" data-label="四谷">57</td>
             <td class="t" data-label="出発（推奨）">7:00</td><td class="t" data-label="出発（最遅）">7:09</td><td class="t" data-label="学校着">8:05</td><td class="t" data-label="登校">8:10</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">1:05</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">826円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR横須賀線・総武線快速→馬喰町→徒歩3分</td>
           </tr>
-          <tr class="komaba" data-key="komaba" data-dep="425" data-sx="59" data-yt="66" data-out="0">
+          <tr class="komaba" data-key="komaba" data-wish="0" data-dep="425" data-sx="59" data-yt="66">
             <td class="sch" data-label="学校">駒場東邦</td>
             <td class="t" data-label="サピ">59</td><td class="t" data-label="四谷">66</td>
             <td class="t" data-label="出発（推奨）">7:05</td><td class="t" data-label="出発（最遅）">7:05</td><td class="t" data-label="学校着">8:16</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">4分</td><td class="t" data-label="所要">1:11</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">790円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR湘南新宿ライン→渋谷→京王井の頭線→駒場東大前→徒歩10分</td>
           </tr>
-          <tr class="kaijo" data-key="kaijo" data-dep="425" data-sx="59" data-yt="65" data-out="0">
+          <tr class="kaijo" data-key="kaijo" data-wish="0" data-dep="425" data-sx="59" data-yt="65">
             <td class="sch" data-label="学校">海城</td>
             <td class="t" data-label="サピ">59</td><td class="t" data-label="四谷">65</td>
             <td class="t" data-label="出発（推奨）">7:05</td><td class="t" data-label="出発（最遅）">7:05</td><td class="t" data-label="学校着">8:12</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">3分</td><td class="t" data-label="所要">1:07</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">826円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR湘南新宿ライン→恵比寿→JR山手線→新大久保→徒歩5分</td>
           </tr>
-          <tr class="zushi" data-key="zushi" data-dep="425" data-sx="-1" data-yt="58" data-out="0">
+          <tr class="zushi" data-key="zushi" data-wish="0" data-dep="425" data-sx="-1" data-yt="58">
             <td class="sch" data-label="学校">逗子開成</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">58</td>
             <td class="t" data-label="出発（推奨）">7:05</td><td class="t" data-label="出発（最遅）">7:05</td><td class="t" data-label="学校着">8:11</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">4分</td><td class="t" data-label="所要">1:06</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">528円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→横浜→JR横須賀線 逗子行→逗子→徒歩10分</td>
           </tr>
-          <tr class="kumon" data-key="kumon" data-dep="425" data-sx="-1" data-yt="51" data-out="0">
+          <tr class="kumon" data-key="kumon" data-wish="0" data-dep="425" data-sx="-1" data-yt="51">
             <td class="sch" data-label="学校">公文国際学園<br><span class="dim">バス通学</span></td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">51</td>
             <td class="t" data-label="出発（推奨）">7:05</td><td class="t" data-label="出発（最遅）">7:05</td><td class="t" data-label="学校着">8:07</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">13分</td><td class="t" data-label="所要">1:02</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">641円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→横浜→JR横須賀線→大船→神奈中バス船65→公文国際学園</td>
           </tr>
-          <tr class="todoroki" data-key="todoroki" data-dep="429" data-sx="41" data-yt="55" data-out="0">
+          <tr class="todoroki" data-key="todoroki" data-wish="0" data-dep="429" data-sx="41" data-yt="55">
             <td class="sch" data-label="学校">東京都市大学等々力</td>
             <td class="t" data-label="サピ">41</td><td class="t" data-label="四谷">55</td>
             <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:19</td><td class="t" data-label="学校着">8:19</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">11分</td><td class="t" data-label="所要">1:10</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">498円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→東急東横線→自由が丘→東急大井町線→等々力→徒歩10分</td>
           </tr>
-          <tr class="morimura" data-key="morimura" data-dep="429" data-sx="-1" data-yt="50" data-out="0">
+          <tr class="morimura" data-key="morimura" data-wish="0" data-dep="429" data-sx="-1" data-yt="50">
             <td class="sch" data-label="学校">森村学園中等部</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">50</td>
             <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:23</td><td class="t" data-label="学校着">8:16</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">14分</td><td class="t" data-label="所要">1:07</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">562円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→あざみ野→東急田園都市線→つくし野→徒歩5分</td>
           </tr>
-          <tr class="nichidai" data-key="nichidai" data-dep="429" data-sx="-1" data-yt="51" data-out="0">
+          <tr class="nichidai" data-key="nichidai" data-wish="0" data-dep="429" data-sx="-1" data-yt="51">
             <td class="sch" data-label="学校">日本大学中学校</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">51</td>
             <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:19</td><td class="t" data-label="学校着">7:59</td><td class="t" data-label="登校">8:10</td>
             <td class="t" data-label="余裕">11分</td><td class="t" data-label="所要">50分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">437円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→東急東横線→日吉→徒歩12分</td>
           </tr>
-          <tr class="mita" data-key="mita" data-dep="429" data-sx="49" data-yt="60">
+          <tr class="mita" data-key="mita" data-wish="0" data-dep="429" data-sx="49" data-yt="60">
             <td class="sch" data-label="学校">三田国際科学学園</td>
             <td class="t" data-label="サピ">49</td><td class="t" data-label="四谷">60</td>
             <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:23</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">7分</td><td class="t" data-label="所要">1:14</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">562円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→あざみ野→田園都市線準急→用賀→徒歩5分</td>
           </tr>
-          <tr class="gyoku" data-key="gyoku" data-dep="429" data-sx="48" data-yt="57">
+          <tr class="gyoku" data-key="gyoku" data-wish="0" data-dep="429" data-sx="48" data-yt="57">
             <td class="sch" data-label="学校">攻玉社</td>
             <td class="t" data-label="サピ">48</td><td class="t" data-label="四谷">57</td>
             <td class="t" data-label="出発（推奨）">7:09</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:14</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">1:05</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">519円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→東横線→日吉→目黒線→不動前→徒歩2分</td>
           </tr>
-          <tr class="eiko" data-key="eiko" data-dep="431" data-sx="60" data-yt="66" data-out="0">
+          <tr class="eiko" data-key="eiko" data-wish="0" data-dep="431" data-sx="60" data-yt="66">
             <td class="sch" data-label="学校">栄光学園</td>
             <td class="t" data-label="サピ">60</td><td class="t" data-label="四谷">66</td>
             <td class="t" data-label="出発（推奨）">7:11</td><td class="t" data-label="出発（最遅）">7:15</td><td class="t" data-label="学校着">8:09</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">58分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">341円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR根岸線 大船行→大船→徒歩15分</td>
           </tr>
-          <tr class="shibu" data-key="shibu" data-dep="434" data-sx="62" data-yt="67">
+          <tr class="shibu" data-key="shibu" data-wish="0" data-dep="434" data-sx="62" data-yt="67">
             <td class="sch" data-label="学校">渋谷教育学園渋谷<br><span class="dim">渋渋</span></td>
             <td class="t" data-label="サピ">62</td><td class="t" data-label="四谷">67</td>
             <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">7分</td><td class="t" data-label="所要">54分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">650円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→湘南新宿ライン快速→渋谷→徒歩7分</td>
           </tr>
-          <tr class="hiroo" data-key="hiroo" data-dep="434" data-sx="58" data-yt="65">
+          <tr class="hiroo" data-key="hiroo" data-wish="0" data-dep="434" data-sx="58" data-yt="65">
             <td class="sch" data-label="学校">広尾学園</td>
             <td class="t" data-label="サピ">58</td><td class="t" data-label="四谷">65</td>
             <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:09</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">55分</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">828円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→湘南新宿ライン快速→恵比寿→日比谷線→広尾→徒歩1分</td>
           </tr>
-          <tr class="kanadai" data-key="kanadai" data-dep="434" data-sx="51" data-yt="59" data-out="0">
+          <tr class="kanadai" data-key="kanadai" data-wish="0" data-dep="434" data-sx="51" data-yt="59">
             <td class="sch" data-label="学校">神奈川大学附属</td>
             <td class="t" data-label="サピ">51</td><td class="t" data-label="四谷">59</td>
             <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:20</td><td class="t" data-label="学校着">8:14</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">1:00</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">367円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→センター南→グリーンライン→中山→徒歩15分</td>
           </tr>
-          <tr class="tsukukoma" data-key="tsukukoma" data-dep="434" data-sx="70" data-yt="74" data-out="0">
+          <tr class="tsukukoma" data-key="tsukukoma" data-wish="0" data-dep="434" data-sx="70" data-yt="74">
             <td class="sch" data-label="学校">筑波大学附属駒場<br><span class="dim">国立</span></td>
             <td class="t" data-label="サピ">70</td><td class="t" data-label="四谷">74</td>
             <td class="t" data-label="出発（推奨）">7:14</td><td class="t" data-label="出発（最遅）">7:14</td><td class="t" data-label="学校着">8:19</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">11分</td><td class="t" data-label="所要">1:05</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">790円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR湘南新宿ライン快速→渋谷→京王井の頭線→駒場東大前→徒歩7分</td>
           </tr>
-          <tr class="shibak" data-key="shibak" data-dep="437" data-sx="45" data-yt="54">
+          <tr class="shibak" data-key="shibak" data-wish="0" data-dep="437" data-sx="45" data-yt="54">
             <td class="sch" data-label="学校">芝国際</td>
             <td class="t" data-label="サピ">45</td><td class="t" data-label="四谷">54</td>
             <td class="t" data-label="出発（推奨）">7:17</td><td class="t" data-label="出発（最遅）">7:23</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">58分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">528円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→田町→徒歩5分</td>
           </tr>
-          <tr class="takanawa" data-key="takanawa" data-dep="437" data-sx="45" data-yt="55">
+          <tr class="takanawa" data-key="takanawa" data-wish="0" data-dep="437" data-sx="45" data-yt="55">
             <td class="sch" data-label="学校">高輪</td>
             <td class="t" data-label="サピ">45</td><td class="t" data-label="四谷">55</td>
             <td class="t" data-label="出発（推奨）">7:17</td><td class="t" data-label="出発（最遅）">7:23</td><td class="t" data-label="学校着">8:14</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">57分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">440円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→高輪ゲートウェイ→徒歩6分</td>
           </tr>
-          <tr class="kamagaku" data-key="kamagaku" data-dep="440" data-sx="43" data-yt="52" data-out="0">
+          <tr class="kamagaku" data-key="kamagaku" data-wish="0" data-dep="440" data-sx="43" data-yt="52">
             <td class="sch" data-label="学校">鎌倉学園</td>
             <td class="t" data-label="サピ">43</td><td class="t" data-label="四谷">52</td>
             <td class="t" data-label="出発（推奨）">7:20</td><td class="t" data-label="出発（最遅）">7:20</td><td class="t" data-label="学校着">8:17</td><td class="t" data-label="登校">8:25</td>
             <td class="t" data-label="余裕">8分</td><td class="t" data-label="所要">57分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">440円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→横浜→JR横須賀線→北鎌倉→徒歩13分</td>
           </tr>
-          <tr class="sfc" data-key="sfc" data-dep="442" data-sx="58" data-yt="65">
+          <tr class="sfc" data-key="sfc" data-wish="0" data-dep="442" data-sx="58" data-yt="65">
             <td class="sch" data-label="学校">慶應義塾湘南藤沢</td>
             <td class="t" data-label="サピ">58</td><td class="t" data-label="四谷">65</td>
             <td class="t" data-label="出発（推奨）">7:22</td><td class="t" data-label="出発（最遅）">7:26</td><td class="t" data-label="学校着">8:32</td><td class="t" data-label="登校">8:40</td>
             <td class="t" data-label="余裕">8分</td><td class="t" data-label="所要">1:10</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">637円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→湘南台→神奈中バス湘23／湘25→徒歩1分</td>
           </tr>
-          <tr class="seiryo" data-key="seiryo" data-dep="443" data-sx="42" data-yt="54">
+          <tr class="seiryo" data-key="seiryo" data-wish="0" data-dep="443" data-sx="42" data-yt="54">
             <td class="sch" data-label="学校">青稜</td>
             <td class="t" data-label="サピ">42</td><td class="t" data-label="四谷">54</td>
             <td class="t" data-label="出発（推奨）">7:23</td><td class="t" data-label="出発（最遅）">7:28</td><td class="t" data-label="学校着">8:15</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">52分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">440円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北・根岸線→大井町→徒歩7分</td>
           </tr>
-          <tr class="haneda" data-key="haneda" data-dep="443" data-sx="-1" data-yt="35" data-out="0">
+          <tr class="haneda" data-key="haneda" data-wish="0" data-dep="443" data-sx="-1" data-yt="35">
             <td class="sch" data-label="学校">羽田国際<br><span class="dim">2026年開校</span></td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">35</td>
             <td class="t" data-label="出発（推奨）">7:23</td><td class="t" data-label="出発（最遅）">7:35</td><td class="t" data-label="学校着">8:11</td><td class="t" data-label="登校">8:25</td>
             <td class="t" data-label="余裕">14分</td><td class="t" data-label="所要">48分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">313円</td>
             <td data-label="主なルート">徒歩12分→戸部→京急本線→神奈川新町→京急本線特急→糀谷→徒歩7分</td>
           </tr>
-          <tr class="joseph" data-key="joseph" data-dep="446" data-sx="-1" data-yt="33" data-out="0">
+          <tr class="joseph" data-key="joseph" data-wish="0" data-dep="446" data-sx="-1" data-yt="33">
             <td class="sch" data-label="学校">聖ヨゼフ学園</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">33</td>
             <td class="t" data-label="出発（推奨）">7:26</td><td class="t" data-label="出発（最遅）">7:29</td><td class="t" data-label="学校着">8:10</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">44分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">209円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北線→鶴見→徒歩15分</td>
           </tr>
-          <tr class="yamate" data-key="yamate" data-dep="448" data-sx="40" data-yt="52">
+          <tr class="yamate" data-key="yamate" data-wish="0" data-dep="448" data-sx="40" data-yt="52">
             <td class="sch" data-label="学校">山手学院</td>
             <td class="t" data-label="サピ">40</td><td class="t" data-label="四谷">52</td>
             <td class="t" data-label="出発（推奨）">7:28</td><td class="t" data-label="出発（最遅）">7:39</td><td class="t" data-label="学校着">8:17</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">13分</td><td class="t" data-label="所要">49分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">253円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR根岸線→港南台→徒歩12分</td>
           </tr>
-          <tr class="soei" data-key="soei" data-dep="459" data-sx="-1" data-yt="41" data-out="0">
+          <tr class="soei" data-key="soei" data-wish="0" data-dep="459" data-sx="-1" data-yt="41">
             <td class="sch" data-label="学校">横浜創英</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">41</td>
             <td class="t" data-label="出発（推奨）">7:39</td><td class="t" data-label="出発（最遅）">7:49</td><td class="t" data-label="学校着">8:13</td><td class="t" data-label="登校">8:25</td>
             <td class="t" data-label="余裕">12分</td><td class="t" data-label="所要">34分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">199円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR横浜線 直通→大口→徒歩8分</td>
           </tr>
-          <tr class="yokoeiwa" data-key="yokoeiwa" data-dep="460" data-sx="45" data-yt="56">
+          <tr class="yokoeiwa" data-key="yokoeiwa" data-wish="0" data-dep="460" data-sx="45" data-yt="56">
             <td class="sch" data-label="学校">青山学院横浜英和</td>
             <td class="t" data-label="サピ">45</td><td class="t" data-label="四谷">56</td>
             <td class="t" data-label="出発（推奨）">7:40</td><td class="t" data-label="出発（最遅）">7:44</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="登校">8:15</td>
             <td class="t" data-label="余裕">7分</td><td class="t" data-label="所要">28分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">242円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→蒔田→徒歩8分</td>
           </tr>
-          <tr class="minami" data-key="minami" data-dep="460" data-sx="48" data-yt="59" data-out="0">
+          <tr class="minami" data-key="minami" data-wish="0" data-dep="460" data-sx="48" data-yt="59">
             <td class="sch" data-label="学校">横浜市立南高附属<br><span class="dim">公立中高一貫</span></td>
             <td class="t" data-label="サピ">48</td><td class="t" data-label="四谷">59</td>
             <td class="t" data-label="出発（推奨）">7:40</td><td class="t" data-label="出発（最遅）">7:44</td><td class="t" data-label="学校着">8:25</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">45分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">272円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン 湘南台行→上永谷→徒歩15分</td>
           </tr>
-          <tr class="ysf" data-key="ysf" data-dep="462" data-sx="-1" data-yt="63" data-out="0">
+          <tr class="ysf" data-key="ysf" data-wish="0" data-dep="462" data-sx="-1" data-yt="63">
             <td class="sch" data-label="学校">横浜サイエンスフロンティア高附属<br><span class="dim">公立中高一貫</span></td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">63</td>
             <td class="t" data-label="出発（推奨）">7:42</td><td class="t" data-label="出発（最遅）">7:46</td><td class="t" data-label="学校着">8:22</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">8分</td><td class="t" data-label="所要">40分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">253円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR京浜東北線→鶴見→JR鶴見線→鶴見小野→徒歩3分</td>
           </tr>
-          <tr class="hosei2" data-key="hosei2" data-dep="461" data-sx="48" data-yt="58" data-out="0">
+          <tr class="hosei2" data-key="hosei2" data-wish="0" data-dep="461" data-sx="48" data-yt="58">
             <td class="sch" data-label="学校">法政大学第二</td>
             <td class="t" data-label="サピ">48</td><td class="t" data-label="四谷">58</td>
             <td class="t" data-label="出発（推奨）">7:41</td><td class="t" data-label="出発（最遅）">7:46</td><td class="t" data-label="学校着">8:25</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">44分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">463円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR湘南新宿ライン→武蔵小杉→徒歩10分</td>
           </tr>
-          <tr class="chuoyoko" data-key="chuoyoko" data-dep="461" data-sx="49" data-yt="59" data-out="0">
+          <tr class="chuoyoko" data-key="chuoyoko" data-wish="0" data-dep="461" data-sx="49" data-yt="59">
             <td class="sch" data-label="学校">中央大学附属横浜</td>
             <td class="t" data-label="サピ">49</td><td class="t" data-label="四谷">59</td>
             <td class="t" data-label="出発（推奨）">7:41</td><td class="t" data-label="出発（最遅）">7:46</td><td class="t" data-label="学校着">8:24</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">43分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">335円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン あざみ野行→センター北→徒歩7分</td>
           </tr>
-          <tr class="salesio" data-key="salesio" data-dep="461" data-sx="50" data-yt="61">
+          <tr class="salesio" data-key="salesio" data-wish="0" data-dep="461" data-sx="50" data-yt="61">
             <td class="sch" data-label="学校">サレジオ学院</td>
             <td class="t" data-label="サピ">50</td><td class="t" data-label="四谷">61</td>
             <td class="t" data-label="出発（推奨）">7:41</td><td class="t" data-label="出発（最遅）">7:46</td><td class="t" data-label="学校着">8:30</td><td class="t" data-label="登校">8:35</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">49分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">335円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→センター北→グリーンライン→北山田→徒歩5分</td>
           </tr>
-          <tr class="seiko" data-key="seiko" data-dep="465" data-sx="66" data-yt="71">
+          <tr class="seiko" data-key="seiko" data-wish="0" data-dep="465" data-sx="66" data-yt="71">
             <td class="sch" data-label="学校">聖光学院</td>
             <td class="t" data-label="サピ">66</td><td class="t" data-label="四谷">71</td>
             <td class="t" data-label="出発（推奨）">7:45</td><td class="t" data-label="出発（最遅）">7:49</td><td class="t" data-label="学校着">8:16</td><td class="t" data-label="登校">8:20</td>
             <td class="t" data-label="余裕">4分</td><td class="t" data-label="所要">31分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">155円</td>
             <td data-label="主なルート">徒歩15分→桜木町→JR根岸線→山手→徒歩10分</td>
           </tr>
-          <tr class="kanto" data-key="kanto" data-dep="465" data-sx="-1" data-yt="48">
+          <tr class="kanto" data-key="kanto" data-wish="0" data-dep="465" data-sx="-1" data-yt="48">
             <td class="sch" data-label="学校">関東学院<br><span class="dim">バス通学</span></td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">48</td>
             <td class="t" data-label="出発（推奨）">7:45</td><td class="t" data-label="出発（最遅）">7:57</td><td class="t" data-label="学校着">8:11</td><td class="t" data-label="登校">8:30</td>
             <td class="t" data-label="余裕">19分</td><td class="t" data-label="所要">26分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">220円</td>
             <td data-label="主なルート">徒歩10分→戸部警察署前→市営バス102系統 滝頭ゆき→霞ケ丘→徒歩2分</td>
           </tr>
-          <tr class="shonan" data-key="shonan" data-dep="466" data-sx="-1" data-yt="46" data-out="0">
+          <tr class="shonan" data-key="shonan" data-wish="0" data-dep="466" data-sx="-1" data-yt="46">
             <td class="sch" data-label="学校">湘南学園</td>
             <td class="t" data-label="サピ">—</td><td class="t" data-label="四谷">46</td>
             <td class="t" data-label="出発（推奨）">7:46</td><td class="t" data-label="出発（最遅）">7:46</td><td class="t" data-label="学校着">8:50</td><td class="t" data-label="登校">9:00</td>
             <td class="t" data-label="余裕">10分</td><td class="t" data-label="所要">1:04</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">786円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR東海道本線→藤沢→小田急江ノ島線→鵠沼海岸→徒歩8分</td>
           </tr>
-          <tr class="asano" data-key="asano" data-dep="477" data-sx="58" data-yt="64">
+          <tr class="asano" data-key="asano" data-wish="0" data-dep="477" data-sx="58" data-yt="64">
             <td class="sch" data-label="学校">浅野</td>
             <td class="t" data-label="サピ">58</td><td class="t" data-label="四谷">64</td>
             <td class="t" data-label="出発（推奨）">7:57</td><td class="t" data-label="出発（最遅）">8:01</td><td class="t" data-label="学校着">8:30</td><td class="t" data-label="登校">8:35</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">33分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">180円</td>
             <td data-label="主なルート">徒歩12分→戸部→京急本線→京急新子安→徒歩8分</td>
           </tr>
-          <tr class="yokokoku" data-key="yokokoku" data-dep="491" data-sx="41" data-yt="48" data-out="0">
+          <tr class="yokokoku" data-key="yokokoku" data-wish="0" data-dep="491" data-sx="41" data-yt="48">
             <td class="sch" data-label="学校">横浜国大附属横浜<br><span class="dim">国立・高校なし</span></td>
             <td class="t" data-label="サピ">41</td><td class="t" data-label="四谷">48</td>
             <td class="t" data-label="出発（推奨）">8:11</td><td class="t" data-label="出発（最遅）">8:16</td><td class="t" data-label="学校着">8:35</td><td class="t" data-label="登校">8:40</td>
             <td class="t" data-label="余裕">5分</td><td class="t" data-label="所要">24分</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">242円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→弘明寺→徒歩1分</td>
           </tr>
-          <tr class="futsubu" data-key="futsubu" data-dep="493" data-sx="58" data-yt="65">
+          <tr class="futsubu" data-key="futsubu" data-wish="0" data-dep="493" data-sx="58" data-yt="65">
             <td class="sch" data-label="学校">慶應義塾普通部</td>
             <td class="t" data-label="サピ">58</td><td class="t" data-label="四谷">65</td>
             <td class="t" data-label="出発（推奨）">8:13</td><td class="t" data-label="出発（最遅）">8:17</td><td class="t" data-label="学校着">8:54</td><td class="t" data-label="登校">9:00</td>
             <td class="t" data-label="余裕">6分</td><td class="t" data-label="所要">41分</td><td class="t" data-label="乗換">1回</td><td class="t" data-label="IC運賃">437円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→東横線通勤特急→日吉→徒歩5分</td>
           </tr>
-          <tr class="azabu is-out" data-key="azabu" data-dep="398" data-sx="59" data-yt="65" data-out="1">
-            <td class="sch" data-label="学校">麻布<br><span class="dim">対象外</span></td>
+          <tr class="azabu" data-key="azabu" data-wish="0" data-dep="398" data-sx="59" data-yt="65">
+            <td class="sch" data-label="学校">麻布</td>
             <td class="t" data-label="サピ">59</td><td class="t" data-label="四谷">65</td>
             <td class="t" data-label="出発（推奨）">6:38</td><td class="t" data-label="出発（最遅）">6:38</td><td class="t" data-label="学校着">7:57</td><td class="t" data-label="登校">8:00</td>
             <td class="t" data-label="余裕">3分</td><td class="t" data-label="所要">1:19</td><td class="t" data-label="乗換">2回</td><td class="t" data-label="IC運賃">697円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→東急東横線→中目黒→日比谷線→広尾→徒歩10分</td>
           </tr>
-          <tr class="shiba is-out" data-key="shiba" data-dep="407" data-sx="49" data-yt="59" data-out="1">
-            <td class="sch" data-label="学校">芝<br><span class="dim">対象外</span></td>
+          <tr class="shiba" data-key="shiba" data-wish="0" data-dep="407" data-sx="49" data-yt="59">
+            <td class="sch" data-label="学校">芝</td>
             <td class="t" data-label="サピ">49</td><td class="t" data-label="四谷">59</td>
             <td class="t" data-label="出発（推奨）">6:47</td><td class="t" data-label="出発（最遅）">6:47</td><td class="t" data-label="学校着">7:57</td><td class="t" data-label="登校">8:00</td>
             <td class="t" data-label="余裕">3分</td><td class="t" data-label="所要">1:10</td><td class="t" data-label="乗換">3回</td><td class="t" data-label="IC運賃">916円</td>
             <td data-label="主なルート">徒歩10分→高島町→ブルーライン→横浜→JR東海道線→新橋→銀座線・日比谷線→神谷町→徒歩5分</td>
           </tr>
-          <tr class="kaisei is-out" data-key="kaisei" data-dep="410" data-sx="68" data-yt="72" data-out="1">
-            <td class="sch" data-label="学校">開成<br><span class="dim">対象外</span></td>
+          <tr class="kaisei" data-key="kaisei" data-wish="0" data-dep="410" data-sx="68" data-yt="72">
+            <td class="sch" data-label="学校">開成</td>
             <td class="t" data-label="サピ">68</td><td class="t" data-label="四谷">72</td>
             <td class="t" data-label="出発（推奨）">6:50</td><td class="t" data-label="出発（最遅）">7:00</td><td class="t" data-label="学校着">8:08</td><td class="t" data-label="登校">8:10</td>
             <td class="t" data-label="余裕">2分</td><td class="t" data-label="所要">1:18</td><td class="t" data-label="乗換">0回</td><td class="t" data-label="IC運賃">715円</td>
@@ -1408,7 +1521,7 @@
       </table>
       </div>
     <p class="sec-note" style="margin-top:1rem">
-      対象35校では、いちばん早い 7:05 といちばん遅い 8:13 の差は <b>1時間8分</b>。登校時刻が 8:15〜9:00 と45分ひらくため、通学時間だけでは順番が決まりません。
+      39校では、いちばん早い 6:38 といちばん遅い 8:13 の差は <b>1時間35分</b>。登校時刻が 8:15〜9:00 と45分ひらくため、通学時間だけでは順番が決まりません。
       渋渋・広尾・三田国際は <b>高島町発のブルーライン</b>が起点、
       芝国際・青稜・山手学院・聖光は <b>桜木町から JR 一本</b>、
       関東学院・浅野は <b>戸部</b>から。開智日本橋学園だけが <b>横浜から横須賀線・総武快速</b>で都心の東側へ抜けます。
@@ -1418,7 +1531,7 @@
 
   <!-- ============ 三田国際 ============ -->
   <!-- ============ 開智日本橋学園中学校 ============ -->
-  <section class="school kaichi" id="s-kaichi" data-key="kaichi" data-dep="420" data-sx="46" data-yt="57" data-out="1">
+  <section class="school kaichi" id="s-kaichi" data-key="kaichi" data-wish="0" data-dep="420" data-sx="46" data-yt="57">
     <header>
       <h2>開智日本橋学園中学校・高等学校</h2>
       <ul class="facts">
@@ -1426,6 +1539,7 @@
         <li>最寄り：<b>馬喰町 徒歩3分</b>（JR総武線快速）／浅草橋 徒歩3分（JR総武線・都営浅草線）／馬喰横山 徒歩7分（都営新宿線）</li>
         <li>登校 <b>8:10</b>（朝学習・SHR 8:10〜8:30／週6日制）</li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%96%8B%E6%99%BA%E6%97%A5%E6%9C%AC%E6%A9%8B%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E4%B8%AD%E5%A4%AE%E5%8C%BA%E6%97%A5%E6%9C%AC%E6%A9%8B%E9%A6%AC%E5%96%B0%E7%94%BA2-7-6%20%E9%96%8B%E6%99%BA%E6%97%A5%E6%9C%AC%E6%A9%8B%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 46<i>/</i>四谷 57<em>1回・2/1・男子</em></span></p>
@@ -1448,7 +1562,7 @@
       <div class="kv"><span>所要 1時間5分</span><span>乗換 1回</span><span>IC 826円</span><span>余裕 5分</span></div>
     </div>
 
-    <div class="box warn"><p><b>この学校は「対象外」です。</b>最遅便の 7:09 発は 7:05 の条件を満たしますが、<b>学校着が 8:09 と登校1分前</b>で、実質は推奨の 7:00 発になります。7:05 より前になるため、開成と同じく対象外としました。ご指定の条件からは外れますが、時刻とルートは他校と同じ形で載せてあります。</p></div>
+    <div class="box warn"><p><b>実質 7:00 発です。</b>最遅便は 7:09 発ですが、<b>学校着が 8:09 と登校1分前</b>なので、現実には推奨の 7:00 発で見ておく必要があります。7:05 より前に出る4校のひとつです。</p></div>
     <div class="box"><p><b>横浜からは乗り換えなしの41分</b>です。横須賀線・総武線快速は横浜から馬喰町まで直通で、朝は8〜10分間隔。負担は乗車時間の長さで、乗り換えは高島町→横浜の1回だけ、駅から学校も徒歩3分です。</p></div>
 
     <div>
@@ -1471,7 +1585,7 @@
   </section>
 
   <!-- ============ 公文国際学園中等部・高等部 ============ -->
-  <section class="school kumon" id="s-kumon" data-key="kumon" data-dep="425" data-sx="-1" data-yt="51" data-out="0">
+  <section class="school kumon" id="s-kumon" data-key="kumon" data-wish="0" data-dep="425" data-sx="-1" data-yt="51">
     <header>
       <h2>公文国際学園中等部・高等部</h2>
       <ul class="facts">
@@ -1479,13 +1593,14 @@
         <li>最寄り：<b>大船 からバス8分</b>（神奈中バス 船65／バス停「公文国際学園」下車）。学校の直通バスもあり</li>
         <li>登校 <b>8:20</b>（高等部は 8:40）</li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E5%85%AC%E6%96%87%E5%9B%BD%E9%9A%9B%E5%AD%A6%E5%9C%92%E4%B8%AD%E7%AD%89%E9%83%A8%E3%83%BB%E9%AB%98%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E6%88%B8%E5%A1%9A%E5%8C%BA%E5%B0%8F%E9%9B%80%E7%94%BA777%20%E5%85%AC%E6%96%87%E5%9B%BD%E9%9A%9B%E5%AD%A6%E5%9C%92%E4%B8%AD%E7%AD%89%E9%83%A8%E3%83%BB%E9%AB%98%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 51<em>A・2/1・男子</em></span></p>
 
     <div class="profile">
       <div class="prow"><span class="plabel">校風</span><p>1993年に公文教育研究会が設立した中高一貫の共学校。<b>制服がなく校則も少なく</b>、生徒の自主性に任せる校風で、行事の運営も生徒が担う。希望者が入れる寮を併設し、全国から生徒が集まる。</p></div>
-      <div class="prow"><span class="plabel">向いている人</span><p>自分で決めて動ける子。制服や細かい校則のない環境が合う家庭。ただし<b>通学は大船からバス</b>で、対象35校のなかでいちばん早い 7:05 発の組になる。</p></div>
+      <div class="prow"><span class="plabel">向いている人</span><p>自分で決めて動ける子。制服や細かい校則のない環境が合う家庭。ただし<b>通学は大船からバス</b>で、39校のなかでも早い 7:05 発の組になる。</p></div>
       <div class="prow"><span class="plabel">進学実績<em>2026年春</em></span><p>卒業155名。東大4、一橋2、東京科学2、国公立大の医学科3。早稲田22、慶應28、上智16、理科大12（早慶上理78）。</p></div>
     </div>
 
@@ -1523,7 +1638,7 @@
   </section>
 
   <!-- ============ 東京都市大学等々力中学校・高等学校 ============ -->
-  <section class="school todoroki" id="s-todoroki" data-key="todoroki" data-dep="429" data-sx="41" data-yt="55" data-out="0">
+  <section class="school todoroki" id="s-todoroki" data-key="todoroki" data-wish="0" data-dep="429" data-sx="41" data-yt="55">
     <header>
       <h2>東京都市大学等々力中学校・高等学校</h2>
       <ul class="facts">
@@ -1531,6 +1646,7 @@
         <li>最寄り：<b>等々力 徒歩10分</b>（東急大井町線）／尾山台 徒歩12分</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%B8%82%E5%A4%A7%E5%AD%A6%E7%AD%89%E3%80%85%E5%8A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E4%B8%96%E7%94%B0%E8%B0%B7%E5%8C%BA%E7%AD%89%E3%80%85%E5%8A%9B8-10-1%20%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%B8%82%E5%A4%A7%E5%AD%A6%E7%AD%89%E3%80%85%E5%8A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 41<i>/</i>四谷 55<em>特選・2/1・男子</em></span></p>
@@ -1577,7 +1693,7 @@
   </section>
 
   <!-- ============ 森村学園中等部・高等部 ============ -->
-  <section class="school morimura" id="s-morimura" data-key="morimura" data-dep="429" data-sx="-1" data-yt="50" data-out="0">
+  <section class="school morimura" id="s-morimura" data-key="morimura" data-wish="0" data-dep="429" data-sx="-1" data-yt="50">
     <header>
       <h2>森村学園中等部・高等部</h2>
       <ul class="facts">
@@ -1585,6 +1701,7 @@
         <li>最寄り：<b>つくし野 徒歩5分</b>（東急田園都市線）／長津田 徒歩13分（JR横浜線・田園都市線）</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A3%AE%E6%9D%91%E5%AD%A6%E5%9C%92%E4%B8%AD%E7%AD%89%E9%83%A8%E3%83%BB%E9%AB%98%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%B7%91%E5%8C%BA%E9%95%B7%E6%B4%A5%E7%94%B0%E7%94%BA2695%20%E6%A3%AE%E6%9D%91%E5%AD%A6%E5%9C%92%E4%B8%AD%E7%AD%89%E9%83%A8%E3%83%BB%E9%AB%98%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 50<em>1回・2/1・男子</em></span></p>
@@ -1630,7 +1747,7 @@
 
   <!-- ============ 三田国際科学学園 ============ -->
   <!-- ============ 駒場東邦中学校・高等学校 ============ -->
-  <section class="school komaba" id="s-komaba" data-key="komaba" data-dep="425" data-sx="59" data-yt="66" data-out="0">
+  <section class="school komaba" id="s-komaba" data-key="komaba" data-wish="0" data-dep="425" data-sx="59" data-yt="66">
     <header>
       <h2>駒場東邦中学校・高等学校</h2>
       <ul class="facts">
@@ -1638,13 +1755,14 @@
         <li>最寄り：<b>駒場東大前 徒歩10分</b>（京王井の頭線）／池尻大橋 徒歩10分（東急田園都市線）／渋谷からバス「駒場」徒歩5分</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%A7%92%E5%A0%B4%E6%9D%B1%E9%82%A6%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E4%B8%96%E7%94%B0%E8%B0%B7%E5%8C%BA%E6%B1%A0%E5%B0%BB4-5-1%20%E9%A7%92%E5%A0%B4%E6%9D%B1%E9%82%A6%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 66<em>1回・2/1・男子</em></span></p>
 
     <div class="profile">
       <div class="prow"><span class="plabel">校風</span><p>1957年、東邦大学が「資源のない日本で、科学的精神を持つ人材を」という理念で設立した男子校。<b>中高6年間ずっとクラス替えがあり、担任も持ち上がらない</b>のが特徴。中1の「地学実習」や中3の「理科自由研究」など、理科系の課題が伝統的に重い。</p></div>
-      <div class="prow"><span class="plabel">向いている人</span><p>理科・数学を面白がれる子。面倒見のよさより<b>自分で考えて書き上げる力</b>を求められる環境が合う家庭。通学は乗換2回・1時間11分で、35校のなかでも重い部類。</p></div>
+      <div class="prow"><span class="plabel">向いている人</span><p>理科・数学を面白がれる子。面倒見のよさより<b>自分で考えて書き上げる力</b>を求められる環境が合う家庭。通学は乗換2回・1時間11分で、39校のなかでも重い部類。</p></div>
       <div class="prow"><span class="plabel">進学実績<em>2026年春</em></span><p>卒業228名。東大39、京大12、一橋11、東京科学13、国公立大の医学科26。早慶上理342、GMARCH 122。<b>卒業生あたりの東大・医学科の密度は39校で開成・筑駒に次ぐ</b>水準です。</p></div>
     </div>
 
@@ -1661,7 +1779,7 @@
       <div class="kv"><span>所要 1時間11分</span><span>乗換 2回</span><span>IC 790円</span><span>余裕 4分</span></div>
     </div>
 
-    <div class="box warn"><p><b>推奨と最遅が同じ 7:05 発で、余裕は4分しかありません。</b>これを逃すと次は登校に間に合いません。ひとつ前の便は 6:47 発（余裕13分）まで下がるので、<b>実質この1本に賭ける通学</b>になります。湘南新宿ラインが止まると代替が効きにくい点も含め、35校のなかでは読みにくいほうです。</p></div>
+    <div class="box warn"><p><b>推奨と最遅が同じ 7:05 発で、余裕は4分しかありません。</b>これを逃すと次は登校に間に合いません。ひとつ前の便は 6:47 発（余裕13分）まで下がるので、<b>実質この1本に賭ける通学</b>になります。湘南新宿ラインが止まると代替が効きにくい点も含め、39校のなかでは読みにくいほうです。</p></div>
     <div class="box"><p><b>池尻大橋からも徒歩10分</b>です。高島町→あざみ野→田園都市線というルートも取れるので、湘南新宿ラインが乱れた日の逃げ道になります。筑波大学附属駒場とは同じ駅（駒場東大前）で、隣り合っています。</p></div>
 
     <div>
@@ -1683,7 +1801,7 @@
   </section>
 
   <!-- ============ 海城中学校・高等学校 ============ -->
-  <section class="school kaijo" id="s-kaijo" data-key="kaijo" data-dep="425" data-sx="59" data-yt="65" data-out="0">
+  <section class="school kaijo" id="s-kaijo" data-key="kaijo" data-wish="0" data-dep="425" data-sx="59" data-yt="65">
     <header>
       <h2>海城中学校・高等学校</h2>
       <ul class="facts">
@@ -1691,6 +1809,7 @@
         <li>最寄り：<b>新大久保 徒歩5分</b>（JR山手線）／西早稲田 徒歩8分（メトロ副都心線）／大久保 徒歩10分（JR中央・総武線）</li>
         <li>登校 <b>8:15</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%B5%B7%E5%9F%8E%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%96%B0%E5%AE%BF%E5%8C%BA%E5%A4%A7%E4%B9%85%E4%BF%9D3-6-1%20%E6%B5%B7%E5%9F%8E%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 65<em>1回・2/1・男子</em></span></p>
@@ -1736,7 +1855,7 @@
   </section>
 
   <!-- ============ 逗子開成中学校・高等学校 ============ -->
-  <section class="school zushi" id="s-zushi" data-key="zushi" data-dep="425" data-sx="-1" data-yt="58" data-out="0">
+  <section class="school zushi" id="s-zushi" data-key="zushi" data-wish="0" data-dep="425" data-sx="-1" data-yt="58">
     <header>
       <h2>逗子開成中学校・高等学校</h2>
       <ul class="facts">
@@ -1744,6 +1863,7 @@
         <li>最寄り：<b>逗子 徒歩10分</b>（JR横須賀線・湘南新宿ライン）／逗子・葉山 徒歩10分（京急逗子線）</li>
         <li>登校 <b>8:15</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%80%97%E5%AD%90%E9%96%8B%E6%88%90%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E9%80%97%E5%AD%90%E5%B8%82%E6%96%B0%E5%AE%BF2-5-1%20%E9%80%97%E5%AD%90%E9%96%8B%E6%88%90%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ &mdash;<i>/</i>四谷 58<em>1次・2/1・男子</em></span></p>
@@ -1788,7 +1908,7 @@
   </section>
 
   <!-- ============ 日本大学中学校・高等学校 ============ -->
-  <section class="school nichidai" id="s-nichidai" data-key="nichidai" data-dep="429" data-sx="-1" data-yt="51" data-out="0">
+  <section class="school nichidai" id="s-nichidai" data-key="nichidai" data-wish="0" data-dep="429" data-sx="-1" data-yt="51">
     <header>
       <h2>日本大学中学校・高等学校</h2>
       <ul class="facts">
@@ -1796,6 +1916,7 @@
         <li>最寄り：<b>日吉 徒歩12分</b>（東急東横線・目黒線・新横浜線／横浜市営地下鉄グリーンライン）。スクールバス5分、東急バス「日大高校前」もあり</li>
         <li>登校 <b>8:10</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%97%A5%E6%9C%AC%E5%A4%A7%E5%AD%A6%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E6%B8%AF%E5%8C%97%E5%8C%BA%E7%AE%95%E8%BC%AA%E7%94%BA2-9-1%20%E6%97%A5%E6%9C%AC%E5%A4%A7%E5%AD%A6%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ &mdash;<i>/</i>四谷 51<em>A1・2/1午前・男子</em></span></p>
@@ -1840,7 +1961,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school mita" id="s-mita" data-key="mita" data-dep="429" data-sx="49" data-yt="60">
+  <section class="school mita" id="s-mita" data-key="mita" data-wish="0" data-dep="429" data-sx="49" data-yt="60">
     <header>
       <h2>三田国際科学学園中学校高等学校</h2>
       <ul class="facts">
@@ -1848,6 +1969,7 @@
         <li>最寄り：<b>用賀 徒歩5分</b>（東急田園都市線）</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E4%B8%89%E7%94%B0%E5%9B%BD%E9%9A%9B%E7%A7%91%E5%AD%A6%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E4%B8%96%E7%94%B0%E8%B0%B7%E5%8C%BA%E7%94%A8%E8%B3%802-16-1%20%E4%B8%89%E7%94%B0%E5%9B%BD%E9%9A%9B%E7%A7%91%E5%AD%A6%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 49<i>/</i>四谷 60<em>1回ISC・2/1・男子</em></span></p>
@@ -1897,7 +2019,7 @@
   </section>
 
   <!-- ============ 攻玉社中学校・高等学校 ============ -->
-  <section class="school gyoku" id="s-gyoku" data-key="gyoku" data-dep="429" data-sx="48" data-yt="57">
+  <section class="school gyoku" id="s-gyoku" data-key="gyoku" data-wish="0" data-dep="429" data-sx="48" data-yt="57">
     <header>
       <h2>攻玉社中学校・高等学校</h2>
       <ul class="facts">
@@ -1905,6 +2027,7 @@
         <li>最寄り：<b>不動前 徒歩2分</b>（東急目黒線）</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%94%BB%E7%8E%89%E7%A4%BE%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%93%81%E5%B7%9D%E5%8C%BA%E8%A5%BF%E4%BA%94%E5%8F%8D%E7%94%B05-14-2%20%E6%94%BB%E7%8E%89%E7%A4%BE%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 48<i>/</i>四谷 57<em>①・2/1・男子</em></span></p>
@@ -1949,7 +2072,7 @@
   </section>
 
   <!-- ============ 栄光学園中学校・高等学校 ============ -->
-  <section class="school eiko" id="s-eiko" data-key="eiko" data-dep="431" data-sx="60" data-yt="66" data-out="0">
+  <section class="school eiko" id="s-eiko" data-key="eiko" data-wish="0" data-dep="431" data-sx="60" data-yt="66">
     <header>
       <h2>栄光学園中学校・高等学校</h2>
       <ul class="facts">
@@ -1957,6 +2080,7 @@
         <li>最寄り：<b>大船 徒歩15分</b>（JR東海道線・横須賀線・湘南新宿ライン・根岸線／湘南モノレール）</li>
         <li>登校 <b>夏 8:15 ／ 冬 8:45</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A0%84%E5%85%89%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E9%8E%8C%E5%80%89%E5%B8%82%E7%8E%89%E7%B8%844-1-1%20%E6%A0%84%E5%85%89%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 60<i>/</i>四谷 66<em>1回・2/2・男子</em></span></p>
@@ -2000,7 +2124,7 @@
   </section>
 
   <!-- ============ 渋渋 ============ -->
-  <section class="school shibu" id="s-shibu" data-key="shibu" data-dep="434" data-sx="62" data-yt="67">
+  <section class="school shibu" id="s-shibu" data-key="shibu" data-wish="0" data-dep="434" data-sx="62" data-yt="67">
     <header>
       <h2>渋谷教育学園渋谷中学高等学校</h2>
       <ul class="facts">
@@ -2008,6 +2132,7 @@
         <li>最寄り：<b>渋谷 徒歩7分</b>（B1出入口から明治通りを原宿方面へ）／明治神宮前 徒歩8分（明治通りを渋谷方面へ）</li>
         <li>登校 <b>8:15</b>（朝礼 8:20 ／ 第1校時 8:35〜9:20）</li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%B8%8B%E8%B0%B7%E6%95%99%E8%82%B2%E5%AD%A6%E5%9C%92%E6%B8%8B%E8%B0%B7%E4%B8%AD%E5%AD%A6%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%8B%E8%B0%B7%E5%8C%BA%E6%B8%8B%E8%B0%B71-21-18%20%E6%B8%8B%E8%B0%B7%E6%95%99%E8%82%B2%E5%AD%A6%E5%9C%92%E6%B8%8B%E8%B0%B7%E4%B8%AD%E5%AD%A6%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 62<i>/</i>四谷 67<em>1回・2/1・男子</em></span></p>
@@ -2060,7 +2185,7 @@
   </section>
 
   <!-- ============ 広尾学園 ============ -->
-  <section class="school hiroo" id="s-hiroo" data-key="hiroo" data-dep="434" data-sx="58" data-yt="65">
+  <section class="school hiroo" id="s-hiroo" data-key="hiroo" data-wish="0" data-dep="434" data-sx="58" data-yt="65">
     <header>
       <h2>広尾学園中学校高等学校</h2>
       <ul class="facts">
@@ -2068,6 +2193,7 @@
         <li>最寄り：<b>広尾 徒歩1分</b>（東京メトロ日比谷線）</li>
         <li>登校 <b>8:15</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E5%BA%83%E5%B0%BE%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%AF%E5%8C%BA%E5%8D%97%E9%BA%BB%E5%B8%835-1-14%20%E5%BA%83%E5%B0%BE%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 58<i>/</i>四谷 65<em>1回本科・2/1・男子</em></span></p>
@@ -2116,7 +2242,7 @@
 
   <!-- ============ 芝国際 ============ -->
   <!-- ============ 神奈川大学附属中・高等学校 ============ -->
-  <section class="school kanadai" id="s-kanadai" data-key="kanadai" data-dep="434" data-sx="51" data-yt="59" data-out="0">
+  <section class="school kanadai" id="s-kanadai" data-key="kanadai" data-wish="0" data-dep="434" data-sx="51" data-yt="59">
     <header>
       <h2>神奈川大学附属中・高等学校</h2>
       <ul class="facts">
@@ -2124,6 +2250,7 @@
         <li>最寄り：<b>中山 徒歩15分</b>（JR横浜線・横浜市営地下鉄グリーンライン）／鶴ヶ峰から相鉄バス「西ひかりが丘」徒歩3分</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E7%A5%9E%E5%A5%88%E5%B7%9D%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E4%B8%AD%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%B7%91%E5%8C%BA%E5%8F%B0%E6%9D%91%E7%94%BA800%20%E7%A5%9E%E5%A5%88%E5%B7%9D%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E4%B8%AD%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 51<i>/</i>四谷 59<em>1回・2/1午後・男子</em></span></p>
@@ -2169,7 +2296,7 @@
   </section>
 
   <!-- ============ 筑波大学附属駒場中学校・高等学校 ============ -->
-  <section class="school tsukukoma" id="s-tsukukoma" data-key="tsukukoma" data-dep="434" data-sx="70" data-yt="74" data-out="0">
+  <section class="school tsukukoma" id="s-tsukukoma" data-key="tsukukoma" data-wish="0" data-dep="434" data-sx="70" data-yt="74">
     <header>
       <h2>筑波大学附属駒場中学校・高等学校</h2>
       <ul class="facts">
@@ -2177,6 +2304,7 @@
         <li>最寄り：<b>駒場東大前 徒歩7分</b>（京王井の頭線）／池尻大橋 徒歩15分（東急田園都市線）／渋谷からバス「駒場」徒歩1分</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E7%AD%91%E6%B3%A2%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E9%A7%92%E5%A0%B4%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E4%B8%96%E7%94%B0%E8%B0%B7%E5%8C%BA%E6%B1%A0%E5%B0%BB4-7-1%20%E7%AD%91%E6%B3%A2%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E9%A7%92%E5%A0%B4%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 70<i>/</i>四谷 74<em>2/3・男子</em></span></p>
@@ -2221,7 +2349,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school shibak" id="s-shibak" data-key="shibak" data-dep="437" data-sx="45" data-yt="54">
+  <section class="school shibak" id="s-shibak" data-key="shibak" data-wish="0" data-dep="437" data-sx="45" data-yt="54">
     <header>
       <h2>芝国際中学校高等学校</h2>
       <ul class="facts">
@@ -2229,6 +2357,7 @@
         <li>最寄り：<b>三田 徒歩2分</b>（都営浅草線・三田線）／田町 徒歩5分（JR山手線・京浜東北線）</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E8%8A%9D%E5%9B%BD%E9%9A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%AF%E5%8C%BA%E8%8A%9D4-1-30%20%E8%8A%9D%E5%9B%BD%E9%9A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 45<i>/</i>四谷 54<em>①特午後・2/1・男子</em></span></p>
@@ -2282,7 +2411,7 @@
   </section>
 
   <!-- ============ 高輪中学校・高等学校 ============ -->
-  <section class="school takanawa" id="s-takanawa" data-key="takanawa" data-dep="437" data-sx="45" data-yt="55">
+  <section class="school takanawa" id="s-takanawa" data-key="takanawa" data-wish="0" data-dep="437" data-sx="45" data-yt="55">
     <header>
       <h2>高輪中学校・高等学校</h2>
       <ul class="facts">
@@ -2290,6 +2419,7 @@
         <li>最寄り：<b>高輪ゲートウェイ 徒歩6分</b>（JR山手線・京浜東北線）／泉岳寺 徒歩3分（都営浅草線・京急本線）／白金高輪 徒歩5分（南北線・都営三田線）</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%AB%98%E8%BC%AA%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%AF%E5%8C%BA%E9%AB%98%E8%BC%AA2-1-32%20%E9%AB%98%E8%BC%AA%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 45<i>/</i>四谷 55<em>A・2/1・男子</em></span></p>
@@ -2335,7 +2465,7 @@
 
   <!-- ============ 慶應義塾湘南藤沢中等部 ============ -->
   <!-- ============ 鎌倉学園中学校・高等学校 ============ -->
-  <section class="school kamagaku" id="s-kamagaku" data-key="kamagaku" data-dep="440" data-sx="43" data-yt="52" data-out="0">
+  <section class="school kamagaku" id="s-kamagaku" data-key="kamagaku" data-wish="0" data-dep="440" data-sx="43" data-yt="52">
     <header>
       <h2>鎌倉学園中学校・高等学校</h2>
       <ul class="facts">
@@ -2343,6 +2473,7 @@
         <li>最寄り：<b>北鎌倉 徒歩13分</b>（JR横須賀線・湘南新宿ライン）</li>
         <li>登校 <b>8:25</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%8E%8C%E5%80%89%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E9%8E%8C%E5%80%89%E5%B8%82%E5%B1%B1%E3%83%8E%E5%86%85110%20%E9%8E%8C%E5%80%89%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 43<i>/</i>四谷 52<em>1次・2/1午前・男子</em></span></p>
@@ -2387,7 +2518,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school sfc" id="s-sfc" data-key="sfc" data-dep="442" data-sx="58" data-yt="65">
+  <section class="school sfc" id="s-sfc" data-key="sfc" data-wish="0" data-dep="442" data-sx="58" data-yt="65">
     <header>
       <h2>慶應義塾湘南藤沢中等部</h2>
       <ul class="facts">
@@ -2395,6 +2526,7 @@
         <li>最寄り：<b>湘南台からバス15分</b>＋徒歩1分（神奈中バス 湘23／湘25）／辻堂からバス21分</li>
         <li>登校 <b>8:40</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%85%B6%E6%87%89%E7%BE%A9%E5%A1%BE%E6%B9%98%E5%8D%97%E8%97%A4%E6%B2%A2%E4%B8%AD%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E8%97%A4%E6%B2%A2%E5%B8%82%E9%81%A0%E8%97%A45466%20%E6%85%B6%E6%87%89%E7%BE%A9%E5%A1%BE%E6%B9%98%E5%8D%97%E8%97%A4%E6%B2%A2%E4%B8%AD%E7%AD%89%E9%83%A8" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 58<i>/</i>四谷 65<em>1次・2/2・男子</em></span></p>
@@ -2439,7 +2571,7 @@
   </section>
 
   <!-- ============ 青稜 ============ -->
-  <section class="school seiryo" id="s-seiryo" data-key="seiryo" data-dep="443" data-sx="42" data-yt="54">
+  <section class="school seiryo" id="s-seiryo" data-key="seiryo" data-wish="0" data-dep="443" data-sx="42" data-yt="54">
     <header>
       <h2>青稜中学校・高等学校</h2>
       <ul class="facts">
@@ -2447,6 +2579,7 @@
         <li>最寄り：<b>下神明 徒歩1分</b>（東急大井町線）／大井町 徒歩7分（JR京浜東北線・りんかい線）／西大井 徒歩10分（JR横須賀線・湘南新宿ライン）</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%9D%92%E7%A8%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%93%81%E5%B7%9D%E5%8C%BA%E4%BA%8C%E8%91%891-6-6%20%E9%9D%92%E7%A8%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 42<i>/</i>四谷 54<em>1回A・2/1・男子</em></span></p>
@@ -2497,7 +2630,7 @@
 
   <!-- ============ 山手学院 ============ -->
   <!-- ============ 羽田国際中学校・高等学校 ============ -->
-  <section class="school haneda" id="s-haneda" data-key="haneda" data-dep="443" data-sx="-1" data-yt="35" data-out="0">
+  <section class="school haneda" id="s-haneda" data-key="haneda" data-wish="0" data-dep="443" data-sx="-1" data-yt="35">
     <header>
       <h2>羽田国際中学校・高等学校</h2>
       <ul class="facts">
@@ -2505,6 +2638,7 @@
         <li>最寄り：<b>糀谷 徒歩7分</b>（京急空港線）／JR蒲田駅東口からバス12分「簡野学園前」</li>
         <li>登校 <b>8:25</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E7%BE%BD%E7%94%B0%E5%9B%BD%E9%9A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E5%A4%A7%E7%94%B0%E5%8C%BA%E6%9C%AC%E7%BE%BD%E7%94%B01-4-1%20%E7%BE%BD%E7%94%B0%E5%9B%BD%E9%9A%9B%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 35<em>開校初年度の予想・男子</em></span></p>
@@ -2549,7 +2683,7 @@
   </section>
 
   <!-- ============ 聖ヨゼフ学園中学校・高等学校 ============ -->
-  <section class="school joseph" id="s-joseph" data-key="joseph" data-dep="446" data-sx="-1" data-yt="33" data-out="0">
+  <section class="school joseph" id="s-joseph" data-key="joseph" data-wish="0" data-dep="446" data-sx="-1" data-yt="33">
     <header>
       <h2>聖ヨゼフ学園中学校・高等学校</h2>
       <ul class="facts">
@@ -2557,6 +2691,7 @@
         <li>最寄り：<b>鶴見 徒歩15分</b>（JR京浜東北線・鶴見線）／バス「二本木聖ヨゼフ学園前」下車</li>
         <li>登校 <b>8:15</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E8%81%96%E3%83%A8%E3%82%BC%E3%83%95%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E9%B6%B4%E8%A6%8B%E5%8C%BA%E6%9D%B1%E5%AF%BA%E5%B0%BE%E5%8C%97%E5%8F%B011-1%20%E8%81%96%E3%83%A8%E3%82%BC%E3%83%95%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 33<em>1回・2/1・男子</em></span></p>
@@ -2599,14 +2734,15 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school yamate" id="s-yamate" data-key="yamate" data-dep="448" data-sx="40" data-yt="52">
+  <section class="school yamate" id="s-yamate" data-key="yamate" data-wish="0" data-dep="448" data-sx="40" data-yt="52">
     <header>
       <h2>山手学院中学校・高等学校</h2>
       <ul class="facts">
-        <li>神奈川県横浜市栄区上郷町</li>
+        <li>神奈川県横浜市栄区上郷町460</li>
         <li>最寄り：<b>港南台 徒歩12分</b>（JR根岸線）</li>
         <li>登校 <b>8:30</b>（高校は 8:40）</li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E5%B1%B1%E6%89%8B%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E6%A0%84%E5%8C%BA%E4%B8%8A%E9%83%B7%E7%94%BA460%20%E5%B1%B1%E6%89%8B%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 40<i>/</i>四谷 52<em>A・2/1・男子</em></span></p>
@@ -2661,7 +2797,7 @@
 
   <!-- ============ 青山学院横浜英和中学高等学校 ============ -->
   <!-- ============ 横浜創英中学・高等学校 ============ -->
-  <section class="school soei" id="s-soei" data-key="soei" data-dep="459" data-sx="-1" data-yt="41" data-out="0">
+  <section class="school soei" id="s-soei" data-key="soei" data-wish="0" data-dep="459" data-sx="-1" data-yt="41">
     <header>
       <h2>横浜創英中学・高等学校</h2>
       <ul class="facts">
@@ -2669,6 +2805,7 @@
         <li>最寄り：<b>大口 徒歩8分</b>（JR横浜線）／子安 徒歩12分（京急本線）</li>
         <li>登校 <b>8:25</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A8%AA%E6%B5%9C%E5%89%B5%E8%8B%B1%E4%B8%AD%E5%AD%A6%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%A5%9E%E5%A5%88%E5%B7%9D%E5%8C%BA%E8%A5%BF%E5%A4%A7%E5%8F%A328%20%E6%A8%AA%E6%B5%9C%E5%89%B5%E8%8B%B1%E4%B8%AD%E5%AD%A6%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ &mdash;<i>/</i>四谷 41<em>1回・2/1・男子</em></span></p>
@@ -2711,7 +2848,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school yokoeiwa" id="s-yokoeiwa" data-key="yokoeiwa" data-dep="460" data-sx="45" data-yt="56">
+  <section class="school yokoeiwa" id="s-yokoeiwa" data-key="yokoeiwa" data-wish="0" data-dep="460" data-sx="45" data-yt="56">
     <header>
       <h2>青山学院横浜英和中学高等学校</h2>
       <ul class="facts">
@@ -2719,6 +2856,7 @@
         <li>最寄り：<b>蒔田 徒歩8分</b>（横浜市営地下鉄ブルーライン）</li>
         <li>登校 <b>8:15</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%9D%92%E5%B1%B1%E5%AD%A6%E9%99%A2%E6%A8%AA%E6%B5%9C%E8%8B%B1%E5%92%8C%E4%B8%AD%E5%AD%A6%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E5%8D%97%E5%8C%BA%E8%92%94%E7%94%B0%E7%94%BA124%20%E9%9D%92%E5%B1%B1%E5%AD%A6%E9%99%A2%E6%A8%AA%E6%B5%9C%E8%8B%B1%E5%92%8C%E4%B8%AD%E5%AD%A6%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 45<i>/</i>四谷 56<em>A・2/1・男子</em></span></p>
@@ -2762,7 +2900,7 @@
   </section>
 
   <!-- ============ 横浜市立南高等学校附属中学校 ============ -->
-  <section class="school minami" id="s-minami" data-key="minami" data-dep="460" data-sx="48" data-yt="59" data-out="0">
+  <section class="school minami" id="s-minami" data-key="minami" data-wish="0" data-dep="460" data-sx="48" data-yt="59">
     <header>
       <h2>横浜市立南高等学校附属中学校</h2>
       <ul class="facts">
@@ -2770,6 +2908,7 @@
         <li>最寄り：<b>上永谷 徒歩15分</b>（横浜市営地下鉄ブルーライン）／上大岡からバス約10分「南高校前」</li>
         <li>登校 <b>8:30</b>　入試（適性検査）<b>2月3日</b>　出願資格は<b>横浜市内全域</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%AB%8B%E5%8D%97%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1%E9%99%84%E5%B1%9E%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E6%B8%AF%E5%8D%97%E5%8C%BA%E6%9D%B1%E6%B0%B8%E8%B0%B72-1-1%20%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%AB%8B%E5%8D%97%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1%E9%99%84%E5%B1%9E%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">公立・共学</span><span class="badge hen">サピ 48<i>/</i>四谷 59<em>2/3・男女共通</em></span></p>
@@ -2816,7 +2955,7 @@
   </section>
 
   <!-- ============ 横浜サイエンスフロンティア高附属 ============ -->
-  <section class="school ysf" id="s-ysf" data-key="ysf" data-dep="462" data-sx="-1" data-yt="63" data-out="0">
+  <section class="school ysf" id="s-ysf" data-key="ysf" data-wish="0" data-dep="462" data-sx="-1" data-yt="63">
     <header>
       <h2>横浜市立横浜サイエンスフロンティア高等学校附属中学校</h2>
       <ul class="facts">
@@ -2824,6 +2963,7 @@
         <li>最寄り：<b>鶴見小野 徒歩3分</b>（JR鶴見線）／花月総持寺 徒歩17分（京急）／鶴見 徒歩20分</li>
         <li>登校 <b>8:30</b>　入試（適性検査）<b>2月3日</b>　出願資格は<b>横浜市内全域</b>　募集80名（男女各40）</li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%AB%8B%E6%A8%AA%E6%B5%9C%E3%82%B5%E3%82%A4%E3%82%A8%E3%83%B3%E3%82%B9%E3%83%95%E3%83%AD%E3%83%B3%E3%83%86%E3%82%A3%E3%82%A2%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1%E9%99%84%E5%B1%9E%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E9%B6%B4%E8%A6%8B%E5%8C%BA%E5%B0%8F%E9%87%8E%E7%94%BA6%20%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%AB%8B%E6%A8%AA%E6%B5%9C%E3%82%B5%E3%82%A4%E3%82%A8%E3%83%B3%E3%82%B9%E3%83%95%E3%83%AD%E3%83%B3%E3%83%86%E3%82%A3%E3%82%A2%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1%E9%99%84%E5%B1%9E%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">公立・共学</span><span class="badge hen">サピ —<i>/</i>四谷 63<em>2/3・男女共通</em></span></p>
@@ -2873,7 +3013,7 @@
   <!-- ============ サレジオ学院中学校・高等学校 ============ -->
   <!-- ============ 中央大学附属横浜中学校・高等学校 ============ -->
   <!-- ============ 法政大学第二中・高等学校 ============ -->
-  <section class="school hosei2" id="s-hosei2" data-key="hosei2" data-dep="461" data-sx="48" data-yt="58" data-out="0">
+  <section class="school hosei2" id="s-hosei2" data-key="hosei2" data-wish="0" data-dep="461" data-sx="48" data-yt="58">
     <header>
       <h2>法政大学第二中・高等学校</h2>
       <ul class="facts">
@@ -2881,6 +3021,7 @@
         <li>最寄り：<b>武蔵小杉 徒歩10分</b>（東急東横線・目黒線・東京メトロ南北線）／武蔵小杉 徒歩12分（JR南武線）・徒歩15分（JR横須賀線）</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%B3%95%E6%94%BF%E5%A4%A7%E5%AD%A6%E7%AC%AC%E4%BA%8C%E4%B8%AD%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E5%B7%9D%E5%B4%8E%E5%B8%82%E4%B8%AD%E5%8E%9F%E5%8C%BA%E6%9C%A8%E6%9C%88%E5%A4%A7%E7%94%BA6-1%20%E6%B3%95%E6%94%BF%E5%A4%A7%E5%AD%A6%E7%AC%AC%E4%BA%8C%E4%B8%AD%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 48<i>/</i>四谷 58<em>1回・2/2午前・男子</em></span></p>
@@ -2925,7 +3066,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school chuoyoko" id="s-chuoyoko" data-key="chuoyoko" data-dep="461" data-sx="49" data-yt="59" data-out="0">
+  <section class="school chuoyoko" id="s-chuoyoko" data-key="chuoyoko" data-wish="0" data-dep="461" data-sx="49" data-yt="59">
     <header>
       <h2>中央大学附属横浜中学校・高等学校</h2>
       <ul class="facts">
@@ -2933,6 +3074,7 @@
         <li>最寄り：<b>センター北 徒歩7分</b>（横浜市営地下鉄ブルーライン・グリーンライン）</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E4%B8%AD%E5%A4%AE%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E6%A8%AA%E6%B5%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E9%83%BD%E7%AD%91%E5%8C%BA%E7%89%9B%E4%B9%85%E4%BF%9D%E6%9D%B11-14-1%20%E4%B8%AD%E5%A4%AE%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E6%A8%AA%E6%B5%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 49<i>/</i>四谷 59<em>1回・2/1・男子</em></span></p>
@@ -2975,7 +3117,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school salesio" id="s-salesio" data-key="salesio" data-dep="461" data-sx="50" data-yt="61">
+  <section class="school salesio" id="s-salesio" data-key="salesio" data-wish="0" data-dep="461" data-sx="50" data-yt="61">
     <header>
       <h2>サレジオ学院中学校・高等学校</h2>
       <ul class="facts">
@@ -2983,6 +3125,7 @@
         <li>最寄り：<b>北山田 徒歩5分</b>（横浜市営地下鉄グリーンライン）／たまプラーザ駅からバス17分</li>
         <li>登校 <b>8:35</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E3%82%B5%E3%83%AC%E3%82%B8%E3%82%AA%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E9%83%BD%E7%AD%91%E5%8C%BA%E5%8D%97%E5%B1%B1%E7%94%B03-43-1%20%E3%82%B5%E3%83%AC%E3%82%B8%E3%82%AA%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 50<i>/</i>四谷 61<em>A・2/1・男子</em></span></p>
@@ -3027,7 +3170,7 @@
   </section>
 
   <!-- ============ 聖光 ============ -->
-  <section class="school seiko" id="s-seiko" data-key="seiko" data-dep="465" data-sx="66" data-yt="71">
+  <section class="school seiko" id="s-seiko" data-key="seiko" data-wish="0" data-dep="465" data-sx="66" data-yt="71">
     <header>
       <h2>聖光学院中学校高等学校</h2>
       <ul class="facts">
@@ -3035,6 +3178,7 @@
         <li>最寄り：<b>JR根岸線 山手 徒歩10分</b>（公式案内。資料により徒歩8分表記もあり／駅からは上り坂）</li>
         <li>登校 <b>8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E8%81%96%E5%85%89%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E4%B8%AD%E5%8C%BA%E6%BB%9D%E4%B9%8B%E4%B8%8A100%20%E8%81%96%E5%85%89%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 66<i>/</i>四谷 71<em>1回・2/2・男子</em></span></p>
@@ -3076,7 +3220,7 @@
   </section>
 
   <!-- ============ 関東学院 ============ -->
-  <section class="school kanto" id="s-kanto" data-key="kanto" data-dep="465" data-sx="-1" data-yt="48">
+  <section class="school kanto" id="s-kanto" data-key="kanto" data-wish="0" data-dep="465" data-sx="-1" data-yt="48">
     <header>
       <h2>関東学院中学校高等学校</h2>
       <ul class="facts">
@@ -3085,6 +3229,7 @@
         <li>鉄道最寄り：黄金町 徒歩5〜8分／阪東橋 徒歩8〜12分（いずれも上り坂）</li>
         <li>登校 <b>8:30</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%96%A2%E6%9D%B1%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E5%8D%97%E5%8C%BA%E4%B8%89%E6%98%A5%E5%8F%B04%20%E9%96%A2%E6%9D%B1%E5%AD%A6%E9%99%A2%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 48<em>一期A・2/1・男子</em></span></p>
@@ -3166,7 +3311,7 @@
 
   <!-- ============ 浅野 ============ -->
   <!-- ============ 湘南学園中学校高等学校 ============ -->
-  <section class="school shonan" id="s-shonan" data-key="shonan" data-dep="466" data-sx="-1" data-yt="46" data-out="0">
+  <section class="school shonan" id="s-shonan" data-key="shonan" data-wish="0" data-dep="466" data-sx="-1" data-yt="46">
     <header>
       <h2>湘南学園中学校高等学校</h2>
       <ul class="facts">
@@ -3174,6 +3319,7 @@
         <li>最寄り：<b>鵠沼海岸 徒歩8分</b>（小田急江ノ島線）／鵠沼 徒歩8分（江ノ島電鉄）</li>
         <li>登校 <b>9:00</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%B9%98%E5%8D%97%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E8%97%A4%E6%B2%A2%E5%B8%82%E9%B5%A0%E6%B2%BC%E6%9D%BE%E3%81%8C%E5%B2%A14-1-32%20%E6%B9%98%E5%8D%97%E5%AD%A6%E5%9C%92%E4%B8%AD%E5%AD%A6%E6%A0%A1%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ —<i>/</i>四谷 46<em>A・2/1・男子</em></span></p>
@@ -3218,7 +3364,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school asano" id="s-asano" data-key="asano" data-dep="477" data-sx="58" data-yt="64">
+  <section class="school asano" id="s-asano" data-key="asano" data-wish="0" data-dep="477" data-sx="58" data-yt="64">
     <header>
       <h2>浅野中学校・浅野高等学校</h2>
       <ul class="facts">
@@ -3226,6 +3372,7 @@
         <li>最寄り：<b>京急新子安 徒歩8分</b>／新子安（JR京浜東北線）徒歩8分</li>
         <li>登校 <b>8:35</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%B5%85%E9%87%8E%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E6%B5%85%E9%87%8E%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E7%A5%9E%E5%A5%88%E5%B7%9D%E5%8C%BA%E5%AD%90%E5%AE%89%E5%8F%B01-3-1%20%E6%B5%85%E9%87%8E%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E6%B5%85%E9%87%8E%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 58<i>/</i>四谷 64<em>2/3・男子</em></span></p>
@@ -3277,7 +3424,7 @@
 
   <!-- ============ 慶應義塾普通部 ============ -->
   <!-- ============ 横浜国立大学附属横浜中学校 ============ -->
-  <section class="school yokokoku" id="s-yokokoku" data-key="yokokoku" data-dep="491" data-sx="41" data-yt="48" data-out="0">
+  <section class="school yokokoku" id="s-yokokoku" data-key="yokokoku" data-wish="0" data-dep="491" data-sx="41" data-yt="48">
     <header>
       <h2>横浜国立大学附属横浜中学校</h2>
       <ul class="facts">
@@ -3285,6 +3432,7 @@
         <li>最寄り：<b>弘明寺 徒歩1分</b>（横浜市営地下鉄ブルーライン）／弘明寺 徒歩8分（京急本線）</li>
         <li>登校 <b>8:40</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%A8%AA%E6%B5%9C%E5%9B%BD%E7%AB%8B%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E6%A8%AA%E6%B5%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E5%8D%97%E5%8C%BA%E5%A4%A7%E5%B2%A12-31-3%20%E6%A8%AA%E6%B5%9C%E5%9B%BD%E7%AB%8B%E5%A4%A7%E5%AD%A6%E9%99%84%E5%B1%9E%E6%A8%AA%E6%B5%9C%E4%B8%AD%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">共学</span><span class="badge hen">サピ 41<i>/</i>四谷 48<em>2/3・男子</em></span></p>
@@ -3328,7 +3476,7 @@
     <a class="totop" href="#toc">↑ もくじへもどる</a>
   </section>
 
-  <section class="school futsubu" id="s-futsubu" data-key="futsubu" data-dep="493" data-sx="58" data-yt="65">
+  <section class="school futsubu" id="s-futsubu" data-key="futsubu" data-wish="0" data-dep="493" data-sx="58" data-yt="65">
     <header>
       <h2>慶應義塾普通部</h2>
       <ul class="facts">
@@ -3336,6 +3484,7 @@
         <li>最寄り：<b>日吉 徒歩5分</b>（東急東横線・目黒線・新横浜線／市営地下鉄グリーンライン）</li>
         <li>登校 <b>9:00</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E6%85%B6%E6%87%89%E7%BE%A9%E5%A1%BE%E6%99%AE%E9%80%9A%E9%83%A8" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E7%A5%9E%E5%A5%88%E5%B7%9D%E7%9C%8C%E6%A8%AA%E6%B5%9C%E5%B8%82%E6%B8%AF%E5%8C%97%E5%8C%BA%E6%97%A5%E5%90%89%E6%9C%AC%E7%94%BA1-45-1%20%E6%85%B6%E6%87%89%E7%BE%A9%E5%A1%BE%E6%99%AE%E9%80%9A%E9%83%A8" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 58<i>/</i>四谷 65<em>1回・2/1・男子</em></span></p>
@@ -3379,7 +3528,7 @@
   </section>
 
   <!-- ============ 麻布中学校・高等学校 ============ -->
-  <section class="school azabu" id="s-azabu" data-key="azabu" data-dep="398" data-sx="59" data-yt="65" data-out="1">
+  <section class="school azabu" id="s-azabu" data-key="azabu" data-wish="0" data-dep="398" data-sx="59" data-yt="65">
     <header>
       <h2>麻布中学校・高等学校</h2>
       <ul class="facts">
@@ -3387,6 +3536,7 @@
         <li>最寄り：<b>広尾 徒歩10分</b>（メトロ日比谷線）／麻布十番 徒歩12分（都営大江戸線）／麻布十番 徒歩15分（メトロ南北線）</li>
         <li>登校 <b>夏 8:00 ／ 冬 8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%BA%BB%E5%B8%83%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%AF%E5%8C%BA%E5%85%83%E9%BA%BB%E5%B8%832-3-29%20%E9%BA%BB%E5%B8%83%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 59<i>/</i>四谷 65<em>2/1・男子</em></span></p>
@@ -3410,7 +3560,7 @@
       <div class="kv"><span>所要 1時間19分</span><span>乗換 2回</span><span>IC 697円</span><span>余裕 3分</span></div>
     </div>
 
-    <div class="box warn"><p><b>この学校は「対象外」です。</b>夏の登校 8:00 に合わせると <b>6:38 発</b>になり、開成の 6:50 より早く、39校でいちばん早い出発です。冬（登校 8:20）なら20分遅く出られますが、それでも 7:05 には届きません。ご指定の条件からは外れますが、時刻とルートは他校と同じ形で載せてあります。</p></div>
+    <div class="box warn"><p><b>39校でいちばん朝が早い学校です。</b>夏の登校 8:00 に合わせると <b>6:38 発</b>になり、開成の 6:50 より早い。冬（登校 8:20）なら20分遅く出られますが、それでも 7:05 には届きません。</p></div>
     <div class="box"><p><b>救いは697円と乗換2回に収まること</b>です。開成の715円とほぼ同じで、1時間19分のうち大半は東横線の乗車時間。広尾からは有栖川宮記念公園の脇を通る坂道を10分歩きます。</p></div>
 
     <div>
@@ -3432,7 +3582,7 @@
   </section>
 
   <!-- ============ 芝中学校・高等学校 ============ -->
-  <section class="school shiba" id="s-shiba" data-key="shiba" data-dep="407" data-sx="49" data-yt="59" data-out="1">
+  <section class="school shiba" id="s-shiba" data-key="shiba" data-wish="0" data-dep="407" data-sx="49" data-yt="59">
     <header>
       <h2>芝中学校・高等学校</h2>
       <ul class="facts">
@@ -3440,6 +3590,7 @@
         <li>最寄り：<b>神谷町 徒歩5分</b>（メトロ日比谷線）／御成門 徒歩7分（都営三田線）／赤羽橋 徒歩10分（都営大江戸線）／浜松町 徒歩18分（JR）</li>
         <li>登校 <b>8:00</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E8%8A%9D%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E6%B8%AF%E5%8C%BA%E8%8A%9D%E5%85%AC%E5%9C%923-5-37%20%E8%8A%9D%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 49<i>/</i>四谷 59<em>1回・2/1・男子</em></span></p>
@@ -3463,7 +3614,7 @@
       <div class="kv"><span>所要 1時間10分</span><span>乗換 3回</span><span>IC 916円</span><span>余裕 3分</span></div>
     </div>
 
-    <div class="box warn"><p><b>この学校は「対象外」です。</b>登校 8:00 に間に合わせると <b>6:47 発</b>になり、7:05 に届きません。<b>916円は39校でいちばん高い運賃</b>で、乗換も3回と最多。ご指定の条件からは外れますが、時刻とルートは他校と同じ形で載せてあります。</p></div>
+    <div class="box warn"><p><b>朝が早く、運賃も高い。</b>登校 8:00 に間に合わせると <b>6:47 発</b>になり、<b>916円は39校でいちばん高い運賃</b>、乗換も3回と最多です。</p></div>
     <div class="box"><p><b>駅からは徒歩5分と近い</b>のが救いです。神谷町・御成門・赤羽橋・大門と4駅が使えるので、1本止まっても振り替えは利きます。読みにくいのは都心に入るまでの部分です。</p></div>
 
     <div>
@@ -3485,7 +3636,7 @@
   </section>
 
   <!-- ============ 開成中学校・高等学校 ============ -->
-  <section class="school kaisei" id="s-kaisei" data-key="kaisei" data-dep="410" data-sx="68" data-yt="72" data-out="1">
+  <section class="school kaisei" id="s-kaisei" data-key="kaisei" data-wish="0" data-dep="410" data-sx="68" data-yt="72">
     <header>
       <h2>開成中学校・高等学校</h2>
       <ul class="facts">
@@ -3493,6 +3644,7 @@
         <li>最寄り：<b>西日暮里 徒歩2分</b>（JR山手線・京浜東北線／東京メトロ千代田線／日暮里・舎人ライナー）</li>
         <li>登校 <b>夏 8:10 ／ 冬 8:20</b></li>
       </ul>
+      <p class="ext"><a href="https://www.google.com/search?q=%E9%96%8B%E6%88%90%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">Google検索</a><a href="https://www.google.com/maps/search/?api=1&amp;query=%E6%9D%B1%E4%BA%AC%E9%83%BD%E8%8D%92%E5%B7%9D%E5%8C%BA%E8%A5%BF%E6%97%A5%E6%9A%AE%E9%87%8C4-7-7%20%E9%96%8B%E6%88%90%E4%B8%AD%E5%AD%A6%E6%A0%A1%E3%83%BB%E9%AB%98%E7%AD%89%E5%AD%A6%E6%A0%A1" target="_blank" rel="noopener noreferrer">地図でひらく</a></p>
     </header>
 
     <p class="badges"><span class="badge type">男子校</span><span class="badge hen">サピ 68<i>/</i>四谷 72<em>2/1・男子</em></span></p>
@@ -3514,7 +3666,7 @@
       <div class="kv"><span>所要 1時間18分</span><span>乗換 0回</span><span>IC 715円</span><span>余裕 2分</span></div>
     </div>
 
-    <div class="box warn"><p><b>この学校だけ 7:05 より前になるため「対象外」です。</b>夏（登校 8:10）の最遅は 7:00 発、冬（登校 8:20）でも 7:02 発で、どちらも 7:05 に届きません。ご指定の条件からは外れますが、時刻とルートは他校と同じ形で載せてあります。</p></div>
+    <div class="box warn"><p><b>夏は 7:00 発、冬でも 7:02 発です。</b>夏（登校 8:10）の最遅が 7:00 発、冬（登校 8:20）でも 7:02 発。麻布・芝とならんで朝の早い組になります。</p></div>
     <div class="box"><p><b>救いは桜木町始発で乗換0回だということ</b>です。1時間1分を座って過ごせる可能性が高く、西日暮里からは徒歩2分。長いのは乗車時間だけで、乗り換えや歩きの負担はほとんどありません。</p></div>
 
     <div>
@@ -3565,8 +3717,12 @@
       <li>横浜市立南高附属と横浜サイエンスフロンティア高附属は公立中高一貫で、入試は4科ではなく<b>適性検査</b>です。2校とも検査日は2月3日で、同じ日のため<b>市立2校の併願はできません</b>。偏差値は掲載値をそのまま載せていますが、私立の4科入試の数値とは性質が違うため、横に並べるときは注意してください（四谷大塚の59は男女共通の値）。</li>
       <li>偏差値は<b>2027年入試向けの予想（男子・合格率80%）</b>で、2026年6月時点のもの。入試回次によって大きく変わるため、ここでは第1回相当の1つだけを載せています。サピックスと四谷大塚は尺度が違うので、数値どうしを直接比べないでください。</li>
       <li>進学実績は<b>2026年春</b>の合格者数（既卒生を含む延べ人数）。芝国際は中高一貫の1期生が2026年春に卒業したばかり、青山学院横浜英和は2020年の共学化で男子の卒業生がまだ少なく、いずれも実績はこれからです。</li>
+      <li>★は押した数がそのまま入ります。<b>同じ★をもう一度押しても消えません</b>（志望度を付け替えるときに誤って消えるのを防ぐため）。未設定に戻すのは★の右の<b>「×」</b>だけです。</li>
       <li>志望度の★は、この端末のブラウザ（localStorage）にのみ保存されます。別の端末やシークレットウィンドウには引き継がれず、閲覧データを消すと失われます。</li>
+      <li><b>★が未設定の学校は「候補から外した」扱い</b>で、カード・目次・一覧表・詳細がグレー表示になります。★を1つでも付ければ色が戻ります。以前は「出発が 7:05 以降」という線で対象／対象外を分けて末尾へ送っていましたが、それはやめ、39校すべてを同じ並びに混ぜています。</li>
+      <li>★は<b>「志望度の控えと復元」</b>（並び順ボタンの下）からコピーして控えておけます。ブラウザの閲覧データを消したときは、控えた文字列を貼り付ければ戻せます。<b>「はじめの設定に戻す」</b>は、このページに書き込んである初期値（<code>DEFAULT_WISH</code>）に戻します。</li>
       <li>校風・向いている人は、公開情報をもとにまとめた要約です。実際の雰囲気は説明会・文化祭で確かめてください。</li>
+      <li>各校の見出しの下にある<b>「Google検索」「地図でひらく」</b>は、校名と住所をそのままGoogleに渡す外部リンクです（別タブで開きます）。住所は各校の公式サイトの表記に合わせています。</li>
       <li>運賃はIC・大人普通運賃。通学定期はこれとは別計算になります。横浜市営バスは中学生から大人運賃です。</li>
       <li>関東学院のバスダイヤは横浜市交通局の平日時刻表（戸部警察署前・霞ケ丘）で照合しています。路線バスは道路状況で遅れるため、鉄道より余裕を厚めにとってください。</li>
     </ul>
@@ -3617,15 +3773,27 @@
 </div>
 
 <script>
-// 志望度（★1〜5）を localStorage に保存する。同じ星をもう一度押すと未設定に戻る。
+// 志望度（★1〜5）を localStorage に保存する。★は押した数がそのまま入り、同じ★を
+// 押しても消えない（付け替えで誤って消えるため）。消すのは脇の×だけ。
+// 未設定（0）の学校は「候補から外した」扱いで、グレー表示になる。
 (function () {
   var KEY = 'tsugaku-route:wish';
+
+  // ★★ はじめて開いたときの志望度。ブラウザの閲覧データを消しても、ここに書いてある値まで戻る。
+  // 書き換えるときはパネルの「いまの★をコピー」で出た文字列を、そのまま貼り替える。
+  var DEFAULT_WISH = {};
+
+  function copyOf(o) { var r = {}; for (var k in o) if (o[k]) r[k] = o[k]; return r; }
+
   function load() {
-    try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; }
-    catch (e) { return {}; }
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') return o; }
+    } catch (e) { /* 読めなければ初期値で始める */ }
+    return copyOf(DEFAULT_WISH);   // まだ一度も触っていない端末は初期値から
   }
   function save(o) {
-    try { localStorage.setItem(KEY, JSON.stringify(o)); } catch (e) { /* 保存できなくても表示は続ける */ }
+    try { localStorage.setItem(KEY, JSON.stringify(copyOf(o))); } catch (e) { /* 保存できなくても表示は続ける */ }
   }
   var state = load();
 
@@ -3642,7 +3810,7 @@
       }
       g.setAttribute('data-value', v);
       var out = g.querySelector('.stars-out');
-      if (out) out.textContent = v ? '志望度 ' + v : '未設定';
+      if (out) out.textContent = v ? '志望度 ' + v : '未設定（対象外）';
 
       // 並べ替えで使えるよう、同じ学校のカード・表の行・目次・詳細に配る
       var kin = document.querySelectorAll('[data-key="' + g.getAttribute('data-school') + '"]');
@@ -3657,12 +3825,90 @@
     e.preventDefault();
     e.stopPropagation();
     var g = b.closest('.stars');
-    var k = g.getAttribute('data-school');
-    var n = +b.getAttribute('data-v');
-    state[k] = (state[k] === n) ? 0 : n;
+    state[g.getAttribute('data-school')] = +b.getAttribute('data-v');
     save(state);
     paint();
   });
+
+  // ★の付け替えで誤って消えないよう、消すのは×だけにしてある
+  document.addEventListener('click', function (e) {
+    var c = e.target.closest && e.target.closest('.stars .clr');
+    if (!c) return;
+    e.preventDefault();
+    e.stopPropagation();
+    state[c.closest('.stars').getAttribute('data-school')] = 0;
+    save(state);
+    paint();
+  });
+
+  // ---- 控えと復元 ----
+  var io = document.getElementById('wish-io');
+  var msg = document.getElementById('wish-msg');
+  var KEYS = {};
+  [].slice.call(document.querySelectorAll('.stars')).forEach(function (g) {
+    KEYS[g.getAttribute('data-school')] = 1;
+  });
+
+  function say(t, ng) {
+    if (!msg) return;
+    msg.textContent = t;
+    msg.classList.toggle('ng', !!ng);
+  }
+
+  function onCopy() {
+    var text = JSON.stringify(copyOf(state));
+    io.value = text;
+    io.focus();
+    io.select();
+    var done = function () { say('コピーしました。メモやメールに貼って控えておいてください。'); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () {
+        say('下の欄の文字を選んでコピーしてください。');
+      });
+    } else if (document.execCommand && document.execCommand('copy')) {
+      done();
+    } else {
+      say('下の欄の文字を選んでコピーしてください。');
+    }
+  }
+
+  function onApply() {
+    var text = (io.value || '').trim();
+    if (!text) { say('復元したい内容を下の欄に貼り付けてください。', 1); return; }
+    var o;
+    try { o = JSON.parse(text); } catch (e) { o = null; }
+    if (!o || typeof o !== 'object' || o instanceof Array) {
+      say('読み取れませんでした。{"seiko":5,...} の形で貼り付けてください。', 1);
+      return;
+    }
+    var next = {}, ok = 0, skip = [];
+    for (var k in o) {
+      var v = Math.round(+o[k]);
+      if (KEYS[k] && v >= 1 && v <= 5) { next[k] = v; ok++; }
+      else skip.push(k);
+    }
+    if (!ok) { say('使える値がありませんでした。学校キーと 1〜5 の数字が必要です。', 1); return; }
+    state = next;
+    save(state);
+    paint();
+    say(ok + '校を復元しました。' + (skip.length ? '（' + skip.length + '件は読み飛ばしました）' : ''));
+  }
+
+  function onReset() {
+    state = copyOf(DEFAULT_WISH);
+    save(state);
+    paint();
+    io.value = JSON.stringify(state);
+    var n = 0; for (var k in state) n++;
+    say(n ? 'はじめの設定（' + n + '校）に戻しました。' : 'はじめの設定は空なので、すべて未設定に戻しました。');
+  }
+
+  var cp = document.getElementById('wish-copy');
+  var ap = document.getElementById('wish-apply');
+  var rs = document.getElementById('wish-reset');
+  if (cp) cp.addEventListener('click', onCopy);
+  if (ap) ap.addEventListener('click', onApply);
+  if (rs) rs.addEventListener('click', onReset);
 
   paint();
 })();
@@ -3677,7 +3923,7 @@
     'dep-desc': { attr: 'dep', dir: -1, hint: '家を出る時刻が遅い順。朝に余裕のある学校から並びます。' },
     'sx-desc':  { attr: 'sx',  dir: -1, hint: 'サピックス偏差値の高い順。サピの数値がない10校（関東学院・横浜サイエンスフロンティア高附属など）は末尾になります。' },
     'yt-desc':  { attr: 'yt',  dir: -1, hint: '四谷大塚偏差値の高い順。' },
-    'wish-desc':{ attr: 'wish', dir: -1, hint: '志望度（★）の高い順。★が同じ学校どうしは、家を出る時刻が早い順に並びます。' }
+    'wish-desc':{ attr: 'wish', dir: -1, hint: '志望度（★）の高い順。★が未設定の学校（グレー表示）は末尾にまとまります。' }
   };
   var DEFAULT = 'dep-asc';
 
@@ -3697,9 +3943,6 @@
   function cmp(mode) {
     var m = MODES[mode];
     return function (a, b) {
-      // 対象外（7:05 より前）はどの並び順でも末尾へ
-      var ao = +a.getAttribute('data-out') || 0, bo = +b.getAttribute('data-out') || 0;
-      if (ao !== bo) return ao - bo;
       var av = +a.getAttribute('data-' + m.attr), bv = +b.getAttribute('data-' + m.attr);
       if (av !== bv) return (av - bv) * m.dir;
       var ad = +a.getAttribute('data-dep'), bd = +b.getAttribute('data-dep');

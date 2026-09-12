@@ -144,6 +144,13 @@
   }
   .chip:hover:not(:disabled) { border-color: var(--ink-mute); color: var(--ink); }
   .chip:disabled { cursor: not-allowed; }
+  /* 通学ルート比較で★が未設定＝候補から外した学校。選べない */
+  .chip.nowish {
+    background: var(--surface-2); border-color: var(--rule);
+    color: var(--ink-mute); opacity: .55; text-decoration: line-through;
+    text-decoration-thickness: 1px; text-decoration-color: var(--ink-mute);
+  }
+  .chip.nowish .q, .chip.nowish .sx { text-decoration: none; }
   .chip .q { font-size: .66rem; opacity: .75; }
   .chip .sx { font-family: var(--font-util); font-size: .66rem; opacity: .6; margin-left: .2rem; }
   .chip.pa { background: var(--a); border-color: var(--a); color: var(--a-on); font-weight: 600; }
@@ -156,6 +163,18 @@
   /* いま編集していないレーンの選択は控えめに */
   .mx[data-lane="a"] .chip.pb:not(.pa) { background: var(--b-bg); border-color: var(--b); color: var(--b); font-weight: 600; }
   .mx[data-lane="b"] .chip.pa:not(.pb) { background: var(--a-bg); border-color: var(--a); color: var(--a); font-weight: 600; }
+
+  /* ★による絞り込みの状態 */
+  .wishnote {
+    border: 1px solid var(--rule); border-left: 4px solid var(--ink-mute);
+    border-radius: 10px; background: var(--surface);
+    padding: .7rem .95rem; margin: 0 0 .9rem; font-size: .84rem; line-height: 1.8;
+    color: var(--ink-soft);
+  }
+  .wishnote.on { border-left-color: var(--a); }
+  .wishnote b { color: var(--ink); }
+  .wishnote .drop { display: block; margin-top: .35rem; color: var(--a); }
+  .wishnote a { color: inherit; }
 
   .bar { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; align-items: center; }
   .bar button {
@@ -249,6 +268,8 @@
       縦がサピックス偏差値、横が2月1日から5日までの10枠。表に出ている学校は、その枠に入試があります。
       まず下のボタンで<b>どちらのルートを組むか</b>を選び、表の学校を押してください。
       もう一度押すと外れます。同じ枠に選べるのは1校だけです。
+      <b>選べるのは<a href="../tsugaku-route/">通学ルート比較</a>で★を付けた学校だけ</b>で、
+      ★のない学校は取り消し線つきのグレーになり、押せません。
       いちばん下の<b>「—」の行</b>は、手元の一覧表にサピックス偏差値がない学校。
       かわりに四谷大塚の値を出しています。
     </p>
@@ -259,6 +280,8 @@
       <button type="button" data-lane="b" aria-pressed="false">すでに合格あり</button>
       <span class="now" id="lanenow"></span>
     </div>
+
+    <p class="wishnote" id="wishnote"></p>
 
     <div class="mx" id="mx" data-lane="a"></div>
 
@@ -452,9 +475,33 @@
     return sx >= 0 ? 'サピ' + sx : '四谷' + s.yt;
   }
 
+  // ---------- 通学ルート比較で付けた★を読む ----------
+  // localStorage は同じサイト（オリジン）で共有されるので、別ページの値をそのまま読める。
+  // ★が1つも無い端末では絞り込みをせず、全校から選べるようにしておく（何も選べない画面を出さない）。
+  var WISH_KEY = 'tsugaku-route:wish';
+  var WISH = {}, WISH_ON = false, WISH_N = 0;
+  function readWish() {
+    var o = {};
+    try {
+      var raw = JSON.parse(localStorage.getItem(WISH_KEY) || '{}') || {};
+      for (var k in raw) if (BY_KEY[k] && +raw[k] >= 1) o[k] = +raw[k];
+    } catch (e) { o = {}; }
+    WISH = o;
+    WISH_N = Object.keys(o).length;
+    WISH_ON = WISH_N > 0;
+  }
+  function allowed(k) { return !WISH_ON || !!WISH[k]; }
+  readWish();
+
   var KEY = 'heigan-plan:v1';
+  var dropped = [];          // 直近の prune で落とした学校
+  var droppedSeen = [];      // このページを開いてから落としたぶん（案内に出しつづける）
+  function mergeDropped() {
+    dropped.forEach(function (k) { if (droppedSeen.indexOf(k) < 0) droppedSeen.push(k); });
+  }
   var loaded = load();
   var state = prune(loaded);
+  mergeDropped();
   // 落とした値があれば、そのぶんを黙って書き戻しておく
   if (JSON.stringify(state) !== JSON.stringify(loaded)) persist();
   var lane = 'a';   // いま編集しているレーン
@@ -465,16 +512,22 @@
       return (o && typeof o === 'object') ? o : {};
     } catch (e) { return {}; }
   }
-  // 保存済みの値が、その枠に入試のない学校を指していたら落とす
-  // （日程データを入れる前に組んだプランや、あとで日程を直した場合）
+  // 保存済みの値が、その枠に入試のない学校／★が外れた学校を指していたら落とす
+  // （日程データを入れる前に組んだプランや、あとで日程や★を直した場合）
   function prune(o) {
     var out = {};
+    dropped = [];
     SLOTS.forEach(function (sl, i) {
       var v = o[sl.id]; if (!v) return;
       var keep = {};
       ['a','b'].forEach(function (ln) {
         if (ln === 'b' && i === 0) return;      // 初日の午前に「合格あり」はない
-        if (v[ln] && sits(v[ln], sl.id)) keep[ln] = v[ln];
+        if (!v[ln] || !sits(v[ln], sl.id)) return;
+        if (!allowed(v[ln])) {                  // ★が無いので候補から外れている
+          if (dropped.indexOf(v[ln]) < 0) dropped.push(v[ln]);
+          return;
+        }
+        keep[ln] = v[ln];
       });
       if (keep.a || keep.b) out[sl.id] = keep;
     });
@@ -506,7 +559,7 @@
     var h = '<table><thead><tr><th class="hs">サピ</th>';
     SLOTS.forEach(function (sl, i) {
       h += '<th class="' + (i % 2 ? 'pm' : 'am') + '">' + sl.day + ' ' + sl.half
-         + '<i>' + IN_SLOT[sl.id].length + '校</i></th>';
+         + '<i data-slot="' + sl.id + '">' + IN_SLOT[sl.id].length + '校</i></th>';
     });
     h += '</tr></thead><tbody>';
     ROWS.forEach(function (hs) {
@@ -538,16 +591,66 @@
     mx.setAttribute('data-lane', lane);
     [].forEach.call(mx.querySelectorAll('.chip'), function (b) {
       var slot = b.getAttribute('data-slot'), k = b.getAttribute('data-k');
-      var open = laneOpen(slot, lane);
+      var open = laneOpen(slot, lane), ok = allowed(k);
       b.classList.toggle('pa', get(slot,'a') === k);
       b.classList.toggle('pb', get(slot,'b') === k);
-      b.disabled = !open;
-      b.setAttribute('aria-pressed', String(open && get(slot, lane) === k));
+      b.classList.toggle('nowish', !ok);
+      b.disabled = !open || !ok;
+      if (!ok) b.title = BY_KEY[k].n + '：通学ルート比較で★が付いていないため選べません';
+      b.setAttribute('aria-pressed', String(open && ok && get(slot, lane) === k));
+    });
+    // ヘッダの「N校」は、いま選べる数で出す
+    [].forEach.call(mx.querySelectorAll('th i[data-slot]'), function (el) {
+      var list = IN_SLOT[el.getAttribute('data-slot')];
+      var n = list.filter(function (x) { return allowed(x.k); }).length;
+      el.textContent = (WISH_ON && n !== list.length) ? n + '/' + list.length + '校' : list.length + '校';
     });
     [].forEach.call(mx.querySelectorAll('td[data-slot]'), function (td) {
       td.classList.toggle('off', !laneOpen(td.getAttribute('data-slot'), lane));
     });
   }
+
+  function renderWishNote() {
+    var el = document.getElementById('wishnote');
+    var total = SCHOOLS.length;
+    if (!WISH_ON) {
+      el.className = 'wishnote';
+      el.innerHTML = '<b>いまは' + total + '校すべてから選べます。</b>'
+        + '<a href="../tsugaku-route/">通学ルート比較</a>で★を付けると、'
+        + 'ここでは★を付けた学校だけが選べるようになります（★のない学校＝候補から外した学校）。';
+      return;
+    }
+    el.className = 'wishnote on';
+    var html = '<b>★を付けた ' + WISH_N + '校から選べます。</b>'
+      + '残る ' + (total - WISH_N) + '校は候補から外した扱いで、取り消し線つきのグレーになり押せません。'
+      + '増やすときは<a href="../tsugaku-route/">通学ルート比較</a>で★を付けてください。';
+    if (droppedSeen.length) {
+      html += '<span class="drop">★が外れていたため、'
+        + droppedSeen.map(function (k) { return BY_KEY[k] ? BY_KEY[k].n : k; }).join('・')
+        + ' を日程から外しました。</span>';
+    }
+    el.innerHTML = html;
+  }
+
+  // 別タブで★を変えたときに追随する
+  function refreshWish() {
+    var before = JSON.stringify(WISH);
+    readWish();
+    if (JSON.stringify(WISH) === before) return;
+    var next = prune(state);
+    mergeDropped();
+    var changed = JSON.stringify(next) !== JSON.stringify(state);
+    state = next;
+    if (changed) persist();
+    renderWishNote();
+    renderAll();
+  }
+  window.addEventListener('storage', function (e) {
+    if (!e.key || e.key === WISH_KEY) refreshWish();
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) refreshWish();
+  });
 
   function renderLanePick() {
     var n = 0;
@@ -631,6 +734,7 @@
     var b = e.target.closest ? e.target.closest('.chip') : null;
     if (!b || b.disabled) return;
     var slot = b.getAttribute('data-slot'), k = b.getAttribute('data-k');
+    if (!allowed(k)) return;          // ★が無い学校は、表示が古くても入れない
     set(slot, lane, get(slot, lane) === k ? '' : k);   // 同じものを押したら外す
     save();
     renderAll();
@@ -661,6 +765,7 @@
   });
 
   renderMatrix();   // 表そのものは最初の一度だけ組み立てる
+  renderWishNote();
   renderAll();
 })();
 </script>
