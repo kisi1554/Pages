@@ -349,6 +349,31 @@
   }
 
 
+  /* ★なしの学校をまとめて隠すボタン */
+  .hidebar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .8rem; margin-top: 1rem;
+  }
+  .hidebar button {
+    font: inherit; font-size: .85rem; cursor: pointer;
+    display: inline-flex; align-items: baseline; gap: .45rem;
+    border: 1px solid var(--rule); border-radius: 999px;
+    background: var(--surface); color: var(--ink); padding: .42rem 1.1rem;
+  }
+  .hidebar button:hover:not(:disabled) { border-color: var(--ink-mute); }
+  .hidebar button[aria-pressed="true"] {
+    background: var(--ink); color: var(--bg); border-color: var(--ink);
+  }
+  .hidebar button:disabled { opacity: .55; cursor: not-allowed; }
+  .hidebar button .n { font-family: var(--font-util); font-size: .78rem; opacity: .8; }
+  .hidebar .hint { font-size: .8rem; color: var(--ink-soft); }
+
+  /* 隠すのはカード・一覧表・くらべる表・目次・各校の詳細と、偏差値表のチップ */
+  .page.hideoff .vcard[data-wish="0"],
+  .page.hideoff .toc li[data-wish="0"],
+  .page.hideoff tr[data-wish="0"],
+  .page.hideoff .school[data-wish="0"],
+  .page.hideoff .planapp .chip.nowish { display: none !important; }
+
   /* 並び順の切り替え */
   .page > header      { order: 0; }
   .page > .planapp    { order: 1; }   /* 偏差値表を最上部に */
@@ -769,7 +794,7 @@
     <h1>志望校くらべと併願プラン<br>横浜市内の自宅から</h1>
     <p class="lede">
       各校の登校時刻に間に合う「いちばん遅い便」から逆算した、家を出る時刻の比較です。カードの★で志望度を記録でき、この端末のブラウザに保存されます。
-      <b>★が未設定の学校はグレー表示</b>になります（★を付けた学校＝検討中、という見え方）。ダイヤは平日（2026-09-07 月曜）基準。
+      <b>★が未設定の学校はグレー表示</b>になります（★を付けた学校＝検討中、という見え方）。<b>下のボタンで、★なしの学校をまとめて隠せます。</b>ダイヤは平日（2026-09-07 月曜）基準。
     </p>
     <nav class="jump" aria-label="ページ内の行き先">
       <a href="#plan">併願プランを組む</a>
@@ -783,6 +808,10 @@
       <a href="#toc">学校ごとの詳しいルート</a>
       <a href="#assume">前提とルール</a>
     </nav>
+    <div class="hidebar">
+      <button type="button" id="hideoff" aria-pressed="false">★なしの学校を隠す</button>
+      <span class="hint" id="hideoffnote"></span>
+    </div>
   </header>
 
   <!-- ============ 結論 ============ -->
@@ -5324,6 +5353,56 @@
   });
 
   apply(current);
+})();
+</script>
+
+<script>
+/* ============================================================
+   ★なしの学校をまとめて隠す（カード・一覧表・くらべる表・目次・各校の詳細・偏差値表のチップ）
+   ============================================================ */
+(function () {
+  'use strict';
+  var KEY = 'tsugaku-route:hideoff';
+  var page = document.querySelector('.page');
+  var btn = document.getElementById('hideoff');
+  var note = document.getElementById('hideoffnote');
+  if (!page || !btn || !note) return;
+
+  var on = false;
+  try { on = localStorage.getItem(KEY) === '1'; } catch (e) {}
+
+  function apply() {
+    var cards = document.querySelectorAll('.verdict .vcard');
+    var off = document.querySelectorAll('.verdict .vcard[data-wish="0"]').length;
+    var all = cards.length;
+    var can = off > 0 && off < all;   // ぜんぶ隠すことはしない
+    if (!can) on = false;
+
+    page.classList.toggle('hideoff', on);
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.disabled = !can;
+    btn.innerHTML = (on ? '隠した学校を出す' : '★なしの学校を隠す')
+      + '<span class="n">' + off + '校</span>';
+
+    if (off === 0) {
+      note.textContent = 'ぜんぶの学校に★が付いています。隠すものはありません。';
+    } else if (!can) {
+      note.textContent = 'すべての学校が★なしなので、隠せません。';
+    } else if (on) {
+      note.textContent = '★を付けた ' + (all - off) + '校だけを出しています（' + off + '校を隠しています）。';
+    } else {
+      note.textContent = '★を付けたのは ' + (all - off) + '校。残り ' + off + '校をまとめて隠せます。';
+    }
+  }
+
+  btn.addEventListener('click', function () {
+    on = !on;
+    try { localStorage.setItem(KEY, on ? '1' : '0'); } catch (e) {}
+    apply();
+  });
+
+  document.addEventListener('wish-change', apply);
+  apply();
 })();
 </script>
 
