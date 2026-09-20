@@ -1253,8 +1253,8 @@ const RAW_LINES = [
     name: '鶴見線',
     yomi: 'つるみせん',
     company: 'JR東日本',
-    color: '#6b8e23',
-    ink: '#3f5414',
+    color: '#f0b90c',
+    ink: '#7a5c00',
     symbol: 'JI',
     note: '鶴見から扇町まで こうじょうの町をはしる',
     stations: [
@@ -1275,8 +1275,8 @@ const RAW_LINES = [
     name: '鶴見線 海芝浦支線',
     yomi: 'つるみせん うみしばうらしせん',
     company: 'JR東日本',
-    color: '#6b8e23',
-    ink: '#3f5414',
+    color: '#f0b90c',
+    ink: '#7a5c00',
     symbol: 'ji',
     note: '浅野から海芝浦まで うみが見える えだ分かれ',
     stations: [
@@ -1290,8 +1290,8 @@ const RAW_LINES = [
     name: '鶴見線 大川支線',
     yomi: 'つるみせん おおかわしせん',
     company: 'JR東日本',
-    color: '#6b8e23',
-    ink: '#3f5414',
+    color: '#f0b90c',
+    ink: '#7a5c00',
     symbol: 'ji',
     note: '武蔵白石から大川までの みじかい えだ分かれ',
     stations: [
