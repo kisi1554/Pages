@@ -915,6 +915,36 @@ function askMapStart(line, index) {
   ask.appendChild(document.createTextNode('から あそぶ?'));
   ask.appendChild(yomiEl);
 
+  // この駅で ほかの路線(支線など)に のりかえられるなら、地図からも えらべるようにする
+  const transferWrap = $('mapstart-transfers');
+  transferWrap.innerHTML = '';
+  const transfers = transfersFor(station.name, line.id);
+  if (transfers.length > 0) {
+    const label = document.createElement('div');
+    label.className = 'mapstart-transfer-label';
+    label.textContent = 'のりかえて あそぶ';
+    transferWrap.appendChild(label);
+
+    const chips = document.createElement('div');
+    chips.className = 'transfer-chips';
+    transfers.forEach((t) => {
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.style.setProperty('--c', t.line.color);
+      chip.textContent = t.line.name;
+      chip.addEventListener('click', () => {
+        SoundEngine.seStamp();
+        state.mapStart = null;
+        $('mapstart-overlay').classList.remove('is-active');
+        state.save.progress[t.line.id] = t.index;
+        persist();
+        startLine(t.line);
+      });
+      chips.appendChild(chip);
+    });
+    transferWrap.appendChild(chips);
+  }
+
   $('mapstart-overlay').classList.add('is-active');
 }
 
