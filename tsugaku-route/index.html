@@ -683,10 +683,10 @@
     border-bottom: 1px solid var(--rule); color: var(--ink-soft);
   }
   .planapp .fw th.lane {
-    position: sticky; left: 0; z-index: 2; background: var(--surface-2);
+    position: sticky; left: 0; z-index: 6; background: var(--surface-2);
     width: 6.4rem; min-width: 6.4rem; font-size: .76rem; font-weight: 700; white-space: nowrap;
   }
-  .planapp .fw thead th.lane { z-index: 3; }
+  .planapp .fw thead th.lane { z-index: 7; }
   .planapp .fw tr.l-ch th.lane { color: var(--ch); }
   .planapp .fw tr.l-ma th.lane { color: var(--ma); }
   .planapp .fw tr.l-sa th.lane { color: var(--sa); }
@@ -714,6 +714,39 @@
   .planapp .cell .nm { font-size: .84rem; font-weight: 600; line-height: 1.4; }
   .planapp .cell .psub { font-size: .7rem; color: var(--ink-mute); font-family: var(--font-util); }
   .planapp .fw .empty { color: var(--ink-mute); font-size: .9rem; padding: 1.3rem 1rem; }
+
+  /* 流れの矢印。.fwin は横スクロールする中身ぜんぶを包む入れ物で、
+     そのうえに SVG を重ねて線を引く（線じたいは押せない）。
+     区分の列（th.lane）は左に貼りついたままなので、矢印より上に重ねてある。 */
+  .planapp .fw .fwin { position: relative; width: max-content; min-width: 100%; }
+  .planapp .fw .arrows {
+    position: absolute; left: 0; top: 0; z-index: 2; pointer-events: none; overflow: visible;
+  }
+  .planapp .fw .arrows path { opacity: .92; }
+  .planapp .fw .arrows path.ar { fill: none; stroke-width: 2.4; stroke-linecap: round; }
+  .planapp .fw .arrows path.arh { stroke: none; }
+  .planapp .fw .arrows .a-ch { stroke: var(--ch); fill: var(--ch); }
+  .planapp .fw .arrows .a-ma { stroke: var(--ma); fill: var(--ma); }
+  .planapp .fw .arrows .a-sa { stroke: var(--sa); fill: var(--sa); }
+  .planapp .fw .arrows .a-no { stroke: var(--ink-mute); fill: var(--ink-mute); }
+
+  /* 学校の入っている枠は押せる。押すと矢印の起点になる */
+  .planapp button.cell {
+    font: inherit; color: inherit; text-align: left; width: 100%; cursor: pointer;
+  }
+  .planapp button.cell:hover { border-color: var(--ink-mute); }
+  .planapp button.cell:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+  .planapp .cell.from { outline: 2px dashed var(--ink); outline-offset: 2px; }
+  .planapp .cell.cand { outline: 2px solid var(--ink-mute); outline-offset: 2px; }
+  .planapp .cell.linked { outline-style: double; outline-width: 4px; }
+  .planapp .fw.picking button.cell:not(.from):not(.cand) { opacity: .6; }
+  .planapp .cell .arrn {
+    position: absolute; right: .3rem; top: .25rem;
+    font-size: .64rem; font-family: var(--font-util); color: var(--ink-mute);
+  }
+  .planapp .cell.hasarr .nm { padding-right: 1.6rem; }   /* 「→n」に文字がかぶらないように */
+  .planapp .arrnote { font-size: .8rem; color: var(--ink-mute); margin: .6rem 0 0; }
+  .planapp .arrnote b { color: var(--ink); }
   .planapp .hopnote { font-size: .8rem; color: var(--ink-mute); margin: .7rem 0 0; }
   .planapp .hopnote b { color: var(--sa); }
 
@@ -2541,7 +2574,22 @@
       <b>上段がチャレンジ校、中段が実力相応校、下段が安全校</b>です。
       縦に見れば<b>その日の候補が3段そろっているか</b>、横に見れば<b>どの区分がどの日に寄っているか</b>が分かります。
     </p>
+    <p class="pnote">
+      <b>学校を押して、つぎに受けるつもりの学校（あとの日程）を押すと、矢印でつながります。</b>
+      「2/1午前 チャレンジ校 → 2/1午後 安全校 → 2/2午前 実力相応校」のように、
+      <b>実際に受けていく順番</b>を線にして見るためのものです。
+      つないだ先はそのまま次の起点になるので、続けて押していけば1本の流れが引けます。
+      1つの学校からは<b>2本まで</b>出せます（<b>受かったとき</b>と<b>だめだったとき</b>で
+      次に受ける学校が分かれる場合）。
+      同じ相手をもう一度押すと矢印は消え、起点にした学校をもう一度押すと起点を取り消します。
+      矢印の色は<b>起点の区分の色</b>です。引いた矢印はこの端末に保存されます。
+    </p>
     <div class="fw" id="flow"></div>
+    <p class="arrnote" id="arrnote"></p>
+    <div class="bar">
+      <button type="button" id="arrclear">矢印をぜんぶ消す</button>
+      <span class="saved" id="arrmsg"></span>
+    </div>
     <p class="hopnote"><b>安全校をどこに置くか</b>で、あとの日程の重さが変わります。
       早い日に1つ置ければ、そのあとは思い切って組めます。
       同じ枠に3段そろえておけば、<b>前の日の結果を見てから、その日の朝に決める</b>こともできます。</p>
@@ -7811,6 +7859,73 @@
   }
   function catName(c) { return CAT_BY[c] ? CAT_BY[c].n : '区分なし'; }
 
+  // ---------- 流れの矢印（受ける順番を線でつなぐ）----------
+  // 1本の矢印は { f:'d1am:ch', t:'d1pm:sa' }。枠のid と 段（区分）で場所を指す。
+  var ARR_KEY = 'heigan-flow:v1';
+  var MAX_OUT = 2;          // 1つの学校から出せる矢印の本数（受かったとき／だめだったとき）
+  var pickFrom = '';        // いま起点に選んでいるセル。空なら選んでいない
+
+  function cellId(slotId, ln) { return slotId + ':' + ln; }
+  function partsOf(id) { var i = String(id).indexOf(':'); return [String(id).slice(0, i), String(id).slice(i + 1)]; }
+  function cellKey(id) { var p = partsOf(id); return get(p[0], p[1]); }
+  function cellName(id) {
+    var p = partsOf(id), k = get(p[0], p[1]);
+    if (!k) return '';
+    var sl = SLOTS[SLOT_IX[p[0]]];
+    return sl.day + ' ' + sl.half + '　' + fullName(k, p[0]);
+  }
+  // f より t があとの枠か（同じ枠のなかでは矢印を引かない）
+  function laterThan(f, t) {
+    var a = SLOT_IX[partsOf(f)[0]], b = SLOT_IX[partsOf(t)[0]];
+    return typeof a === 'number' && typeof b === 'number' && b > a;
+  }
+  function outCount(list, id) {
+    var n = 0;
+    list.forEach(function (x) { if (x.f === id) n++; });
+    return n;
+  }
+  function hasArrow(f, t) {
+    for (var i = 0; i < arrows.length; i++) if (arrows[i].f === f && arrows[i].t === t) return true;
+    return false;
+  }
+  function loadArrows() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(ARR_KEY) || '[]');
+      if (!raw || Object.prototype.toString.call(raw) !== '[object Array]') return [];
+      return raw.filter(function (x) {
+        return x && typeof x.f === 'string' && typeof x.t === 'string';
+      }).map(function (x) { return { f: x.f, t: x.t }; });
+    } catch (e) { return []; }
+  }
+  // 学校の入っていない枠をつないだ矢印・向きが逆のもの・重複・本数超過は落とす
+  function pruneArrows(list) {
+    var out = [], seen = {};
+    list.forEach(function (a) {
+      var id = a.f + '>' + a.t;
+      if (seen[id]) return;
+      if (!cellKey(a.f) || !cellKey(a.t)) return;
+      if (!laterThan(a.f, a.t)) return;
+      if (outCount(out, a.f) >= MAX_OUT) return;
+      seen[id] = 1;
+      out.push(a);
+    });
+    return out;
+  }
+  function persistArrows() {
+    try { localStorage.setItem(ARR_KEY, JSON.stringify(arrows)); return true; }
+    catch (e) { return false; }
+  }
+  function saveArrows() { flashArr(persistArrows() ? '保存しました' : '保存できませんでした'); }
+  var arrTimer = null;
+  function flashArr(msg) {
+    var el = document.getElementById('arrmsg');
+    if (!el) return;
+    el.textContent = msg;
+    clearTimeout(arrTimer);
+    arrTimer = setTimeout(function () { el.textContent = ''; }, 1600);
+  }
+  var arrows = pruneArrows(loadArrows());
+
   // ---------- 入力：日程別 偏差値マトリクス ----------
   function renderMatrix() {
     var h = '<table><thead><tr><th class="hs">四谷</th>';
@@ -7941,11 +8056,14 @@
     var k = get(slotId, ln);
     if (!k) return '<div class="cell none"><span class="nm">—</span></div>';
     var q = sits(k, slotId), mt = minsText(k);
-    return '<div class="cell c-' + ln + '">'
-         + '<span class="nm">' + esc(fullName(k, slotId)) + '</span>'
+    var id = cellId(slotId, ln), nm = fullName(k, slotId), n = outCount(arrows, id);
+    return '<button type="button" class="cell c-' + ln + (n ? ' hasarr' : '') + '" data-cell="' + id + '"'
+         + ' aria-pressed="' + (pickFrom === id ? 'true' : 'false') + '">'
+         + '<span class="nm">' + esc(nm) + '</span>'
          + '<span class="psub">' + (q[0] >= 0 ? '四谷' + q[0] : '四谷—')
          + (mt ? '・通学' + mt : '') + '</span>'
-         + '</div>';
+         + (n ? '<span class="arrn">→' + n + '</span>' : '')
+         + '</button>';
   }
 
   // 出す段：3区分は必ず出し、「区分なし」は残っているときだけ出す
@@ -7959,11 +8077,15 @@
   function renderFlow() {
     var f = document.getElementById('flow');
     var used = SLOTS.filter(function (sl) { return filled(sl.id); });
+    var sx = f.scrollLeft;          // 押すたびに組み直すので、横の位置は戻しておく
     if (!used.length) {
+      pickFrom = '';
+      f.classList.remove('picking');
       f.innerHTML = '<p class="empty">上の日程表で学校を選ぶと、ここに流れが出ます。</p>';
+      renderArrNote();
       return;
     }
-    var h = '<table><thead><tr><th class="lane"></th>';
+    var h = '<div class="fwin"><table><thead><tr><th class="lane"></th>';
     used.forEach(function (sl) { h += '<th>' + sl.day + ' ' + sl.half + '</th>'; });
     h += '</tr></thead><tbody>';
     laneRows().forEach(function (r) {
@@ -7971,8 +8093,79 @@
       used.forEach(function (sl) { h += '<td>' + cell(sl.id, r.id) + '</td>'; });
       h += '</tr>';
     });
-    h += '</tbody></table>';
+    h += '</tbody></table></div>';
     f.innerHTML = h;
+    f.scrollLeft = sx;
+    f.classList.toggle('picking', !!pickFrom);
+    markCells();
+    drawArrows();
+    renderArrNote();
+  }
+
+  // 起点・つなぎ先の候補・すでにつないである相手に印を付ける
+  function markCells() {
+    var f = document.getElementById('flow');
+    [].forEach.call(f.querySelectorAll('.cell[data-cell]'), function (el) {
+      var id = el.getAttribute('data-cell');
+      var isFrom = !!pickFrom && id === pickFrom;
+      var cand = !!pickFrom && !isFrom && laterThan(pickFrom, id);
+      el.classList.toggle('from', isFrom);
+      el.classList.toggle('cand', cand);
+      el.classList.toggle('linked', cand && hasArrow(pickFrom, id));
+    });
+  }
+
+  function rnd(v) { return Math.round(v * 10) / 10; }
+
+  // セルの位置をはかって、右はじ → 次の学校の左はじ へ線を引く。
+  // 表を組み直したあとに呼ぶこと（位置が決まっていないと測れない）
+  function drawArrows() {
+    var f = document.getElementById('flow');
+    var box = f.querySelector('.fwin');
+    if (!box) return;
+    var old = box.querySelector('svg.arrows');
+    if (old) old.parentNode.removeChild(old);
+    if (!arrows.length) return;
+    var base = box.getBoundingClientRect();
+    var w = box.offsetWidth, hg = box.offsetHeight, seen = {}, d = [];
+    arrows.forEach(function (a) {
+      var sEl = box.querySelector('.cell[data-cell="' + a.f + '"]');
+      var tEl = box.querySelector('.cell[data-cell="' + a.t + '"]');
+      if (!sEl || !tEl) return;
+      var nth = (seen[a.f] = (seen[a.f] || 0) + 1);
+      // 同じ学校から2本出るときは、出口を上下にずらして重ならないようにする
+      var off = outCount(arrows, a.f) > 1 ? (nth === 1 ? -7 : 7) : 0;
+      var sr = sEl.getBoundingClientRect(), tr = tEl.getBoundingClientRect();
+      var x1 = sr.right - base.left, y1 = sr.top + sr.height / 2 - base.top + off;
+      var x2 = tr.left - base.left - 9, y2 = tr.top + tr.height / 2 - base.top;
+      // ふくらみは横の間の半分まで。となりの列（間が2cmもない）でも行きすぎない。
+      // 2本出るときは片方だけ少しふくらませて、線が重ならないようにする
+      var dx = Math.max(4, Math.min((x2 - x1) * (off > 0 ? 0.6 : 0.38), 64));
+      d.push('<path class="ar a-' + partsOf(a.f)[1] + '" d="M' + rnd(x1) + ' ' + rnd(y1)
+           + 'C' + rnd(x1 + dx) + ' ' + rnd(y1) + ',' + rnd(x2 - dx) + ' ' + rnd(y2)
+           + ',' + rnd(x2) + ' ' + rnd(y2) + '"/>');
+      d.push('<path class="arh a-' + partsOf(a.f)[1] + '" d="M' + rnd(x2 + 9) + ' ' + rnd(y2)
+           + 'L' + rnd(x2 - 1) + ' ' + rnd(y2 - 5) + 'L' + rnd(x2 - 1) + ' ' + rnd(y2 + 5) + 'Z"/>');
+    });
+    if (!d.length) return;
+    box.insertAdjacentHTML('beforeend',
+      '<svg class="arrows" aria-hidden="true" width="' + w + '" height="' + hg + '"'
+      + ' viewBox="0 0 ' + w + ' ' + hg + '">' + d.join('') + '</svg>');
+  }
+
+  function renderArrNote() {
+    var el = document.getElementById('arrnote');
+    if (!el) return;
+    if (pickFrom && cellKey(pickFrom)) {
+      el.innerHTML = '<b>' + esc(cellName(pickFrom)) + ' を起点にしました。</b>'
+        + 'あとの日程の学校を押すとつながります。'
+        + '同じ学校をもう一度押すと、起点を取り消します。';
+    } else if (arrows.length) {
+      el.textContent = '矢印は ' + arrows.length
+        + ' 本。学校を押すと、そこから次の矢印を引けます。';
+    } else {
+      el.textContent = '学校を押して、つぎに受ける学校を押すと矢印がつながります。';
+    }
   }
 
   // ---------- まとめ ----------
@@ -8079,7 +8272,14 @@
     el.innerHTML = '<p><b>気づいたこと。</b></p><ul><li>' + li.join('</li><li>') + '</li></ul>';
   }
 
-  function renderAll() { paintChips(); renderCatPick(); renderFlow(); renderStats(); }
+  function renderAll() {
+    // 日程を動かすと、行き先を失った矢印が出るのでそのつど落とす
+    var was = JSON.stringify(arrows);
+    arrows = pruneArrows(arrows);
+    if (JSON.stringify(arrows) !== was) persistArrows();
+    if (pickFrom && !cellKey(pickFrom)) pickFrom = '';
+    paintChips(); renderCatPick(); renderFlow(); renderStats();
+  }
 
   // ---------- 操作 ----------
   document.getElementById('mx').addEventListener('click', function (e) {
@@ -8107,6 +8307,49 @@
     state = {};
     save();
     renderAll();
+  });
+
+  // 流れ：セルを押して矢印をつなぐ
+  document.getElementById('flow').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('.cell[data-cell]') : null;
+    if (!b) return;
+    var id = b.getAttribute('data-cell');
+    if (!pickFrom || id === pickFrom || !laterThan(pickFrom, id)) {
+      // 起点を選ぶ／取り消す／別の学校へ移す
+      pickFrom = (pickFrom === id) ? '' : id;
+      renderFlow();
+      return;
+    }
+    if (hasArrow(pickFrom, id)) {
+      arrows = arrows.filter(function (a) { return !(a.f === pickFrom && a.t === id); });
+      flashArr('矢印を消しました');
+      persistArrows();
+    } else if (outCount(arrows, pickFrom) >= MAX_OUT) {
+      flashArr('1つの学校から出せる矢印は ' + MAX_OUT + ' 本までです');
+      return;
+    } else {
+      arrows.push({ f: pickFrom, t: id });
+      saveArrows();
+    }
+    pickFrom = id;          // つないだ先を次の起点にして、続けて引けるようにする
+    renderFlow();
+  });
+
+  document.getElementById('arrclear').addEventListener('click', function () {
+    if (arrows.length && !confirm('引いた矢印をぜんぶ消します。よろしいですか。')) return;
+    var had = arrows.length;
+    arrows = [];
+    pickFrom = '';
+    persistArrows();
+    if (had) flashArr('消しました');
+    renderFlow();
+  });
+
+  // 幅が変わると位置がずれるので引き直す
+  var arrRedraw = null;
+  window.addEventListener('resize', function () {
+    clearTimeout(arrRedraw);
+    arrRedraw = setTimeout(drawArrows, 120);
   });
 
   renderMatrix();   // 表そのものは最初の一度だけ組み立てる
