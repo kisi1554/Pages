@@ -173,6 +173,22 @@
   .acc span { background: #fff6e0; border: 2px solid #e2b04a; border-radius: 12px; padding: 4px 10px; font-size: 15px; }
   .rank { font-size: 22px; font-weight: bold; color: #d35400; margin: 8px 0; }
   .bigemoji { font-size: 56px; line-height: 1; }
+  .q { font-size: clamp(40px, 12vw, 60px); font-weight: bold; margin: 6px 0; letter-spacing: 2px; }
+  .dots { font-size: 26px; letter-spacing: 3px; color: #b0527a; min-height: 34px; }
+  .choices { display: flex; gap: 10px; justify-content: center; margin: 12px 0 4px; }
+  .choices button, .yesno button {
+    flex: 1; min-height: 80px; max-width: 140px;
+    font-size: 40px; font-family: inherit; font-weight: bold; color: var(--ink);
+    background: #fff3d6; border: 4px solid #8a5a18; border-radius: 20px;
+    box-shadow: 0 5px 0 #8a5a18; cursor: pointer;
+  }
+  .choices button:active, .yesno button:active { transform: translateY(4px); box-shadow: 0 1px 0 #8a5a18; }
+  .choices button.ok { background: #c8f7c5; }
+  .choices button.ng { background: #ffd6d6; }
+  .feedback { font-size: 22px; font-weight: bold; min-height: 32px; margin: 6px 0 0; }
+  .yesno { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
+  .yesno button { max-width: 220px; font-size: 24px; }
+  .yesno button.eat { background: #ffe082; }
 
   @media (max-height: 520px) {
     header { padding-top: 2px; }
@@ -226,9 +242,35 @@
         <li>🍠 おいもを ひろうと <b>「ぷっ!」</b>で びゅーんと とべる</li>
         <li>🐛 にょこすけを さわると くすぐったがるよ</li>
         <li>🚦 しんごうは <b>あお</b>で わたろうね</li>
+        <li>➕ 「ぷっ!」の まえの <b>たしざん</b>に せいかいすると おならが <b>2ばい</b> はやい</li>
+        <li>🍜 ラーメンやさんで ラーメンが たべられるよ</li>
       </ul>
       <p class="best" id="bestLine"></p>
       <button class="startbtn" id="startBtn" type="button">しゅっぱつ！</button>
+    </div>
+  </div>
+
+  <!-- おならの まえの たしざん -->
+  <div class="overlay" id="quizOv" hidden>
+    <div class="panel">
+      <p>💨 おならの まえに もんだい！<br>せいかいすると <b>2ばい</b> はやいよ</p>
+      <div class="q" id="quizQ">3 ＋ 1 ＝ ？</div>
+      <div class="dots" id="quizDots"></div>
+      <div class="choices" id="quizChoices"></div>
+      <p class="feedback" id="quizFb"></p>
+    </div>
+  </div>
+
+  <!-- ラーメンやさん -->
+  <div class="overlay" id="ramenOv" hidden>
+    <div class="panel">
+      <div class="bigemoji">🍜</div>
+      <h2>ラーメンやさんだ！</h2>
+      <p>いい におい〜。ラーメン たべていく？<br>たべると おならが まんたんに なるよ</p>
+      <div class="yesno">
+        <button type="button" class="eat" id="ramenYes">たべる！</button>
+        <button type="button" id="ramenNo">がまんする</button>
+      </div>
     </div>
   </div>
 
@@ -239,6 +281,7 @@
       <h2><ruby>新横浜<rt>しんよこはま</rt></ruby>に ついた！</h2>
       <p class="result">かかった じかん <b id="rTime">0</b> びょう</p>
       <p class="result">おなら <b id="rFart">0</b> かい ／ わらい <b id="rLaugh">0</b> かい</p>
+      <p class="result" id="rQuiz"></p>
       <p id="rNew" class="rank" hidden>✨ じこベスト こうしん！ ✨</p>
       <p>あたまに ついてきた おみやげ</p>
       <div class="acc" id="rAcc"></div>
@@ -346,6 +389,8 @@
     laugh() { const n = [760, 640, 800, 660, 840, 700]; n.forEach((f, i) => tone(f, 0.09, { type: 'triangle', vol: 0.08, delay: i * 0.11 })); },
     whoosh(){ noise(1.1, { f: 200, to: 3500, type: 'bandpass', q: 2, vol: 0.25, att: 0.3 }); },
     cheer() { noise(1.6, { f: 1400, type: 'bandpass', q: 0.8, vol: 0.12, att: 0.2 }); },
+    slurp() { for (let i = 0; i < 5; i++) noise(0.22, { f: 900, to: 2400, type: 'bandpass', q: 3, vol: 0.18, delay: i * 0.25 }); },
+    burp()  { tone(120, 0.4, { to: 70, type: 'sawtooth', vol: 0.12 }); noise(0.3, { f: 300, vol: 0.08 }); },
     brake() { tone(1800, 0.4, { to: 1500, type: 'sawtooth', vol: 0.04 }); },
     fart() {
       if (!soundOn) return;
@@ -377,7 +422,7 @@
   // ---------- ゲームの じょうたい ----------
   let st = 'title';
   let T = 0, playTime = 0, holding = false, goalWait = 0;
-  let laughs = 0, farts = 0, tickles = 0;
+  let laughs = 0, farts = 0, tickles = 0, quizOk = 0, quizN = 0;
   let camX = -20, W = 0, H = 0, DPR = 1, scale = 1, viewW = 400, viewH = VH, offY = 0;
   let parts = [], npcSay = [], items = [];
   const P = {};
@@ -389,6 +434,7 @@
       stepping: false, base: 40, sl: SL,
       mode: 'walk', modeT: 0, modeDur: 1, opt: {}, lift: 0,
       gauge: 0, acc: [], bubble: null, segs: [],
+      boostV: 440, ate: false, fat: 0, eatStage: -1,
     });
     Hz = {
       flower: { done: false },
@@ -398,12 +444,12 @@
       sig: { hint: false },
       cat: { done: false, faint: false, mofu: false, off: Math.random() * 6 },
       sk: { seen: false, prevC: 0 },
-      ramen: { entered: false, gift: false, next: 0 },
+      ramen: { entered: false, gift: false, next: 0, asked: false },
       arena: { done: false, cheerT: 0 },
     };
     items = ITEM_XS.map((x) => ({ x, got: false }));
     parts = []; npcSay = [];
-    laughs = 0; farts = 0; tickles = 0;
+    laughs = 0; farts = 0; tickles = 0; quizOk = 0; quizN = 0;
     T = 0; playTime = 0; goalWait = 0;
     camX = -20;
     updateHud();
@@ -452,6 +498,11 @@
       P.lift = 0;
     }
     if (m === 'slide') say('ふぅ〜 びっくりした', 1.3);
+    if (m === 'eat') {
+      P.gauge = 3; P.fat = 1; updateHud();
+      say('おなか いっぱい! おなら まんたん!', 2);
+      laugh();
+    }
     P.mode = 'walk'; P.modeT = 0;
   }
 
@@ -471,7 +522,7 @@
     if (P.mode === 'walk') {
       if (!P.stepping && holding && st === 'play') {
         P.stepping = true; P.phase = 0; P.half = 0; P.base = P.x;
-        P.sl = inRamen() ? 22 : SL;
+        P.sl = inRamen() && !P.ate ? 22 : SL;
         snd.nyo();
       }
       if (P.stepping) {
@@ -484,7 +535,18 @@
       const m = P.mode;
       if (m === 'back' || m === 'police') P.x += (P.opt.to - P.x) * Math.min(1, dt * 7);
       else if (m === 'slide') { P.x += 330 * dt; P.modeT = P.x >= 1420 ? 0 : 1; }
-      else if (m === 'boost') P.x += 440 * dt;
+      else if (m === 'boost') P.x += P.boostV * dt;
+      else if (m === 'eat') {
+        const k = 1 - P.modeT / P.modeDur;
+        const stage = k < 0.45 ? 0 : k < 0.8 ? 1 : 2;
+        if (stage !== P.eatStage) {
+          P.eatStage = stage;
+          say(['ずるずる〜 ずずーっ', 'おいしい〜!!', 'げぷっ'][stage], 1.2);
+          if (stage === 0) snd.slurp();
+          else if (stage === 1) snd.potato();
+          else snd.burp();
+        }
+      }
       else if (m === 'sneeze') P.x += 380 * dt;
       else if (m === 'grab') {
         const k = 1 - P.modeT / P.modeDur;
@@ -518,13 +580,77 @@
   function doFart() {
     if (st !== 'play' || P.gauge <= 0) return;
     if (!(P.mode === 'walk' || P.mode === 'dizzy')) return;
+    const f = $('fartBtn'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 120);
+    openQuiz();
+  }
+
+  // たす1 の もんだい
+  function openQuiz() {
+    st = 'quiz'; setHold(false);
+    const a = Math.floor(Math.random() * 10);
+    const ans = a + 1;
+    const cand = [ans, a === 0 ? 3 : a, ans + 1];
+    for (let i = cand.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [cand[i], cand[j]] = [cand[j], cand[i]]; }
+    $('quizQ').textContent = `${a} ＋ 1 ＝ ？`;
+    $('quizDots').textContent = (a ? '●'.repeat(a) : '（なし）') + ' ＋ ●';
+    $('quizFb').textContent = '';
+    const box = $('quizChoices');
+    box.innerHTML = '';
+    cand.forEach((n) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = n;
+      b.addEventListener('click', () => answerQuiz(n === ans, ans, b));
+      box.appendChild(b);
+    });
+    $('quizOv').hidden = false;
+    tone(660, 0.1, { vol: 0.08 });
+  }
+  function answerQuiz(ok, ans, btn) {
+    if (st !== 'quiz') return;
+    st = 'quizEnd';
+    quizN++;
+    [...$('quizChoices').children].forEach((b) => { b.disabled = true; });
+    btn.classList.add(ok ? 'ok' : 'ng');
+    if (ok) { quizOk++; $('quizFb').textContent = '⭕ せいかい！ 2ばい おなら！'; snd.potato(); }
+    else { $('quizFb').textContent = `ざんねん… こたえは ${ans}。ふつうの おなら`; tone(300, 0.3, { to: 200, type: 'triangle', vol: 0.08 }); }
+    setTimeout(() => {
+      $('quizOv').hidden = true;
+      st = 'play';
+      fartGo(ok);
+    }, ok ? 800 : 1400);
+  }
+  function fartGo(superFart) {
     P.gauge--; farts++;
+    P.boostV = superFart ? 880 : 440;
     setMode('boost', 1.2);
     snd.fart();
-    say(pick(['ぷっ!', 'ぷぅ〜〜', 'ぷすーっ', 'ぶぉっ!', 'ぷりっ']), 1.1);
+    if (superFart) {
+      tone(400, 0.6, { to: 1600, type: 'triangle', vol: 0.06, delay: 0.1 });
+      say('スーパーおなら! 2ばいだ〜!', 1.4);
+    } else {
+      say(pick(['ぷっ!', 'ぷぅ〜〜', 'ぷすーっ', 'ぶぉっ!', 'ぷりっ']), 1.1);
+    }
     laugh();
     updateHud();
-    const f = $('fartBtn'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 120);
+  }
+
+  // ラーメンやさん
+  function openRamen() {
+    st = 'ramen'; setHold(false);
+    $('ramenOv').hidden = false;
+  }
+  function closeRamen(eat) {
+    if (st !== 'ramen') return;
+    $('ramenOv').hidden = true;
+    st = 'play';
+    if (eat) {
+      P.ate = true; P.eatStage = -1;
+      setMode('eat', 3);
+      npc((R0 + R1) / 2, -150, 'へい おまち!', 1.6);
+    } else {
+      say('がまん がまん…', 1.4);
+      Hz.ramen.next = T + 1.5;
+    }
   }
 
   function tickleTap() {
@@ -658,9 +784,11 @@
 
     // ラーメン
     const rm = Hz.ramen;
-    if (inRamen() && st === 'play') {
+    if (!rm.asked && st === 'play' && P.mode === 'walk' && P.headX >= R0 + 40) { rm.asked = true; openRamen(); return; }
+    if (inRamen() && st === 'play' && P.mode !== 'eat') {
       if (!rm.entered) { rm.entered = true; laugh(); }
-      if (T > rm.next) { rm.next = T + 1.7; say(pick(['いいにおい〜', 'じゅるり…', 'ラーメン たべたい〜', 'おなか すいた〜']), 1.3); }
+      if (P.ate) { /* たべたので もう へいき */ }
+      else if (T > rm.next) { rm.next = T + 1.7; say(pick(['いいにおい〜', 'じゅるり…', 'ラーメン たべたい〜', 'おなか すいた〜']), 1.3); }
     }
     if (rm.entered && !rm.gift && P.tailX >= R1) {
       rm.gift = true; addAcc('naruto');
@@ -668,6 +796,8 @@
       npc((R0 + R1) / 2, -150, 'また きてね〜', 1.8);
       snd.potato(); laugh();
     }
+
+    if (P.fat > 0 && P.tailX > R1 + 150) P.fat = Math.max(0, P.fat - dt * 0.6);
 
     // アリーナ
     const ar = Hz.arena;
@@ -724,6 +854,7 @@
     $('rFart').textContent = farts;
     $('rLaugh').textContent = laughs;
     $('rNew').hidden = !isNew;
+    $('rQuiz').textContent = `たしざん せいかい ${quizOk} / ${quizN} ／ ラーメン ${P.ate ? 'たべた! 🍜' : 'がまんした'}`;
     const names = { feather: '🪶 カラスの はね', flower: '🌸 おはなの かざり', lick: '💦 ねこの よだれ', naruto: '🍥 ラーメンの なると' };
     $('rAcc').innerHTML = P.acc.length
       ? P.acc.map((k) => `<span>${names[k]}</span>`).join('')
@@ -1222,7 +1353,8 @@
       case 'grab': return 'scared';
       case 'tickle': return 'laugh';
       case 'boost': case 'goal': return 'happy';
-      default: return inRamen() ? 'love' : 'normal';
+      case 'eat': return 'laugh';
+      default: return inRamen() && !P.ate ? 'love' : 'normal';
     }
   }
 
@@ -1232,7 +1364,7 @@
     for (let i = 0; i < N; i++) {
       const t = i / (N - 1);
       const x = P.tailX + (P.headX - P.tailX) * t;
-      const r = i === N - 1 ? 17 : 9 + t * 3;
+      const r = i === N - 1 ? 17 : (9 + t * 3) * (1 + 0.4 * P.fat * Math.sin(Math.PI * t));
       let y = GY - r - P.hump * Math.sin(Math.PI * t) - liftAt(x) - P.lift;
       if (wig) y += Math.sin(T * 28 + i * 1.3) * wig;
       else if (P.mode === 'walk' && !P.stepping) y += Math.sin(T * 3 + i * 0.7) * 0.8;
@@ -1343,6 +1475,23 @@
       circle(hx + 16, hy + 1, 2.2, '#ff8fab');
     }
     ctx.lineCap = 'butt';
+
+    // ラーメンを たべている
+    if (P.mode === 'eat') {
+      const bx = hx + 30, by = GY - 14;
+      ctx.strokeStyle = '#f2c94c'; ctx.lineWidth = 2.5;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        for (let k = 0; k <= 10; k++) {
+          const q = k / 10;
+          const xx = bx - 4 + i * 3 + (mx - bx) * q;
+          const yy = by - 8 + (my + 2 - (by - 8)) * q + Math.sin(q * 9 + T * 25 + i) * 3;
+          k ? ctx.lineTo(xx, yy) : ctx.moveTo(xx, yy);
+        }
+        ctx.stroke();
+      }
+      emo('🍜', bx, by, 26);
+    }
 
     // あたまの おみやげ
     if (P.acc.includes('feather')) {
@@ -1468,6 +1617,8 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) setHold(false); });
 
   $('startBtn').addEventListener('click', startGame);
+  $('ramenYes').addEventListener('click', () => closeRamen(true));
+  $('ramenNo').addEventListener('click', () => closeRamen(false));
   $('againBtn').addEventListener('click', startGame);
   $('soundBtn').addEventListener('click', () => {
     soundOn = !soundOn; save(KEY_SOUND, soundOn ? '1' : '0'); updateSoundBtn();
@@ -1494,7 +1645,7 @@
   requestAnimationFrame(frame);
 
   // テスト用（ブラウザの コンソールから）
-  window.__nyoko = { P, get st() { return st; }, get laughs() { return laughs; }, setHold, doFart, startGame };
+  window.__nyoko = { P, get st() { return st; }, get laughs() { return laughs; }, setHold, doFart, startGame, get quiz() { return st; } };
 })();
 </script>
 </body>
