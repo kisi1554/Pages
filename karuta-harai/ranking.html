@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#5b6b2e">
+<title>ランキング ｜ かるた はらい</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --ink: #2a2418; --paper: #fffaf0; --accent: #b8322a; --green: #3e6b2f; --line: #e3d8bf; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    padding: calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 28px);
+    color: var(--ink);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 20px, rgba(120,130,60,.08) 20px 21px),
+      #cdd497;
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  h1 { margin: 0; flex: 1; font-size: clamp(26px, 8vw, 36px); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .06em; }
+  .btn {
+    display: inline-grid; place-items: center; min-height: 52px; padding: 0 18px;
+    border: none; border-radius: 16px; background: var(--accent); color: #fff;
+    font: inherit; font-weight: 800; font-size: 18px; text-decoration: none;
+    box-shadow: 0 4px 0 #7d1f19; cursor: pointer; touch-action: manipulation;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #7d1f19; }
+  .btn.ghost { white-space: nowrap; flex: none; background: #fff; color: #7a6a4a; box-shadow: 0 3px 0 #d9ccae; font-size: 15px; min-height: 44px; }
+
+  .summary { display: flex; gap: 10px; margin-bottom: 12px; }
+  .stat { flex: 1; min-width: 0; background: var(--paper); border-radius: 16px; padding: 10px 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+  .stat .v { font-size: clamp(17px, 5.4vw, 22px); white-space: nowrap; font-weight: 900; }
+  .stat .l { font-size: 13px; white-space: nowrap; color: #7a6a4a; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+  .tab { flex: 1; min-height: 46px; border: 3px solid transparent; border-radius: 14px; background: rgba(255,250,240,.6);
+    font: inherit; font-weight: 800; font-size: 16px; color: #6b5c3c; cursor: pointer; touch-action: manipulation; }
+  .tab[aria-selected="true"] { background: var(--paper); border-color: var(--accent); color: var(--accent); }
+
+  ol.list { list-style: none; margin: 0; padding: 0; background: var(--paper); border-radius: 20px; overflow: hidden; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .item { display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .rank { font-size: 20px; font-weight: 900; text-align: center; color: #7a6a4a; }
+  .rank.m { font-size: 30px; }
+  .who { min-width: 0; }
+  .who .n { font-size: 18px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .d { font-size: 12.5px; color: #8a7a5a; }
+  .score { font-size: 22px; font-weight: 900; text-align: right; white-space: nowrap; }
+  .score small { font-size: .6em; }
+  .item.me { background: #ffe9b8; animation: glow 1.4s ease-in-out 3; }
+  @keyframes glow { 50% { background: #ffd26a; } }
+  .empty { padding: 36px 16px; text-align: center; color: #7a6a4a; font-size: 17px; line-height: 1.7; }
+  .foot { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 10px; font-size: 13px; color: #4a4330; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🏆 ランキング</h1>
+    <a class="btn" href="./">あそぶ</a>
+  </header>
+
+  <div class="summary">
+    <div class="stat"><div class="v" id="stCount">0</div><div class="l">きろく /100</div></div>
+    <div class="stat"><div class="v" id="stTop">-</div><div class="l">ごうけい 1い</div></div>
+    <div class="stat"><div class="v" id="stBest">-</div><div class="l">1まい さいこう</div></div>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-sort="score" aria-selected="true">ごうけい</button>
+    <button class="tab" role="tab" data-sort="best" aria-selected="false">1まいの さいこう</button>
+  </div>
+
+  <ol class="list" id="list"></ol>
+
+  <div class="foot">
+    <span>きろくは この iPhone（ブラウザ）の なかに ほぞん されます</span>
+    <button class="btn ghost" id="clearBtn">ぜんぶ けす</button>
+  </div>
+</div>
+
+<script src="scores.js"></script>
+<script>
+(function () {
+  'use strict';
+  var meId = new URLSearchParams(location.search).get('id');
+  var sortKey = 'score';
+  try { sortKey = localStorage.getItem('karuta-harai.rankTab') || 'score'; } catch (e) {}
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function when(t) {
+    var d = new Date(t);
+    return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + pad(d.getMinutes());
+  }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+  function render() {
+    var list = KarutaScores.load();
+    if (sortKey === 'best') list = list.slice().sort(function (a, b) { return (b.best - a.best) || (a.at - b.at); });
+
+    document.getElementById('stCount').textContent = list.length;
+    var top = KarutaScores.load()[0];
+    document.getElementById('stTop').textContent = top ? top.score.toFixed(2) + 'm' : '-';
+    var bt = KarutaScores.bestThrow();
+    document.getElementById('stBest').textContent = bt ? bt.toFixed(2) + 'm' : '-';
+
+    Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+      b.setAttribute('aria-selected', String(b.dataset.sort === sortKey));
+    });
+
+    var ol = document.getElementById('list');
+    ol.textContent = '';
+    if (!list.length) {
+      var e = el('li', 'empty');
+      e.innerHTML = 'まだ きろくが ないよ。<br>「あそぶ」から はらって みよう！';
+      ol.appendChild(e);
+      return;
+    }
+    var medals = ['🥇', '🥈', '🥉'];
+    var meEl = null;
+    list.forEach(function (r, i) {
+      var li = el('li', 'item' + (r.id === meId ? ' me' : ''));
+      li.appendChild(el('div', 'rank' + (i < 3 ? ' m' : ''), i < 3 ? medals[i] : String(i + 1)));
+      var who = el('div', 'who');
+      who.appendChild(el('div', 'n', r.name || 'ななし'));
+      var detail = (r.throws || []).map(function (d) { return d.toFixed(2); }).join(' / ');
+      who.appendChild(el('div', 'd', when(r.at) + (detail ? '　' + detail + 'm' : '') + (r.fouls ? '　おてつき' + r.fouls : '')));
+      li.appendChild(who);
+      var v = sortKey === 'best' ? r.best : r.score;
+      var sc = el('div', 'score', (v || 0).toFixed(2));
+      sc.appendChild(el('small', null, 'm'));
+      li.appendChild(sc);
+      ol.appendChild(li);
+      if (r.id === meId) meEl = li;
+    });
+    if (meEl) setTimeout(function () { meEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 200);
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
+    b.addEventListener('click', function () {
+      sortKey = b.dataset.sort;
+      try { localStorage.setItem('karuta-harai.rankTab', sortKey); } catch (e) {}
+      render();
+    });
+  });
+  document.getElementById('clearBtn').addEventListener('click', function () {
+    if (confirm('ランキングの きろくを ぜんぶ けしますか？')) { KarutaScores.clear(); render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>
