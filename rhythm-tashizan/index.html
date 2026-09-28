@@ -1,0 +1,1139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>リズムで たしざん</title>
+<meta name="description" content="ドン・パン・のリズムにのって、ひとけたの たしざんを うたって おぼえよう。">
+<meta name="theme-color" content="#7b4fd6">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥁</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg-top:    #f3ecff;
+    --bg-bottom: #fff4e3;
+    --ink:       #26203a;
+    --ink-soft:  #5d5577;
+    --card:      #ffffff;
+    --line:      #ddd2f4;
+    --main:      #7b4fd6;
+    --a:         #2f7fd8;   /* 1つめの かず */
+    --a-tint:    #e3effc;
+    --b:         #f0831e;   /* 2つめの かず */
+    --b-tint:    #fdeedd;
+    --c:         #1f9e5a;   /* こたえ */
+    --c-tint:    #e1f5ea;
+    --ng:        #d8434a;
+    --star:      #f5b301;
+  }
+
+  html, body { margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background: linear-gradient(170deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体",
+                 "Meiryo", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    touch-action: manipulation;
+  }
+
+  /* ---------- ヘッダー ---------- */
+  .top {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+    background: rgba(255, 255, 255, .85);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border-bottom: 2px solid var(--line);
+  }
+  .top h1 {
+    flex: 1;
+    margin: 0;
+    font-size: clamp(18px, 5vw, 24px);
+    letter-spacing: .04em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .icon-btn {
+    min-width: 52px;
+    height: 52px;
+    padding: 0 10px;
+    border: 2px solid var(--line);
+    border-radius: 16px;
+    background: var(--card);
+    font-size: 24px;
+    line-height: 1;
+  }
+  .icon-btn.off { opacity: .45; }
+  .icon-btn[hidden] { display: none; }
+
+  main {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+  [hidden] { display: none !important; }
+
+  .lead {
+    margin: 4px 0 16px;
+    text-align: center;
+    font-size: clamp(17px, 4.6vw, 22px);
+    color: var(--ink-soft);
+  }
+
+  /* ---------- ホーム ---------- */
+  .dan-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+  .dan {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    min-height: 112px;
+    padding: 10px 4px;
+    border: 3px solid var(--line);
+    border-radius: 22px;
+    background: var(--card);
+    box-shadow: 0 5px 0 var(--line);
+    transition: transform .1s;
+  }
+  .dan:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
+  .dan .big { font-size: clamp(34px, 10vw, 46px); font-weight: 800; color: var(--main); line-height: 1.1; }
+  .dan .small { font-size: 14px; color: var(--ink-soft); }
+  .dan .stars { font-size: 16px; letter-spacing: 1px; color: var(--star); min-height: 20px; }
+  .dan .stars .no { color: #d9d3e6; }
+  .dan .song {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 16px;
+  }
+  .dan.mix {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    justify-content: center;
+    gap: 14px;
+    min-height: 84px;
+  }
+  .dan.mix .big { font-size: 34px; }
+
+  .panel {
+    margin-top: 22px;
+    padding: 14px 16px;
+    border: 2px solid var(--line);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, .7);
+  }
+  .panel h2 { margin: 0 0 10px; font-size: 18px; }
+  .seg { display: flex; gap: 8px; }
+  .seg button {
+    flex: 1;
+    min-height: 56px;
+    border: 3px solid var(--line);
+    border-radius: 16px;
+    background: var(--card);
+    font-size: clamp(15px, 4vw, 18px);
+  }
+  .seg button.on { border-color: var(--main); background: #efe7ff; font-weight: 700; }
+
+  .howto { margin: 0; padding-left: 1.2em; line-height: 1.9; font-size: 16px; }
+
+  /* ---------- だんメニュー ---------- */
+  .menu-title {
+    margin: 4px 0 12px;
+    text-align: center;
+    font-size: clamp(28px, 8vw, 40px);
+    color: var(--main);
+  }
+  .table {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+  .table .row {
+    padding: 8px 4px;
+    border-radius: 14px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    text-align: center;
+    font-size: clamp(18px, 5vw, 24px);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .table .row .a { color: var(--a); }
+  .table .row .b { color: var(--b); }
+  .table .row .c { color: var(--c); }
+
+  .big-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 84px;
+    margin-bottom: 14px;
+    padding: 12px 16px;
+    border: 3px solid var(--accent, var(--main));
+    border-radius: 24px;
+    background: var(--tint, #efe7ff);
+    box-shadow: 0 6px 0 var(--accent, var(--main));
+    font-size: clamp(20px, 5.6vw, 26px);
+    font-weight: 800;
+    transition: transform .1s;
+  }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--accent, var(--main)); }
+  .big-btn small { display: block; font-size: 14px; font-weight: 400; color: var(--ink-soft); }
+  .big-btn[disabled] { opacity: .4; pointer-events: none; }
+  .btn-row { display: flex; gap: 12px; }
+  .btn-row .big-btn { flex: 1; }
+
+  .check {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 16px;
+    font-size: 18px;
+  }
+  .check input { width: 28px; height: 28px; accent-color: var(--main); }
+
+  /* ---------- ステージ ---------- */
+  #stage {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .beats { display: flex; gap: 8px; }
+  .beats span {
+    width: clamp(18px, 5vw, 26px);
+    height: clamp(18px, 5vw, 26px);
+    border-radius: 50%;
+    background: #e5def3;
+    transition: transform .08s, background .08s;
+  }
+  .beats span.big-beat { box-shadow: inset 0 0 0 3px #cfc3e8; }
+  .beats span.on { background: var(--main); transform: scale(1.35); }
+
+  .banner {
+    min-height: 1.6em;
+    font-size: clamp(18px, 5vw, 24px);
+    font-weight: 700;
+    color: var(--main);
+    text-align: center;
+  }
+  .banner.pop { animation: pop .35s; }
+
+  .eq {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(4px, 2vw, 14px);
+    min-height: 1.3em;
+    font-size: clamp(56px, 16vw, 112px);
+    font-weight: 800;
+    line-height: 1.15;
+  }
+  .eq > span { opacity: .12; transition: opacity .1s; }
+  .eq > span.on { opacity: 1; }
+  .eq .n {
+    display: inline-block;
+    min-width: .7em;
+    text-align: center;
+  }
+  .eq .n.bump { animation: bump .3s; }
+  .eq .a { color: var(--a); }
+  .eq .b { color: var(--b); }
+  .eq .c { color: var(--c); }
+  .eq .c.q { color: #b7aed0; }
+  .eq .c.miss { color: var(--ng); }
+  .eq .op { color: #8b82a6; font-size: .7em; }
+
+  .lyric {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 10px;
+    min-height: 2em;
+    font-size: clamp(20px, 5.6vw, 28px);
+    font-weight: 700;
+  }
+  .lyric span {
+    padding: 2px 10px;
+    border-radius: 12px;
+    color: #b9b1cc;
+    transition: background .1s, color .1s;
+  }
+  .lyric span.done { color: var(--ink); }
+  .lyric span.now { color: #fff; background: var(--main); transform: scale(1.1); }
+  .lyric span.now.a { background: var(--a); }
+  .lyric span.now.b { background: var(--b); }
+  .lyric span.now.c { background: var(--c); }
+
+  /* 10のまとまり（テンフレーム） */
+  .frames {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    min-height: calc(2 * var(--cell) + 16px);
+    --cell: min(8vw, 42px);
+  }
+  .frame {
+    display: grid;
+    grid-template-columns: repeat(5, var(--cell));
+    grid-auto-rows: var(--cell);
+    gap: 4px;
+    padding: 6px;
+    border: 3px solid var(--line);
+    border-radius: 12px;
+    background: var(--card);
+  }
+  .frame i {
+    border-radius: 50%;
+    background: #f1edf8;
+  }
+  .frame i.a { background: var(--a); animation: pop .25s; }
+  .frame i.b { background: var(--b); animation: pop .25s; }
+
+  .choices {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 96px;
+  }
+  .choices button {
+    flex: 1;
+    max-width: 180px;
+    min-height: 96px;
+    border: 4px solid var(--c);
+    border-radius: 24px;
+    background: var(--c-tint);
+    box-shadow: 0 6px 0 var(--c);
+    font-size: clamp(40px, 12vw, 60px);
+    font-weight: 800;
+    color: var(--c);
+    animation: pop .25s;
+  }
+  .choices button:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--c); }
+  .choices button.ng {
+    border-color: #ccc;
+    background: #f3f3f3;
+    color: #bbb;
+    box-shadow: none;
+    animation: shake .3s;
+    pointer-events: none;
+  }
+  .choices button.ok { background: var(--c); color: #fff; }
+
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+  }
+  .chips span {
+    min-width: 34px;
+    padding: 4px 8px;
+    border-radius: 99px;
+    border: 2px solid var(--line);
+    background: var(--card);
+    font-size: 15px;
+    text-align: center;
+    white-space: nowrap;
+  }
+  .chips span.now { border-color: var(--main); background: #efe7ff; font-weight: 700; }
+  .chips span.good { border-color: var(--c); background: var(--c-tint); }
+  .chips span.bad { border-color: var(--ng); background: #fde6e7; }
+
+  .stage-foot {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+    max-width: 420px;
+    margin-top: 6px;
+  }
+  .stage-foot button {
+    flex: 1;
+    min-height: 56px;
+    border: 3px solid var(--line);
+    border-radius: 16px;
+    background: var(--card);
+    font-size: 18px;
+  }
+
+  .fx {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 10;
+  }
+  .fx b {
+    position: absolute;
+    font-size: 28px;
+    animation: fly 1s ease-out forwards;
+  }
+
+  /* ---------- けっか ---------- */
+  #result { text-align: center; }
+  .result-stars { font-size: clamp(56px, 16vw, 84px); letter-spacing: 6px; color: var(--star); }
+  .result-stars .no { color: #ddd6ea; }
+  .result-msg { margin: 8px 0 4px; font-size: clamp(24px, 7vw, 34px); font-weight: 800; }
+  .result-sub { margin: 0 0 20px; font-size: 18px; color: var(--ink-soft); }
+
+  @keyframes pop  { 0% { transform: scale(.3); } 70% { transform: scale(1.15); } 100% { transform: scale(1); } }
+  @keyframes bump { 0% { transform: scale(1); } 40% { transform: scale(1.3); } 100% { transform: scale(1); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-8px); } 75% { transform: translateX(8px); } }
+  @keyframes fly {
+    0%   { transform: translate(0, 0) scale(.6); opacity: 1; }
+    100% { transform: translate(var(--dx), var(--dy)) scale(1.2); opacity: 0; }
+  }
+
+  /* 横持ちタブレット：式とテンフレームを横に */
+  @media (min-width: 900px) and (orientation: landscape) {
+    main { max-width: 980px; }
+    .dan-grid { grid-template-columns: repeat(5, 1fr); }
+    .dan.mix { grid-column: auto; flex-direction: column; min-height: 112px; gap: 2px; }
+  }
+  @media (max-height: 560px) and (orientation: landscape) {
+    .eq { font-size: 64px; }
+    .frames { --cell: 30px; }
+    .choices, .choices button { min-height: 72px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <button class="icon-btn" id="homeBtn" aria-label="はじめの がめん" hidden>🏠</button>
+  <h1>🥁 リズムで たしざん</h1>
+  <button class="icon-btn" id="sndBtn" aria-label="おと オン・オフ">🔊</button>
+  <button class="icon-btn" id="voiceBtn" aria-label="こえ オン・オフ">🗣️</button>
+</header>
+
+<main>
+
+  <!-- ホーム -->
+  <section id="home" class="screen">
+    <p class="lead">「〇の だん」を えらんでね</p>
+    <div class="dan-grid" id="danGrid"></div>
+
+    <div class="panel">
+      <h2>🎶 はやさ</h2>
+      <div class="seg" id="tempoSeg">
+        <button data-bpm="76">🐢 ゆっくり</button>
+        <button data-bpm="96">🐇 ふつう</button>
+        <button data-bpm="120">🚀 はやい</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📖 あそびかた</h2>
+      <ol class="howto">
+        <li>🎵「うたって おぼえる」で ドン・パンに あわせて いっしょに うたおう</li>
+        <li>なれたら「こたえを かくす」で こたえを じぶんで いってみよう</li>
+        <li>🥁「リズム クイズ」で こたえを タップ。ぜんぶ できたら ★３つ！</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- だんメニュー -->
+  <section id="menu" class="screen" hidden>
+    <h2 class="menu-title" id="menuTitle"></h2>
+    <div class="table" id="menuTable"></div>
+
+    <button class="big-btn" id="goChant" style="--accent:#7b4fd6; --tint:#efe7ff;">
+      🎵 <span>うたって おぼえる<small>リズムに あわせて いっしょに うたおう</small></span>
+    </button>
+    <label class="check" id="hideWrap"><input type="checkbox" id="hideAns"> こたえを かくして うたう</label>
+    <button class="big-btn" id="goQuiz" style="--accent:#1f9e5a; --tint:#e1f5ea;">
+      🥁 <span>リズム クイズ<small>こたえを リズムよく タップしよう</small></span>
+    </button>
+  </section>
+
+  <!-- うた・クイズ -->
+  <section id="stage" class="screen" hidden>
+    <div class="beats" id="beats"></div>
+    <div class="banner" id="banner"></div>
+    <div class="eq" id="eq" aria-live="polite">
+      <span class="n a" id="eqA"></span>
+      <span class="op" id="eqP">＋</span>
+      <span class="n b" id="eqB"></span>
+      <span class="op" id="eqE">＝</span>
+      <span class="n c" id="eqC"></span>
+    </div>
+    <div class="lyric" id="lyric"></div>
+    <div class="frames" id="frames"></div>
+    <div class="choices" id="choices"></div>
+    <div class="chips" id="chips"></div>
+    <div class="stage-foot">
+      <button id="stopBtn">⏹ やめる</button>
+    </div>
+  </section>
+
+  <!-- けっか -->
+  <section id="result" class="screen" hidden>
+    <div class="result-stars" id="resStars"></div>
+    <p class="result-msg" id="resMsg"></p>
+    <p class="result-sub" id="resSub"></p>
+    <div class="chips" id="resChips" style="margin-bottom:22px"></div>
+    <button class="big-btn" id="resAgain" style="--accent:#7b4fd6; --tint:#efe7ff;">🔁 もういちど</button>
+    <button class="big-btn" id="resNext" style="--accent:#1f9e5a; --tint:#e1f5ea;"></button>
+    <button class="big-btn" id="resMenu" style="--accent:#9a91b5; --tint:#f4f1fa;">📋 だんを えらぶ</button>
+  </section>
+
+</main>
+
+<div class="fx" id="fx"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  /* ================= データ ================= */
+  const READ = ['ぜろ', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう',
+                'じゅう', 'じゅういち', 'じゅうに', 'じゅうさん', 'じゅうよん', 'じゅうご',
+                'じゅうろく', 'じゅうなな', 'じゅうはち'];
+  const COUNT_IN = 4;    // はじまる まえの 「ワン・ツー・スリー・フォー」
+  const STEPS = 8;       // うた 1ぎょう ＝ 8はく
+  const QSTEPS = 12;     // クイズ 1もん ＝ 12はく（こたえる じかんを ながめに）
+
+  const $ = id => document.getElementById(id);
+  const shuffle = arr => {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  };
+
+  /* ================= ほぞん ================= */
+  const KEY = 'rhythm-tashizan-v1';
+  let save = { stars: {}, sung: {}, bpm: 96, sound: true, voice: true };
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) save = Object.assign(save, JSON.parse(raw));
+  } catch (e) { /* よめなくても あそべる */ }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ignore */ }
+  }
+
+  /* ================= おと（WebAudio） ================= */
+  let ctx = null, master = null, noiseBuf = null;
+  function ensureAudio() {
+    if (!ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      ctx = new AC();
+      master = ctx.createGain();
+      master.gain.value = save.sound ? 0.8 : 0;
+      master.connect(ctx.destination);
+      noiseBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.4), ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+    return ctx;
+  }
+  const now = () => (ctx ? ctx.currentTime : performance.now() / 1000);
+
+  function kick(t) {
+    if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.frequency.setValueAtTime(160, t);
+    o.frequency.exponentialRampToValueAtTime(45, t + 0.14);
+    g.gain.setValueAtTime(0.9, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    o.connect(g).connect(master);
+    o.start(t); o.stop(t + 0.24);
+  }
+  function noiseHit(t, type, freq, vol, len) {
+    if (!ctx) return;
+    const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    s.buffer = noiseBuf;
+    f.type = type; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    s.connect(f).connect(g).connect(master);
+    s.start(t); s.stop(t + len + 0.02);
+  }
+  const hat = (t, v = 0.12) => noiseHit(t, 'highpass', 7000, v, 0.045);
+  function clap(t) {
+    noiseHit(t, 'bandpass', 1400, 0.5, 0.03);
+    noiseHit(t + 0.012, 'bandpass', 1400, 0.45, 0.03);
+    noiseHit(t + 0.024, 'bandpass', 1300, 0.55, 0.16);
+  }
+  function tone(t, freq, dur, type = 'triangle', vol = 0.22) {
+    if (!ctx) return;
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  const NOTE = { C5: 523.25, D5: 587.33, E5: 659.25, G5: 783.99, A5: 880, C6: 1046.5, E6: 1318.5, G4: 392 };
+  function ding(t = now()) {
+    tone(t, NOTE.C6, 0.25, 'sine', 0.3);
+    tone(t + 0.09, NOTE.E6, 0.4, 'sine', 0.3);
+  }
+  function buzz(t = now()) {
+    tone(t, 180, 0.25, 'square', 0.09);
+    tone(t + 0.12, 150, 0.3, 'square', 0.09);
+  }
+  function fanfare(t = now()) {
+    [NOTE.C5, NOTE.E5, NOTE.G5, NOTE.C6].forEach((f, i) => tone(t + i * 0.12, f, 0.35, 'triangle', 0.25));
+    tone(t + 0.5, NOTE.E6, 0.8, 'sine', 0.2);
+  }
+
+  /* ================= こえ（よみあげ・なくても あそべる） ================= */
+  const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+  let jaVoice = null;
+  function pickVoice() {
+    if (!canSpeak) return;
+    const vs = speechSynthesis.getVoices();
+    jaVoice = vs.find(v => /^ja/i.test(v.lang)) || null;
+  }
+  if (canSpeak) {
+    pickVoice();
+    speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function say(text) {
+    if (!canSpeak || !save.voice) return;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP';
+      if (jaVoice) u.voice = jaVoice;
+      u.rate = save.bpm >= 110 ? 1.6 : 1.35;
+      u.pitch = 1.2;
+      speechSynthesis.speak(u);
+    } catch (e) { /* ignore */ }
+  }
+  function hush() { if (canSpeak) try { speechSynthesis.cancel(); } catch (e) { /* ignore */ } }
+
+  /* ================= リズムの しくみ（さきよみ スケジューラ） ================= */
+  const seq = { alive: false, i: 0, next: 0, fn: null, q: [], timer: 0, raf: 0, lastBeat: 0 };
+  const spb = () => 60 / save.bpm;
+
+  // lines を 1はくずつ すすめる。ぎょうごとに ながさ（len）が ちがっても よい
+  function lineRunner(getLines, lenOf, onLine, onEnd) {
+    const pos = { li: 0, s: 0, ended: false };
+    return (i, t) => {
+      if (i < COUNT_IN) { countInSound(i, t); return () => countInVis(i, lenOf(getLines()[0])); }
+      const lines = getLines();
+      if (pos.li >= lines.length) {
+        if (pos.ended) return null;
+        pos.ended = true;
+        return onEnd(t);
+      }
+      const li = pos.li, s = pos.s, L = lines[li], len = lenOf(L);
+      if (++pos.s >= len) { pos.li++; pos.s = 0; }
+      return onLine(L, li, s, t, len);
+    };
+  }
+
+  function seqStart(stepFn) {
+    seqStop();
+    ensureAudio();
+    seq.alive = true;
+    seq.i = 0;
+    seq.next = now() + 0.2;
+    seq.fn = stepFn;
+    seq.q = [];
+    seq.timer = setInterval(schedule, 25);
+    schedule();
+    seq.raf = requestAnimationFrame(drain);
+  }
+  function seqStop() {
+    seq.alive = false;
+    clearInterval(seq.timer);
+    cancelAnimationFrame(seq.raf);
+    seq.q = [];
+    hush();
+  }
+  function schedule() {
+    while (seq.alive && seq.next < now() + 0.12) {
+      const t = seq.next;
+      const vis = seq.fn(seq.i, t);
+      if (vis) seq.q.push({ t, fn: vis });
+      seq.i++;
+      seq.next += spb();
+    }
+  }
+  function drain() {
+    if (!seq.alive) return;
+    const n = now();
+    while (seq.alive && seq.q.length && seq.q[0].t <= n) {
+      const e = seq.q.shift();
+      seq.lastBeat = e.t;
+      e.fn();
+    }
+    if (seq.alive) seq.raf = requestAnimationFrame(drain);
+  }
+  // 1ぎょうぶんの ドラム： ドン(1・3・5・7はくめ) ＋ チッ(ぜんぶ) ＋ パンパン(さいご)
+  function drums(s, t, len = STEPS) {
+    hat(t);
+    hat(t + spb() / 2, 0.06);
+    if (s % 2 === 0) kick(t);
+    if (s >= len - 2) clap(t);
+  }
+  const MELODY = [NOTE.C5, NOTE.E5, NOTE.G5, NOTE.E5];
+  function countInSound(i, t) {
+    hat(t, 0.25);
+    tone(t, i === COUNT_IN - 1 ? NOTE.C6 : NOTE.G5, 0.09, 'square', 0.1);
+  }
+
+  /* ================= がめん きりかえ ================= */
+  const screens = ['home', 'menu', 'stage', 'result'];
+  function show(name) {
+    screens.forEach(s => { $(s).hidden = s !== name; });
+    $('homeBtn').hidden = name === 'home';
+    window.scrollTo(0, 0);
+  }
+
+  /* ================= ホーム ================= */
+  function starText(n) {
+    let h = '';
+    for (let i = 0; i < 3; i++) h += i < n ? '★' : '<span class="no">★</span>';
+    return h;
+  }
+  function renderHome() {
+    const g = $('danGrid');
+    g.innerHTML = '';
+    for (let d = 1; d <= 9; d++) {
+      const b = document.createElement('button');
+      b.className = 'dan';
+      b.innerHTML =
+        (save.sung[d] ? '<span class="song" aria-label="うたった">🎵</span>' : '') +
+        `<span class="big">${d}</span><span class="small">${d}の だん</span>` +
+        `<span class="stars">${starText(save.stars[d] || 0)}</span>`;
+      b.addEventListener('click', () => openMenu(d));
+      g.appendChild(b);
+    }
+    const m = document.createElement('button');
+    m.className = 'dan mix';
+    m.innerHTML = `<span class="big">🎲</span><span><span class="small">ぜんぶ まぜて</span><br>` +
+      `<span class="stars">${starText(save.stars.mix || 0)}</span></span>`;
+    m.addEventListener('click', () => openMenu('mix'));
+    g.appendChild(m);
+
+    document.querySelectorAll('#tempoSeg button').forEach(b => {
+      b.classList.toggle('on', Number(b.dataset.bpm) === save.bpm);
+    });
+  }
+  document.querySelectorAll('#tempoSeg button').forEach(b => {
+    b.addEventListener('click', () => {
+      save.bpm = Number(b.dataset.bpm);
+      persist();
+      renderHome();
+      ensureAudio();
+      const t = now() + 0.02;
+      for (let i = 0; i < 4; i++) { const tt = t + i * spb(); i % 2 ? clap(tt) : kick(tt); hat(tt); }
+    });
+  });
+
+  /* ================= だんメニュー ================= */
+  let cur = 1;            // えらんだ だん（1〜9 か 'mix'）
+  let lastMode = 'chant';
+  function linesOf(d) {
+    const a = [];
+    for (let b = 1; b <= 9; b++) a.push({ a: d, b, c: d + b });
+    return a;
+  }
+  function eqHTML(L) {
+    return `<span class="a">${L.a}</span>＋<span class="b">${L.b}</span>＝<span class="c">${L.c}</span>`;
+  }
+  function openMenu(d) {
+    ensureAudio();
+    cur = d;
+    const isMix = d === 'mix';
+    $('menuTitle').textContent = isMix ? '🎲 ぜんぶ まぜて' : `${d} の だん`;
+    const t = $('menuTable');
+    t.innerHTML = '';
+    if (!isMix) {
+      linesOf(d).forEach(L => {
+        const r = document.createElement('div');
+        r.className = 'row';
+        r.innerHTML = eqHTML(L);
+        t.appendChild(r);
+      });
+    }
+    t.hidden = isMix;
+    $('goChant').hidden = isMix;
+    $('hideWrap').hidden = isMix;
+    show('menu');
+  }
+  $('goChant').addEventListener('click', () => startChant($('hideAns').checked));
+  $('goQuiz').addEventListener('click', startQuiz);
+
+  /* ================= ステージの ひょうじ ================= */
+  const beatsEl = $('beats');
+  function setBeatCount(n) {
+    if (beatsEl.children.length === n) return;
+    beatsEl.innerHTML = '';
+    for (let i = 0; i < n; i++) {
+      const s = document.createElement('span');
+      if (i % 2 === 0) s.className = 'big-beat';
+      beatsEl.appendChild(s);
+    }
+  }
+  function lightBeat(k) {
+    [...beatsEl.children].forEach((s, i) => s.classList.toggle('on', i === k));
+  }
+  function banner(text) {
+    const b = $('banner');
+    b.textContent = text;
+    b.classList.remove('pop');
+    void b.offsetWidth;
+    if (text) b.classList.add('pop');
+  }
+  function bump(el) {
+    el.classList.remove('bump');
+    void el.offsetWidth;
+    el.classList.add('bump');
+  }
+  function setEq(L, s, ansState) {
+    // s: いま なんはくめ（0〜）、ansState: 'show' | 'hide' | 'q' | 'miss'
+    $('eqA').textContent = L.a;
+    $('eqB').textContent = L.b;
+    $('eqA').classList.toggle('on', s >= 0);
+    $('eqP').classList.toggle('on', s >= 1);
+    $('eqB').classList.toggle('on', s >= 2);
+    $('eqE').classList.toggle('on', s >= 3);
+    const c = $('eqC');
+    c.classList.remove('q', 'miss');
+    if (s >= 4) {
+      c.classList.add('on');
+      if (ansState === 'show' || ansState === 'miss') c.textContent = L.c;
+      else { c.textContent = '？'; c.classList.add('q'); }
+      if (ansState === 'miss') c.classList.add('miss');
+    } else {
+      c.classList.remove('on');
+      c.textContent = '？';
+    }
+  }
+  function setLyric(L, k, showAns) {
+    const words = [
+      [READ[L.a], 'a'], ['たす', ''], [READ[L.b], 'b'], ['は', ''],
+      [showAns ? READ[L.c] : '？', 'c'],
+    ];
+    $('lyric').innerHTML = words.map(([w, cls], i) =>
+      `<span class="${cls} ${i === k ? 'now' : i < k ? 'done' : ''}">${w}</span>`).join('');
+  }
+  function setFrames(a, b) {
+    const total = a + b;
+    const frames = total > 10 ? 2 : 1;
+    let h = '';
+    for (let f = 0; f < frames; f++) {
+      h += '<div class="frame">';
+      for (let i = 0; i < 10; i++) {
+        const n = f * 10 + i;
+        h += `<i class="${n < a ? 'a' : n < total ? 'b' : ''}"></i>`;
+      }
+      h += '</div>';
+    }
+    $('frames').innerHTML = h;
+  }
+  function clearStage() {
+    ['eqA', 'eqP', 'eqB', 'eqE', 'eqC'].forEach(id => $(id).classList.remove('on'));
+    $('eqA').textContent = ''; $('eqB').textContent = ''; $('eqC').textContent = '';
+    $('lyric').innerHTML = '';
+    $('frames').innerHTML = '';
+    $('choices').innerHTML = '';
+    lightBeat(-1);
+    banner('');
+  }
+  function renderChips(lines, idx, mode) {
+    $('chips').innerHTML = lines.map((L, i) => {
+      let cls = i === idx ? 'now' : '';
+      if (mode === 'quiz' && L.done) cls = L.ok ? 'good' : 'bad';
+      const label = mode === 'quiz' ? (L.done ? (L.ok ? '⭕' : '🔺') : i + 1) : `${L.a}＋${L.b}`;
+      return `<span class="${cls}">${label}</span>`;
+    }).join('');
+  }
+  function countInVis(i, n) {
+    setBeatCount(n);
+    lightBeat(i + n - COUNT_IN);
+    banner(['よーい', '３', '２', '１'][i] || '');
+  }
+  function sparkle(x, y, n = 10) {
+    const fx = $('fx');
+    const set = ['⭐', '✨', '🎵', '🎶'];
+    for (let i = 0; i < n; i++) {
+      const b = document.createElement('b');
+      b.textContent = set[i % set.length];
+      b.style.left = x + 'px';
+      b.style.top = y + 'px';
+      const ang = Math.random() * Math.PI * 2, dist = 80 + Math.random() * 120;
+      b.style.setProperty('--dx', Math.cos(ang) * dist + 'px');
+      b.style.setProperty('--dy', Math.sin(ang) * dist + 'px');
+      fx.appendChild(b);
+      setTimeout(() => b.remove(), 1000);
+    }
+  }
+
+  // 1はくぶんの ひょうじ（うた・クイズ きょうつう）
+  function stepVis(L, s, ansMode) {
+    lightBeat(s);
+    const showAns = ansMode === 'show';
+    if (s === 0) { setFrames(L.a, 0); bump($('eqA')); say(READ[L.a]); }
+    if (s === 1) say('たす');
+    if (s === 2) { setFrames(L.a, L.b); bump($('eqB')); say(READ[L.b]); }
+    if (s === 3) say('わ');
+    if (s === 4 && showAns) { bump($('eqC')); say(READ[L.c]); }
+    if (s <= 4) {
+      setEq(L, s, showAns ? 'show' : 'q');
+      setLyric(L, s, showAns);
+    }
+  }
+
+  /* ================= うたって おぼえる ================= */
+  let chant = null;
+  function startChant(hide) {
+    lastMode = 'chant';
+    chant = { lines: linesOf(cur), hide };
+    clearStage();
+    renderChips(chant.lines, -1, 'chant');
+    show('stage');
+    seqStart(chantStep());
+  }
+  const chantStep = () => lineRunner(() => chant.lines, () => STEPS, (L, li, s, t) => {
+    drums(s, t);
+    if (s < 4) tone(t, MELODY[s], spb() * 0.8);
+    if (s === 4 && !chant.hide) { tone(t, NOTE.C6, spb() * 1.8, 'triangle', 0.25); tone(t, NOTE.G5, spb() * 1.8, 'sine', 0.12); }
+    if (s === 6 && chant.hide) { tone(t, NOTE.C6, spb() * 1.5, 'triangle', 0.25); }
+    return () => {
+      if (s === 0) { setBeatCount(STEPS); renderChips(chant.lines, li, 'chant'); banner(chant.hide ? 'こたえを いってみよう！' : ''); }
+      stepVis(L, s, chant.hide ? 'hide' : 'show');
+      if (chant.hide && s === 6) {
+        setEq(L, 4, 'show'); setLyric(L, 5, true); bump($('eqC')); say(READ[L.c]);
+      }
+    };
+  }, t => { fanfare(t); kick(t); return finishChant; });
+  function finishChant() {
+    seqStop();
+    if (cur !== 'mix') { save.sung[cur] = true; persist(); }
+    $('resStars').innerHTML = '🎵🎶🎵';
+    $('resMsg').textContent = chant.hide ? 'かくしても うたえたね！' : 'さいごまで うたえたね！';
+    $('resSub').textContent = chant.hide
+      ? 'つぎは クイズに ちょうせん しよう'
+      : 'つぎは「こたえを かくして」うたってみよう';
+    $('resChips').innerHTML = '';
+    $('resNext').innerHTML = chant.hide ? '🥁 リズム クイズへ' : '🙈 こたえを かくして うたう';
+    $('resNext').onclick = chant.hide ? startQuiz : () => { $('hideAns').checked = true; startChant(true); };
+    show('result');
+    sparkle(innerWidth / 2, innerHeight / 3, 16);
+  }
+
+  /* ================= リズム クイズ ================= */
+  let quiz = null;
+  function makeQuestions() {
+    if (cur === 'mix') {
+      const qs = [];
+      while (qs.length < 10) {
+        const a = 1 + Math.floor(Math.random() * 9), b = 1 + Math.floor(Math.random() * 9);
+        if (qs.some(q => q.a === a && q.b === b)) continue;
+        qs.push({ a, b, c: a + b });
+      }
+      return qs;
+    }
+    return shuffle(linesOf(cur));
+  }
+  function startQuiz() {
+    lastMode = 'quiz';
+    const qs = makeQuestions().map(q => Object.assign(q, { done: false, ok: false, wrong: 0 }));
+    // lines には まちがえたときの「もういちど うたう」ぎょうが はいる
+    quiz = { qs, lines: qs.slice(), open: null, perfect: 0 };
+    clearStage();
+    renderChips(quiz.qs, -1, 'quiz');
+    show('stage');
+    seqStart(quizStep());
+  }
+  function makeChoices(c) {
+    const set = new Set([c]);
+    const near = shuffle([-2, -1, 1, 2, 3, -3]);
+    for (const d of near) {
+      const v = c + d;
+      if (v >= 2 && v <= 18) set.add(v);
+      if (set.size === 3) break;
+    }
+    return shuffle([...set]);
+  }
+  const quizStep = () => lineRunner(() => quiz.lines, L => (L.teach ? STEPS : QSTEPS), (L, li, s, t, len) => {
+    drums(s, t, len);
+    if (s < 4) tone(t, MELODY[s], spb() * 0.8);
+    if (L.teach) {
+      if (s === 4) { tone(t, NOTE.C6, spb() * 1.8, 'triangle', 0.25); tone(t, NOTE.G5, spb() * 1.8, 'sine', 0.12); }
+      return () => {
+        if (s === 0) { setBeatCount(len); $('choices').innerHTML = ''; banner('🔁 もういちど うたおう'); }
+        stepVis(L, s, 'show');
+      };
+    }
+    if (s === 4) { tone(t, NOTE.A5, 0.08, 'square', 0.08); tone(t + 0.1, NOTE.A5, 0.08, 'square', 0.08); }
+    return () => {
+      if (s === 0) {
+        setBeatCount(len);
+        $('choices').innerHTML = '';
+        banner(`だい ${quiz.qs.indexOf(L) + 1} もん`);
+        renderChips(quiz.qs, quiz.qs.indexOf(L), 'quiz');
+      }
+      if (L.done) { lightBeat(s); return; }       // もう こたえた
+      stepVis(L, s, 'q');
+      if (s === 4) openChoices(L);
+      if (s === len - 1) timeUp(L, li);
+    };
+  }, t => { kick(t); return finishQuiz; });
+  function openChoices(L) {
+    quiz.open = L;
+    const box = $('choices');
+    box.innerHTML = '';
+    makeChoices(L.c).forEach(v => {
+      const b = document.createElement('button');
+      b.textContent = v;
+      b.addEventListener('pointerdown', ev => { ev.preventDefault(); answer(L, v, b); });
+      box.appendChild(b);
+    });
+  }
+  function answer(L, v, btn) {
+    if (quiz.open !== L || L.done) return;
+    if (v !== L.c) {
+      L.wrong++;
+      btn.classList.add('ng');
+      buzz();
+      return;
+    }
+    L.done = true;
+    L.ok = L.wrong === 0;
+    quiz.open = null;
+    btn.classList.add('ok');
+    ding();
+    setEq(L, 4, 'show');
+    setLyric(L, 4, true);
+    bump($('eqC'));
+    say(READ[L.c]);
+    // ビートに ぴったり あわせて タップできたら ほめる
+    const d = now() - seq.lastBeat, gap = Math.min(d, spb() - d);
+    if (L.ok) quiz.perfect++;
+    banner(gap < 0.12 ? '🎯 リズム ぴったり！' : L.ok ? '⭕ せいかい！' : '⭕ できたね！');
+    const r = btn.getBoundingClientRect();
+    sparkle(r.left + r.width / 2, r.top + r.height / 2, gap < 0.12 ? 14 : 8);
+    renderChips(quiz.qs, quiz.qs.indexOf(L), 'quiz');
+  }
+  function timeUp(L, li) {
+    if (L.done) return;
+    L.done = true;
+    L.ok = false;
+    quiz.open = null;
+    buzz();
+    setEq(L, 4, 'miss');
+    setLyric(L, 5, true);
+    $('choices').innerHTML = '';
+    banner(`こたえは ${L.c}`);
+    // つぎの ぎょうに「もういちど うたう」を はさむ
+    quiz.lines.splice(li + 1, 0, { a: L.a, b: L.b, c: L.c, teach: true });
+    renderChips(quiz.qs, quiz.qs.indexOf(L), 'quiz');
+  }
+  function finishQuiz() {
+    seqStop();
+    const total = quiz.qs.length, ok = quiz.perfect;
+    const miss = total - ok;
+    const stars = miss === 0 ? 3 : miss <= 2 ? 2 : 1;
+    const key = cur === 'mix' ? 'mix' : cur;
+    if ((save.stars[key] || 0) < stars) { save.stars[key] = stars; persist(); }
+    $('resStars').innerHTML = starText(stars);
+    $('resMsg').textContent = stars === 3 ? 'パーフェクト！' : stars === 2 ? 'すごい！ あと すこし' : 'よく がんばったね！';
+    $('resSub').textContent = `${total}もん ちゅう ${ok}もん いっぱつで せいかい`;
+    $('resChips').innerHTML = quiz.qs.map(q =>
+      `<span class="${q.ok ? 'good' : 'bad'}">${q.a}＋${q.b}＝${q.c}</span>`).join('');
+    if (stars === 3) {
+      fanfare();
+      const nextDan = cur === 'mix' ? null : cur < 9 ? cur + 1 : 'mix';
+      if (nextDan) {
+        $('resNext').innerHTML = nextDan === 'mix' ? '🎲 ぜんぶ まぜてに ちょうせん' : `➡️ ${nextDan} の だんへ`;
+        $('resNext').onclick = () => openMenu(nextDan);
+      } else {
+        $('resNext').innerHTML = '🏠 はじめの がめんへ';
+        $('resNext').onclick = goHome;
+      }
+      sparkle(innerWidth / 2, innerHeight / 3, 20);
+    } else if (cur !== 'mix') {
+      $('resNext').innerHTML = '🎵 うたって れんしゅう';
+      $('resNext').onclick = () => startChant(false);
+    } else {
+      $('resNext').innerHTML = '🏠 はじめの がめんへ';
+      $('resNext').onclick = goHome;
+    }
+    show('result');
+  }
+
+  /* ================= ボタン・せってい ================= */
+  function goHome() { seqStop(); renderHome(); show('home'); }
+  $('homeBtn').addEventListener('click', goHome);
+  $('stopBtn').addEventListener('click', () => { seqStop(); openMenu(cur); });
+  $('resAgain').addEventListener('click', () => (lastMode === 'quiz' ? startQuiz() : startChant(chant ? chant.hide : false)));
+  $('resMenu').addEventListener('click', goHome);
+
+  function renderToggles() {
+    $('sndBtn').textContent = save.sound ? '🔊' : '🔇';
+    $('sndBtn').classList.toggle('off', !save.sound);
+    $('voiceBtn').classList.toggle('off', !save.voice);
+    $('voiceBtn').hidden = !canSpeak;
+  }
+  $('sndBtn').addEventListener('click', () => {
+    save.sound = !save.sound;
+    persist();
+    ensureAudio();
+    if (master) master.gain.value = save.sound ? 0.8 : 0;
+    renderToggles();
+  });
+  $('voiceBtn').addEventListener('click', () => {
+    save.voice = !save.voice;
+    persist();
+    if (!save.voice) hush(); else say('こえ おん');
+    renderToggles();
+  });
+
+  // ほかの アプリに いったら とめる
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && seq.alive) { seqStop(); openMenu(cur); }
+  });
+
+  renderToggles();
+  renderHome();
+})();
+</script>
+</body>
+</html>
