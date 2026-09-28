@@ -190,6 +190,21 @@
   .yesno { display: flex; gap: 10px; justify-content: center; margin-top: 12px; }
   .yesno button { max-width: 220px; font-size: 24px; }
   .yesno button.eat { background: #ffe082; }
+  .xbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .xbtns button {
+    min-height: 74px; padding: 6px 4px;
+    font-size: 16px; line-height: 1.35; font-family: inherit; font-weight: bold; color: var(--ink);
+    background: var(--bg, #fff); border: 4px solid var(--c, #1565c0); border-radius: 18px;
+    box-shadow: 0 5px 0 var(--c, #1565c0); cursor: pointer;
+  }
+  .xbtns button:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--c, #1565c0); }
+  .xbtns button.wide { grid-column: 1 / -1; min-height: 56px; }
+  .xbtns small { font-size: 12px; font-weight: normal; }
+  .xbtns ruby rt { font-size: 9px; }
+  .over .yesno button { font-size: 18px; line-height: 1.4; }
+  .over { background: rgba(60, 0, 0, .45); }
+  .over .panel { border-color: #b71c1c; box-shadow: 0 8px 0 rgba(183, 28, 28, .45); }
+  .over h2 { color: #b71c1c; }
   .yesno button.green { background: #c8f7c5; border-color: #2e7d32; box-shadow: 0 5px 0 #2e7d32; font-size: 17px; line-height: 1.5; padding: 6px 4px; }
   .yesno button.blue { background: #d6e9ff; border-color: #1565c0; box-shadow: 0 5px 0 #1565c0; font-size: 17px; line-height: 1.5; padding: 6px 4px; }
 
@@ -249,7 +264,9 @@
         <li>🚦 しんごうは <b>あお</b>で わたろうね</li>
         <li>➕ 「ぷっ!」の まえの <b>たしざん</b>に せいかいすると はやくなる。<b>むずかしいほど はやい！</b>（たす2 → 3ばい、たす3 → 4ばい、たす4 → なんと 6ばい）</li>
         <li>🍜 ラーメンやさんに はいって ラーメンが たべられるよ</li>
-        <li>🟢 センターきた えきで <b>グリーンライン</b>に のりかえると <ruby>日吉<rt>ひよし</rt></ruby>ゴール</li>
+        <li>🟢 センターみなみ・センターきた えきで <b>グリーンライン</b>に のりかえ（<ruby>日吉<rt>ひよし</rt></ruby>・<ruby>中山<rt>なかやま</rt></ruby>）</li>
+        <li>🚃 よこはま えきで <b>JR</b>（けいひんとうほくせん・とうかいどうせん）に のりかえ。のぼり・くだりを えらべる</li>
+        <li>💀 <b>あかしんごう</b>で わたると くるまに ひかれて ゲームオーバー！</li>
       </ul>
       <p class="best" id="bestLine"></p>
       <button class="startbtn" id="startBtn" type="button">しゅっぱつ！</button>
@@ -284,12 +301,22 @@
   <!-- のりかえ -->
   <div class="overlay" id="xferOv" hidden>
     <div class="panel">
-      <div class="bigemoji">🚇🔀🚃</div>
-      <h2>センターきた えき！</h2>
-      <p><b style="color:#2e7d32">グリーンライン</b>に のりかえ できるよ。<br>どっちで いく？</p>
+      <div class="bigemoji" id="xferEmoji">🚇🔀🚃</div>
+      <h2 id="xferTitle"></h2>
+      <p id="xferText"></p>
+      <div class="xbtns" id="xferBtns"></div>
+    </div>
+  </div>
+
+  <!-- ゲームオーバー -->
+  <div class="overlay over" id="overOv" hidden>
+    <div class="panel">
+      <div class="bigemoji">💀🚗💥</div>
+      <h2>ゲームオーバー</h2>
+      <p>あかしんごうで わたったら くるまに ひかれちゃった…<br><b>しんごうは あおに なってから わたろうね！</b></p>
       <div class="yesno">
-        <button type="button" class="green" id="xferGreen">🟢<br>グリーンライン<br>で <ruby>日吉<rt>ひよし</rt></ruby>へ</button>
-        <button type="button" class="blue" id="xferBlue">🔵<br>ブルーライン<br>で <ruby>あざみ野<rt>あざみの</rt></ruby>へ</button>
+        <button type="button" class="eat" id="contBtn">🚦<br>しんごうの<br>まえから</button>
+        <button type="button" id="retryBtn">🔁<br>さいしょ<br>から</button>
       </div>
     </div>
   </div>
@@ -372,7 +399,29 @@
   ];
   const G_VIA0 = 10150, G_VIA1 = 11900; // グリーンラインの こうか
   let route = 'blue';
+  // でんしゃに のる コース（のったら ゴールまで でんしゃ）
+  const S_ = (list) => list.split(' ').map((w) => w.split(':'));
+  const LINES = {
+    kt_up: { name: 'けいひんとうほくせん', color: '#00b2e5', dir: 'のぼり', scenery: 'city',
+      stations: S_('東神奈川:ひがしかながわ 新子安:しんこやす 鶴見:つるみ 川崎:かわさき 蒲田:かまた 大森:おおもり 大井町:おおいまち 品川:しながわ 高輪ゲートウェイ:たかなわゲートウェイ 田町:たまち 浜松町:はままつちょう 新橋:しんばし 有楽町:ゆうらくちょう 東京:とうきょう') },
+    kt_down: { name: 'けいひんとうほくせん', color: '#00b2e5', dir: 'くだり', scenery: 'mix',
+      stations: S_('桜木町:さくらぎちょう 関内:かんない 石川町:いしかわちょう 山手:やまて 根岸:ねぎし 磯子:いそご 新杉田:しんすぎた 洋光台:ようこうだい 港南台:こうなんだい 本郷台:ほんごうだい 大船:おおふな') },
+    td_up: { name: 'とうかいどうせん', color: '#f68b1e', color2: '#1d9e48', dir: 'のぼり', scenery: 'city',
+      stations: S_('川崎:かわさき 品川:しながわ 新橋:しんばし 東京:とうきょう') },
+    td_down: { name: 'とうかいどうせん', color: '#f68b1e', color2: '#1d9e48', dir: 'くだり', scenery: 'sea', seaFrom: 6,
+      stations: S_('戸塚:とつか 大船:おおふな 藤沢:ふじさわ 辻堂:つじどう 茅ケ崎:ちがさき 平塚:ひらつか 大磯:おおいそ 二宮:にのみや 国府津:こうづ 鴨宮:かものみや 小田原:おだわら 早川:はやかわ 根府川:ねぶかわ 真鶴:まなづる 湯河原:ゆがわら 熱海:あたみ') },
+    g_naka_s: { name: 'グリーンライン', color: '#2e9e44', dir: 'なかやまゆき', scenery: 'green',
+      stations: S_('都筑ふれあいの丘:つづきふれあいのおか 川和町:かわわちょう 中山:なかやま') },
+    g_naka_n: { name: 'グリーンライン', color: '#2e9e44', dir: 'なかやまゆき', scenery: 'green',
+      stations: S_('センター南:センターみなみ 都筑ふれあいの丘:つづきふれあいのおか 川和町:かわわちょう 中山:なかやま') },
+  };
+  const JR_GAP = 520;
+  let jr = null; // でんしゃに のっている あいだの じょうたい
   const goalX = () => (route === 'green' ? G_GOAL : GOAL);
+  const goalName = () => {
+    if (LINES[route]) { const [k, kana] = LINES[route].stations[LINES[route].stations.length - 1]; return `<ruby>${k}<rt>${kana}</rt></ruby>`; }
+    return route === 'green' ? '<ruby>日吉<rt>ひよし</rt></ruby>' : '<ruby>あざみ野<rt>あざみの</rt></ruby>';
+  };
   const worldEnd = () => (route === 'green' ? G_WORLD_END : WORLD_END);
   const stationsNow = () => (route === 'green'
     ? STATIONS.filter((s) => s.x <= TRANSFER_X).concat(GREEN_STATIONS)
@@ -473,6 +522,9 @@
     },
     doors() { tone(880, 0.2, { vol: 0.06 }); tone(660, 0.3, { vol: 0.06, delay: 0.22 }); noise(0.4, { f: 1500, type: 'bandpass', vol: 0.08, delay: 0.5 }); },
     rumble() { noise(0.12, { f: 180, vol: 0.12 }); },
+    horn() { tone(440, 0.22, { type: 'square', vol: 0.07 }); tone(440, 0.35, { type: 'square', vol: 0.07, delay: 0.26 }); tone(554, 0.22, { type: 'square', vol: 0.05 }); tone(554, 0.35, { type: 'square', vol: 0.05, delay: 0.26 }); },
+    crash() { noise(0.7, { f: 900, to: 120, vol: 0.45 }); tone(160, 0.6, { to: 40, type: 'sawtooth', vol: 0.18 }); tone(1800, 0.4, { to: 300, type: 'square', vol: 0.05, delay: 0.1 }); },
+    chin() { tone(1568, 2.2, { vol: 0.12 }); tone(1576, 2.2, { vol: 0.08 }); tone(3136, 1.2, { vol: 0.03 }); },
     slurp() { for (let i = 0; i < 5; i++) noise(0.22, { f: 900, to: 2400, type: 'bandpass', q: 3, vol: 0.18, delay: i * 0.25 }); },
     burp()  { tone(120, 0.4, { to: 70, type: 'sawtooth', vol: 0.12 }); noise(0.3, { f: 300, vol: 0.08 }); },
     brake() { tone(1800, 0.4, { to: 1500, type: 'sawtooth', vol: 0.04 }); },
@@ -530,7 +582,7 @@
       sk: { seen: false, prevC: 0 },
       ramen: { entered: false, gift: false, next: 0, asked: false },
       arena: { done: false, cheerT: 0 },
-      later: { xfer: false, kishi: false, stadium: false, tower: false, half: false, river: false, wheel: false, train: false, st: {} },
+      later: { kishi: false, stadium: false, tower: false, half: false, river: false, wheel: false, train: false, st: {} },
     };
     items = ITEM_XS.map((x) => ({ x, got: false }));
     parts = []; npcSay = [];
@@ -618,6 +670,7 @@
     if (m === 'slide') say('ふぅ〜 びっくりした', 1.3);
     if (m === 'boost' && P.superLv) say(pick(['ぜぇぜぇ… はやすぎ〜!', 'めが まわる〜', 'ひゃー たのしかった!']), 1.4);
     if (m === 'boost') P.superLv = 0;
+    if (m === 'dead') { if (st === 'play') showGameOver(); P.modeT = 0; return; }
     if (m === 'ride') { Hz.later.st[GREEN_STATIONS[0].x] = true; snd.doors(); say('きたやまた えきで おりたよ! ひよしまで にょこにょこ!', 2); }
     if (m === 'shop') {
       P.chef = null; fadeT = FADE;
@@ -705,12 +758,12 @@
              : P.mode === 'boost' ? 6 + 5 * Math.sin(T * 30)
              : 0;
     }
-    if (P.mode !== 'grab') P.lift = 0;
+    if (P.mode !== 'grab' && !jr) P.lift = 0;
   }
 
   function doFart() {
     if (st !== 'play' || P.gauge <= 0) return;
-    if (!(P.mode === 'walk' || P.mode === 'dizzy')) return;
+    if (!(P.mode === 'walk' || P.mode === 'dizzy' || P.mode === 'jr')) return;
     const f = $('fartBtn'); f.classList.add('on'); setTimeout(() => f.classList.remove('on'), 120);
     openQuiz();
   }
@@ -723,7 +776,7 @@
     4: { name: 'ウルトラ', mul: 6 },
   };
   const mulOf = (add) => SUPER[add].mul;
-  const fx = { banner: null, flash: 0, shake: 0 };
+  const fx = { banner: null, flash: 0, shake: 0, death: null, redFlash: 0 };
   function openQuiz() {
     st = 'quiz'; setHold(false);
     const r = Math.random();
@@ -765,7 +818,10 @@
   function fartGo(add) {
     P.gauge--; farts++;
     P.boostV = BOOST_BASE * (add ? mulOf(add) : 1);
-    setMode('boost', add ? 1.8 : 1.2);
+    if (jr) {
+      jr.boostT = add ? 1.8 : 1.2;
+      jr.boostMul = add ? mulOf(add) : 1.8;
+    } else setMode('boost', add ? 1.8 : 1.2);
     P.superLv = add;
     snd.fart();
     if (add) {
@@ -783,27 +839,120 @@
   }
 
   // のりかえ
-  function openXfer() {
+  const XFERS = {
+    yokohama: {
+      x: preX(19), emoji: '🚇🔀🚃', title: 'よこはま えき！',
+      text: '<b>JR</b>に のりかえ できるよ。どれに のる？',
+      opts: [
+        { html: '<ruby>京浜東北線<rt>けいひんとうほくせん</rt></ruby><br><small>のぼり → </small><ruby>東京<rt>とうきょう</rt></ruby>', c: '#00b2e5', bg: '#e1f5fe', go: () => startJr('kt_up') },
+        { html: '<ruby>京浜東北線<rt>けいひんとうほくせん</rt></ruby><br><small>くだり → </small><ruby>大船<rt>おおふな</rt></ruby>', c: '#00b2e5', bg: '#e1f5fe', go: () => startJr('kt_down') },
+        { html: '<ruby>東海道線<rt>とうかいどうせん</rt></ruby><br><small>のぼり → </small><ruby>東京<rt>とうきょう</rt></ruby>', c: '#f68b1e', bg: '#fff3e0', go: () => startJr('td_up') },
+        { html: '<ruby>東海道線<rt>とうかいどうせん</rt></ruby><br><small>くだり → </small><ruby>熱海<rt>あたみ</rt></ruby>', c: '#f68b1e', bg: '#fff3e0', go: () => startJr('td_down') },
+        { html: '🔵 ブルーラインの まま', c: '#1565c0', bg: '#e3f2fd', wide: true, go: () => stayBlue() },
+      ],
+    },
+    center_s: {
+      x: 8300, emoji: '🚇🔀🟢', title: 'センターみなみ えき！',
+      text: '<b style="color:#2e7d32">グリーンライン</b>に のりかえ できるよ。どこへ いく？',
+      opts: [
+        { html: '🟢 グリーンライン<br><small>→ </small><ruby>日吉<rt>ひよし</rt></ruby>', c: '#2e9e44', bg: '#e8f5e9', go: () => goHiyoshi() },
+        { html: '🟢 グリーンライン<br><small>→ </small><ruby>中山<rt>なかやま</rt></ruby>', c: '#2e9e44', bg: '#e8f5e9', go: () => startJr('g_naka_s') },
+        { html: '🔵 ブルーラインの まま', c: '#1565c0', bg: '#e3f2fd', wide: true, go: () => stayBlue() },
+      ],
+    },
+    center_n: {
+      x: TRANSFER_X, emoji: '🚇🔀🟢', title: 'センターきた えき！',
+      text: '<b style="color:#2e7d32">グリーンライン</b>に のりかえ できるよ。どこへ いく？',
+      opts: [
+        { html: '🟢 グリーンライン<br><small>→ </small><ruby>日吉<rt>ひよし</rt></ruby>', c: '#2e9e44', bg: '#e8f5e9', go: () => goHiyoshi() },
+        { html: '🟢 グリーンライン<br><small>→ </small><ruby>中山<rt>なかやま</rt></ruby>', c: '#2e9e44', bg: '#e8f5e9', go: () => startJr('g_naka_n') },
+        { html: '🔵 ブルーラインの まま', c: '#1565c0', bg: '#e3f2fd', wide: true, go: () => stayBlue() },
+      ],
+    },
+  };
+  function openXfer(key) {
+    const xf = XFERS[key];
     st = 'xfer'; setHold(false);
+    $('xferEmoji').textContent = xf.emoji;
+    $('xferTitle').textContent = xf.title;
+    $('xferText').innerHTML = xf.text;
+    const box = $('xferBtns');
+    box.innerHTML = '';
+    xf.opts.forEach((o) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.innerHTML = o.html;
+      if (o.wide) b.className = 'wide';
+      b.style.setProperty('--c', o.c); b.style.setProperty('--bg', o.bg);
+      b.addEventListener('click', () => {
+        if (st !== 'xfer') return;
+        $('xferOv').hidden = true;
+        st = 'play';
+        o.go();
+      });
+      box.appendChild(b);
+    });
     $('xferOv').hidden = false;
-    speak('のりかえ できるよ。どっちに する?');
+    speak('のりかえ できるよ。どれに する?');
   }
-  function closeXfer(green) {
-    if (st !== 'xfer') return;
-    $('xferOv').hidden = true;
-    st = 'play';
-    if (green) {
-      route = 'green';
-      rebuildTrack();
-      fx.banner = { text: 'のりかえ!', sub: 'グリーンラインで ひよしへ', t: 1.6, dur: 1.6, lv: 1 };
-      fx.flash = 0.25;
-      setMode('ride', 3.4, { from: P.x, to: GREEN_STATIONS[0].x + 10 - BL });
-      say('グリーンラインに のったよ! がたんごとん', 2);
-      snd.doors();
-      laugh();
-    } else {
-      say('ブルーラインで あざみのへ いくよ!', 1.6);
+  function stayBlue() { say('ブルーラインの まま いくよ!', 1.6); }
+  function goHiyoshi() {
+    route = 'green';
+    rebuildTrack();
+    fx.banner = { text: 'のりかえ!', sub: 'グリーンラインで ひよしへ', t: 1.6, dur: 1.6, lv: 1 };
+    fx.flash = 0.25;
+    const to = GREEN_STATIONS[0].x + 10 - BL;
+    setMode('ride', 3.4 + Math.max(0, to - P.x - 800) / 600, { from: P.x, to });
+    say('グリーンラインに のったよ! がたんごとん', 2);
+    snd.doors();
+    laugh();
+  }
+  // でんしゃに のって ゴールまで
+  function startJr(key) {
+    const cfg = LINES[key];
+    route = key;
+    jr = { key, cfg, pos: 0, len: cfg.stations.length * JR_GAP, speed: 0, boostT: 0, boostMul: 1, next: 0, rumbleT: 0, chatT: 4 };
+    setMode('jr', 1e9);
+    P.lift = 22;
+    P.gauge = 3; updateHud();
+    rebuildTrack();
+    fx.banner = { text: 'のりかえ!', sub: `${cfg.name} ${cfg.dir}`, t: 1.8, dur: 1.8, lv: 1 };
+    fx.flash = 0.3;
+    snd.doors(); laugh();
+    const last = cfg.stations[cfg.stations.length - 1][1];
+    say(`${cfg.name}に のったよ! ${last}まで しゅっぱつ! おなら まんたん!`, 2.6);
+  }
+  function jrScreenX() { return viewW * 0.1; }
+  function updateJr(dt) {
+    const j = jr;
+    if (st === 'play') {
+      if (j.boostT > 0) j.boostT -= dt;
+      let target = 260 + (holding ? 260 : 0);
+      if (j.boostT > 0) target *= j.boostMul;
+      j.speed += (target - j.speed) * Math.min(1, dt * 2.5);
+      j.pos += j.speed * dt;
+      j.rumbleT -= dt;
+      if (j.rumbleT <= 0) { j.rumbleT = Math.max(0.12, 60 / Math.max(60, j.speed)); snd.rumble(); }
+      // えきの アナウンス
+      const n = j.cfg.stations.length;
+      while (j.next < n && j.pos >= (j.next + 1) * JR_GAP - 320) {
+        const [, kana] = j.cfg.stations[j.next];
+        say(j.next === n - 1 ? `つぎは しゅうてん ${kana}!` : `つぎは ${kana}`, 1.5);
+        tone(988, 0.18, { vol: 0.07 }); tone(784, 0.3, { vol: 0.07, delay: 0.18 });
+        j.next++;
+      }
+      j.chatT -= dt;
+      if (j.chatT <= 0 && (!P.bubble || P.bubble.t < 0.3)) {
+        j.chatT = 5 + Math.random() * 3;
+        say(pick(['がたんごとん', 'はやーい!', 'けしきが きれい〜', 'でんしゃ だいすき!']), 1.2);
+      }
+      if (j.boostT > 0 && P.superLv) {
+        for (let k = 0; k < 3; k++) addP({ kind: 'dot', x: jrScreenX() - 10, y: GY - 30 - k * 10, vx: -200, vy: 0, life: 0.6, size: 6, color: `hsl(${(T * 720 + k * 60) % 360},90%,60%)` });
+      }
+      if (j.pos >= j.len) { j.pos = j.len; j.speed = 0; finish(); }
     }
+    P.x = jrScreenX() + 150;
+    if (P.mode === 'jr') { P.tailX = P.x; P.headX = P.x + BL; P.hump = Math.abs(Math.sin(T * 12)) * 3; }
+    camX = 0;
   }
 
   // ラーメンやさん（おみせの なかの ながれ）
@@ -838,6 +987,38 @@
     }
   }
 
+  // くるまに ひかれる（ゲームオーバー）
+  const DEAD_T = 3.6;
+  let deaths = 0;
+  function die() {
+    setMode('dead', DEAD_T, { x: P.headX - BL });
+    setHold(false);
+    deaths++;
+    fx.death = { t: 0 };
+    snd.horn();
+    say('あっ! くるまだ!', 0.6);
+    setTimeout(() => {
+      if (P.mode !== 'dead') return;
+      snd.crash(); fx.shake = 1.4; fx.redFlash = 0.5;
+      say('ぎゃーーーっ!!', 1.4);
+      for (let i = 0; i < 26; i++) addP({ kind: 'emo', x: P.headX, y: GY - 30, vx: -260 + Math.random() * 520, vy: -320 + Math.random() * 220, g: 420, life: 1.4, text: pick(['💥', '⭐', '✨', '💫']), size: 14 + Math.random() * 14 });
+    }, 300);
+    setTimeout(() => { if (P.mode === 'dead') snd.chin(); }, 1500);
+  }
+  function showGameOver() {
+    st = 'over';
+    $('overOv').hidden = false;
+  }
+  function continueFromSignal() {
+    $('overOv').hidden = true;
+    fx.death = null; fx.redFlash = 0;
+    P.x = S0 - 170 - BL; P.tailX = P.x; P.headX = P.x + BL;
+    P.mode = 'walk'; P.modeT = 0; P.stepping = false;
+    camX = P.headX - viewW * 0.4;
+    st = 'play';
+    say('こんどは あおで わたるぞ!', 1.8);
+  }
+
   function tickleTap() {
     if (P.mode !== 'walk') return;
     setMode('tickle', 0.9);
@@ -847,9 +1028,37 @@
     if (tickles <= 5) laugh();
   }
 
+  // はなし・つぶ・えんしゅつ の タイマー（どの ばめんでも うごく）
+  function tickCommon(dt) {
+    if (P.bubble) { P.bubble.t -= dt; if (P.bubble.t <= 0) P.bubble = null; }
+    for (const n of npcSay) n.t -= dt;
+    npcSay = npcSay.filter((n) => n.t > 0);
+    for (const p of parts) {
+      p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.kind === 'cloud') p.size += 18 * dt;
+    }
+    parts = parts.filter((p) => p.life > 0);
+    if (fx.flash > 0) fx.flash = Math.max(0, fx.flash - dt);
+    if (fx.shake > 0) fx.shake = Math.max(0, fx.shake - dt);
+    if (fx.banner) { fx.banner.t -= dt; if (fx.banner.t <= 0) fx.banner = null; }
+    if (fx.death) fx.death.t += dt;
+    if (st === 'goal') {
+      goalWait -= dt;
+      if (Math.random() < 0.4) addP({ kind: 'dot', x: camX + Math.random() * viewW, y: GY - 260, vx: -20 + Math.random() * 40, vy: 40 + Math.random() * 60, life: 3, color: pick(['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#f783ac']), size: 4 });
+      if (goalWait <= 0 && $('goalOv').hidden) showResult();
+    }
+  }
+
   function update(dt) {
     T += dt;
     if (st === 'play') playTime += dt;
+    if (jr) {
+      updatePlayer(dt);
+      updateJr(dt);
+      tickCommon(dt);
+      updateTrack();
+      return;
+    }
     const prevHead = P.headX;
     updatePlayer(dt);
     const walk = P.mode === 'walk', boost = P.mode === 'boost';
@@ -934,10 +1143,7 @@
     if (!Hz.sig.hint && P.headX > 1990) { Hz.sig.hint = true; npc(2085, -80, 'あおに なったら わたろうね', 2.6); }
     if (prevHead < S0 && P.headX >= S0 && sg.red) {
       if (walk) {
-        setMode('police', 0.7, { to: 2030 });
-        npc(2085, -80, 'ピピーッ! あかは とまってね!', 1.8);
-        say('わわっ ごめんなさい', 1.4);
-        snd.whistle(); laugh();
+        die();
       } else if (boost) {
         P.x = S0 - 2 - BL; P.tailX = P.x; P.headX = P.x + BL;
         setMode('dizzy', 0.7);
@@ -999,10 +1205,7 @@
     if (!ar.done && P.headX > AX) { ar.done = true; ar.cheerT = 3; snd.cheer(); npc(AX + 110, -150, 'にょこくん がんばれー!', 2.6); }
     if (ar.cheerT > 0) ar.cheerT -= dt;
 
-    // はでな えんしゅつ の タイマー
-    if (fx.flash > 0) fx.flash = Math.max(0, fx.flash - dt);
-    if (fx.shake > 0) fx.shake = Math.max(0, fx.shake - dt);
-    if (fx.banner) { fx.banner.t -= dt; if (fx.banner.t <= 0) fx.banner = null; }
+    // にじの しっぽ
     if (boost && P.superLv) {
       for (let k = 0; k < 3; k++) addP({ kind: 'dot', x: P.tailX - k * 8, y: GY - 10 - k * 6 + Math.sin(T * 20 + k) * 4, vx: -40, vy: 0, life: 0.9, size: 6, color: `hsl(${(T * 720 + k * 60) % 360},90%,60%)` });
       if (Math.random() < 0.4) addP({ kind: 'emo', x: P.headX + Math.random() * 40, y: GY - 20 - Math.random() * 50, vx: -300, vy: 0, life: 0.5, text: '✨', size: 14 });
@@ -1040,28 +1243,17 @@
     }
 
     // ゴール
-    // のりかえ（センターきた）
-    if (!lt.xfer && st === 'play' && (P.mode === 'walk' || P.mode === 'boost') && P.headX >= TRANSFER_X - 20 && P.headX < TRANSFER_X + 600) {
-      if (P.mode === 'boost') { P.x = TRANSFER_X - 20 - BL; P.tailX = P.x; P.headX = P.x + BL; setMode('walk', 0); say('のりかえ えきだ! キキーッ!', 1); }
-      lt.xfer = true; openXfer(); return;
+    // のりかえ（よこはま・センターみなみ・センターきた）
+    for (const key of Object.keys(XFERS)) {
+      const xx = XFERS[key].x;
+      if (lt['x_' + key] || route !== 'blue' || st !== 'play' || !(P.mode === 'walk' || P.mode === 'boost')) continue;
+      if (P.headX < xx - 20 || P.headX >= xx + 600) continue;
+      if (P.mode === 'boost') { P.x = xx - 20 - BL; P.tailX = P.x; P.headX = P.x + BL; setMode('walk', 0); say('のりかえ えきだ! キキーッ!', 1); }
+      lt['x_' + key] = true; openXfer(key); return;
     }
 
     if (st === 'play' && P.headX >= goalX()) finish();
-    if (st === 'goal') {
-      goalWait -= dt;
-      if (Math.random() < 0.4) addP({ kind: 'dot', x: camX + Math.random() * viewW, y: GY - 260, vx: -20 + Math.random() * 40, vy: 40 + Math.random() * 60, life: 3, color: pick(['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#f783ac']), size: 4 });
-      if (goalWait <= 0 && $('goalOv').hidden) showResult();
-    }
-
-    // はなし・つぶ
-    if (P.bubble) { P.bubble.t -= dt; if (P.bubble.t <= 0) P.bubble = null; }
-    for (const n of npcSay) n.t -= dt;
-    npcSay = npcSay.filter((n) => n.t > 0);
-    for (const p of parts) {
-      p.life -= dt; p.vy += p.g * dt; p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.kind === 'cloud') p.size += 18 * dt;
-    }
-    parts = parts.filter((p) => p.life > 0);
+    tickCommon(dt);
 
     // カメラ
     if (fadeT > 0) fadeT = Math.max(0, fadeT - dt);
@@ -1602,6 +1794,154 @@
     }
   }
 
+  // ひかれた にょこくん（とんで → ぺしゃんこ → おばけ）
+  function drawDeadWorm() {
+    const k = P.modeDur - P.modeT;
+    const cx = (P.tailX + P.headX) / 2, cy = GY - 15;
+    ctx.save();
+    if (k < 0.3) drawWorm();
+    else if (k < 1.4) {
+      const q = (k - 0.3) / 1.1;
+      ctx.translate(cx - q * 150, cy - Math.sin(q * Math.PI) * 190);
+      ctx.rotate(-q * Math.PI * 6);
+      ctx.translate(-cx, -cy);
+      drawWorm();
+    } else {
+      ctx.translate(cx - 150, GY);
+      ctx.scale(1.5, 0.28);
+      ctx.translate(-cx, -GY);
+      drawWorm();
+      ctx.restore(); ctx.save();
+      const g = k - 1.4;
+      emo('🪦', cx - 60, GY - 18, 30);
+      ctx.globalAlpha = Math.min(1, g * 2);
+      emo('👻', cx - 150 + Math.sin(g * 4) * 16, GY - 40 - g * 45, 36);
+      circle(cx - 150 + Math.sin(g * 4) * 16, GY - 64 - g * 45, 12, null, '#ffd54f', 3);
+    }
+    ctx.restore();
+  }
+
+  // 「死す」
+  function drawDeath(t) {
+    const a = t - 0.3;
+    if (a <= 0) return;
+    ctx.save();
+    ctx.translate(viewW / 2, viewH * 0.36);
+    // あかい ひかり
+    ctx.save();
+    ctx.rotate(T * 0.8);
+    for (let i = 0; i < 16; i++) {
+      ctx.rotate(Math.PI / 8);
+      ctx.fillStyle = i % 2 ? 'rgba(183,28,28,.35)' : 'rgba(0,0,0,.22)';
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(viewW, -viewW * 0.12); ctx.lineTo(viewW, viewW * 0.12); ctx.fill();
+    }
+    ctx.restore();
+    const pop = a < 0.18 ? 3.2 - (a / 0.18) * 2.3 : a < 0.3 ? 0.9 + ((a - 0.18) / 0.12) * 0.1 : 1 + Math.sin(T * 9) * 0.025;
+    ctx.scale(pop, pop);
+    ctx.rotate(-0.08 + Math.sin(T * 7) * 0.02);
+    const size = Math.min(viewW * 0.42, viewH * 0.34, 170);
+    ctx.font = `900 ${size}px "Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const g = ctx.createLinearGradient(0, -size / 2, 0, size / 2);
+    g.addColorStop(0, '#ff1744'); g.addColorStop(0.55, '#b71c1c'); g.addColorStop(1, '#4a0000');
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = size / 5; ctx.strokeStyle = '#000'; ctx.strokeText('死す', 0, 0);
+    ctx.lineWidth = size / 12; ctx.strokeStyle = '#fff'; ctx.strokeText('死す', 0, 0);
+    ctx.fillStyle = g; ctx.fillText('死す', 0, 0);
+    // まわる ドクロ
+    for (let i = 0; i < 6; i++) {
+      const ang = T * 2 + i * Math.PI / 3;
+      emo('💀', Math.cos(ang) * size * 1.05, Math.sin(ang) * size * 0.55, size * 0.2);
+    }
+    if (a > 1.1) txt('チーン…', 0, size * 0.8, size * 0.22, '#fff', '#000');
+    ctx.restore();
+  }
+
+  // でんしゃの たび（JR・グリーンライン なかやま）
+  function drawJrScene(front) {
+    const j = jr, cfg = j.cfg, X0 = jrScreenX();
+    const trainL = X0, trainR = X0 + 380, top = GY - 86, bot = GY - 10;
+    if (!front) {
+      const n = cfg.stations.length;
+      const idx = Math.min(n - 1, Math.floor(j.pos / JR_GAP));
+      const sea = cfg.scenery === 'sea' && idx >= cfg.seaFrom;
+      // とおくの けしき
+      const pf = j.pos * 0.2;
+      if (sea) {
+        const fx0 = viewW * 0.75 - (pf * 0.2) % (viewW + 300);
+        ctx.fillStyle = '#90a4ae';
+        ctx.beginPath(); ctx.moveTo(fx0 - 150, GY - 60); ctx.lineTo(fx0, GY - 190); ctx.lineTo(fx0 + 150, GY - 60); ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.moveTo(fx0 - 40, GY - 155); ctx.lineTo(fx0, GY - 190); ctx.lineTo(fx0 + 40, GY - 155); ctx.fill();
+        ctx.fillStyle = '#29b6f6'; ctx.fillRect(-10, GY - 64, viewW + 20, 50);
+        ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2;
+        for (let i = 0; i < 8; i++) { const wx = (i * 120 - pf * 2) % (viewW + 120); const xx = wx < 0 ? wx + viewW + 120 : wx; ctx.beginPath(); ctx.moveTo(xx, GY - 40 + (i % 3) * 8); ctx.lineTo(xx + 26, GY - 40 + (i % 3) * 8); ctx.stroke(); }
+        emo('⛵', (viewW * 0.4 - pf) % (viewW + 100) + viewW, GY - 58, 22);
+      } else {
+        const cityLv = cfg.scenery === 'green' ? 0.25 : cfg.scenery === 'mix' ? 0.6 : 1;
+        for (let i = Math.floor(pf / 60) - 1; i < Math.floor((pf + viewW) / 60) + 2; i++) {
+          const x = i * 60 - pf, r = hash(i + 31);
+          if (r > 0.3 + 0.6 * cityLv) { drawTreeAt(x + 30, GY - 14, 0.7); continue; }
+          const h = 30 + (40 + 130 * cityLv) * hash(i + 77);
+          ctx.fillStyle = ['#b0bec5', '#cfd8dc', '#a5b4c8'][((i % 3) + 3) % 3];
+          ctx.fillRect(x, GY - 14 - h, 50, h);
+          ctx.fillStyle = 'rgba(255,255,255,.5)';
+          for (let yy = GY - 8 - h; yy < GY - 20; yy += 12) ctx.fillRect(x + 6, yy, 38, 3);
+        }
+      }
+      // でんちゅう と せん
+      ctx.strokeStyle = '#555'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(-10, GY - 128); ctx.lineTo(viewW + 10, GY - 128); ctx.stroke();
+      for (let k = Math.floor(j.pos / 150) - 1; k < Math.floor((j.pos + viewW) / 150) + 2; k++) {
+        const x = k * 150 - j.pos;
+        ctx.fillStyle = '#8d8d8d'; ctx.fillRect(x - 3, GY - 140, 6, 140); ctx.fillRect(x - 16, GY - 132, 32, 4);
+      }
+      // えきの ホーム と かんばん
+      for (let i = 0; i < n; i++) {
+        const sx = (i + 1) * JR_GAP - j.pos + X0 + 190;
+        if (sx < -260 || sx > viewW + 260) continue;
+        const [kanji, kana] = cfg.stations[i];
+        const goal = i === n - 1;
+        ctx.fillStyle = '#bdbdbd'; ctx.fillRect(sx - 230, GY - 22, 460, 22);
+        ctx.fillStyle = '#ffeb3b'; ctx.fillRect(sx - 230, GY - 24, 460, 3);
+        ctx.fillStyle = '#9e9e9e'; ctx.fillRect(sx - 230, GY - 150, 460, 8);
+        for (const d of [-200, 0, 200]) ctx.fillRect(sx + d - 3, GY - 150, 6, 128);
+        ctx.fillStyle = '#fff'; rr(sx - 80, GY - 196, 160, 44, 6); ctx.fill();
+        ctx.strokeStyle = cfg.color; ctx.lineWidth = 3; ctx.stroke();
+        ctx.fillStyle = cfg.color; ctx.fillRect(sx - 80, GY - 160, 160, 7);
+        txt(kana, sx, GY - 186, 10, '#333');
+        txt(kanji, sx, GY - 168, kanji.length > 6 ? 12 : 17, '#111');
+        if (goal) { emo('🏁', sx + 100, GY - 180, 26); txt('ゴール', sx, GY - 214, 18, '#e53935', '#fff'); }
+      }
+      // せんろ
+      ctx.fillStyle = '#9e8e7e'; ctx.fillRect(-10, GY - 2, viewW + 20, VH - GY + 10);
+      ctx.fillStyle = '#6d4c41';
+      for (let k = Math.floor(j.pos / 22) - 1; k < Math.floor((j.pos + viewW) / 22) + 2; k++) ctx.fillRect(k * 22 - j.pos, GY + 2, 10, 8);
+      ctx.fillStyle = '#757575'; ctx.fillRect(-10, GY, viewW + 20, 3); ctx.fillRect(-10, GY + 8, viewW + 20, 3);
+      // でんしゃ（うしろがわ）
+      ctx.fillStyle = '#e0e0e0'; rr(trainL, top, trainR - trainL, bot - top, 14); ctx.fill();
+      ctx.strokeStyle = '#9e9e9e'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.fillStyle = cfg.color; ctx.fillRect(trainL, top + 50, trainR - trainL, 8);
+      if (cfg.color2) { ctx.fillStyle = cfg.color2; ctx.fillRect(trainL, top + 58, trainR - trainL, 6); }
+      ctx.fillStyle = '#37474f';
+      for (const wx of [trainL + 18, trainL + 64, trainR - 90]) { rr(wx, top + 12, 34, 30, 5); ctx.fill(); }
+      ctx.fillStyle = '#cfe8ff'; rr(P.tailX - 26, top + 10, BL + 56, 56, 8); ctx.fill();
+      txt(`${cfg.name}`, trainR - 60, top + 76 - 30, 9, '#333');
+      return;
+    }
+    // でんしゃ（まえがわ）
+    ctx.fillStyle = '#e0e0e0'; ctx.fillRect(trainL + 2, bot - 18, trainR - trainL - 4, 16);
+    ctx.fillStyle = cfg.color; ctx.fillRect(trainL + 2, bot - 18, trainR - trainL - 4, 6);
+    ctx.strokeStyle = '#78909c'; ctx.lineWidth = 3; rr(P.tailX - 26, top + 10, BL + 56, 56, 8); ctx.stroke();
+    for (const wx of [trainL + 40, trainL + 90, trainR - 90, trainR - 40]) circle(wx, bot + 4, 9, '#455a64', '#263238', 2);
+    ctx.fillStyle = '#37474f';
+    ctx.beginPath(); ctx.moveTo(trainR - 26, top + 10); ctx.quadraticCurveTo(trainR, top + 14, trainR, top + 42); ctx.lineTo(trainR - 26, top + 42); ctx.fill();
+  }
+  function drawTreeAt(x, base, s) {
+    ctx.fillStyle = '#8d6e63'; ctx.fillRect(x - 3 * s, base - 30 * s, 6 * s, 30 * s);
+    circle(x, base - 42 * s, 20 * s, '#66bb6a');
+  }
+
   // にょこくんが のっている グリーンラインの でんしゃ
   function drawRideTrain(front) {
     const x0 = P.tailX - 150, x1 = P.headX + 90, top = GY - 78, y1 = GY - 8;
@@ -1806,6 +2146,18 @@
       sign(S1 + 60, GY - 80, '環状2号線', 'かんじょう2ごうせん', '#1565c0', '#fff', 13);
       emo('👮', S0 - 65, GY - 24, 34);
       // くるま（あかの とき、にょこくんが わたっていなければ はしる）
+      if (P.mode === 'dead') {
+        const k = P.modeDur - P.modeT;
+        const hx = P.opt.x + BL;
+        const cx = k < 0.3 ? hx + 420 - (k / 0.3) * 390 : hx + 30 - (k - 0.3) * 900;
+        ctx.strokeStyle = 'rgba(80,80,80,.5)'; ctx.lineWidth = 3;
+        for (let i = 0; i < 4; i++) { ctx.beginPath(); ctx.moveTo(cx + 45, GY - 40 + i * 10); ctx.lineTo(cx + 110 + i * 15, GY - 40 + i * 10); ctx.stroke(); }
+        emo('🚙', cx, GY - 32, 72);
+        if (k > 0.3 && k < 1.0) {
+          emo('💥', hx, GY - 40, 90 + Math.sin(k * 30) * 8);
+          txt('ドカーン!!', hx, GY - 120, 34, '#ffeb3b', '#d32f2f');
+        }
+      }
       const onCross = P.headX > S0 && P.tailX < S1;
       if (sg.red && !onCross) {
         const k = ((sg.c - 4.5) % 1.1) / 1.1;
@@ -1876,7 +2228,8 @@
 
   function faceKind() {
     switch (P.mode) {
-      case 'back': case 'police': case 'dizzy': return 'dizzy';
+      case 'back': case 'police': case 'dizzy': case 'dead': return 'dizzy';
+      case 'jr': return 'happy';
       case 'slide': case 'sneeze': return 'wow';
       case 'sneezePre': return 'scrunch';
       case 'grab': return 'scared';
@@ -2007,7 +2360,7 @@
     ctx.lineCap = 'butt';
 
     // スーパーおならの ときは サングラス
-    if (P.mode === 'boost' && P.superLv) {
+    if ((P.mode === 'boost' || (jr && jr.boostT > 0)) && P.superLv) {
       ctx.fillStyle = '#111';
       rr(e1.x - 6.5, e1.y - 4.5, 13, 9, 3); ctx.fill();
       rr(e2.x - 5.5, e2.y - 5, 11, 8.5, 3); ctx.fill();
@@ -2065,18 +2418,20 @@
     if (fx.shake > 0) ctx.translate((Math.random() - 0.5) * fx.shake * 16, (Math.random() - 0.5) * fx.shake * 12);
     ctx.translate(0, offY);
     const inShop = P.mode === 'shop';
-    if (!inShop) drawFar();
+    if (!inShop && !jr) drawFar();
     ctx.translate(-camX, 0);
     const x0 = camX - 60, x1 = camX + viewW + 60;
     if (inShop) drawShop();
+    else if (jr) drawJrScene(false);
     else {
       drawScenery(x0, x1);
       drawGround(x0, x1);
       drawHazards(x0, x1);
     }
     if (P.mode === 'ride') drawRideTrain(false);
-    drawWorm();
+    if (P.mode === 'dead') drawDeadWorm(); else drawWorm();
     if (P.mode === 'ride') drawRideTrain(true);
+    if (jr) drawJrScene(true);
     drawParts();
     if (inShop) {
       if (P.chef) bubble(camX + viewW * 0.66, GY - 150, P.chef.text, Math.min(1, P.chef.t * 3));
@@ -2100,7 +2455,14 @@
     }
     // がめん ぜんたいの えんしゅつ
     ctx.setTransform(scale * DPR, 0, 0, scale * DPR, 0, 0);
-    if (P.mode === 'boost' && P.superLv) drawSpeedLines(P.superLv);
+    if ((P.mode === 'boost' || (jr && jr.boostT > 0)) && P.superLv) drawSpeedLines(P.superLv);
+    else if (jr && jr.speed > 420) drawSpeedLines(1);
+    if (fx.redFlash > 0) {
+      ctx.fillStyle = `rgba(220,0,0,${fx.redFlash})`;
+      ctx.fillRect(0, 0, viewW, viewH);
+      fx.redFlash = Math.max(0, fx.redFlash - 0.012);
+    }
+    if (fx.death) drawDeath(fx.death.t);
     if (fx.flash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${fx.flash / 0.4 * 0.85})`;
       ctx.fillRect(0, 0, viewW, viewH);
@@ -2162,6 +2524,12 @@
   function buildTrack() {
     const tr = $('track');
     tr.querySelectorAll('.mk').forEach((m) => m.remove());
+    if (jr) {
+      const s = document.createElement('span');
+      s.className = 'mk'; s.textContent = '🏁'; s.style.left = '100%';
+      tr.insertBefore(s, $('trackMe'));
+      return;
+    }
     const marks = route === 'green'
       ? MARKS.concat([[TRANSFER_X, '🔀'], [10250, '🎋'], [G_GOAL, '🏁']])
       : MARKS.concat([[TRANSFER_X, '🔀'], [GOAL, '🏁']]);
@@ -2175,11 +2543,11 @@
   const GOAL_NAMES = { blue: '<ruby>あざみ野<rt>あざみの</rt></ruby>', green: '<ruby>日吉<rt>ひよし</rt></ruby>' };
   function rebuildTrack() {
     buildTrack();
-    $('endName').innerHTML = GOAL_NAMES[route];
-    $('rGoalName').innerHTML = GOAL_NAMES[route];
+    $('endName').innerHTML = goalName();
+    $('rGoalName').innerHTML = goalName();
   }
   function updateTrack() {
-    const pct = clamp((P.headX - START) / (goalX() - START), 0, 1) * 100;
+    const pct = jr ? clamp(jr.pos / jr.len, 0, 1) * 100 : clamp((P.headX - START) / (goalX() - START), 0, 1) * 100;
     $('trackMe').style.left = pct + '%';
     $('trackFill').style.width = pct + '%';
     $('time').textContent = playTime.toFixed(1) + 'びょう';
@@ -2201,12 +2569,12 @@
   // ---------- そうさ ----------
   function startGame() {
     ac();
-    route = 'blue';
+    route = 'blue'; jr = null;
     resetGame();
     rebuildTrack();
     st = 'play';
-    $('titleOv').hidden = true; $('goalOv').hidden = true;
-    fadeT = 0; fx.banner = null; fx.flash = 0; fx.shake = 0;
+    $('titleOv').hidden = true; $('goalOv').hidden = true; $('overOv').hidden = true;
+    fadeT = 0; fx.banner = null; fx.flash = 0; fx.shake = 0; fx.death = null; fx.redFlash = 0;
     say('しゅっぱつ しんこう〜!', 1.8);
     updateHud();
   }
@@ -2241,7 +2609,7 @@
     if (e.repeat) return;
     if (e.code === 'Space' || e.code === 'ArrowRight' || e.code === 'Enter') {
       e.preventDefault();
-      if (st === 'title' || (st === 'goal' && !$('goalOv').hidden)) { startGame(); return; }
+      if (st === 'title' || (st === 'goal' && !$('goalOv').hidden) || st === 'over') { startGame(); return; }
       ac(); setHold(true);
     } else if (e.code === 'ArrowUp' || e.code === 'KeyF' || e.code === 'KeyP') {
       e.preventDefault(); doFart();
@@ -2255,8 +2623,8 @@
 
   $('startBtn').addEventListener('click', startGame);
   $('ramenYes').addEventListener('click', () => closeRamen(true));
-  $('xferGreen').addEventListener('click', () => closeXfer(true));
-  $('xferBlue').addEventListener('click', () => closeXfer(false));
+  $('contBtn').addEventListener('click', continueFromSignal);
+  $('retryBtn').addEventListener('click', startGame);
   $('ramenNo').addEventListener('click', () => closeRamen(false));
   $('againBtn').addEventListener('click', startGame);
   $('soundBtn').addEventListener('click', () => {
@@ -2288,7 +2656,7 @@
   requestAnimationFrame(frame);
 
   // テスト用（ブラウザの コンソールから）
-  window.__nyoko = { P, get st() { return st; }, get laughs() { return laughs; }, setHold, doFart, startGame, get quiz() { return st; }, get route() { return route; } };
+  window.__nyoko = { P, get st() { return st; }, get laughs() { return laughs; }, setHold, doFart, startGame, get quiz() { return st; }, get route() { return route; }, get jr() { return jr; }, die: () => die(), sigRed: () => sigState().red };
 })();
 </script>
 </body>
