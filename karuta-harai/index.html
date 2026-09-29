@@ -40,17 +40,19 @@
   #hud {
     position: fixed; left: 0; right: 0; top: 0;
     padding: calc(env(safe-area-inset-top) + 8px) 12px 0;
-    display: flex; align-items: center; gap: 8px;
+    display: flex; align-items: center; gap: 6px;
     pointer-events: none;
   }
   #hud .pill {
-    background: var(--panel); border-radius: 99px; padding: 8px 14px;
-    font-weight: 700; font-size: 16px; box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    background: var(--panel); border-radius: 99px; padding: 8px 12px;
+    font-weight: 700; font-size: 15px; box-shadow: 0 2px 6px rgba(0,0,0,.15);
     white-space: nowrap;
   }
   #hud .spacer { flex: 1; }
+  #hud .pill.total { line-height: 1.05; padding: 5px 12px; text-align: center; }
+  #hud .pill.total small { display: block; font-size: 11px; font-weight: 600; color: #7a6a4a; }
   .iconbtn {
-    pointer-events: auto; width: 48px; height: 48px; border-radius: 50%;
+    pointer-events: auto; width: 46px; height: 46px; border-radius: 50%; flex: none;
     border: none; background: var(--panel); font-size: 22px;
     box-shadow: 0 2px 6px rgba(0,0,0,.15); display: grid; place-items: center;
     text-decoration: none;
@@ -73,6 +75,12 @@
   }
   #reader .kami .kimari { color: var(--accent); }
   #reader .kami .rest { opacity: .25; }
+  #reader .kami.pre { color: #6f7f4a; font-size: clamp(17px, 5vw, 22px); }
+  #reader .shimo {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+    font-size: clamp(16px, 4.6vw, 21px); letter-spacing: .08em; color: #5b4f35; min-height: 1.4em;
+  }
+  #reader .shimo .rest { opacity: .2; }
 
   /* まんなかの おおきな もじ */
   #call {
@@ -168,16 +176,18 @@
 <canvas id="cv"></canvas>
 
 <div id="hud">
-  <span class="pill" id="hudRound">1 / 3まいめ</span>
-  <span class="pill" id="hudTotal">ごうけい 0.00m</span>
+  <span class="pill" id="hudRound">1/3まい</span>
+  <span class="pill total"><small>ごうけい</small><span id="hudTotal">0.00m</span></span>
   <span class="spacer"></span>
-  <button class="iconbtn" id="soundBtn" aria-label="おと オン/オフ">🔊</button>
+  <button class="iconbtn" id="voiceBtn" aria-label="よみあげの こえ オン/オフ">🗣️</button>
+  <button class="iconbtn" id="soundBtn" aria-label="こうかおん オン/オフ">🔊</button>
   <a class="iconbtn" href="ranking.html" aria-label="ランキング">🏆</a>
 </div>
 
 <div id="reader">
-  <div class="who">よみあげ</div>
+  <div class="who" id="readWho">よみあげ</div>
   <div class="kami" id="kami">&nbsp;</div>
+  <div class="shimo" id="shimoLine"></div>
 </div>
 
 <div id="call"></div>
@@ -198,7 +208,7 @@
     <h1>かるた はらい</h1>
     <p class="lead">きょうぎかるたの 「はらい」で ふだを とおくへ とばそう！</p>
     <ol class="how">
-      <li>よみあげが はじまるよ。<b>あかい もじ</b>まで よまれたら 「はらえ！」</li>
+      <li>よみてが うたを よみあげるよ（🗣️ で こえ オン/オフ）。まえの うたの しものく → つぎの <b>かみのく</b>。<b>あかい もじ</b>まで よまれたら 「はらえ！」</li>
       <li>ふだの <b>そと</b>から ゆびを いきおいよく すべらせて、ふだを はらう</li>
       <li><b>はやく・まっすぐ・ふだの まんなか</b>を はらうと とおくへ とぶ</li>
       <li>「はらえ！」より まえに さわると <b>おてつき</b>で 0m</li>
@@ -228,7 +238,7 @@
   </div>
 </div>
 
-<script src="scores.js?v=962bf3e"></script>
+<script src="scores.js?v=8d80de1"></script>
 <script>
 (function () {
   'use strict';
@@ -237,23 +247,44 @@
    * うた（むすめふさほせ の いちじきまり ＋ よく しられた うた）
    * k = きまりじの もじすう
    * ------------------------------------------------------------------ */
+  /* kami / shimo = ふだの かなづかい（ひょうじ ようの れきしてき かなづかい）
+   * ky / sy = よみあげ よう（いまの はつおん。じょし の は → わ、らむ → らん など）
+   * ことばの くぎり（5・7・5 / 7・7）は スペース。ひょうじと よみは おなじ かずに する */
   var POEMS = [
-    { no: 87, k: 1, kami: 'むらさめの つゆもまだひぬ まきのはに', shimo: 'きりたちのぼるあきのゆふぐれ' },
-    { no: 18, k: 1, kami: 'すみのえの きしによるなみ よるさへや', shimo: 'ゆめのかよひぢひとめよくらむ' },
-    { no: 57, k: 1, kami: 'めぐりあひて みしやそれとも わかぬまに', shimo: 'くもがくれにしよはのつきかな' },
-    { no: 22, k: 1, kami: 'ふくからに あきのくさきの しをるれば', shimo: 'むべやまかぜをあらしといふらむ' },
-    { no: 70, k: 1, kami: 'さびしさに やどをたちいでて ながむれば', shimo: 'いづこもおなじあきのゆふぐれ' },
-    { no: 81, k: 1, kami: 'ほととぎす なきつるかたを ながむれば', shimo: 'ただありあけのつきぞのこれる' },
-    { no: 77, k: 1, kami: 'せをはやみ いはにせかるる たきがはの', shimo: 'われてもすゑにあはむとぞおもふ' },
-    { no: 1,  k: 3, kami: 'あきのたの かりほのいほの とまをあらみ', shimo: 'わがころもではつゆにぬれつつ' },
-    { no: 2,  k: 3, kami: 'はるすぎて なつきにけらし しろたへの', shimo: 'ころもほすてふあまのかぐやま' },
-    { no: 4,  k: 2, kami: 'たごのうらに うちいでてみれば しろたへの', shimo: 'ふじのたかねにゆきはふりつつ' },
-    { no: 7,  k: 3, kami: 'あまのはら ふりさけみれば かすがなる', shimo: 'みかさのやまにいでしつきかも' },
-    { no: 9,  k: 3, kami: 'はなのいろは うつりにけりな いたづらに', shimo: 'わがみよにふるながめせしまに' },
-    { no: 17, k: 2, kami: 'ちはやぶる かみよもきかず たつたがは', shimo: 'からくれなゐにみづくくるとは' },
-    { no: 33, k: 2, kami: 'ひさかたの ひかりのどけき はるのひに', shimo: 'しづごころなくはなのちるらむ' },
-    { no: 61, k: 2, kami: 'いにしへの ならのみやこの やへざくら', shimo: 'けふここのへににほひぬるかな' }
+    { no: 87, k: 1, kami: 'むらさめの つゆもまだひぬ まきのはに', ky: 'むらさめの つゆもまだひぬ まきのハに',
+      shimo: 'きりたちのぼる あきのゆふぐれ', sy: 'きりたちのぼる あきのゆうぐれ' },
+    { no: 18, k: 1, kami: 'すみのえの きしによるなみ よるさへや', ky: 'すみのえの きしによるなみ よるさえや',
+      shimo: 'ゆめのかよひぢ ひとめよくらむ', sy: 'ゆめのかよいじ ひとめよくらん' },
+    { no: 57, k: 1, kami: 'めぐりあひて みしやそれとも わかぬまに', ky: 'めぐりあいて みしやそれとも わかぬまに',
+      shimo: 'くもがくれにし よはのつきかな', sy: 'くもがくれにし よわのつきかな' },
+    { no: 22, k: 1, kami: 'ふくからに あきのくさきの しをるれば', ky: 'ふくからに あきのくさきの しおるれば',
+      shimo: 'むべやまかぜを あらしといふらむ', sy: 'むべやまかぜお あらしというらん' },
+    { no: 70, k: 1, kami: 'さびしさに やどをたちいでて ながむれば', ky: 'さびしさに やどおたちいでて ながむれば',
+      shimo: 'いづこもおなじ あきのゆふぐれ', sy: 'いずこもおなじ あきのゆうぐれ' },
+    { no: 81, k: 1, kami: 'ほととぎす なきつるかたを ながむれば', ky: 'ほととぎす なきつるかたお ながむれば',
+      shimo: 'ただありあけの つきぞのこれる', sy: 'ただありあけの つきぞのこれる' },
+    { no: 77, k: 1, kami: 'せをはやみ いはにせかるる たきがはの', ky: 'せおはやみ いわにせかるる たきがわの',
+      shimo: 'われてもすゑに あはむとぞおもふ', sy: 'われてもすえに あわんとぞおもう' },
+    { no: 1,  k: 3, kami: 'あきのたの かりほのいほの とまをあらみ', ky: 'あきのたの かりおのいおの とまおあらみ',
+      shimo: 'わがころもでは つゆにぬれつつ', sy: 'わがころもでわ つゆにぬれつつ' },
+    { no: 2,  k: 3, kami: 'はるすぎて なつきにけらし しろたへの', ky: 'はるすぎて なつきにけらし しろたえの',
+      shimo: 'ころもほすてふ あまのかぐやま', sy: 'ころもほすちょう あまのかぐやま' },
+    { no: 4,  k: 2, kami: 'たごのうらに うちいでてみれば しろたへの', ky: 'たごのうらに うちいでてみれば しろたえの',
+      shimo: 'ふじのたかねに ゆきはふりつつ', sy: 'ふじのたかねに ゆきわふりつつ' },
+    { no: 7,  k: 3, kami: 'あまのはら ふりさけみれば かすがなる', ky: 'あまのハら ふりさけみれば かすがなる',
+      shimo: 'みかさのやまに いでしつきかも', sy: 'みかさのやまに いでしつきかも' },
+    { no: 9,  k: 3, kami: 'はなのいろは うつりにけりな いたづらに', ky: 'はなのいろわ うつりにけりな いたずらに',
+      shimo: 'わがみよにふる ながめせしまに', sy: 'わがみよにふる ながめせしまに' },
+    { no: 17, k: 2, kami: 'ちはやぶる かみよもきかず たつたがは', ky: 'ちはやぶる かみよもきかず たつたがわ',
+      shimo: 'からくれなゐに みづくくるとは', sy: 'からくれないに みずくくるとわ' },
+    { no: 33, k: 2, kami: 'ひさかたの ひかりのどけき はるのひに', ky: 'ひさかたの ひかりのどけき はるのひに',
+      shimo: 'しづごころなく はなのちるらむ', sy: 'しずごころなく はなのちるらん' },
+    { no: 61, k: 2, kami: 'いにしへの ならのみやこの やへざくら', ky: 'いにしえの ならのみやこの やえざくら',
+      shimo: 'けふここのへに にほひぬるかな', sy: 'きょうここのえに においぬるかな' }
   ];
+  // じょか（なにわづ）の しものく。1まいめの まえに よむ
+  var JOKA = { shimo: 'いまははるべと さくやこのはな', sy: 'いまわはるべと さくやこのはな' };
+  POEMS.forEach(function (p) { p.card = p.shimo.replace(/ /g, ''); });
 
   var THROWS = 3;
 
@@ -269,6 +300,7 @@
 
   var PREF_SOUND = 'karuta-harai.sound';
   var PREF_NAME = 'karuta-harai.name';
+  var PREF_VOICE = 'karuta-harai.voice';
 
   function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -390,7 +422,7 @@
   var poems = [], round = 0, results = [];
   var card = null;                // { x, y, vx, vy, ang, w, air, airT, trail }
   var cam = { x: 0, y: 0, s: 1800 };
-  var readT = 0, readChars = [], readShown = 0, readGoAt = 0, goTime = 0, nextCharAt = 0;
+  var goTime = 0;
   var bestEver = KarutaScores.bestThrow();
 
   function restCamY(s) { return -(H * 0.1) / s; }   // ふだを すこし したに おく
@@ -421,14 +453,9 @@
     resetCamera(false);
     hideSheet();
     hud();
-    // よみあげの じゅんび
-    var p = card.poem;
-    readChars = p.kami.split('');
-    readShown = 0;
-    readT = 0;
-    nextCharAt = 0.7 + Math.random() * 1.3;       // いつ はじまるか わからない ように
-    readGoAt = -1;
-    $('kami').innerHTML = '&nbsp;';
+    // きょうぎかるたの よみかた: まえの うたの しものく → ま → つぎの かみのく → よいん → しものく
+    var p = card.poem, prev = round > 0 ? poems[round - 1] : JOKA;
+    reader.start(p, prev, round === 0);
     $('reader').style.opacity = 1;
     setCall('', false);
     $('hint').textContent = 'よみあげを よく きいて…';
@@ -436,21 +463,9 @@
   }
 
   function hud() {
-    $('hudRound').textContent = (Math.min(round + 1, THROWS)) + ' / ' + THROWS + 'まいめ';
+    $('hudRound').textContent = (Math.min(round + 1, THROWS)) + '/' + THROWS + 'まい';
     var tot = results.reduce(function (s, r) { return s + r.dist; }, 0);
-    $('hudTotal').textContent = 'ごうけい ' + tot.toFixed(2) + 'm';
-  }
-
-  function renderKami() {
-    var p = card.poem, html = '', letters = 0;
-    for (var i = 0; i < readChars.length; i++) {
-      var ch = readChars[i];
-      var shown = i < readShown;
-      if (ch !== ' ') letters++;
-      var cls = shown ? (ch !== ' ' && letters <= p.k ? 'kimari' : '') : 'rest';
-      html += '<span class="' + cls + '">' + (ch === ' ' ? '&nbsp;' : ch) + '</span>';
-    }
-    $('kami').innerHTML = html;
+    $('hudTotal').textContent = tot.toFixed(2) + 'm';
   }
 
   var callTimer = 0;
@@ -463,27 +478,196 @@
     if (text && ms) callTimer = setTimeout(function () { c.classList.remove('show'); }, ms);
   }
 
-  function updateRead(dt) {
-    readT += dt;
-    if (readShown < readChars.length && readT >= nextCharAt) {
-      var ch = readChars[readShown++];
-      renderKami();
-      if (ch !== ' ') sfx.read();
-      nextCharAt = readT + (ch === ' ' ? 0.32 : 0.2);
-      // きまりじを よみおえたら「はらえ！」
-      var letters = 0;
-      for (var i = 0; i < readShown; i++) if (readChars[i] !== ' ') letters++;
-      if (readGoAt < 0 && letters >= card.poem.k) readGoAt = readT + 0.12;
-    }
-    if (state === 'read' && readGoAt >= 0 && readT >= readGoAt) {
-      state = 'ready';
-      goTime = performance.now();
-      setCall('はらえ！', false, 900);
-      $('hint').textContent = 'ふだの そとから ゆびで はらおう！';
-      sfx.go();
-      if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
-    }
+  function onGo() {
+    if (state !== 'read') return;
+    state = 'ready';
+    goTime = performance.now();
+    setCall('はらえ！', false, 900);
+    $('hint').textContent = 'ふだの そとから ゆびで はらおう！';
+    sfx.go();
+    if (navigator.vibrate) try { navigator.vibrate(20); } catch (e) {}
   }
+
+  /* ------------------------------------------------------------------
+   * よみて（Web Speech API の よみあげ ＋ もじの ひょうじ）
+   *  1く ずつ しゃべらせて、しゃべって いる あいだ もじを じゅんに だす。
+   *  こえが つかえない／オフの ときは タイマーだけで おなじ ながれに なる。
+   * ------------------------------------------------------------------ */
+  var voiceOn = lsGet(PREF_VOICE) !== 'off';
+  var hasTTS = !!(window.speechSynthesis && window.SpeechSynthesisUtterance);
+  var jaVoice = null;
+  function pickVoice() {
+    if (!hasTTS) return null;
+    var vs = speechSynthesis.getVoices() || [];
+    var ja = vs.filter(function (v) { return /^ja/i.test(v.lang); });
+    // iPhone の きれいな こえを ゆうせん
+    var pref = ['Kyoko', 'O-ren', 'Otoya', 'Hattori', 'Enhanced', 'Premium'];
+    for (var i = 0; i < pref.length && !jaVoice; i++) {
+      for (var j = 0; j < ja.length; j++) if (ja[j].name.indexOf(pref[i]) >= 0) { jaVoice = ja[j]; break; }
+    }
+    if (!jaVoice) jaVoice = ja[0] || null;
+    return jaVoice;
+  }
+  if (hasTTS) {
+    pickVoice();
+    try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) { speechSynthesis.onvoiceschanged = pickVoice; }
+  }
+  function ttsCancel() { try { if (hasTTS) speechSynthesis.cancel(); } catch (e) {} }
+  // iPhone は タップの なかで いちど しゃべらせないと こえが でない
+  function ttsUnlock() {
+    if (!hasTTS || !voiceOn || ttsUnlock.done) return;
+    try {
+      var u = new SpeechSynthesisUtterance(' ');
+      u.volume = 0; u.lang = 'ja-JP';
+      speechSynthesis.speak(u);
+      ttsUnlock.done = true;
+    } catch (e) {}
+  }
+
+  var reader = (function () {
+    var steps = [], idx = 0, cur = null, waitUntil = 0, poem = null;
+    var perChar = 0.2;           // 1もじ あたりの びょう（しゃべった じかんで まなびなおす）
+    var goFired = false, keep = [];
+    var line = { pre: '', kami: [], shimo: [], preArr: [] };
+
+    function phrases(disp, yomi) {
+      var d = disp.split(' '), y = yomi.split(' ');
+      return d.map(function (t, i) { return { d: t, y: y[i] || t }; });
+    }
+
+    function start(p, prev, first) {
+      ttsCancel();
+      poem = p; goFired = false; idx = 0; cur = null;
+      var now = performance.now() / 1000;
+      steps = [];
+      // まえの うたの しものく（1まいめは じょか）
+      phrases(prev.shimo, prev.sy).forEach(function (ph, i, a) {
+        steps.push({ part: 'pre', d: ph.d, y: ph.y, after: i < a.length - 1 ? 0.35 : 0 });
+      });
+      // 「ま」。いつ はじまるか わからない ように すこし ばらつかせる
+      steps[steps.length - 1].after = 1.0 + Math.random() * 1.2;
+      phrases(p.kami, p.ky).forEach(function (ph, i, a) {
+        steps.push({ part: 'kami', d: ph.d, y: ph.y, after: i < a.length - 1 ? 0.3 : 1.4, first: i === 0 });
+      });
+      phrases(p.shimo, p.sy).forEach(function (ph, i, a) {
+        steps.push({ part: 'shimo', d: ph.d, y: ph.y, after: i < a.length - 1 ? 0.35 : 0 });
+      });
+      line = { pre: '', preLabel: first ? 'じょか（なにわづに…）' : 'まえの うたの しものく', kami: [], shimo: [], preArr: [] };
+      waitUntil = now + 0.5;       // cancel の ちょくごは iPhone で こえが きえやすいので すこし まつ
+      render();
+    }
+
+    function stop() { ttsCancel(); steps = []; cur = null; }
+
+    function begin(step, now) {
+      cur = { step: step, t0: now, started: false, ended: false, utt: null, shown: 0, len: step.d.length };
+      if (step.part === 'kami' && step.first) line.pre = null;
+      if (voiceOn && hasTTS && (jaVoice || pickVoice())) {   // にほんごの こえが ない ときは もじだけ
+        try {
+          // ことばの おわりを のばして よみあげらしく
+          var u = new SpeechSynthesisUtterance(step.y + 'ー');
+          u.lang = 'ja-JP'; u.rate = 0.78; u.pitch = 0.95; u.volume = 1;
+          u.voice = jaVoice;
+          var c = cur;
+          u.onstart = function () { if (c.utt === u && !c.started) { c.started = true; c.t0 = performance.now() / 1000; } };
+          u.onend = u.onerror = function () { if (c.utt === u) c.ended = true; };
+          c.utt = u;
+          keep.push(u); if (keep.length > 8) keep.shift();   // GC で onend が こなく ならないように
+          speechSynthesis.speak(u);
+        } catch (e) { cur.utt = null; }
+      }
+      if (!cur.utt) cur.started = true;
+    }
+
+    function update() {
+      if (!steps.length) return;
+      var now = performance.now() / 1000;
+      if (!cur) {
+        if (idx >= steps.length || now < waitUntil) return;
+        begin(steps[idx], now);
+      }
+      var c = cur, st = c.step;
+      if (c.utt && !voiceOn) { c.utt = null; ttsCancel(); c.started = true; }   // とちゅうで こえを けした
+      // こえが はじまらない（iPhone で ロック中 など）ときは もじだけで すすむ
+      if (!c.started && now - c.t0 > 1.2) { c.utt = null; c.started = true; c.t0 = now; }
+      if (!c.started) return;
+
+      var el = now - c.t0;
+      var want = Math.min(c.len, Math.floor(el / perChar) + 1);
+      if (c.utt && !c.ended) want = Math.min(want, c.len - 1);   // さいごの もじは しゃべりおわりに
+      if (c.utt && c.ended) want = c.len;
+      if (want > c.shown) {
+        if (!c.utt) for (var i = c.shown; i < want; i++) sfx.read();
+        c.shown = want;
+        show(st, c.shown);
+      }
+      var done = c.utt ? c.ended : (c.shown >= c.len && el >= c.len * perChar + 0.25);
+      if (c.utt && !c.ended && el > c.len * perChar * 3 + 2) done = true;   // onend が こない ばあいの ほけん
+      if (done) {
+        if (c.utt && c.ended && el > 0.3) perChar = perChar * 0.5 + (el / (c.len + 1.5)) * 0.5;
+        show(st, c.len);
+        cur = null; idx++;
+        waitUntil = now + st.after;
+      }
+    }
+
+    function show(st, n) {
+      var part = st.part, text = st.d.slice(0, n);
+      if (part === 'pre' && line.pre === null) return;
+      var arr = part === 'pre' ? line.preArr : part === 'kami' ? line.kami : line.shimo;
+      var k = steps.filter(function (s) { return s.part === part; }).indexOf(st);
+      arr[k] = text;
+      if (part === 'pre') line.pre = arr.join(' ');
+      render();
+      // きまりじまで よまれたら「はらえ！」
+      if (!goFired && part === 'kami' && st.first && n >= poem.k) { goFired = true; setTimeout(onGo, 100); }
+    }
+
+    function render() {
+      var who = $('readWho'), kami = $('kami'), sh = $('shimoLine');
+      if (line.pre !== null) {
+        who.textContent = 'よみあげ … ' + line.preLabel;
+        kami.className = 'kami pre';
+        kami.textContent = line.pre || '\u00a0';
+        sh.innerHTML = '';
+        return;
+      }
+      who.textContent = line.shimo.length ? 'よみあげ … しものく' : 'よみあげ … かみのく';
+      kami.className = 'kami';
+      // かみのく: よんだ ところまで こく、きまりじは あかく
+      var full = poem.kami.split(' '), html = '', letters = 0;
+      full.forEach(function (ph, pi) {
+        var got = (line.kami[pi] || '').length;
+        for (var i = 0; i < ph.length; i++) {
+          letters++;
+          var cls = i < got ? (letters <= poem.k ? 'kimari' : '') : 'rest';
+          html += '<span class="' + cls + '">' + ph[i] + '</span>';
+        }
+        if (pi < full.length - 1) html += '<span class="' + (got >= ph.length ? '' : 'rest') + '">&nbsp;</span>';
+      });
+      kami.innerHTML = html;
+      var sfull = poem.shimo.split(' '), sh2 = '';
+      if (line.shimo.length) sfull.forEach(function (ph, pi) {
+        var got = (line.shimo[pi] || '').length;
+        sh2 += '<span>' + ph.slice(0, got) + '</span><span class="rest">' + ph.slice(got) + '</span>' + (pi < sfull.length - 1 ? '&nbsp;' : '');
+      });
+      sh.innerHTML = sh2;
+    }
+
+    return { start: start, stop: stop, update: update };
+  })();
+
+  function paintVoice() {
+    var b = $('voiceBtn');
+    b.textContent = voiceOn ? '🗣️' : '🤐';
+    b.style.opacity = hasTTS ? 1 : 0.4;
+  }
+  $('voiceBtn').addEventListener('click', function () {
+    voiceOn = !voiceOn; lsSet(PREF_VOICE, voiceOn ? 'on' : 'off');
+    if (!voiceOn) ttsCancel(); else ttsUnlock();
+    paintVoice();
+  });
+  paintVoice();
 
   /* ------------------------------------------------------------------
    * ゆびの うごき
@@ -704,6 +888,7 @@
 
   $('nextBtn').addEventListener('click', function () {
     if (state !== 'result') return;
+    ttsUnlock();
     round++;
     if (round >= THROWS) gameOver();
     else startRound();
@@ -716,6 +901,7 @@
 
   function gameOver() {
     state = 'over';
+    reader.stop();
     hideSheet();
     lastTotal = Math.round(results.reduce(function (s, r) { return s + r.dist; }, 0) * 100) / 100;
     $('oTotal').innerHTML = lastTotal.toFixed(2) + '<small>m</small>';
@@ -757,7 +943,7 @@
   $('saveBtn').addEventListener('click', saveRecord);
   $('nameInput').addEventListener('keydown', function (e) { if (e.key === 'Enter') saveRecord(); });
   $('againBtn').addEventListener('click', function () { if (!saved) saveRecord(); startGame(); });
-  $('startBtn').addEventListener('click', function () { audio(); startGame(); });
+  $('startBtn').addEventListener('click', function () { audio(); ttsUnlock(); startGame(); });
 
   function paintTitleRec() {
     var list = KarutaScores.load();
@@ -873,7 +1059,7 @@
 
     // したのく（たてがき 3ぎょう・みぎから）
     if (wpx >= 40) {
-      var txt = c.poem.shimo, fs = wpx * 0.2;
+      var txt = c.poem.card, fs = wpx * 0.2;
       ctx.fillStyle = '#1d1a14';
       ctx.font = '600 ' + fs + 'px "Hiragino Mincho ProN", "Yu Mincho", serif';
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -952,9 +1138,8 @@
   var lastT = performance.now();
   function frame(now) {
     var dt = Math.min(0.05, (now - lastT) / 1000); lastT = now;
-    if (state === 'read') updateRead(dt);
-    else if (state === 'ready') updateRead(dt);   // よみあげは つづく
-    else if (state === 'fly') updateFly(dt);
+    if (state !== 'title' && state !== 'over') reader.update();   // はらった あとも しものくを よみつづける
+    if (state === 'fly') updateFly(dt);
     if (card && card.shake > 0) card.shake = Math.max(0, card.shake - dt);
     updateCamera(dt);
 
