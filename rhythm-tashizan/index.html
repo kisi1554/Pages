@@ -163,9 +163,36 @@
     border: 3px solid var(--line);
     border-radius: 16px;
     background: var(--card);
-    font-size: clamp(15px, 4vw, 18px);
+    padding: 0 4px;
+    font-size: clamp(14px, 3.8vw, 18px);
+    white-space: nowrap;
   }
   .seg button.on { border-color: var(--main); background: #efe7ff; font-weight: 700; }
+
+  /* はやさ 1〜100 */
+  .speed { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+  .speed-step {
+    flex: none;
+    width: 56px;
+    height: 56px;
+    border: 3px solid var(--line);
+    border-radius: 50%;
+    background: var(--card);
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .speed-step:active { background: #efe7ff; }
+  .speed input[type=range] {
+    flex: 1;
+    min-width: 0;
+    height: 44px;
+    accent-color: var(--main);
+    touch-action: pan-y;
+  }
+  .speed input[type=range]::-webkit-slider-thumb { width: 32px; height: 32px; }
+  .speed-val { margin: 4px 0 0; text-align: center; font-size: 16px; color: var(--ink-soft); }
+  .speed-val span { font-size: 26px; font-weight: 800; color: var(--main); }
 
   .howto { margin: 0; padding-left: 1.2em; line-height: 1.9; font-size: 16px; }
 
@@ -463,10 +490,16 @@
     <div class="panel">
       <h2>🎶 はやさ</h2>
       <div class="seg" id="tempoSeg">
-        <button data-bpm="76">🐢 ゆっくり</button>
-        <button data-bpm="96">🐇 ふつう</button>
-        <button data-bpm="120">🚀 はやい</button>
+        <button data-level="26">🐢 ゆっくり</button>
+        <button data-level="40">🐇 ふつう</button>
+        <button data-level="57">🚀 はやい</button>
       </div>
+      <div class="speed">
+        <button class="speed-step" id="speedDown" aria-label="すこし おそく">－</button>
+        <input type="range" id="speedRange" min="1" max="100" step="1" aria-label="はやさ（1〜100）">
+        <button class="speed-step" id="speedUp" aria-label="すこし はやく">＋</button>
+      </div>
+      <p class="speed-val"><span id="speedNum"></span> / 100</p>
     </div>
 
     <div class="panel">
@@ -551,13 +584,22 @@
 
   /* ================= ほぞん ================= */
   const KEY = 'rhythm-tashizan-v1';
-  let save = { stars: {}, sung: {}, bpm: 96, sound: true, voice: true };
+  let save = { stars: {}, sung: {}, speed: 40, sound: true, voice: true };
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) save = Object.assign(save, JSON.parse(raw));
   } catch (e) { /* よめなくても あそべる */ }
   function persist() {
     try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* ignore */ }
+  }
+
+  // はやさ 1〜100 → BPM 41〜180（ゆっくり26≒76・ふつう40＝96・はやい57≒120）
+  const speedToBpm = level => 40 + level * 1.4;
+  const bpm = () => speedToBpm(save.speed);
+  if (typeof save.bpm === 'number') {   // まえの ばん（bpm で ほぞん）からの ひっこし
+    save.speed = Math.min(100, Math.max(1, Math.round((save.bpm - 40) / 1.4)));
+    delete save.bpm;
+    persist();
   }
 
   /* ================= おと（WebAudio） ================= */
@@ -649,7 +691,7 @@
       const u = new SpeechSynthesisUtterance(text);
       u.lang = 'ja-JP';
       if (jaVoice) u.voice = jaVoice;
-      u.rate = save.bpm >= 110 ? 1.6 : 1.35;
+      u.rate = bpm() >= 110 ? 1.6 : 1.35;
       u.pitch = 1.2;
       speechSynthesis.speak(u);
     } catch (e) { /* ignore */ }
@@ -658,7 +700,7 @@
 
   /* ================= リズムの しくみ（さきよみ スケジューラ） ================= */
   const seq = { alive: false, i: 0, next: 0, fn: null, q: [], timer: 0, raf: 0, lastBeat: 0 };
-  const spb = () => 60 / save.bpm;
+  const spb = () => 60 / bpm();
 
   // lines を 1はくずつ すすめる。ぎょうごとに ながさ（len）が ちがっても よい
   function lineRunner(getLines, lenOf, onLine, onEnd) {
@@ -776,20 +818,32 @@
       pg.appendChild(b);
     }
 
+    renderSpeed();
+  }
+  function renderSpeed() {
     document.querySelectorAll('#tempoSeg button').forEach(b => {
-      b.classList.toggle('on', Number(b.dataset.bpm) === save.bpm);
+      b.classList.toggle('on', Number(b.dataset.level) === save.speed);
     });
+    $('speedRange').value = save.speed;
+    $('speedNum').textContent = save.speed;
+  }
+  // はやさを かえて「ドン・パン・ドン・パン」で ためしに ならす
+  function setSpeed(level, demo) {
+    save.speed = Math.min(100, Math.max(1, Math.round(level)));
+    persist();
+    renderSpeed();
+    if (!demo) return;
+    ensureAudio();
+    const t = now() + 0.02;
+    for (let i = 0; i < 4; i++) { const tt = t + i * spb(); i % 2 ? clap(tt) : kick(tt); hat(tt); }
   }
   document.querySelectorAll('#tempoSeg button').forEach(b => {
-    b.addEventListener('click', () => {
-      save.bpm = Number(b.dataset.bpm);
-      persist();
-      renderHome();
-      ensureAudio();
-      const t = now() + 0.02;
-      for (let i = 0; i < 4; i++) { const tt = t + i * spb(); i % 2 ? clap(tt) : kick(tt); hat(tt); }
-    });
+    b.addEventListener('click', () => setSpeed(Number(b.dataset.level), true));
   });
+  $('speedRange').addEventListener('input', e => setSpeed(Number(e.target.value), false));
+  $('speedRange').addEventListener('change', e => setSpeed(Number(e.target.value), true));
+  $('speedDown').addEventListener('click', () => setSpeed(save.speed - 1, true));
+  $('speedUp').addEventListener('click', () => setSpeed(save.speed + 1, true));
 
   /* ================= だんメニュー ================= */
   let cur = 1;            // えらんだ だん（1〜9、'p1'〜'p4'＝たすＮ シリーズ、'mix'）
