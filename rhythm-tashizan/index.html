@@ -141,6 +141,13 @@
   }
   .dan.mix .big { font-size: 34px; }
 
+  /* たす１〜４ シリーズ */
+  .series-title { margin: 26px 0 2px; text-align: center; font-size: clamp(20px, 5.4vw, 24px); }
+  .series-sub { margin: 0 0 12px; text-align: center; font-size: 15px; color: var(--ink-soft); }
+  .plus-grid { grid-template-columns: repeat(2, 1fr); }
+  .dan.plus { border-color: #f6cfa8; box-shadow: 0 5px 0 #f6cfa8; }
+  .dan.plus .big { color: var(--b); }
+
   .panel {
     margin-top: 22px;
     padding: 14px 16px;
@@ -420,6 +427,7 @@
   @media (min-width: 900px) and (orientation: landscape) {
     main { max-width: 980px; }
     .dan-grid { grid-template-columns: repeat(5, 1fr); }
+    .plus-grid { grid-template-columns: repeat(4, 1fr); }
     .dan.mix { grid-column: auto; flex-direction: column; min-height: 112px; gap: 2px; }
   }
   @media (max-height: 560px) and (orientation: landscape) {
@@ -447,6 +455,10 @@
   <section id="home" class="screen">
     <p class="lead">「〇の だん」を えらんでね</p>
     <div class="dan-grid" id="danGrid"></div>
+
+    <h2 class="series-title">➕ たす１・２・３・４ シリーズ</h2>
+    <p class="series-sub">うしろの かずが ずっと おなじ</p>
+    <div class="dan-grid plus-grid" id="plusGrid"></div>
 
     <div class="panel">
       <h2>🎶 はやさ</h2>
@@ -750,6 +762,20 @@
     m.addEventListener('click', () => openMenu('mix'));
     g.appendChild(m);
 
+    const pg = $('plusGrid');
+    pg.innerHTML = '';
+    for (let n = 1; n <= 4; n++) {
+      const key = 'p' + n;
+      const b = document.createElement('button');
+      b.className = 'dan plus';
+      b.innerHTML =
+        (save.sung[key] ? '<span class="song" aria-label="うたった">🎵</span>' : '') +
+        `<span class="big">＋${n}</span><span class="small">たす ${n}</span>` +
+        `<span class="stars">${starText(save.stars[key] || 0)}</span>`;
+      b.addEventListener('click', () => openMenu(key));
+      pg.appendChild(b);
+    }
+
     document.querySelectorAll('#tempoSeg button').forEach(b => {
       b.classList.toggle('on', Number(b.dataset.bpm) === save.bpm);
     });
@@ -766,12 +792,24 @@
   });
 
   /* ================= だんメニュー ================= */
-  let cur = 1;            // えらんだ だん（1〜9 か 'mix'）
+  let cur = 1;            // えらんだ だん（1〜9、'p1'〜'p4'＝たすＮ シリーズ、'mix'）
   let lastMode = 'chant';
+  const plusN = d => (typeof d === 'string' && d[0] === 'p' ? Number(d.slice(1)) : 0);
   function linesOf(d) {
-    const a = [];
-    for (let b = 1; b <= 9; b++) a.push({ a: d, b, c: d + b });
+    const a = [], n = plusN(d);
+    // 〇の だん は まえの かずが おなじ（3＋1〜3＋9）、たすＮ は うしろの かずが おなじ（1＋N〜9＋N）
+    for (let k = 1; k <= 9; k++) a.push(n ? { a: k, b: n, c: k + n } : { a: d, b: k, c: d + k });
     return a;
+  }
+  function titleOf(d) {
+    if (d === 'mix') return '🎲 ぜんぶ まぜて';
+    return plusN(d) ? `たす ${plusN(d)}` : `${d} の だん`;
+  }
+  // ★３つで すすむ さき
+  function nextOf(d) {
+    if (d === 'mix') return null;
+    if (plusN(d)) return plusN(d) < 4 ? 'p' + (plusN(d) + 1) : null;
+    return d < 9 ? d + 1 : 'mix';
   }
   function eqHTML(L) {
     return `<span class="a">${L.a}</span>＋<span class="b">${L.b}</span>＝<span class="c">${L.c}</span>`;
@@ -780,7 +818,7 @@
     ensureAudio();
     cur = d;
     const isMix = d === 'mix';
-    $('menuTitle').textContent = isMix ? '🎲 ぜんぶ まぜて' : `${d} の だん`;
+    $('menuTitle').textContent = titleOf(d);
     const t = $('menuTable');
     t.innerHTML = '';
     if (!isMix) {
@@ -1080,9 +1118,9 @@
       `<span class="${q.ok ? 'good' : 'bad'}">${q.a}＋${q.b}＝${q.c}</span>`).join('');
     if (stars === 3) {
       fanfare();
-      const nextDan = cur === 'mix' ? null : cur < 9 ? cur + 1 : 'mix';
+      const nextDan = nextOf(cur);
       if (nextDan) {
-        $('resNext').innerHTML = nextDan === 'mix' ? '🎲 ぜんぶ まぜてに ちょうせん' : `➡️ ${nextDan} の だんへ`;
+        $('resNext').innerHTML = nextDan === 'mix' ? '🎲 ぜんぶ まぜてに ちょうせん' : `➡️ ${titleOf(nextDan)} へ`;
         $('resNext').onclick = () => openMenu(nextDan);
       } else {
         $('resNext').innerHTML = '🏠 はじめの がめんへ';
