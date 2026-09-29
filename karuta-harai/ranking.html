@@ -7,6 +7,8 @@
 <meta name="theme-color" content="#5b6b2e">
 <title>ランキング ｜ かるた はらい</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏆</text></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>
   *, *::before, *::after { box-sizing: border-box; }
   :root { --ink: #2a2418; --paper: #fffaf0; --accent: #b8322a; --green: #3e6b2f; --line: #e3d8bf; }
@@ -22,17 +24,24 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
   }
+  ruby rt { font-size: .5em; }
   .wrap { max-width: 620px; margin: 0 auto; }
   header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  h1 { margin: 0; flex: 1; font-size: clamp(26px, 8vw, 36px); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .06em; }
+  h1 { margin: 0; flex: 1; min-width: 0; white-space: nowrap; font-size: clamp(22px, 6.6vw, 36px); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .06em; }
   .btn {
-    display: inline-grid; place-items: center; min-height: 52px; padding: 0 18px;
+    display: inline-grid; place-items: center; min-height: 52px; padding: 0 16px;
     border: none; border-radius: 16px; background: var(--accent); color: #fff;
-    font: inherit; font-weight: 800; font-size: 18px; text-decoration: none;
+    font: inherit; font-weight: 800; font-size: 18px; text-decoration: none; white-space: nowrap;
     box-shadow: 0 4px 0 #7d1f19; cursor: pointer; touch-action: manipulation;
   }
   .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #7d1f19; }
-  .btn.ghost { white-space: nowrap; flex: none; background: #fff; color: #7a6a4a; box-shadow: 0 3px 0 #d9ccae; font-size: 15px; min-height: 44px; }
+  .btn.sub { background: var(--green); box-shadow: 0 4px 0 #25431b; }
+  .btn.ghost { flex: none; background: #fff; color: #7a6a4a; box-shadow: 0 3px 0 #d9ccae; font-size: 15px; min-height: 44px; }
+
+  .modes { display: flex; gap: 8px; margin-bottom: 10px; }
+  .modes button { flex: 1; min-height: 52px; border: none; border-radius: 16px; background: rgba(255,250,240,.55);
+    font: inherit; font-weight: 900; font-size: 17px; color: #6b5c3c; cursor: pointer; touch-action: manipulation; }
+  .modes button[aria-selected="true"] { background: var(--accent); color: #fff; box-shadow: 0 4px 0 #7d1f19; }
 
   .summary { display: flex; gap: 10px; margin-bottom: 12px; }
   .stat { flex: 1; min-width: 0; background: var(--paper); border-radius: 16px; padding: 10px 12px; text-align: center; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
@@ -51,6 +60,7 @@
   .rank.m { font-size: 30px; }
   .who { min-width: 0; }
   .who .n { font-size: 18px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .dan { display: inline-block; margin-left: 6px; font-size: 13px; font-weight: 800; color: #fff; background: var(--green); border-radius: 8px; padding: 0 6px; vertical-align: 2px; }
   .who .d { font-size: 12.5px; color: #8a7a5a; }
   .score { font-size: 22px; font-weight: 900; text-align: right; white-space: nowrap; }
   .score small { font-size: .6em; }
@@ -64,16 +74,22 @@
 <div class="wrap">
   <header>
     <h1>🏆 ランキング</h1>
+    <a class="btn sub" href="zukan.html">📖</a>
     <a class="btn" href="./">あそぶ</a>
   </header>
+
+  <div class="modes" role="tablist">
+    <button role="tab" data-mode="tobashi">🎴 とばし</button>
+    <button role="tab" data-mode="sagashi">🔍 ふださがし</button>
+  </div>
 
   <div class="summary">
     <div class="stat"><div class="v" id="stCount">0</div><div class="l">きろく /100</div></div>
     <div class="stat"><div class="v" id="stTop">-</div><div class="l">ごうけい 1い</div></div>
-    <div class="stat"><div class="v" id="stBest">-</div><div class="l">1まい さいこう</div></div>
+    <div class="stat"><div class="v" id="stBest">-</div><div class="l" id="stBestL">1まい さいこう</div></div>
   </div>
 
-  <div class="tabs" role="tablist">
+  <div class="tabs" role="tablist" id="sortTabs">
     <button class="tab" role="tab" data-sort="score" aria-selected="true">ごうけい</button>
     <button class="tab" role="tab" data-sort="best" aria-selected="false">1まいの さいこう</button>
   </div>
@@ -82,7 +98,7 @@
 
   <div class="foot">
     <span>きろくは この iPhone（ブラウザ）の なかに ほぞん されます</span>
-    <button class="btn ghost" id="clearBtn">ぜんぶ けす</button>
+    <button class="btn ghost" id="clearBtn">この モードを けす</button>
   </div>
 </div>
 
@@ -90,9 +106,12 @@
 <script>
 (function () {
   'use strict';
-  var meId = new URLSearchParams(location.search).get('id');
-  var sortKey = 'score';
+  var q = new URLSearchParams(location.search);
+  var meId = q.get('id');
+  var sortKey = 'score', mode = q.get('mode');
   try { sortKey = localStorage.getItem('karuta-harai.rankTab') || 'score'; } catch (e) {}
+  try { if (!mode) mode = localStorage.getItem('karuta-harai.rankMode'); } catch (e) {}
+  if (mode !== 'sagashi') mode = 'tobashi';
 
   function pad(n) { return (n < 10 ? '0' : '') + n; }
   function when(t) {
@@ -100,26 +119,33 @@
     return (d.getMonth() + 1) + '/' + d.getDate() + ' ' + d.getHours() + ':' + pad(d.getMinutes());
   }
   function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function val(v) { return mode === 'tobashi' ? (v || 0).toFixed(2) : String(Math.round(v || 0)); }
+  function unit() { return mode === 'tobashi' ? 'm' : 'てん'; }
 
   function render() {
-    var list = KarutaScores.load();
+    var list = KarutaScores.load(mode);
     if (sortKey === 'best') list = list.slice().sort(function (a, b) { return (b.best - a.best) || (a.at - b.at); });
 
-    document.getElementById('stCount').textContent = list.length;
-    var top = KarutaScores.load()[0];
-    document.getElementById('stTop').textContent = top ? top.score.toFixed(2) + 'm' : '-';
-    var bt = KarutaScores.bestThrow();
-    document.getElementById('stBest').textContent = bt ? bt.toFixed(2) + 'm' : '-';
-
+    Array.prototype.forEach.call(document.querySelectorAll('.modes button'), function (b) {
+      b.setAttribute('aria-selected', String(b.dataset.mode === mode));
+    });
     Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
       b.setAttribute('aria-selected', String(b.dataset.sort === sortKey));
     });
+    document.getElementById('sortTabs').querySelector('[data-sort="best"]').textContent = mode === 'tobashi' ? '1まいの さいこう' : '1かいの さいこう';
+    document.getElementById('stBestL').textContent = mode === 'tobashi' ? '1まい さいこう' : '1かい さいこう';
+
+    var all = KarutaScores.load(mode);
+    document.getElementById('stCount').textContent = all.length;
+    document.getElementById('stTop').textContent = all[0] ? val(all[0].score) + unit() : '-';
+    var bt = all.reduce(function (m, e) { return Math.max(m, e.best || 0); }, 0);
+    document.getElementById('stBest').textContent = bt ? val(bt) + unit() : '-';
 
     var ol = document.getElementById('list');
     ol.textContent = '';
     if (!list.length) {
       var e = el('li', 'empty');
-      e.innerHTML = 'まだ きろくが ないよ。<br>「あそぶ」から はらって みよう！';
+      e.innerHTML = 'まだ きろくが ないよ。<br>「あそぶ」から はじめて みよう！';
       ol.appendChild(e);
       return;
     }
@@ -129,13 +155,19 @@
       var li = el('li', 'item' + (r.id === meId ? ' me' : ''));
       li.appendChild(el('div', 'rank' + (i < 3 ? ' m' : ''), i < 3 ? medals[i] : String(i + 1)));
       var who = el('div', 'who');
-      who.appendChild(el('div', 'n', r.name || 'ななし'));
-      var detail = (r.throws || []).map(function (d) { return d.toFixed(2); }).join(' / ');
-      who.appendChild(el('div', 'd', when(r.at) + (detail ? '　' + detail + 'm' : '') + (r.fouls ? '　おてつき' + r.fouls : '')));
+      var n = el('div', 'n', r.name || 'ななし');
+      if (typeof r.dan === 'number' && r.dan > 0) {
+        var badge = el('span', 'dan');
+        badge.innerHTML = KarutaScores.danHtml(r.dan);   // だんいの ひょうじは きまった もじだけ
+        n.appendChild(badge);
+      }
+      who.appendChild(n);
+      var detail = (r.throws || []).map(function (d) { return val(d); }).join(' / ');
+      var extra = mode === 'sagashi' && r.hint === false ? '　ヒントなし' : '';
+      who.appendChild(el('div', 'd', when(r.at) + (detail ? '　' + detail + unit() : '') + (r.fouls ? '　おてつき' + r.fouls : '') + extra));
       li.appendChild(who);
-      var v = sortKey === 'best' ? r.best : r.score;
-      var sc = el('div', 'score', (v || 0).toFixed(2));
-      sc.appendChild(el('small', null, 'm'));
+      var sc = el('div', 'score', val(sortKey === 'best' ? r.best : r.score));
+      sc.appendChild(el('small', null, unit()));
       li.appendChild(sc);
       ol.appendChild(li);
       if (r.id === meId) meEl = li;
@@ -143,6 +175,13 @@
     if (meEl) setTimeout(function () { meEl.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 200);
   }
 
+  Array.prototype.forEach.call(document.querySelectorAll('.modes button'), function (b) {
+    b.addEventListener('click', function () {
+      mode = b.dataset.mode;
+      try { localStorage.setItem('karuta-harai.rankMode', mode); } catch (e) {}
+      render();
+    });
+  });
   Array.prototype.forEach.call(document.querySelectorAll('.tab'), function (b) {
     b.addEventListener('click', function () {
       sortKey = b.dataset.sort;
@@ -151,9 +190,13 @@
     });
   });
   document.getElementById('clearBtn').addEventListener('click', function () {
-    if (confirm('ランキングの きろくを ぜんぶ けしますか？')) { KarutaScores.clear(); render(); }
+    var label = mode === 'tobashi' ? 'とばし' : 'ふださがし';
+    if (confirm(label + ' の きろくを ぜんぶ けしますか？')) { KarutaScores.clear(mode); render(); }
   });
   render();
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+  }
 })();
 </script>
 </body>

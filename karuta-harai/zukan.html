@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#5b6b2e">
+<title>ふだずかん ｜ かるた はらい</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root { --ink: #2a2418; --paper: #fffaf0; --accent: #b8322a; --green: #3e6b2f; --line: #e3d8bf; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    padding: calc(env(safe-area-inset-top) + 16px) 14px calc(env(safe-area-inset-bottom) + 28px);
+    color: var(--ink);
+    background:
+      repeating-linear-gradient(90deg, transparent 0 20px, rgba(120,130,60,.08) 20px 21px),
+      #cdd497;
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ruby rt { font-size: .5em; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+  header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  h1 { margin: 0; flex: 1; min-width: 0; white-space: nowrap; font-size: clamp(22px, 6.6vw, 36px); font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .06em; }
+  .btn {
+    display: inline-grid; place-items: center; min-height: 52px; padding: 0 16px;
+    border: none; border-radius: 16px; background: var(--accent); color: #fff;
+    font: inherit; font-weight: 800; font-size: 18px; text-decoration: none; white-space: nowrap;
+    box-shadow: 0 4px 0 #7d1f19; cursor: pointer; touch-action: manipulation;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #7d1f19; }
+  .btn.sub { background: var(--green); box-shadow: 0 4px 0 #25431b; }
+
+  .progress { background: var(--paper); border-radius: 18px; padding: 12px 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,.1); }
+  .progress .top { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; }
+  .progress .top b { font-size: 28px; color: var(--accent); }
+  .bar { height: 14px; border-radius: 99px; background: #eadfc4; overflow: hidden; margin-top: 6px; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, #e0a31c, #b8322a); border-radius: 99px; }
+  .progress p { margin: 8px 0 0; font-size: 14px; color: #6b5c3c; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .filters button { min-height: 44px; padding: 0 14px; border: 3px solid transparent; border-radius: 14px; background: rgba(255,250,240,.6);
+    font: inherit; font-weight: 800; font-size: 15px; color: #6b5c3c; cursor: pointer; touch-action: manipulation; }
+  .filters button[aria-pressed="true"] { background: var(--paper); border-color: var(--accent); color: var(--accent); }
+  .filters .sep { width: 100%; height: 0; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 10px; }
+  .slot {
+    position: relative; aspect-ratio: 53 / 73; border: none; border-radius: 8px; padding: 0; cursor: pointer;
+    background: #2f6b3a; box-shadow: 0 3px 6px rgba(0,0,0,.2); font: inherit; color: inherit; touch-action: manipulation;
+  }
+  .slot .face {
+    position: absolute; inset: 4px; border-radius: 5px; background: #f7f0dc; border: 1px solid #8a6f3c;
+    display: flex; flex-direction: row-reverse; justify-content: center; gap: 2px; padding: 8px 2px 4px;
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 12px; line-height: 1.05; font-weight: 600;
+  }
+  .slot .face span { writing-mode: vertical-rl; letter-spacing: .02em; }
+  .slot .no { position: absolute; left: 3px; top: 2px; font-size: 10px; font-weight: 900; color: #fff; background: var(--green); border-radius: 6px; padding: 0 4px; z-index: 1; }
+  .slot.miss { background: #7c8a63; }
+  .slot.miss .face { background: #e7e1cf; color: #b3a888; align-items: center; font-size: 26px; }
+  .slot .kim { position: absolute; right: 4px; bottom: 4px; font-size: 11px; font-weight: 900; color: var(--accent); background: rgba(255,250,240,.9); border-radius: 5px; padding: 0 3px; }
+
+  dialog {
+    width: min(94vw, 520px); max-height: 88vh; border: none; border-radius: 22px; padding: 18px 18px 20px;
+    background: var(--paper); color: var(--ink); box-shadow: 0 10px 30px rgba(0,0,0,.35);
+  }
+  dialog::backdrop { background: rgba(40, 34, 20, .6); }
+  .dh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 16px; }
+  .dh .no { background: var(--green); color: #fff; border-radius: 99px; padding: 1px 10px; font-weight: 900; }
+  .dk, .ds { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: 21px; line-height: 1.6; letter-spacing: .05em; }
+  .dk { margin-top: 10px; }
+  .dk .kimari { color: var(--accent); font-weight: 800; }
+  .ds { padding-left: 1.2em; }
+  .di { margin-top: 10px; font-size: 16px; line-height: 1.7; background: #f6efdb; border-radius: 14px; padding: 10px 12px; }
+  .di b { display: inline-block; background: var(--accent); color: #fff; border-radius: 6px; padding: 0 6px; margin-right: 6px; font-size: 13px; }
+  .dstat { margin-top: 8px; font-size: 14px; color: #6b5c3c; }
+  .drow { display: flex; gap: 10px; margin-top: 14px; }
+  .drow .btn { flex: 1; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📖 ふだずかん</h1>
+    <a class="btn sub" href="ranking.html">🏆</a>
+    <a class="btn" href="./">あそぶ</a>
+  </header>
+
+  <div class="progress">
+    <div class="top"><span>あつめた ふだ</span><span><b id="got">0</b> / 100</span></div>
+    <div class="bar"><i id="barFill" style="width:0"></i></div>
+    <p>ゲームで はらえた うたが ここに あつまるよ。ふだを タップすると うたの いみが みられるよ。</p>
+  </div>
+
+  <div class="filters" id="filters">
+    <button data-f="all" aria-pressed="true">ぜんぶ</button>
+    <button data-f="got" aria-pressed="false">とった</button>
+    <button data-f="miss" aria-pressed="false">まだ</button>
+    <span class="sep"></span>
+    <button data-k="0" aria-pressed="true">きまりじ すべて</button>
+    <button data-k="1" aria-pressed="false">1じ（むすめふさほせ）</button>
+    <button data-k="2" aria-pressed="false">2じ</button>
+    <button data-k="3" aria-pressed="false">3じ</button>
+    <button data-k="4" aria-pressed="false">4じ いじょう</button>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</div>
+
+<dialog id="dlg">
+  <div class="dh" id="dHead"></div>
+  <div class="dk" id="dKami"></div>
+  <div class="ds" id="dShimo"></div>
+  <div class="di" id="dImi"></div>
+  <div class="dstat" id="dStat"></div>
+  <div class="drow">
+    <button class="btn sub" id="dSay">🗣️ よみあげ</button>
+    <button class="btn" id="dClose">とじる</button>
+  </div>
+</dialog>
+
+<script src="poems.js"></script>
+<script src="scores.js"></script>
+<script>
+(function () {
+  'use strict';
+  var P = KarutaPoems.all, z = KarutaScores.zukan();
+  var filter = 'all', kfil = 0, current = null;
+  var $ = function (id) { return document.getElementById(id); };
+
+  function kamiHtml(p) {
+    var html = '', n = 0;
+    p.kami.split('').forEach(function (ch) {
+      if (ch === ' ') { html += '&nbsp;'; return; }
+      n++;
+      html += n <= p.k ? '<span class="kimari">' + ch + '</span>' : ch;
+    });
+    return html;
+  }
+
+  function render() {
+    var got = Object.keys(z).length;
+    $('got').textContent = got;
+    $('barFill').style.width = got + '%';
+    var grid = $('grid');
+    grid.textContent = '';
+    P.forEach(function (p) {
+      var has = !!z[p.no];
+      if (filter === 'got' && !has) return;
+      if (filter === 'miss' && has) return;
+      if (kfil && (kfil === 4 ? p.k < 4 : p.k !== kfil)) return;
+      var b = document.createElement('button');
+      b.className = 'slot' + (has ? '' : ' miss');
+      b.setAttribute('aria-label', p.no + 'ばん ' + (has ? p.kami : 'まだ'));
+      var no = document.createElement('span'); no.className = 'no'; no.textContent = p.no; b.appendChild(no);
+      var face = document.createElement('span'); face.className = 'face';
+      if (has) {
+        // とりふだと おなじ たてがき 3ぎょう
+        var t = p.card, per = Math.ceil(t.length / 3);
+        for (var i = 0; i < 3; i++) { var s = document.createElement('span'); s.textContent = t.slice(i * per, (i + 1) * per); face.appendChild(s); }
+      } else face.textContent = '？';
+      b.appendChild(face);
+      var kim = document.createElement('span'); kim.className = 'kim'; kim.textContent = p.kimari; b.appendChild(kim);
+      b.addEventListener('click', function () { open(p); });
+      grid.appendChild(b);
+    });
+  }
+
+  function open(p) {
+    current = p;
+    var has = z[p.no];
+    $('dHead').innerHTML = '<span class="no">' + p.no + '</span><ruby>' + p.author + '<rt>' + p.authorYomi + '</rt></ruby>';
+    $('dKami').innerHTML = kamiHtml(p);
+    $('dShimo').innerHTML = has ? p.shimo.replace(/ /g, '&nbsp;') : '？？？？？？？&nbsp;？？？？？？？';
+    $('dImi').innerHTML = has ? '<b>いみ</b>' + p.imi : '<b>いみ</b>ゲームで この ふだを はらうと みられるよ';
+    $('dStat').textContent = (has ? 'はらった かず ' + has.n + 'かい ／ いちばん とおく ' + (has.best || 0).toFixed(2) + 'm ／ ' : '') +
+      'きまりじ 「' + p.kimari + '」（' + p.k + 'じ きまり）';
+    var d = $('dlg');
+    if (d.showModal) d.showModal(); else d.setAttribute('open', '');
+  }
+  function close() { stopSay(); var d = $('dlg'); if (d.close) d.close(); else d.removeAttribute('open'); }
+  $('dClose').addEventListener('click', close);
+  $('dlg').addEventListener('click', function (e) { if (e.target === this) close(); });
+
+  /* よみあげ（ゲームと おなじ く ごとに のばして よむ） */
+  var hasTTS = !!(window.speechSynthesis && window.SpeechSynthesisUtterance), jaVoice = null;
+  function pickVoice() {
+    if (!hasTTS) return null;
+    var ja = (speechSynthesis.getVoices() || []).filter(function (v) { return /^ja/i.test(v.lang); });
+    var pref = ['Kyoko', 'O-ren', 'Otoya', 'Hattori', 'Enhanced', 'Premium'];
+    for (var i = 0; i < pref.length && !jaVoice; i++) for (var j = 0; j < ja.length; j++) if (ja[j].name.indexOf(pref[i]) >= 0) { jaVoice = ja[j]; break; }
+    return jaVoice = jaVoice || ja[0] || null;
+  }
+  if (hasTTS) { pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) {} }
+  function stopSay() { try { if (hasTTS) speechSynthesis.cancel(); } catch (e) {} }
+  $('dSay').addEventListener('click', function () {
+    if (!current || !hasTTS) return;
+    stopSay();
+    var parts = current.ky.split(' ');
+    if (z[current.no]) parts = parts.concat(current.sy.split(' '));
+    parts.forEach(function (t) {
+      var u = new SpeechSynthesisUtterance(t + 'ー');
+      u.lang = 'ja-JP'; u.rate = 0.78; u.pitch = 0.95;
+      if (jaVoice || pickVoice()) u.voice = jaVoice;
+      speechSynthesis.speak(u);
+    });
+  });
+  if (!hasTTS) $('dSay').style.display = 'none';
+
+  Array.prototype.forEach.call(document.querySelectorAll('#filters button'), function (b) {
+    b.addEventListener('click', function () {
+      if (b.dataset.f) filter = b.dataset.f; else kfil = +b.dataset.k;
+      Array.prototype.forEach.call(document.querySelectorAll('#filters button'), function (x) {
+        x.setAttribute('aria-pressed', String(x.dataset.f ? x.dataset.f === filter : +x.dataset.k === kfil));
+      });
+      render();
+    });
+  });
+  render();
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    try { navigator.serviceWorker.register('sw.js').catch(function () {}); } catch (e) {}
+  }
+})();
+</script>
+</body>
+</html>
