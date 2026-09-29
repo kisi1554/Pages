@@ -20,6 +20,10 @@
     btnMap: $('btn-map'),
     btnWords: $('btn-words'),
     wordPanel: $('word-panel'),
+    btnDex: $('btn-dex'),
+    dexPanel: $('dex-panel'),
+    dexList: $('dex-list'),
+    dexCount: $('dex-count'),
     wordList: $('word-list'),
     wordCount: $('word-count'),
     levelBtns: $('level-btns'),
@@ -50,6 +54,7 @@
     voice: 'densha-talk:voice',
     level: 'densha-talk:level',
     learned: 'densha-talk:learned',
+    visited: 'densha-talk:visited',
   };
 
   function load(key, fallback) {
@@ -318,6 +323,7 @@
       if (Math.random() < 0.28) setTimeout(() => gagFace(randomFace()), 500);
     });
     saveLearned();
+    saveVisited();
     startIdleTimer();
   }
 
@@ -452,6 +458,42 @@
           if (res) setTimeout(() => handleReply(res), 200);
         });
         el.wordList.appendChild(b);
+      });
+  }
+
+  /* ==================================================================
+   * えきずかん(はなした えきの コレクション)
+   * ================================================================== */
+
+  function saveVisited() {
+    const list = Brain.state.visited;
+    save(STORE.visited, JSON.stringify(list));
+    renderDex();
+  }
+
+  function renderDex() {
+    const entries = Brain.visitedStations();
+    el.dexCount.textContent = entries.length + ' / ' + Brain.totalStationCount();
+    el.dexList.innerHTML = '';
+    if (entries.length === 0) {
+      const p = document.createElement('p');
+      p.className = 'dex-empty';
+      p.textContent = 'まだ からっぽ。えきの はなしを すると、ここに たまっていくよ!';
+      el.dexList.appendChild(p);
+      return;
+    }
+    entries
+      .slice()
+      .reverse()
+      .forEach((entry) => {
+        const b = document.createElement('button');
+        b.className = 'dex-chip';
+        b.innerHTML =
+          '<span class="dex-motif">' + entry.motif + '</span>' +
+          '<span class="dex-name">' + entry.name + '</span>' +
+          '<span class="dex-yomi">' + entry.yomi + '</span>';
+        b.addEventListener('click', () => sendText(entry.name));
+        el.dexList.appendChild(b);
       });
   }
 
@@ -600,6 +642,15 @@
     }
     renderWords();
 
+    /* はなした えきを よみこむ */
+    try {
+      const savedVisited = JSON.parse(load(STORE.visited, '[]'));
+      if (Array.isArray(savedVisited)) Brain.setVisited(savedVisited);
+    } catch (e) {
+      /* こわれていたら からっぽで はじめる */
+    }
+    renderDex();
+
     const voiceOn = load(STORE.voice, '1') === '1';
     Speech.setVoiceEnabled(voiceOn);
     el.btnVoice.textContent = voiceOn ? '🔊' : '🔇';
@@ -615,6 +666,11 @@
 
     el.btnWords.addEventListener('click', () => {
       el.wordPanel.classList.toggle('is-open');
+      el.log.scrollTop = el.log.scrollHeight;
+    });
+
+    el.btnDex.addEventListener('click', () => {
+      el.dexPanel.classList.toggle('is-open');
       el.log.scrollTop = el.log.scrollHeight;
     });
 

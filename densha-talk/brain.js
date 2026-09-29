@@ -39,6 +39,7 @@ const Brain = (function () {
     wordLevel: 3, // 1=やさしい 2=ふつう 3=ぜんぶ
     sinceWord: 0, // ことばの おまけを だしてから なんターン たったか
     learned: [],  // おぼえた ことば(app.js が ほぞんする)
+    visited: [],  // はなした えき(えきずかん。app.js が ほぞんする)
     turns: 0,
     recent: {}, // おなじ せりふを つづけて 言わないため
   };
@@ -151,6 +152,9 @@ const Brain = (function () {
     out.say = out.say.map((t) => fill(t));
     if (!out.chips) out.chips = suggestChips();
     state.lastSay = out.say;
+    if (out.focusStation && STATION_INDEX[out.focusStation] && state.visited.indexOf(out.focusStation) < 0) {
+      state.visited.push(out.focusStation);
+    }
     return out;
   }
 
@@ -1937,6 +1941,22 @@ const Brain = (function () {
     },
     learnedWords() {
       return state.learned.map((w) => WORD_BY_KEY[w]).filter(Boolean);
+    },
+    setVisited(list) {
+      state.visited = Array.isArray(list) ? list.filter((n) => STATION_INDEX[n]) : [];
+    },
+    visitedStations() {
+      return state.visited
+        .filter((n) => STATION_INDEX[n])
+        .map((n) => ({
+          name: n,
+          yomi: stationYomi(n),
+          motif: stationMotif(n),
+          lines: linesOf(n).map((l) => l.name),
+        }));
+    },
+    totalStationCount() {
+      return ALL_STATIONS.length;
     },
     wordTip() {
       return fill(wordSeed());
