@@ -215,6 +215,7 @@
   .bline h3 { font-size: 15px; margin: 0 0 4px; border-left: 10px solid var(--lc); padding-left: 6px; }
   .bline h3 small { font-weight: normal; color: #5b6b4d; }
   .chips { display: flex; flex-wrap: wrap; gap: 3px; }
+  .book h3.area { margin: 16px 0 4px; font-size: 18px; color: var(--green-dark); border-bottom: 3px solid #cfe8c0; }
   .chip { font-size: 11px; padding: 2px 5px; border-radius: 8px; background: #eee; color: #9e9e9e; }
   .chip.on { background: var(--lc); color: #fff; font-weight: bold; }
   .startbtn.sub { background: #fff3d6; border-color: #8a5a18; box-shadow: 0 6px 0 #8a5a18; font-size: 22px; min-height: 58px; }
@@ -272,7 +273,8 @@
       <button class="startbtn sub" id="titleBookBtn" type="button">📔 スタンプちょう を みる</button>
       <ul class="howto">
         <li>🟢 <b>にょこにょこ ボタン</b>を おしている あいだ すすむよ</li>
-        <li>📮 えきに つくと <b>スタンプ</b>が もらえる。ぜんぶで 23ろせん・430えき いじょう！</li>
+        <li>📮 えきに つくと <b>スタンプ</b>が もらえる。ぜんぶで <span id="netSum"></span>！</li>
+        <li>🚄 <b>しんかんせん</b>ぞいも あるけるよ。<ruby>博多<rt>はかた</rt></ruby>・<ruby>新青森<rt>しんあおもり</rt></ruby>・<ruby>新函館北斗<rt>しんはこだてほくと</rt></ruby>・<ruby>金沢<rt>かなざわ</rt></ruby>・<ruby>鹿児島中央<rt>かごしまちゅうおう</rt></ruby>まで！</li>
         <li>🎯 <b>ミッション</b>の えきを めざそう。💡ヒントも でるよ</li>
         <li>🚉 えきで「<b>えきメニュー</b>」を おすと <b>のりかえ</b> や ひきかえし が できる</li>
         <li>🚃 <b>ふみきり</b>が カンカン なったら とまって まとう。わたったら でんしゃに ひかれて アウト！</li>
@@ -341,7 +343,7 @@
   </div>
 </div>
 
-<script src="net.js?v=8a43792"></script>
+<script src="net.js?v=b1ad36c"></script>
 <script>
 (() => {
   'use strict';
@@ -405,10 +407,18 @@
 
   // ---------- ろせんず（net.js） ----------
   const NET = window.NYOKO_NET;
+  const FAR_CITY = ['osaka_loop', 'midosuji', 'karasuma', 'higashiyama', 'fukuoka_kuko', 'sendai_nb'];
   const LINE = {};
   NET.LINES.forEach((l) => {
-    l.st = l.stations.split(' ').map((w) => { const [k, kana] = w.split(':'); return { k, kana, g: NET.ALIAS[k] || k }; });
+    l.st = l.stations.split(' ').map((w) => {
+      const [kk, kana] = w.split(':');
+      const [k, tag] = kk.split('@');   // 「京橋@大阪」 → とおくの べつの えき
+      return { k, kana, g: tag ? `${k}（${tag}）` : (NET.ALIAS[k] || k) };
+    });
     l.seaSet = new Set((l.sea || '').split(' ').filter(Boolean));
+    l.sightMap = {};
+    (l.sights || '').split(' ').filter(Boolean).forEach((w) => { const [k, e] = w.split(':'); l.sightMap[k] = e; });
+    l.area = l.kind === 'shinkansen' || /_s$/.test(l.id) ? 'shinkansen' : FAR_CITY.includes(l.id) ? 'far' : 'kanto';
     LINE[l.id] = l;
   });
   // えき（おなじ なまえ＝のりかえ できる グループ）ごとの ろせん
@@ -1349,7 +1359,7 @@
   function enterLine(l, i, d) {
     const n = l.st.length;
     const kMax = l.loop ? 1e9 : (d > 0 ? n - 1 - i : i);
-    const base = l.kind === 'chika' ? 0.8 : l.kind === 'jr' ? 0.62 : 0.45;
+    const base = l.kind === 'chika' ? 0.8 : l.kind === 'shinkansen' ? 0.3 : l.kind === 'jr' ? 0.62 : 0.45;
     let seed = 0;
     for (const ch of l.id) seed = seed * 31 + ch.charCodeAt(0);
     W = {
@@ -1379,26 +1389,35 @@
       let n = 0;
       const named = l.crossingsAt && l.crossingsAt.some(([p, q]) => (l.st[a].k === p && l.st[b].k === q) || (l.st[a].k === q && l.st[b].k === p));
       if (named) n = 1;
-      else if (l.crossing > 0) {
-        if (hash(sd) < l.crossing) n++;
-        if (hash(sd + 5) < l.crossing * 0.6) n++;
+      else if ((l.kind === 'jr' || l.kind === 'shitetsu') && l.crossing >= 0) {
+        // ふみきりの でやすさ（ほんものより ずっと おおめ。ちかてつ・しんかんせん には ない）
+        const pr = Math.min(1, l.crossing * 1.6 + 0.2);
+        if (hash(sd) < pr) n++;
+        if (hash(sd + 5) < pr * 0.8) n++;
+        if (hash(sd + 9) < pr * 0.5) n++;
       }
-      const spots = n === 1 ? [0.45] : n === 2 ? [0.3, 0.68] : [];
-      spots.forEach((f, j) => list.push({ x0: k * LGAP + f * LGAP, off: hash(sd + j * 3 + 1) * 11.5, warned: false }));
+      const spots = [[], [0.45], [0.33, 0.66], [0.26, 0.5, 0.74]][n];
+      spots.forEach((f, j) => {
+        const per = 8.5 + hash(sd + j * 7 + 2) * 3;   // ふみきりごとに はやさが ちがう
+        list.push({ x0: k * LGAP + f * LGAP, per, off: hash(sd + j * 3 + 1) * per, warned: false });
+      });
     }
     W.cross.set(k, list);
     return list;
   }
-  // ふみきりの ようす（ひらく 6びょう → カンカン → しまる → でんしゃ → あがる）
+  // ふみきりの ようす（ひらく みじかめ → カンカン → しまる → でんしゃ → あがる）
+  // per（1しゅう の びょう）の うち、あいているのは さいしょの 3.4びょう だけ
   function crossState(c) {
-    const t = (T + c.off) % 11.5;
+    const per = c.per || 10, t = (T + c.off) % per;
+    const o = 3.4, down = o + 0.9, up = per - 1.1;
     let gate = 0;
-    if (t >= 6 && t < 7.2) gate = ease((t - 6) / 1.2);
-    else if (t >= 7.2 && t < 10.3) gate = 1;
-    else if (t >= 10.3) gate = 1 - ease((t - 10.3) / 1.2);
-    return { t, gate, ring: t >= 6 && t < 10.3, blocked: t >= 6.3 && t < 10.9, trainQ: t >= 7.4 && t < 10.1 ? (t - 7.4) / 2.7 : -1 };
+    if (t >= o && t < down) gate = ease((t - o) / 0.9);
+    else if (t >= down && t < up) gate = 1;
+    else if (t >= up) gate = 1 - ease((t - up) / 1.1);
+    const tq0 = down + 0.2, tq1 = up - 0.2;
+    return { t, gate, ring: t >= o && t < up, blocked: t >= o + 0.25 && t < per - 0.5, trainQ: t >= tq0 && t < tq1 ? (t - tq0) / (tq1 - tq0) : -1 };
   }
-  const potatoX = (k) => k * LGAP + (crossingsOf(k).length ? 0.17 : 0.55) * LGAP;
+  const potatoX = (k) => k * LGAP + (crossingsOf(k).length ? 0.12 : 0.55) * LGAP;
 
   function updateLine(dt, prevHead) {
     const l = W.line, walk = P.mode === 'walk', boost = P.mode === 'boost';
@@ -1448,10 +1467,14 @@
       if (W.trainT <= 0) {
         W.trainT = 5 + Math.random() * 5;
         const fromRight = Math.random() < 0.5;
-        W.trains.push({ x: fromRight ? camX + viewW + 80 : camX - 420, v: (fromRight ? -1 : 1) * (520 + Math.random() * 260) });
-        snd.passing();
+        const shin = l.kind === 'shinkansen';
+        const sp = shin ? 1500 + Math.random() * 500 : 520 + Math.random() * 260;
+        W.trains.push({ x: fromRight ? camX + viewW + 80 : camX - 460, v: (fromRight ? -1 : 1) * sp });
+        if (shin) snd.whoosh(); else snd.passing();
         Hz.trainSay++;
-        if (Hz.trainSay % 3 === 1 && (!P.bubble || P.bubble.t < 0.3)) say(pick(['でんしゃだ! おーい!', 'がたんごとん', `${l.name}の でんしゃ だ!`]), 1.4);
+        if (Hz.trainSay % 3 === 1 && (!P.bubble || P.bubble.t < 0.3)) {
+          say(shin ? pick(['しんかんせんだ! はやーい!', 'びゅーん!', `${l.name}だ!`]) : pick(['でんしゃだ! おーい!', 'がたんごとん', `${l.name}の でんしゃ だ!`]), 1.4);
+        }
       }
       for (const t of W.trains) t.x += t.v * dt;
       W.trains = W.trains.filter((t) => t.x > camX - 900 && t.x < camX + viewW + 900);
@@ -1480,7 +1503,7 @@
       if (k <= W.kMax) {
         const i = idxAt(k), s0 = l.st[i];
         drawStation({
-          x: k * LGAP, kanji: s0.k, kana: s0.kana, g: s0.g, lineId: l.id, color: l.color, subway: l.kind === 'chika',
+          x: k * LGAP, kanji: s0.k, kana: s0.kana, g: s0.g, lineId: l.id, color: l.color, subway: l.kind === 'chika', shin: l.kind === 'shinkansen',
           term: !l.loop && (i === 0 || i === l.st.length - 1),
         });
       }
@@ -1490,7 +1513,21 @@
     const l = W.line, base = k * LGAP;
     const a = l.st[idxAt(k)], b = l.st[idxAt(k + 1)];
     const sd = W.seed + (W.i0 + W.dir * k) * 31;
-    if ((a && l.seaSet.has(a.k)) || (b && l.seaSet.has(b.k))) {
+    // えきの めいしょ（えきを でて すぐ と、つく まえ）
+    const sa = a && l.sightMap[a.k], sb = b && l.sightMap[b.k];
+    if (sa === '🗻' || sb === '🗻') {
+      ctx.save(); ctx.globalAlpha = 0.95;
+      emo('🗻', base + (sa === '🗻' ? 200 : 500), GY - 150, 190);
+      ctx.restore();
+    }
+    const seaGap = (a && l.seaSet.has(a.k)) || (b && l.seaSet.has(b.k));
+    if (!seaGap) {
+      drawGapTown(k, base, sd, (sa && sa !== '🗻') || (sb && sb !== '🗻'));
+      if (sa && sa !== '🗻') drawSight(sa, base + 175);
+      if (sb && sb !== '🗻') drawSight(sb, base + 545);
+      return;
+    }
+    {
       ctx.fillStyle = '#4fc3f7'; ctx.fillRect(base - 2, GY - 72, LGAP + 4, 70);
       ctx.fillStyle = '#ffe0a3'; ctx.fillRect(base - 2, GY - 14, LGAP + 4, 12);
       ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 2;
@@ -1501,10 +1538,20 @@
       emo('⛵', base + 200 + Math.sin(T * 0.5 + k) * 40, GY - 62, 22);
       if (hash(sd) < 0.5) emo('🏝️', base + 520, GY - 42, 30);
       else emo('🐚', base + 480, GY - 10, 16);
-      return;
+      if (sa && sa !== '🗻') drawSight(sa, base + 175);
+      if (sb && sb !== '🗻') drawSight(sb, base + 545);
     }
+  }
+  // めいしょの おおきな え（だいざ つき）
+  function drawSight(e, x) {
+    ctx.fillStyle = 'rgba(255,255,255,.55)';
+    ctx.beginPath(); ctx.ellipse(x, GY - 6, 70, 10, 0, 0, Math.PI * 2); ctx.fill();
+    emo(e, x, GY - 62 + Math.sin(T * 2 + x) * 2, 96);
+  }
+  function drawGapTown(k, base, sd, hasSight) {
     const c = clamp(W.city + (hash(sd) - 0.5) * 0.5, 0, 1);
     [150, 330, 510].forEach((dx, j) => {
+      if (hasSight && j !== 1) return;
       const x = base + dx, h = hash(sd + j * 7);
       if (hash(sd + j * 11) < 0.12) { emo(LANDMARKS[Math.floor(hash(sd + j * 13) * LANDMARKS.length)], x + 40, GY - 26, 46); return; }
       if (c > 0.55 && h < c) drawBuilding(x, 100, 110 + hash(sd + j * 3) * 140, ['#90a4ae', '#b0bec5', '#a5b4c8'][j % 3]);
@@ -1513,6 +1560,20 @@
     });
   }
   function drawBackTrack(x0, x1) {
+    if (W.line.kind === 'shinkansen') {
+      const yv = GY - 118;
+      ctx.fillStyle = '#cfd8dc';
+      for (let x = Math.floor(x0 / 220) * 220; x < x1; x += 220) ctx.fillRect(x - 10, yv, 20, GY - yv);
+      ctx.fillStyle = '#b0bec5'; ctx.fillRect(x0, yv - 8, x1 - x0, 16);
+      ctx.fillStyle = '#90a4ae'; ctx.fillRect(x0, yv - 12, x1 - x0, 4);
+      for (const t of W.trains) {
+        ctx.save();
+        if (t.v > 0) { ctx.translate(t.x + 210, 0); ctx.scale(-1, 1); ctx.translate(-(t.x + 210), 0); }
+        drawTrain(t.x, yv - 12);
+        ctx.restore();
+      }
+      return;
+    }
     const y = GY - 30;
     ctx.fillStyle = '#b8a992'; ctx.fillRect(x0, y - 7, x1 - x0, 13);
     ctx.fillStyle = '#6d4c41';
@@ -2023,7 +2084,7 @@
     txt(stn.kana, x, GY - 127, stn.kana.length > 12 ? 8 : 10, '#fff');
     const nm = stn.kanji + (stn.kanji.length <= 3 ? '駅' : '');
     txt(nm, x, GY - 108, nm.length > 8 ? 11 : nm.length > 5 ? 14 : 17, '#fff');
-    emo(stn.subway ? '🚇' : '🚉', x - 60, GY - 20, 20);
+    emo(stn.shin ? '🚄' : stn.subway ? '🚇' : '🚉', x - 60, GY - 20, 20);
     if (stamps.has(stn.g)) emo('💮', x + 74, GY - 138, 20);
     const hasX = drawBadges(x, stn.g, stn.lineId, GY - 152);
     if (stn.term) txt('しゅうてん', x, GY - (hasX ? 190 : 152), 14, '#e53935', '#fff');
@@ -2618,7 +2679,7 @@
     ctx.beginPath(); ctx.arc(0, 0, 47, 0, Math.PI * 2); ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2; ctx.stroke();
     txt(fs.kana, 0, -25, fs.kana.length > 9 ? 7 : 10, '#d32f2f');
     const n = fs.k.length;
-    txt(fs.k, 0, 0, n > 6 ? 10 : n > 4 ? 13 : n > 2 ? 18 : 24, '#d32f2f');
+    txt(fs.k, 0, 0, n > 9 ? 8 : n > 6 ? 10 : n > 4 ? 13 : n > 2 ? 18 : 24, '#d32f2f');
     txt('スタンプ', 0, 25, 11, '#d32f2f');
     ctx.restore();
   }
@@ -2667,7 +2728,10 @@
     ctx.lineWidth = size / 3; ctx.strokeStyle = '#3b2a1a'; ctx.strokeText(b.text, 0, 0);
     ctx.lineWidth = size / 6; ctx.strokeStyle = '#fff'; ctx.strokeText(b.text, 0, 0);
     ctx.fillStyle = g; ctx.fillText(b.text, 0, 0);
-    txt(`${'💨'.repeat(b.lv - 1)} ${b.sub} ${'💨'.repeat(b.lv - 1)}`, 0, size * 0.85, size * 0.45, '#e8590c', '#fff');
+    const sub = `${'💨'.repeat(Math.max(0, b.lv - 1))} ${b.sub} ${'💨'.repeat(Math.max(0, b.lv - 1))}`.trim();
+    ctx.font = `bold 20px ${FONT}`;
+    const subSize = Math.min(size * 0.45, 20 * (viewW * 0.86 / pop) / ctx.measureText(sub).width);
+    txt(sub, 0, size * 0.85, subSize, '#e8590c', '#fff');
     ctx.restore();
   }
 
@@ -2705,11 +2769,12 @@
   function openBook() {
     const got = ALL_G.filter((g) => stamps.has(g)).length;
     $('bookSum').innerHTML = `あつめた スタンプ <b>${got}</b> / ${ALL_G.length}　ミッション クリア <b>${missionsDone}</b>かい`;
-    $('bookList').innerHTML = NET.LINES.map((l) => {
+    const AREAS = [['kanto', '🚃 しゅとけん'], ['shinkansen', '🚄 しんかんせん'], ['far', '🗾 とおくの まち']];
+    $('bookList').innerHTML = AREAS.map(([a, title]) => `<h3 class="area">${title}</h3>` + NET.LINES.filter((l) => l.area === a).map((l) => {
       const n = l.st.filter((x) => stamps.has(x.g)).length;
       const chips = l.st.map((x) => `<span class="chip${stamps.has(x.g) ? ' on' : ''}">${x.k}</span>`).join('');
       return `<div class="bline" style="--lc:${l.color}"><h3>${n === l.st.length ? '👑 ' : ''}${l.name} <small>${l.kanji}　${n}/${l.st.length}</small></h3><div class="chips">${chips}</div></div>`;
-    }).join('');
+    }).join('')).join('');
     bookFrom = st;
     st = 'book'; setHold(false);
     $('bookOv').hidden = false;
@@ -2847,6 +2912,7 @@
   }
 
   // ---------- はじめ ----------
+  $('netSum').textContent = `${NET.LINES.length}ろせん・${ALL_G.length}えき`;
   resetGame();
   updateSoundBtn();
   updateContinueBtn();
