@@ -1166,6 +1166,21 @@
   fartBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); ac(); doFart(); });
   [stepBtn, jumpBtn, fartBtn].forEach((b) => b.addEventListener('contextmenu', (e) => e.preventDefault()));
 
+  // スマホで ズームさせない: れんだ（ダブルタップ）・ピンチ・ながおし を とめる
+  // （iOS Safari は viewport の user-scalable=no を むしするので JS でも とめる）
+  ['#controls', '#stage'].forEach((sel) => {
+    $(sel).addEventListener('touchstart', (e) => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+  });
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd < 350 && e.cancelable && !e.target.closest('a, .screen, .bar')) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach((ev) => document.addEventListener(ev, (e) => e.preventDefault()));
+  document.addEventListener('dblclick', (e) => e.preventDefault());
+
   window.addEventListener('keydown', (e) => {
     if (mode === 'title' || mode === 'result') return;
     if (e.code === 'Space' || e.code === 'ArrowRight') {
