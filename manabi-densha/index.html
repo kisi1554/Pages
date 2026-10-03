@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b78be">
+<meta name="description" content="まいにちの べんきょうは 1ぽんの でんしゃを はしらせること。えきに つくたびに 1もん とく がくしゅうアプリ">
+<title>まなび でんしゃ</title>
+<style>
+:root{
+  --bg:#eef4f8; --card:#fff; --ink:#1d2a35; --soft:#55636f; --rule:#d5dee5;
+  --kazu:#0b78be; --kazu-bg:#e4f1fa;
+  --kotoba:#d9661c; --kotoba-bg:#fdeee2;
+  --line:var(--kazu); --line-bg:var(--kazu-bg);
+  --go:#2e9d55; --caution:#e8b417; --stop:#d8433b;
+  --gold:#e3a91a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);
+  font:18px/1.5 "Hiragino Maru Gothic ProN","Hiragino Sans","BIZ UDPGothic","Meiryo",system-ui,sans-serif;
+  -webkit-user-select:none;user-select:none;overscroll-behavior:none}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none;touch-action:manipulation}
+rt{font-size:.5em;font-weight:700}
+.app{max-width:980px;margin:0 auto;min-height:100%;padding:12px 16px calc(24px + env(safe-area-inset-bottom));display:flex;flex-direction:column}
+.screen{display:none;flex:1;flex-direction:column;gap:14px}
+.screen.on{display:flex}
+
+/* ヘッダー */
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top h1{font-size:26px;margin:0;flex:1;letter-spacing:.04em;color:var(--kazu)}
+.pill{display:inline-flex;align-items:center;gap:6px;background:var(--card);border:2px solid var(--rule);border-radius:999px;padding:6px 12px;font-weight:700;font-size:16px;min-height:44px}
+.pill.tog[aria-pressed="false"]{opacity:.45}
+.iconbtn{width:48px;height:48px;border-radius:50%;background:var(--card);border:2px solid var(--rule);font-size:22px;display:inline-flex;align-items:center;justify-content:center}
+
+/* ホーム */
+.status{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.box{background:var(--card);border-radius:18px;padding:14px 16px;box-shadow:0 2px 0 var(--rule)}
+.box .lbl{font-size:14px;color:var(--soft);font-weight:700}
+.box .big{font-size:30px;font-weight:900;line-height:1.2}
+.trains{font-size:30px;letter-spacing:4px}
+.trains .used{filter:grayscale(1);opacity:.3}
+.freeze{font-size:13px;color:var(--soft)}
+.lines{display:grid;grid-template-columns:1fr;gap:14px}
+@media (min-width:720px){.lines{grid-template-columns:1fr 1fr}}
+.linecard{text-align:left;background:var(--card);border-radius:22px;padding:16px;border:4px solid var(--c);box-shadow:0 5px 0 var(--c);display:flex;flex-direction:column;gap:8px;transition:transform .1s}
+.linecard:active{transform:translateY(4px);box-shadow:0 1px 0 var(--c)}
+.linecard[disabled]{opacity:.5;filter:grayscale(.6)}
+.linecard .lname{font-size:26px;font-weight:900;color:var(--c);display:flex;align-items:center;gap:8px}
+.linecard .ldesc{font-size:15px;color:var(--soft)}
+.linecard .next{font-size:15px;font-weight:700}
+.dots{display:grid;grid-template-columns:repeat(16,1fr);gap:4px}
+.dots i{aspect-ratio:1;border-radius:50%;background:#e3e8ec;border:2px solid #cfd8de}
+.dots i.got{background:var(--c);border-color:var(--c)}
+.dots i.gold{background:var(--gold);border-color:var(--gold)}
+.prog{font-size:14px;font-weight:700;color:var(--soft)}
+.kaitsu{display:inline-block;background:var(--gold);color:#fff;border-radius:8px;padding:0 8px;font-size:14px}
+.stampbtn{align-self:center;background:var(--card);border:3px solid var(--rule);border-radius:999px;padding:10px 22px;font-weight:900;min-height:52px}
+.foot{font-size:13px;color:var(--soft);text-align:center;margin-top:auto}
+.foot a{color:var(--soft)}
+
+/* 運行 */
+.track{position:relative;background:var(--card);border-radius:18px;padding:12px 18px 8px;box-shadow:0 2px 0 var(--rule)}
+.rail{position:relative;height:74px}
+.rail .bar{position:absolute;left:0;right:0;top:44px;height:8px;border-radius:4px;background:var(--line)}
+.rail .st{position:absolute;top:36px;width:24px;height:24px;margin-left:-12px;border-radius:50%;background:#fff;border:4px solid var(--line);z-index:1}
+.rail .st.gold{background:var(--gold);border-color:var(--gold)}
+.rail .st.ok{background:var(--line)}
+.rail .st.help{background:#c7cfd5;border-color:#9aa6af}
+.rail .st .no{position:absolute;top:24px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:900;color:var(--soft);white-space:nowrap}
+.rail .train{position:absolute;top:0;width:52px;margin-left:-26px;font-size:36px;line-height:1;text-align:center;transition:left 1.4s cubic-bezier(.45,0,.3,1);z-index:2}
+.rail .train.go{animation:rock .25s linear infinite}
+@keyframes rock{50%{transform:translateY(-2px)}}
+.runinfo{display:flex;gap:10px;align-items:center;font-weight:700;font-size:15px;color:var(--soft);margin-top:16px}
+
+.qcard{background:var(--card);border-radius:22px;padding:16px;box-shadow:0 3px 0 var(--rule);display:flex;flex-direction:column;gap:14px;flex:1}
+.qhead{display:flex;align-items:center;gap:12px}
+.signal{display:flex;flex-direction:column;gap:4px;background:#2a3238;border-radius:12px;padding:6px;flex:none}
+.signal i{width:22px;height:22px;border-radius:50%;background:#4b555c}
+.signal.green i.g{background:var(--go);box-shadow:0 0 10px var(--go)}
+.signal.yellow i.y{background:var(--caution);box-shadow:0 0 10px var(--caution)}
+.signal.red i.r{background:var(--stop);box-shadow:0 0 10px var(--stop)}
+.qtext{flex:1;font-size:22px;font-weight:900;line-height:1.6}
+.qtext .em{color:var(--line)}
+.say{flex:none}
+.visual{display:flex;justify-content:center;align-items:center;min-height:70px}
+.plate{display:inline-flex;flex-direction:column;align-items:center;background:#fff;border:3px solid var(--ink);border-radius:10px;padding:6px 18px 4px;min-width:200px;box-shadow:0 4px 0 #0002}
+.plate .pn{font-size:38px;font-weight:900;letter-spacing:.06em;line-height:1.35}
+.plate .pb{height:8px;align-self:stretch;background:var(--line);border-radius:3px;margin-top:4px}
+.ncirc{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:62px;height:62px;border-radius:50%;border:6px solid var(--kazu);background:#fff;font-weight:900;line-height:1;flex:none}
+.ncirc small{font-size:12px}
+.ncirc b{font-size:24px}
+.ncirc.sm{width:44px;height:44px;border-width:4px}
+.ncirc.sm small{font-size:9px}
+.ncirc.sm b{font-size:17px}
+
+.numline{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:6px 0}
+.numline .nl{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:40px;opacity:.55;transition:opacity .2s,transform .2s}
+.numline .nl.lit{opacity:1}
+.numline .nl.start .ncirc{background:var(--kazu-bg)}
+.numline .nl.hop .ncirc{border-color:var(--caution)}
+.numline .nl.ans{transform:scale(1.15);opacity:1}
+.numline .nl.ans .ncirc{background:var(--caution);border-color:var(--stop)}
+.numline .cnt{font-size:13px;font-weight:900;color:var(--stop);min-height:18px}
+
+.hintbox{display:none;background:#fff8dc;border:3px dashed var(--caution);border-radius:16px;padding:10px 12px;font-size:18px;font-weight:700}
+.hintbox.on{display:block}
+.hintbox.red{background:#fdecea;border-color:var(--stop)}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.choice{background:#fff;border:4px solid var(--line);border-radius:18px;padding:12px 6px;min-height:92px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:24px;font-weight:900;box-shadow:0 5px 0 var(--line);transition:transform .08s}
+.choice:active{transform:translateY(4px);box-shadow:0 1px 0 var(--line)}
+.choice .sub{font-size:14px;color:var(--soft);font-weight:700}
+.choice.no{opacity:.3;border-color:#bbb;box-shadow:0 5px 0 #bbb;pointer-events:none}
+.choice.right{background:#e3f6e9;border-color:var(--go);box-shadow:0 5px 0 var(--go)}
+.choice.pulse{animation:pulse 1s ease-in-out infinite}
+.choice.shake{animation:shake .4s}
+@keyframes pulse{50%{transform:scale(1.06)}}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.hintbtn{align-self:center;display:inline-flex;align-items:center;gap:8px;background:#fff;border:3px solid var(--caution);border-radius:999px;padding:8px 20px;font-weight:900;min-height:52px}
+.hintbtn[disabled]{opacity:.35}
+.toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);background:#fff;border:5px solid var(--go);color:var(--go);font-size:40px;font-weight:900;padding:14px 34px;border-radius:24px;opacity:0;pointer-events:none;transition:all .25s;z-index:20;box-shadow:0 10px 30px #0003}
+.toast.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+/* 終点 */
+.endwrap{align-items:center;text-align:center}
+.endwrap h2{font-size:30px;margin:6px 0 0;color:var(--line)}
+.stamp{width:180px;height:180px;border-radius:50%;border:8px double var(--line);color:var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;transform:rotate(-8deg);background:#fff;font-weight:900;line-height:1.2}
+.stamp.drop{animation:drop .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes drop{0%{transform:scale(2.4) rotate(-8deg);opacity:0}100%{transform:scale(1) rotate(-8deg);opacity:1}}
+.stamp .s1{font-size:14px}
+.stamp .s2{font-size:28px}
+.stamp .s3{font-size:13px}
+#runLine{flex:1;font-size:14px}
+#runCount{white-space:nowrap}
+.result{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.result span{display:inline-flex;align-items:center;gap:4px;background:var(--card);border-radius:10px;padding:4px 8px;font-size:14px;font-weight:700}
+.msg{background:var(--card);border-radius:16px;padding:12px 16px;font-weight:700;max-width:560px}
+.bigbtn{background:var(--line);color:#fff;border-radius:999px;padding:14px 34px;font-size:22px;font-weight:900;min-height:64px;box-shadow:0 5px 0 #0003}
+.bigbtn:active{transform:translateY(3px);box-shadow:0 2px 0 #0003}
+.subbtn{background:var(--card);border:3px solid var(--rule);border-radius:999px;padding:10px 24px;font-weight:900;min-height:52px}
+
+/* 車庫 */
+.depot{align-items:center;justify-content:center;text-align:center;gap:18px}
+.depot .shed{font-size:80px;line-height:1}
+.depot h2{font-size:28px;margin:0}
+
+/* スタンプ帳 */
+.book{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:10px}
+.mini{aspect-ratio:1;border-radius:50%;border:5px double #cdd5db;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:12px;line-height:1.2;color:#b6c0c7;background:#fff;text-align:center;padding:4px}
+.mini b{font-size:15px}
+.mini.has{border-color:var(--c);color:var(--c);transform:rotate(-6deg)}
+.booksec h3{margin:6px 0;color:var(--c)}
+
+/* おとな */
+dialog{border:none;border-radius:20px;padding:20px;max-width:min(420px,calc(100vw - 32px));box-shadow:0 20px 50px #0004}
+dialog::backdrop{background:#0006}
+dialog h3{margin:0 0 10px}
+dialog label{display:block;margin:10px 0 4px;font-weight:700;font-size:15px}
+dialog input{font:inherit;font-size:22px;width:100%;padding:8px 10px;border:2px solid var(--rule);border-radius:10px;-webkit-user-select:text;user-select:text}
+dialog .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+dialog .row button{flex:1;min-height:48px;border-radius:12px;background:#eef2f5;font-weight:700;padding:6px 10px}
+dialog .row button.pri{background:var(--kazu);color:#fff}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;min-height:44px;border-radius:10px;background:#eef2f5;font-weight:900}
+.seg button.on{background:var(--kazu);color:#fff}
+.note{font-size:13px;color:var(--soft)}
+
+@media (max-width:520px){
+  .top h1{font-size:22px}
+  .qtext{font-size:19px}
+  .choice{font-size:20px;min-height:84px}
+  .plate .pn{font-size:30px}
+  .rail .train{font-size:30px}
+  .box .big{font-size:24px}
+}
+@media (max-height:520px) and (orientation:landscape){
+  .qcard{gap:8px}
+  .choice{min-height:70px}
+  .rail{height:64px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ホーム -->
+<section class="screen on" id="home">
+  <div class="top">
+    <h1>🚃 まなび でんしゃ</h1>
+    <button class="pill tog" id="sndBtn" aria-pressed="true">🔔 おと</button>
+    <button class="pill tog" id="vceBtn" aria-pressed="true">🗣️ こえ</button>
+    <button class="iconbtn" id="adultBtn" aria-label="おとなの かた">⚙️</button>
+  </div>
+
+  <div class="status">
+    <div class="box">
+      <div class="lbl">むじこ うんてん</div>
+      <div class="big" id="streak">0にち</div>
+      <div class="freeze" id="freezeTxt"></div>
+    </div>
+    <div class="box">
+      <div class="lbl">きょう はしれる でんしゃ</div>
+      <div class="trains" id="trains"></div>
+      <div class="freeze" id="runsTxt"></div>
+    </div>
+  </div>
+
+  <div class="lines" id="lines"></div>
+
+  <button class="stampbtn" id="bookBtn">📮 スタンプちょう</button>
+
+  <div class="foot">
+    <a href="../">← あそびメニュー</a><br>
+    えきの なまえと ばんごうは よこはましえいちかてつ ブルーライン（B01〜B32）です
+  </div>
+</section>
+
+<!-- 運行 -->
+<section class="screen" id="run">
+  <div class="track">
+    <div class="rail" id="rail"></div>
+    <div class="runinfo">
+      <span id="runLine"></span>
+      <span id="runCount"></span>
+      <button class="iconbtn" id="quitBtn" aria-label="やめる">✖</button>
+    </div>
+  </div>
+
+  <div class="qcard" id="qcard">
+    <div class="qhead">
+      <div class="signal green" id="signal" aria-hidden="true"><i class="g"></i><i class="y"></i><i class="r"></i></div>
+      <div class="qtext" id="qtext"></div>
+      <button class="iconbtn say" id="sayBtn" aria-label="もういちど きく">🔊</button>
+    </div>
+    <div class="visual" id="visual"></div>
+    <div class="hintbox" id="hintbox"></div>
+    <div class="choices" id="choices"></div>
+    <button class="hintbtn" id="hintBtn">🚦 ヒント</button>
+  </div>
+</section>
+
+<!-- 終点 -->
+<section class="screen endwrap" id="end">
+  <h2 id="endTitle">しゅうてん！</h2>
+  <div class="stamp" id="stamp"></div>
+  <div class="result" id="result"></div>
+  <div class="msg" id="endMsg"></div>
+  <button class="bigbtn" id="toDepot">🅿️ しゃこへ もどる</button>
+</section>
+
+<!-- 車庫（きょうはおしまい） -->
+<section class="screen depot" id="depot">
+  <div class="shed">🏠🚃💤</div>
+  <h2>きょうの うんこうは おしまい</h2>
+  <div class="msg" id="depotMsg">でんしゃは しゃこで おやすみ ちゅう。<br>また あした はしらせようね！</div>
+  <button class="subbtn" id="depotBook">📮 スタンプちょうを みる</button>
+</section>
+
+<!-- スタンプ帳 -->
+<section class="screen" id="bookScr">
+  <div class="top">
+    <h1>📮 スタンプちょう</h1>
+    <button class="iconbtn" id="bookClose" aria-label="とじる">✖</button>
+  </div>
+  <div id="bookBody"></div>
+</section>
+
+</div>
+
+<div class="toast" id="toast">せいかい！</div>
+
+<dialog id="gate">
+  <h3>おとなの かたへ</h3>
+  <p class="note">せっていを ひらくには けいさんの こたえを いれてください。</p>
+  <label for="gateIn" id="gateQ"></label>
+  <input id="gateIn" type="number" inputmode="numeric" autocomplete="off">
+  <div class="row"><button id="gateNo">やめる</button><button class="pri" id="gateOk">ひらく</button></div>
+</dialog>
+
+<dialog id="adult">
+  <h3>うんてん しれいしょ（せってい）</h3>
+  <label>1日に はしれる でんしゃの かず</label>
+  <div class="seg" id="maxSeg"></div>
+  <p class="note">市販アプリと同じく、やりすぎ防止のため既定は1日3本です。</p>
+  <label>きょうの きろく</label>
+  <div class="note" id="todayTxt"></div>
+  <div class="row"><button id="resetToday">きょうの回数を もどす</button></div>
+  <div class="row"><button id="resetAll">すべての きろくを けす</button></div>
+  <div class="row"><button class="pri" id="adultClose">とじる</button></div>
+</dialog>
+
+<script>
+'use strict';
+/* =========================================================
+   駅データ（横浜市営地下鉄ブルーライン B01〜B32）
+   blueline-tashizan の駅データから名前・読みだけを流用
+   ========================================================= */
+var ST=[
+['湘南台','しょうなんだい'],['下飯田','しもいいだ'],['立場','たてば'],['中田','なかだ'],
+['踊場','おどりば'],['戸塚','とつか'],['舞岡','まいおか'],['下永谷','しもながや'],
+['上永谷','かみながや'],['港南中央','こうなんちゅうおう'],['上大岡','かみおおおか'],['弘明寺','ぐみょうじ'],
+['蒔田','まいた'],['吉野町','よしのちょう'],['阪東橋','ばんどうばし'],['伊勢佐木長者町','いせざきちょうじゃまち'],
+['関内','かんない'],['桜木町','さくらぎちょう'],['高島町','たかしまちょう'],['横浜','よこはま'],
+['三ツ沢下町','みつざわしもちょう'],['三ツ沢上町','みつざわかみちょう'],['片倉町','かたくらちょう'],['岸根公園','きしねこうえん'],
+['新横浜','しんよこはま'],['北新横浜','きたしんよこはま'],['新羽','にっぱ'],['仲町台','なかまちだい'],
+['センター南','せんたーみなみ'],['センター北','せんたーきた'],['中川','なかがわ'],['あざみ野','あざみの']
+].map(function(a,i){return {n:i+1,name:a[0],yomi:a[1]};});
+var N=ST.length;            // 32
+var PER_RUN=8;              // 1本で 8駅（32駅 ÷ 8 ＝ 4本で全線）
+
+var LINES={
+  kazu:{key:'kazu',name:'かず せん',icon:'🔵',color:'#0b78be',bg:'#e4f1fa',
+        desc:'えきの ばんごうで たしざん・ひきざん'},
+  kotoba:{key:'kotoba',name:'ことば せん',icon:'🔤',color:'#d9661c',bg:'#fdeee2',
+        desc:'えきの なまえを ひらがな・カタカナ・かんじで よもう'}
+};
+
+/* =========================================================
+   保存（localStorage。読み書きは try/catch）
+   ========================================================= */
+var KEY='manabi-densha-v1';
+function blankLine(){return {ptr:0,got:new Array(N).fill(0),stamps:[]};}
+function defaults(){return {sound:true,voice:true,maxRuns:3,day:'',runsToday:0,
+  streak:0,lastRun:'',freeze:1,lines:{kazu:blankLine(),kotoba:blankLine()}};}
+var S=defaults();
+function load(){
+  try{
+    var raw=localStorage.getItem(KEY);
+    if(raw){
+      var o=JSON.parse(raw), d=defaults();
+      for(var k in d) if(o[k]!==undefined) d[k]=o[k];
+      ['kazu','kotoba'].forEach(function(l){
+        var b=blankLine(), x=(o.lines&&o.lines[l])||{};
+        b.ptr=(x.ptr|0)%N;
+        if(Array.isArray(x.got)) for(var i=0;i<N;i++) b.got[i]=x.got[i]|0;
+        if(Array.isArray(x.stamps)) b.stamps=x.stamps.filter(function(n){return n>=1&&n<=N;});
+        d.lines[l]=b;
+      });
+      S=d;
+    }
+  }catch(e){S=defaults();}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+
+/* 日付 */
+function today(){var d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+function dayDiff(a,b){ // b - a （日数）
+  if(!a||!b) return 9999;
+  var pa=a.split('-'),pb=b.split('-');
+  return Math.round((Date.UTC(pb[0],pb[1]-1,pb[2])-Date.UTC(pa[0],pa[1]-1,pa[2]))/864e5);
+}
+function rollDay(){var t=today(); if(S.day!==t){S.day=t;S.runsToday=0;save();}}
+// いま表示する連続日数（切れていたら 0）
+function liveStreak(){
+  var d=dayDiff(S.lastRun,today());
+  if(d<=1) return S.streak;
+  if(d===2&&S.freeze>0) return S.streak;   // りんじダイヤで まだ つながる
+  return 0;
+}
+
+/* =========================================================
+   効果音（WebAudio 合成のみ）
+   ========================================================= */
+var AC=null;
+function ac(){
+  if(!S.sound) return null;
+  try{
+    if(!AC){var C=window.AudioContext||window.webkitAudioContext; if(!C) return null; AC=new C();}
+    if(AC.state==='suspended') AC.resume();
+  }catch(e){return null;}
+  return AC;
+}
+function tone(f,t0,dur,type,vol){
+  var a=ac(); if(!a) return;
+  var o=a.createOscillator(),g=a.createGain(),t=a.currentTime+t0;
+  o.type=type||'sine'; o.frequency.setValueAtTime(f,t);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol||.18,t+.02);
+  g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+dur+.05);
+}
+var SFX={
+  bell:function(){ // 発車ベル（発車メロディ風）
+    [659,784,880,1047,880,784,659,784].forEach(function(f,i){tone(f,i*.14,.16,'square',.07);});
+    tone(1047,1.16,.5,'triangle',.12);
+  },
+  door:function(){tone(880,0,.25,'sine',.12);tone(660,.3,.4,'sine',.12);},
+  ok:function(){tone(784,0,.12,'triangle');tone(1047,.1,.12,'triangle');tone(1319,.2,.3,'triangle');},
+  ng:function(){tone(220,0,.18,'sawtooth',.06);tone(196,.16,.24,'sawtooth',.05);},
+  hint:function(){tone(523,0,.12,'sine',.12);tone(659,.12,.18,'sine',.12);},
+  run:function(){ // ガタンゴトン
+    for(var i=0;i<4;i++){tone(90,i*.3,.08,'square',.08);tone(110,i*.3+.12,.08,'square',.07);}
+  },
+  stamp:function(){tone(150,0,.15,'square',.18);tone(1200,.18,.1,'triangle',.1);tone(1600,.3,.3,'triangle',.1);},
+  fanfare:function(){[523,659,784,1047].forEach(function(f,i){tone(f,i*.15,.3,'triangle',.14);});tone(1319,.6,.7,'triangle',.14);}
+};
+
+/* =========================================================
+   読み上げ（端末の音声合成）
+   ========================================================= */
+var jaVoice=null;
+function pickVoice(){
+  try{
+    var vs=speechSynthesis.getVoices();
+    jaVoice=vs.filter(function(v){return /^ja/i.test(v.lang);})[0]||null;
+  }catch(e){}
+}
+if('speechSynthesis' in window){pickVoice(); try{speechSynthesis.onvoiceschanged=pickVoice;}catch(e){}}
+function say(text){
+  if(!S.voice||!('speechSynthesis' in window)) return;
+  try{
+    speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text);
+    u.lang='ja-JP'; u.rate=.95; u.pitch=1.1;
+    if(jaVoice) u.voice=jaVoice;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+function hush(){try{speechSynthesis.cancel();}catch(e){}}
+
+/* =========================================================
+   小物
+   ========================================================= */
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+function rnd(n){return Math.floor(Math.random()*n);}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=rnd(i+1),t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function bno(n){return 'B'+('0'+n).slice(-2);}
+function hasKanji(s){return /[一-鿿]/.test(s);}
+function ruby(st){return hasKanji(st.name)?'<ruby>'+esc(st.name)+'<rt>'+esc(st.yomi)+'</rt></ruby>':esc(st.name);}
+function kata(s){return s.replace(/[ぁ-ゖ]/g,function(c){return String.fromCharCode(c.charCodeAt(0)+0x60);});}
+function ncirc(n,sm){return '<span class="ncirc'+(sm?' sm':'')+'"><small>B</small><b>'+('0'+n).slice(-2)+'</b></span>';}
+var KANSUJI=['','ひとつ','ふたつ','みっつ','よっつ','いつつ'];
+function show(id){
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.toggle('on',s.id===id);});
+  window.scrollTo(0,0);
+}
+function setLineColor(l){
+  document.documentElement.style.setProperty('--line',LINES[l].color);
+  document.documentElement.style.setProperty('--line-bg',LINES[l].bg);
+}
+
+/* =========================================================
+   問題づくり
+   ========================================================= */
+// かず線：駅番号を数直線にした たし算・ひき算
+function makeKazu(n){
+  var k=1+rnd(n>20?5:4), fwd;
+  if(n+k>N) fwd=false; else if(n-k<1) fwd=true; else fwd=Math.random()<.65;
+  var ans=fwd?n+k:n-k, s=ST[n-1];
+  var opts=[ans];
+  [ans+1,ans-1,ans+2,ans-2,fwd?n-k:n+k].forEach(function(x){
+    if(opts.length<3&&x>=1&&x<=N&&x!==n&&opts.indexOf(x)<0) opts.push(x);
+  });
+  return {
+    type:'kazu',n:n,k:k,fwd:fwd,ans:ans,
+    html:ncirc(n,true)+' <span class="em">'+ruby(s)+'</span> から<br><span class="em">'+k+'えき</span> '+(fwd?'すすむと？':'もどると？'),
+    speak:n+'ばんの '+s.yomi+'から、'+k+'えき '+(fwd?'すすむと':'もどると')+'、どの えき？',
+    visual:'',
+    opts:shuffle(opts).map(function(x){return {v:x,html:ncirc(x)+'<span class="sub">'+ruby(ST[x-1])+'</span>',speak:x+'ばん '+ST[x-1].yomi};}),
+    hint:'すうじの ならびを みてね。'+bno(n)+' から '+(fwd?'みぎへ':'ひだりへ')+' '+k+'つ かぞえよう。',
+    help:n+(fwd?' ＋ ':' − ')+k+' ＝ '+ans+'　だから '+bno(ans)+' '+ST[ans-1].name+' だよ'
+  };
+}
+// ことば線の まちがい づくり
+var KANA_SWAP={'さ':'ち','ち':'さ','ぬ':'め','め':'ぬ','わ':'れ','れ':'わ','ね':'れ','は':'ほ','ほ':'は','る':'ろ','ろ':'る','き':'さ','い':'り','り':'い','こ':'に','に':'こ','た':'な','な':'た','あ':'お','お':'あ','ま':'も','も':'ま','う':'つ','つ':'う','し':'つ','の':'め',
+  'シ':'ツ','ツ':'シ','ソ':'ン','ン':'ソ','ク':'ケ','ケ':'ク','ウ':'ワ','ワ':'ウ','ナ':'メ','メ':'ナ','ノ':'ソ','コ':'ユ','ユ':'コ','チ':'テ','テ':'チ','ア':'マ','マ':'ア','キ':'ヰ','タ':'ク','ハ':'バ','バ':'ハ','ヨ':'ユ','ミ':'シ','オ':'ホ','ホ':'オ','ラ':'ヲ','イ':'エ','エ':'イ','カ':'ガ','ガ':'カ','ト':'ド','ド':'ト','サ':'ザ','ザ':'サ','ヤ':'セ','セ':'ヤ','ニ':'ユ','モ':'毛'};
+var DAKU={'か':'が','き':'ぎ','く':'ぐ','け':'げ','こ':'ご','さ':'ざ','し':'じ','す':'ず','せ':'ぜ','そ':'ぞ','た':'だ','ち':'ぢ','つ':'づ','て':'で','と':'ど','は':'ば','ひ':'び','ふ':'ぶ','へ':'べ','ほ':'ぼ'};
+for(var dk in DAKU) DAKU[DAKU[dk]]=dk;
+function variants(word,katakana){
+  var out=[], chars=word.split('');
+  chars.forEach(function(c,i){
+    var r=KANA_SWAP[c];
+    if(!r||r==='毛'||r==='ヰ') r=null;
+    if(!katakana&&!r&&DAKU[c]) r=DAKU[c];
+    if(katakana&&!r){var h=String.fromCharCode(c.charCodeAt(0)-0x60); if(DAKU[h]) r=kata(DAKU[h]);}
+    if(r){var w=chars.slice(); w[i]=r; out.push(w.join(''));}
+  });
+  return shuffle(out.filter(function(w){return w!==word;}));
+}
+function otherStations(n,cnt,pref){
+  var pool=ST.filter(function(s){return s.n!==n;});
+  if(pref) pool.sort(function(a,b){return pref(b)-pref(a)||Math.random()-.5;});
+  else shuffle(pool);
+  return pool.slice(0,cnt);
+}
+function makeKotoba(n,idx){
+  var s=ST[n-1], kinds;
+  // 1本の中で ひらがな → カタカナ → かんじ と だんだん むずかしく
+  if(idx<3) kinds=['yomi']; else if(idx<6) kinds=['kata']; else kinds=['kanji'];
+  if(!hasKanji(s.name)&&kinds[0]!=='kata') kinds=['kata'];
+  var kind=kinds[0], opts, q;
+  if(kind==='yomi'){
+    var w=[s.yomi], v=variants(s.yomi,false);
+    if(v[0]) w.push(v[0]);
+    otherStations(n,3,function(o){return -Math.abs(o.yomi.length-s.yomi.length);}).forEach(function(o){if(w.length<3&&w.indexOf(o.yomi)<0)w.push(o.yomi);});
+    opts=w.map(function(x){return {v:x,html:esc(x),speak:x};});
+    q={html:'この えきの なまえ、<span class="em">なんて よむ？</span>',
+       speak:'この えきの なまえ、なんて よむ？',
+       visual:'<div class="plate"><div class="pn">'+esc(s.name)+'</div><div class="pb"></div></div>',
+       hint:'さいしょの もじは「'+s.yomi.charAt(0)+'」だよ。'+bno(n)+' の えき。',
+       help:'「'+s.name+'」は「'+s.yomi+'」と よむよ',ans:s.yomi};
+  }else if(kind==='kata'){
+    var K=kata(s.yomi), w2=[K], v2=variants(K,true);
+    v2.slice(0,2).forEach(function(x){if(w2.indexOf(x)<0)w2.push(x);});
+    otherStations(n,3).forEach(function(o){if(w2.length<3)w2.push(kata(o.yomi));});
+    opts=w2.map(function(x){return {v:x,html:esc(x),speak:x};});
+    var c0=s.yomi.charAt(0);
+    q={html:'「<span class="em">'+esc(s.yomi)+'</span>」を<br><span class="em">カタカナ</span>で かくと？',
+       speak:s.yomi+' を、カタカナで かくと どれ？',
+       visual:'',
+       hint:'「'+c0+'」は カタカナで「'+kata(c0)+'」。ちがう もじが まじって いないか よく みてね。',
+       help:'「'+s.yomi+'」→「'+K+'」だよ',ans:K};
+  }else{
+    var w3=[s.name];
+    otherStations(n,4,function(o){var sc=0;for(var i=0;i<o.name.length;i++)if(s.name.indexOf(o.name.charAt(i))>=0)sc++;return sc;})
+      .forEach(function(o){if(w3.length<3)w3.push(o.name);});
+    opts=w3.map(function(x){return {v:x,html:'<span style="font-size:1.15em">'+esc(x)+'</span>',speak:''};});
+    q={html:'「<span class="em">'+esc(s.yomi)+'</span>」は<br>どの <span class="em">かんじ</span>？',
+       speak:s.yomi+' は、どの かんじ？',
+       visual:ncirc(n),
+       hint:'ばんごうは '+bno(n)+'。「'+s.yomi.charAt(0)+'」で はじまる かんじを さがそう。',
+       help:'「'+s.yomi+'」は「'+s.name+'」と かくよ',ans:s.name};
+  }
+  q.type='kotoba'; q.kind=kind; q.n=n; q.opts=shuffle(opts);
+  return q;
+}
+
+/* =========================================================
+   運行（1本 ＝ 8駅、駅ごとに1問）
+   ========================================================= */
+var R=null;
+function startRun(l){
+  rollDay();
+  if(S.runsToday>=S.maxRuns){showDepot();return;}
+  var L=S.lines[l], first=L.ptr+1;
+  R={line:l,stations:[],idx:0,res:[],signal:'green',busy:false};
+  for(var i=0;i<PER_RUN;i++) R.stations.push(((first-1+i)%N)+1);
+  setLineColor(l);
+  $('runLine').textContent=LINES[l].icon+' '+LINES[l].name+'　'+ST[R.stations[PER_RUN-1]-1].yomi+' ゆき';
+  buildRail();
+  $('qtext').innerHTML='<span class="em">'+ruby(ST[R.stations[PER_RUN-1]-1])+' ゆき、はっしゃ します</span>';
+  $('visual').innerHTML=''; $('visual').style.display='none';
+  $('choices').innerHTML=''; $('hintbox').className='hintbox';
+  $('hintBtn').disabled=true; $('signal').className='signal green';
+  $('runCount').textContent='';
+  show('run');
+  ac();
+  SFX.bell();
+  say('はっしゃ します。'+ST[R.stations[PER_RUN-1]-1].yomi+' ゆき です。');
+  setTimeout(function(){ask();},1600);
+}
+function railPos(i){return (100/(PER_RUN-1))*i;}
+function buildRail(){
+  var h='<div class="bar"></div>';
+  R.stations.forEach(function(n,i){
+    h+='<div class="st" id="st'+i+'" style="left:'+railPos(i)+'%"><span class="no">'+bno(n)+'</span></div>';
+  });
+  h+='<div class="train" id="train" style="left:0%">🚃</div>';
+  $('rail').innerHTML=h;
+}
+function ask(){
+  var n=R.stations[R.idx];
+  R.q=(R.line==='kazu')?makeKazu(n):makeKotoba(n,R.idx);
+  R.signal='green'; R.busy=false;
+  $('runCount').textContent=(R.idx+1)+' / '+PER_RUN+' えきめ';
+  $('signal').className='signal green';
+  $('qtext').innerHTML=R.q.html;
+  $('visual').innerHTML=R.q.visual||'';
+  $('visual').style.display=R.q.visual?'':'none';
+  $('hintbox').className='hintbox'; $('hintbox').innerHTML='';
+  $('hintBtn').disabled=false;
+  var c=$('choices'); c.innerHTML='';
+  R.q.opts.forEach(function(o){
+    var b=document.createElement('button');
+    b.className='choice'; b.innerHTML=o.html; b.dataset.v=o.v;
+    b.addEventListener('click',function(){choose(b,o);});
+    c.appendChild(b);
+  });
+  if(R.q.type==='kazu') drawNumline(0);
+  say(R.q.speak);
+}
+// かず線のヒント：数直線（0:かくす 1:黄 2:赤）
+function drawNumline(level){
+  if(level===0) return;
+  var q=R.q, lo=Math.max(1,Math.min(q.n,q.ans)-1), hi=Math.min(N,Math.max(q.n,q.ans)+1), h='<div class="numline">';
+  for(var x=lo;x<=hi;x++){
+    var cls='nl', between=q.fwd?(x>q.n&&x<=q.ans):(x<q.n&&x>=q.ans), cnt='';
+    if(x===q.n) cls+=' start lit';
+    if(between){cls+=' hop lit'; cnt=String(Math.abs(x-q.n));}
+    if(level===2&&x===q.ans) cls+=' ans';
+    h+='<div class="'+cls+'"><span class="cnt">'+(level>=1?cnt:'')+'</span>'+ncirc(x,true)+'</div>';
+  }
+  $('visual').innerHTML=h+'</div>';
+  $('visual').style.display='';
+}
+function stepSignal(){
+  if(R.signal==='green'){
+    R.signal='yellow';
+    $('signal').className='signal yellow';
+    SFX.hint();
+    $('hintbox').className='hintbox on';
+    $('hintbox').innerHTML='🟡 '+esc(R.q.hint);
+    if(R.q.type==='kazu') drawNumline(1);
+    say(R.q.hint);
+  }else if(R.signal==='yellow'){
+    R.signal='red';
+    $('signal').className='signal red';
+    SFX.hint();
+    $('hintbox').className='hintbox on red';
+    $('hintbox').innerHTML='🔴 いっしょに とこう。<br>'+esc(R.q.help);
+    if(R.q.type==='kazu') drawNumline(2);
+    $('hintBtn').disabled=true;
+    document.querySelectorAll('.choice').forEach(function(b){
+      if(b.dataset.v===String(R.q.type==='kazu'?R.q.ans:R.q.ans)) b.classList.add('pulse');
+      else b.classList.add('no');
+    });
+    say('いっしょに とこう。'+R.q.help.replace(/[＋]/g,' たす ').replace(/[−]/g,' ひく ').replace(/＝/g,' は ')+'。こたえを おしてね。');
+  }
+}
+function isRight(o){return String(o.v)===String(R.q.ans);}
+function choose(btn,o){
+  if(R.busy) return;
+  if(isRight(o)){
+    R.busy=true;
+    btn.classList.remove('pulse'); btn.classList.add('right');
+    SFX.ok();
+    var mark=R.signal==='green'?'gold':R.signal==='yellow'?'ok':'help';
+    R.res.push(mark);
+    var st=$('st'+R.idx); if(st) st.classList.add(mark);
+    if(mark!=='help'){
+      var g=S.lines[R.line].got, ix=R.stations[R.idx]-1;
+      g[ix]=Math.max(g[ix],mark==='gold'?2:1);
+    }
+    $('toast').textContent=mark==='gold'?'せいかい！':mark==='ok'?'できたね！':'おぼえたね！';
+    $('toast').style.borderColor=$('toast').style.color=mark==='help'?'#55636f':'#2e9d55';
+    $('toast').classList.add('on');
+    say(mark==='gold'?'せいかい！':mark==='ok'?'できたね！':'そう、それが こたえ！');
+    setTimeout(function(){$('toast').classList.remove('on');},900);
+    setTimeout(nextStation,1100);
+  }else{
+    btn.classList.add('shake','no');
+    SFX.ng();
+    setTimeout(function(){btn.classList.remove('shake');},420);
+    stepSignal();
+  }
+}
+function nextStation(){
+  if(R.idx>=PER_RUN-1){arrive();return;}
+  R.idx++;
+  var t=$('train'); t.classList.add('go'); t.style.left=railPos(R.idx)+'%';
+  SFX.run();
+  $('qtext').innerHTML='<span class="em">つぎは '+ruby(ST[R.stations[R.idx]-1])+'</span>';
+  $('visual').innerHTML=''; $('visual').style.display='none';
+  $('choices').innerHTML=''; $('hintbox').className='hintbox';
+  $('hintBtn').disabled=true;
+  say('つぎは、'+ST[R.stations[R.idx]-1].yomi+'。');
+  setTimeout(function(){t.classList.remove('go');SFX.door();ask();},1600);
+}
+
+/* 終点 */
+function arrive(){
+  var l=R.line, L=S.lines[l], term=R.stations[PER_RUN-1], wasAll=allGot(l);
+  L.ptr=(L.ptr+PER_RUN)%N;
+  if(L.stamps.indexOf(term)<0) L.stamps.push(term);
+  rollDay();
+  S.runsToday++;
+  // ストリーク
+  var t=today(), d=dayDiff(S.lastRun,t), extra='';
+  if(S.lastRun!==t){
+    if(d===1) S.streak++;
+    else if(d===2&&S.freeze>0){S.freeze--;S.streak++;extra='きのうは おやすみ だったけど「りんじダイヤ」で きろくを まもったよ！';}
+    else S.streak=1;
+    S.lastRun=t;
+    if(S.streak>0&&S.streak%7===0&&S.freeze<1){S.freeze=1;extra+=(extra?'<br>':'')+'7にち つづいたので りんじダイヤ けんを 1まい もらったよ！';}
+  }
+  save();
+  var s=ST[term-1];
+  $('endTitle').textContent='しゅうてん '+s.yomi+' に とうちゃく！';
+  $('stamp').innerHTML='<span class="s1">'+esc(LINES[l].name)+'</span><span class="s2" style="font-size:'+(s.name.length>5?17:s.name.length>3?22:28)+'px">'+ruby(s)+'</span><span class="s3">'+bno(term)+'　'+t.replace(/-/g,'.')+'</span>';
+  $('stamp').classList.remove('drop'); void $('stamp').offsetWidth;
+  var r='';
+  R.stations.forEach(function(n,i){
+    var m=R.res[i];
+    r+='<span>'+(m==='gold'?'⭐':m==='ok'?'🟡':'🔴')+' '+bno(n)+'</span>';
+  });
+  $('result').innerHTML=r;
+  var gold=R.res.filter(function(m){return m==='gold';}).length;
+  var msg='⭐ じぶんで とけた えき：'+gold+' / '+PER_RUN+'<br>むじこ うんてん '+S.streak+'にち め！';
+  if(extra) msg+='<br>'+extra;
+  if(!wasAll&&allGot(l)) msg+='<br>🎉 <b>'+esc(LINES[l].name)+' ぜんせん かいつう！</b> ぜんぶの えきに いろが ついたよ！';
+  var left=S.maxRuns-S.runsToday;
+  msg+='<br>'+(left>0?'きょうは あと '+left+'ほん はしれるよ':'きょうの うんこうは これで おしまい');
+  $('endMsg').innerHTML=msg;
+  show('end');
+  SFX.door();
+  setTimeout(function(){$('stamp').classList.add('drop');SFX.stamp();},500);
+  setTimeout(function(){SFX.fanfare();},1100);
+  say('しゅうてん、'+s.yomi+'に とうちゃく です。スタンプを ゲット！');
+}
+function allGot(l){return S.lines[l].got.every(function(x){return x>0;});}
+
+/* =========================================================
+   ホーム・車庫・スタンプ帳
+   ========================================================= */
+function renderHome(){
+  rollDay();
+  var st=liveStreak();
+  $('streak').textContent=st+'にち';
+  var dd=dayDiff(S.lastRun,today());
+  $('freezeTxt').textContent=(dd===2&&S.freeze>0)?'きのうは おやすみ。きょう はしれば りんじダイヤで つながるよ':
+    ('りんじダイヤ けん：'+(S.freeze>0?'🎫 1まい':'なし（7にち つづけると もらえる）'));
+  var tr='';
+  for(var i=0;i<S.maxRuns;i++) tr+='<span class="'+(i<S.runsToday?'used':'')+'">🚃</span>';
+  $('trains').innerHTML=tr;
+  var left=Math.max(0,S.maxRuns-S.runsToday);
+  $('runsTxt').textContent=left>0?'あと '+left+'ほん':'きょうは おしまい';
+  var h='';
+  ['kazu','kotoba'].forEach(function(l){
+    var Ld=LINES[l], L=S.lines[l], cnt=L.got.filter(function(x){return x>0;}).length;
+    var from=L.ptr+1, to=((L.ptr+PER_RUN-1)%N)+1, dots='';
+    L.got.forEach(function(g){dots+='<i class="'+(g===2?'got gold':g===1?'got':'')+'"></i>';});
+    h+='<button class="linecard" data-l="'+l+'" style="--c:'+Ld.color+'"'+(left<=0?' disabled':'')+'>'+
+      '<span class="lname">'+Ld.icon+' '+Ld.name+(cnt===N?' <span class="kaitsu">ぜんせん かいつう</span>':'')+'</span>'+
+      '<span class="ldesc">'+Ld.desc+'</span>'+
+      '<span class="dots">'+dots+'</span>'+
+      '<span class="prog">いろが ついた えき '+cnt+' / '+N+'　（⭐＝じぶんで とけた）</span>'+
+      '<span class="next">つぎの うんこう：'+bno(from)+' '+ruby(ST[from-1])+' → '+bno(to)+' '+ruby(ST[to-1])+'</span>'+
+      '</button>';
+  });
+  $('lines').innerHTML=h;
+  document.querySelectorAll('.linecard').forEach(function(b){
+    b.addEventListener('click',function(){startRun(b.dataset.l);});
+  });
+  $('sndBtn').setAttribute('aria-pressed',S.sound);
+  $('vceBtn').setAttribute('aria-pressed',S.voice);
+}
+function goHome(){
+  hush();
+  rollDay();
+  if(S.runsToday>=S.maxRuns){showDepot();return;}
+  renderHome(); show('home');
+}
+function showDepot(){
+  renderHome();
+  $('depotMsg').innerHTML='でんしゃは しゃこで おやすみ ちゅう。<br>また あした はしらせようね！<br>むじこ うんてん <b>'+liveStreak()+'にち</b>';
+  show('depot');
+  say('きょうの うんこうは おしまい。また あした はしらせようね。');
+}
+var bookFrom='home';
+function showBook(from){
+  bookFrom=from;
+  var h='';
+  ['kazu','kotoba'].forEach(function(l){
+    var Ld=LINES[l], L=S.lines[l];
+    h+='<div class="booksec" style="--c:'+Ld.color+'"><h3>'+Ld.icon+' '+Ld.name+'（'+L.stamps.length+'こ）</h3><div class="book">';
+    // 終点になる駅（8・16・24・32番）のスタンプ
+    for(var n=PER_RUN;n<=N;n+=PER_RUN){
+      var has=L.stamps.indexOf(n)>=0;
+      h+='<div class="mini'+(has?' has':'')+'">'+(has?'<b>'+esc(ST[n-1].name)+'</b>'+bno(n):'？<br>'+bno(n))+'</div>';
+    }
+    h+='</div></div>';
+  });
+  h+='<p class="note">1ぽん はしると しゅうてんの えきの スタンプが もらえるよ。</p>';
+  $('bookBody').innerHTML=h;
+  show('bookScr');
+}
+
+/* =========================================================
+   おとなの設定（計算ゲートつき）
+   ========================================================= */
+var gateAns=0;
+function openGate(){
+  var a=12+rnd(8), b=6+rnd(4); gateAns=a*b;
+  $('gateQ').textContent=a+' × '+b+' = ?';
+  $('gateIn').value='';
+  try{$('gate').showModal();}catch(e){$('gate').setAttribute('open','');}
+  setTimeout(function(){$('gateIn').focus();},50);
+}
+function closeDlg(d){try{d.close();}catch(e){d.removeAttribute('open');}}
+function openAdult(){
+  var seg='';
+  for(var i=1;i<=5;i++) seg+='<button data-m="'+i+'" class="'+(i===S.maxRuns?'on':'')+'">'+i+'</button>';
+  $('maxSeg').innerHTML=seg;
+  $('maxSeg').querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click',function(){S.maxRuns=+b.dataset.m;save();openAdult();});
+  });
+  $('todayTxt').textContent='きょう '+S.runsToday+'本 / 連続 '+liveStreak()+'日 / かず線 '+S.lines.kazu.got.filter(Boolean).length+'駅・ことば線 '+S.lines.kotoba.got.filter(Boolean).length+'駅';
+  if(!$('adult').open){try{$('adult').showModal();}catch(e){$('adult').setAttribute('open','');}}
+}
+
+/* =========================================================
+   イベント
+   ========================================================= */
+$('sndBtn').addEventListener('click',function(){S.sound=!S.sound;save();renderHome();if(S.sound)SFX.ok();});
+$('vceBtn').addEventListener('click',function(){S.voice=!S.voice;save();renderHome();if(S.voice)say('こえで よみあげるよ');else hush();});
+$('hintBtn').addEventListener('click',function(){if(!R.busy) stepSignal();});
+$('sayBtn').addEventListener('click',function(){if(R&&R.q){var v=S.voice;S.voice=true;say(R.q.speak);S.voice=v;}});
+$('quitBtn').addEventListener('click',function(){
+  if(confirm('とちゅうで やめる？（この うんこうは かぞえないよ）')){R=null;goHome();}
+});
+$('toDepot').addEventListener('click',goHome);
+$('bookBtn').addEventListener('click',function(){showBook('home');});
+$('depotBook').addEventListener('click',function(){showBook('depot');});
+$('bookClose').addEventListener('click',function(){if(bookFrom==='depot')showDepot();else{renderHome();show('home');}});
+$('adultBtn').addEventListener('click',openGate);
+$('gateNo').addEventListener('click',function(){closeDlg($('gate'));});
+function tryGate(){
+  if(+$('gateIn').value===gateAns){closeDlg($('gate'));openAdult();}
+  else{$('gateIn').value='';$('gateQ').textContent='ちがいます。'+$('gateQ').textContent.replace(/^ちがいます。/,'');}
+}
+$('gateOk').addEventListener('click',tryGate);
+$('gateIn').addEventListener('keydown',function(e){if(e.key==='Enter')tryGate();});
+$('adultClose').addEventListener('click',function(){closeDlg($('adult'));goHome();});
+$('resetToday').addEventListener('click',function(){S.runsToday=0;save();openAdult();});
+$('resetAll').addEventListener('click',function(){
+  if(confirm('スタンプ・れんぞく日数・いろが ついた駅を すべて消します。よろしいですか？')){
+    var keep={sound:S.sound,voice:S.voice,maxRuns:S.maxRuns};
+    S=defaults(); S.sound=keep.sound; S.voice=keep.voice; S.maxRuns=keep.maxRuns; save(); openAdult();
+  }
+});
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden&&$('home').classList.contains('on')) goHome();
+});
+
+load();
+goHome();
+</script>
+</body>
+</html>
