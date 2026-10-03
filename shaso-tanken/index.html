@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>しゃそう たんけん ビンゴ</title>
+<meta name="description" content="でんしゃの まどから みえた ものを さがす ビンゴ。みつけた ものは じぶんの ずかんに きろくされます。">
+<meta name="theme-color" content="#1a6fb5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚃</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  :root {
+    --bg-top:    #e6f2fc;
+    --bg-bottom: #fdf6e8;
+    --ink:       #1d2b3a;
+    --ink-soft:  #4a5f75;
+    --card:      #ffffff;
+    --line:      #cfe0f0;
+    --blue:      #1a6fb5;
+    --blue-dk:   #12507f;
+    --red:       #d8392b;
+    --gold:      #f2b50f;
+    --green:     #2e9e5b;
+    --shadow:    rgba(26, 111, 181, .18);
+    --vh: 1vh;
+  }
+  @supports (height: 100dvh) { :root { --vh: 1dvh; } }
+
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: linear-gradient(170deg, var(--bg-top) 0%, var(--bg-bottom) 100%);
+    background-attachment: fixed;
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体",
+                 "Meiryo", system-ui, sans-serif;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+  rt { font-size: .5em; font-weight: 400; letter-spacing: 0; }
+  [hidden] { display: none !important; }
+
+  /* ---------- ヘッダー ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
+    background: rgba(255,255,255,.88);
+    backdrop-filter: blur(6px);
+    border-bottom: 3px solid var(--line);
+  }
+  .topbar h1 {
+    flex: 1; margin: 0; text-align: center;
+    font-size: clamp(17px, 4.6vw, 22px); letter-spacing: .05em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .iconbtn {
+    flex: none; min-width: 56px; height: 52px; padding: 0 12px;
+    border: 3px solid var(--line); border-radius: 16px; background: #fff;
+    font-size: 17px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .iconbtn:active { transform: translateY(2px); }
+  .iconbtn.ghost { visibility: hidden; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 16px 16px calc(32px + env(safe-area-inset-bottom)); }
+
+  /* ---------- ホーム ---------- */
+  .hero { text-align: center; margin: 6px 0 18px; }
+  .hero .train { font-size: 54px; line-height: 1; }
+  .hero h2 { margin: 6px 0 0; font-size: clamp(26px, 7.4vw, 40px); letter-spacing: .06em; }
+  .hero p { margin: 8px 0 0; color: var(--ink-soft); font-size: clamp(15px, 4vw, 18px); line-height: 1.6; }
+  .rail {
+    width: 120px; height: 8px; margin: 12px auto 0; border-radius: 99px;
+    background: repeating-linear-gradient(90deg, var(--blue) 0 16px, transparent 16px 24px);
+  }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 14px 0 6px; }
+  .chip {
+    padding: 8px 14px; border-radius: 99px; background: #fff; border: 2px solid var(--line);
+    font-size: 15px; font-weight: 700;
+  }
+  .resume {
+    display: flex; align-items: center; gap: 14px; width: 100%; margin: 10px 0 6px;
+    padding: 16px 20px; min-height: 76px;
+    border: 0; border-radius: 22px; background: var(--gold); color: #3a2a00;
+    box-shadow: 0 6px 0 #b98400; font-size: clamp(18px, 5vw, 22px); font-weight: 700; text-align: left;
+  }
+  .resume:active { transform: translateY(4px); box-shadow: 0 2px 0 #b98400; }
+  .resume small { display: block; font-size: 14px; font-weight: 400; margin-top: 2px; }
+  .section-title { margin: 22px 0 10px; font-size: clamp(18px, 5vw, 22px); }
+  .routes { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .routes { grid-template-columns: 1fr 1fr; } }
+  .route {
+    display: flex; align-items: center; gap: 14px; width: 100%; min-height: 112px; padding: 16px 18px;
+    border: 3px solid var(--line); border-left: 12px solid var(--c); border-radius: 22px; background: #fff;
+    box-shadow: 0 6px 0 var(--shadow); text-align: left;
+  }
+  .route:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--shadow); }
+  .route .r-emoji { flex: none; font-size: 44px; line-height: 1; }
+  .route .r-body { flex: 1; min-width: 0; }
+  .route .r-name { display: block; font-size: clamp(19px, 5.2vw, 23px); font-weight: 700; line-height: 1.5; }
+  .route .r-tip { display: block; margin-top: 2px; font-size: 14px; color: var(--ink-soft); line-height: 1.5; }
+  .prog { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+  .bar { flex: 1; height: 10px; border-radius: 99px; background: #e8eef5; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 99px; background: var(--c, var(--green)); }
+  .bigbtn {
+    display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 72px; margin-top: 18px;
+    border: 0; border-radius: 22px; background: var(--blue); color: #fff; box-shadow: 0 6px 0 var(--blue-dk);
+    font-size: clamp(19px, 5.2vw, 23px); font-weight: 700;
+  }
+  .bigbtn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--blue-dk); }
+  .note { margin-top: 26px; font-size: 13px; line-height: 1.8; color: var(--ink-soft); text-align: center; }
+
+  /* ---------- ビンゴ ---------- */
+  .bingo-wrap {
+    display: grid; gap: 12px; justify-items: center;
+    grid-template-areas: "info" "grid" "actions";
+  }
+  .b-info { grid-area: info; width: 100%; text-align: center; }
+  .b-route { font-size: clamp(18px, 5vw, 24px); font-weight: 700; line-height: 1.5; }
+  .b-meta { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+  .b-hint { margin: 8px 0 0; font-size: clamp(15px, 4vw, 18px); color: var(--ink-soft); }
+  .grid {
+    grid-area: grid;
+    width: min(94vw, calc(100 * var(--vh) - 300px), 560px);
+    min-width: 270px;
+    aspect-ratio: 1 / 1;
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 8px;
+    padding: 8px; border-radius: 22px; background: var(--c, var(--blue));
+    box-shadow: 0 6px 0 var(--shadow);
+  }
+  .cell {
+    position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2%;
+    border: 0; border-radius: 14px; background: #fff; padding: 4px;
+    container-type: inline-size;
+  }
+  .cell:active { transform: scale(.96); }
+  .cell .pic { font-size: 42cqw; }
+  .cell .nm { font-size: clamp(11px, 13cqw, 20px); font-weight: 700; line-height: 1.2; text-align: center; }
+  .cell.on { background: #fff1ef; }
+  .cell.line { background: #fff6d6; box-shadow: inset 0 0 0 4px var(--gold); }
+  .stamp {
+    position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none;
+  }
+  .stamp span {
+    width: 78%; aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center;
+    border: 5px solid var(--red); color: var(--red); background: rgba(255,255,255,.35);
+    font-size: 17cqw; font-weight: 700; transform: rotate(-14deg); line-height: 1.1; text-align: center;
+    animation: stampIn .28s ease-out;
+  }
+  @keyframes stampIn { from { transform: rotate(-14deg) scale(1.8); opacity: 0; } to { transform: rotate(-14deg) scale(1); opacity: 1; } }
+  .b-actions { grid-area: actions; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; }
+  .btn {
+    min-height: 60px; padding: 0 18px; border: 3px solid var(--line); border-radius: 18px; background: #fff;
+    font-size: 17px; font-weight: 700; box-shadow: 0 4px 0 var(--shadow);
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--shadow); }
+  .btn.warn { border-color: var(--red); color: var(--red); }
+  @media (orientation: landscape) and (min-width: 640px) {
+    .bingo-wrap {
+      grid-template-columns: minmax(220px, 340px) auto; justify-content: center; align-items: center;
+      grid-template-areas: "info grid" "actions grid"; column-gap: 28px;
+    }
+    .grid { width: min(calc(100 * var(--vh) - 110px), 58vw, 640px); }
+    .b-actions { flex-direction: column; align-self: start; }
+    .b-actions .btn { width: 100%; }
+    .b-info { align-self: end; }
+  }
+
+  /* ---------- ずかん ---------- */
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 640px) { .stats { grid-template-columns: repeat(4, 1fr); } }
+  .stat { background: #fff; border: 3px solid var(--line); border-radius: 18px; padding: 10px; text-align: center; }
+  .stat b { display: block; font-size: 28px; }
+  .stat span { font-size: 14px; color: var(--ink-soft); }
+  .story-btn { background: var(--green); box-shadow: 0 6px 0 #1d6b3c; }
+  .story-btn:active { box-shadow: 0 2px 0 #1d6b3c; }
+  .rprog { display: grid; gap: 10px; grid-template-columns: 1fr; }
+  @media (min-width: 640px) { .rprog { grid-template-columns: 1fr 1fr; } }
+  .rprog .row { background: #fff; border: 3px solid var(--line); border-radius: 16px; padding: 10px 14px; }
+  .rprog .row b { font-size: 16px; line-height: 1.6; }
+  .tabs { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; margin: 0 -2px; }
+  .tab {
+    flex: none; min-height: 52px; padding: 0 16px; border-radius: 99px; border: 3px solid var(--line); background: #fff;
+    font-size: 16px; font-weight: 700;
+  }
+  .tab[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+  .tile {
+    position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    min-height: 116px; padding: 8px 4px; border: 3px solid var(--line); border-radius: 18px; background: #fff;
+  }
+  .tile .pic { font-size: 46px; }
+  .tile .nm { font-size: 14px; font-weight: 700; text-align: center; line-height: 1.3; }
+  .tile.off { background: #f1f4f8; border-style: dashed; }
+  .tile.off .nm { color: #9aa8b6; }
+  .tile .star { position: absolute; top: 4px; right: 6px; font-size: 18px; }
+  .sil { filter: grayscale(1) brightness(0); opacity: .2; }
+  .sil.q { filter: none; opacity: .35; }
+
+  .pic { display: inline-flex; align-items: center; justify-content: center; line-height: 1; }
+  .pic svg { width: 1em; height: 1em; display: block; }
+
+  /* ---------- モーダル ---------- */
+  .modal {
+    position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px;
+    background: rgba(20, 35, 55, .55);
+  }
+  .sheet {
+    position: relative; width: min(640px, 100%); overflow: hidden;
+    background: #fff; border-radius: 26px; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+  }
+  #modalBody { max-height: calc(100 * var(--vh) - 32px); overflow-y: auto; padding: 22px 20px 20px; }
+  .sheet .close { position: absolute; top: 10px; right: 10px; z-index: 2; }
+  #modalBody > :first-child { padding-right: 60px; }
+  .bingo-pop { padding-left: 60px; }
+  .d-head { display: flex; align-items: center; gap: 16px; }
+  .d-head .pic { font-size: 84px; flex: none; }
+  .d-head h3 { margin: 0; font-size: clamp(24px, 6.6vw, 32px); line-height: 1.4; }
+  .catchip { display: inline-block; margin-top: 4px; padding: 3px 12px; border-radius: 99px; color: #fff; font-size: 14px; font-weight: 700; }
+  .fact { font-size: clamp(17px, 4.6vw, 20px); line-height: 2.1; margin: 14px 0 6px; }
+  .sub-h { margin: 18px 0 8px; font-size: 17px; color: var(--ink-soft); }
+  .flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 38px; padding: 10px 12px; background: #f3f8fd; border-radius: 16px; }
+  .flow .arr { font-size: 22px; color: var(--ink-soft); }
+  .quiz-q { font-size: clamp(17px, 4.6vw, 20px); font-weight: 700; line-height: 1.8; margin: 0 0 10px; }
+  .choices { display: grid; gap: 10px; }
+  .choice {
+    min-height: 60px; padding: 8px 16px; border: 3px solid var(--line); border-radius: 16px; background: #fff;
+    font-size: 18px; font-weight: 700; text-align: left;
+  }
+  .choice.ok { background: #e3f6ea; border-color: var(--green); }
+  .choice.ng { background: #fde8e6; border-color: var(--red); animation: shake .3s; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .quiz-res { min-height: 1.6em; margin: 10px 0 0; font-size: 18px; font-weight: 700; }
+  .rec { margin: 0; padding: 0; list-style: none; font-size: 16px; line-height: 1.9; }
+  .rec li { border-bottom: 2px dotted var(--line); padding: 2px 4px; }
+  .speak { margin-top: 10px; }
+
+  .bingo-pop { text-align: center; }
+  .bingo-pop .medal { font-size: 96px; line-height: 1; animation: pop .6s ease-out; }
+  .bingo-pop h3 { margin: 10px 0 4px; font-size: clamp(30px, 9vw, 44px); color: var(--red); letter-spacing: .08em; }
+  .bingo-pop p { font-size: 19px; line-height: 1.8; margin: 6px 0 16px; }
+  @keyframes pop { 0% { transform: scale(.2) rotate(-30deg); } 70% { transform: scale(1.2) rotate(6deg); } 100% { transform: scale(1); } }
+  .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+  .confetti i { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 2px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+  .story-chara { display: flex; align-items: center; gap: 12px; }
+  .story-chara .face { font-size: 64px; flex: none; animation: bob 1.2s ease-in-out infinite; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  .story-text { font-size: clamp(17px, 4.6vw, 20px); line-height: 2.1; background: #f3f8fd; border-radius: 18px; padding: 14px 16px; margin: 12px 0; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 70;
+    transform: translateX(-50%); padding: 12px 22px; border-radius: 99px; background: var(--ink); color: #fff;
+    font-size: 17px; font-weight: 700; box-shadow: 0 6px 20px rgba(0,0,0,.25); white-space: nowrap;
+    animation: toastIn .25s ease-out;
+  }
+  @keyframes toastIn { from { opacity: 0; transform: translate(-50%, 20px); } }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .confetti { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <button class="iconbtn" id="backBtn" type="button" aria-label="もどる">◀ もどる</button>
+  <h1 id="title">しゃそう たんけん ビンゴ</h1>
+  <button class="iconbtn" id="soundBtn" type="button" aria-label="おと オン/オフ">🔊</button>
+</header>
+
+<main>
+  <section id="home"></section>
+  <section id="bingo" hidden></section>
+  <section id="zukan" hidden></section>
+</main>
+
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true">
+  <div class="sheet">
+    <button class="iconbtn close" id="modalClose" type="button" aria-label="とじる">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ============================================================
+   データ（ぜんぶ この ファイルの なか。よみこんだ あとは つうしんしない）
+   {漢字|かんじ} と かくと ふりがな つきで ひょうじし、よみあげは かなで よむ
+   ============================================================ */
+
+const CATS = [
+  { id: 'shizen',   name: 'しぜん',   emoji: '🌿', color: '#2e9e5b' },
+  { id: 'norimono', name: 'のりもの', emoji: '🚆', color: '#1a6fb5' },
+  { id: 'tatemono', name: 'たてもの', emoji: '🏢', color: '#8e5bd0' },
+  { id: 'shigoto',  name: 'しごと',   emoji: '🛠️', color: '#d9572b' },
+];
+
+const SVG = {
+  kamotsu: '<svg viewBox="0 0 64 64"><rect x="2" y="22" width="18" height="20" rx="3" fill="#c0392b"/><rect x="5" y="25" width="8" height="7" fill="#d6eaf8"/><rect x="22" y="24" width="18" height="16" fill="#2e86c1"/><rect x="42" y="24" width="20" height="16" fill="#27ae60"/><rect x="0" y="42" width="64" height="4" fill="#555"/><g fill="#333"><circle cx="8" cy="48" r="4"/><circle cx="16" cy="48" r="4"/><circle cx="27" cy="48" r="4"/><circle cx="35" cy="48" r="4"/><circle cx="48" cy="48" r="4"/><circle cx="56" cy="48" r="4"/></g><rect x="0" y="54" width="64" height="3" fill="#8d6e63"/></svg>',
+  tonneru: '<svg viewBox="0 0 64 64"><path d="M2 58 Q32 0 62 58Z" fill="#6aa84f"/><path d="M18 58 V40 a14 14 0 0 1 28 0 V58Z" fill="#9e9e9e"/><path d="M22 58 V41 a10 10 0 0 1 20 0 V58Z" fill="#222"/><rect x="0" y="57" width="64" height="4" fill="#8d6e63"/></svg>',
+  fumikiri: '<svg viewBox="0 0 64 64"><rect x="30" y="10" width="4" height="50" fill="#555"/><g transform="translate(32 14)"><rect x="-16" y="-3" width="32" height="6" fill="#f1c40f" stroke="#222" stroke-width="1.5" transform="rotate(30)"/><rect x="-16" y="-3" width="32" height="6" fill="#f1c40f" stroke="#222" stroke-width="1.5" transform="rotate(-30)"/></g><rect x="18" y="26" width="28" height="10" rx="5" fill="#222"/><circle cx="23" cy="31" r="4" fill="#e74c3c"/><circle cx="41" cy="31" r="4" fill="#e74c3c"/><rect x="4" y="44" width="56" height="5" fill="#f1c40f" stroke="#222" stroke-width="1"/><g fill="#222"><rect x="10" y="44" width="5" height="5"/><rect x="22" y="44" width="5" height="5"/><rect x="34" y="44" width="5" height="5"/><rect x="46" y="44" width="5" height="5"/></g></svg>',
+  tettou: '<svg viewBox="0 0 64 64"><g stroke="#7f8c8d" stroke-width="2.5" fill="none" stroke-linecap="round"><path d="M22 60 L29 8 L35 8 L42 60"/><path d="M25 40 L39 40 M27 25 L37 25 M24 50 L40 50"/><path d="M25 40 L37 25 M39 40 L27 25 M24 50 L39 40 M40 50 L25 40"/><path d="M14 16 L50 16 M18 26 L46 26"/></g><g stroke="#34495e" stroke-width="1.2" fill="none"><path d="M0 18 Q7 22 14 16 M50 16 Q57 22 64 18 M0 28 Q9 32 18 26 M46 26 Q55 32 64 28"/></g></svg>',
+  suimon: '<svg viewBox="0 0 64 64"><rect x="0" y="44" width="64" height="20" fill="#5dade2"/><rect x="6" y="10" width="8" height="46" fill="#95a5a6"/><rect x="50" y="10" width="8" height="46" fill="#95a5a6"/><rect x="6" y="8" width="52" height="8" fill="#7f8c8d"/><rect x="14" y="20" width="36" height="30" fill="#2e86c1" stroke="#1b4f72" stroke-width="2"/><path d="M14 28 H50 M14 36 H50 M14 44 H50" stroke="#1b4f72" stroke-width="1.5"/><path d="M0 54 q8 -4 16 0 t16 0 t16 0 t16 0" stroke="#fff" stroke-width="2" fill="none"/></svg>',
+  shovel: '<svg viewBox="0 0 64 64"><rect x="6" y="46" width="34" height="10" rx="5" fill="#444"/><g fill="#777"><circle cx="12" cy="51" r="3"/><circle cx="23" cy="51" r="3"/><circle cx="34" cy="51" r="3"/></g><rect x="8" y="34" width="30" height="12" rx="2" fill="#f5b041"/><rect x="10" y="22" width="14" height="14" rx="2" fill="#f5b041"/><rect x="13" y="25" width="8" height="7" fill="#d6eaf8"/><path d="M34 36 L46 16 L58 30" stroke="#f39c12" stroke-width="5" fill="none" stroke-linejoin="round" stroke-linecap="round"/><path d="M54 30 L62 30 L60 42 L52 40Z" fill="#555"/></svg>',
+  solar: '<svg viewBox="0 0 64 64"><circle cx="52" cy="12" r="7" fill="#f7dc6f"/><g transform="translate(12 0) skewX(-15)"><rect x="4" y="22" width="44" height="26" fill="#1f4e8c" stroke="#ccd" stroke-width="2"/><path d="M15 22 V48 M26 22 V48 M37 22 V48 M4 35 H48" stroke="#9ab" stroke-width="1.5"/></g><rect x="20" y="48" width="4" height="12" fill="#777"/><rect x="40" y="48" width="4" height="12" fill="#777"/></svg>',
+};
+
+/* q: [もんだい, せいかい, はずれ, はずれ] */
+const ITEMS = [
+  // ---- しぜん ----
+  { id: 'kawa', box: true, cat: 'shizen', e: '🏞️', name: 'かわ',
+    fact: 'かわの みずは、{山|やま}に ふった {雨|あめ}が あつまって できるよ。ひくい ほうへ ながれて、さいごは うみに たどりつくんだ。でんしゃは てっきょうで かわを わたるよ。',
+    flow: ['🌧️', '⛰️', '🏞️', '🌊'],
+    q: ['かわの みずは さいごに どこへ いく？', 'うみ', 'そら', 'やまの うえ'] },
+  { id: 'fujisan', cat: 'shizen', e: '🗻', name: 'ふじさん',
+    fact: '{富士山|ふじさん}は {日本|にっぽん}で いちばん たかい やまだよ。たかさは 3776メートル。むかし かざんが なんども ふんかして、つみかさなって できたんだ。とうきょうから しんかんせんに のると、みぎがわの まどに みえるよ。',
+    flow: ['🌋', '🪨', '🗻'],
+    q: ['ふじさんの たかさは どれくらい？', '3776メートル', '100メートル', '10000メートル'] },
+  { id: 'umi', cat: 'shizen', e: '🌊', name: 'うみ',
+    fact: 'うみの みずは しょっぱいね。しおが とけているからだよ。ちきゅうの おもての 7わりは うみなんだ。',
+    flow: ['🌊', '☀️', '☁️', '🌧️'],
+    q: ['うみの みずは どんな あじ？', 'しょっぱい', 'あまい', 'すっぱい'] },
+  { id: 'yama', cat: 'shizen', e: '⛰️', name: 'やま',
+    fact: 'とおくの やまが あおっぽく みえるのは、あいだに ある くうきの せいだよ。とおい ほど うすく、あおく みえるんだ。でんしゃが やまを ぬけるときは トンネルを くぐるよ。',
+    flow: ['👀', '💨', '⛰️'],
+    q: ['とおくの やまは なにいろっぽく みえる？', 'あお', 'あか', 'きいろ'] },
+  { id: 'tanbo', cat: 'shizen', e: '🌾', name: 'たんぼ',
+    fact: 'たんぼでは おこめを そだてているよ。はるに みずを はって なえを うえ、あきに きいろく なった いねを かりとるんだ。きせつで いろが かわるから、のるたびに くらべてみよう。',
+    flow: ['💧', '🌱', '🌾', '🍚'],
+    q: ['たんぼで そだてているのは？', 'おこめ', 'りんご', 'じゃがいも'] },
+  { id: 'hatake', cat: 'shizen', e: '🥬', name: 'はたけ',
+    fact: 'はたけでは やさいや おちゃの はっぱを そだてているよ。しずおかけんでは、しんかんせんの まどから おちゃの はたけ（ちゃばたけ）が たくさん みえるんだ。',
+    flow: ['🌱', '☀️', '🥬', '🍽️'],
+    q: ['しずおかけんで よく みえる はたけは？', 'おちゃ', 'バナナ', 'パイナップル'] },
+  { id: 'mori', cat: 'shizen', e: '🌳', name: 'もり',
+    fact: 'たくさんの {木|き}が あつまった ところが もりだよ。{木|き}は はっぱで おひさまの ひかりを うけて、えいようを つくっているんだ。そのとき、わたしたちが すう さんそを だしてくれるよ。',
+    flow: ['☀️', '🌳', '💨', '🙂'],
+    q: ['{木|き}が だしてくれる、いきものが すう ものは？', 'さんそ', 'けむり', 'すな'] },
+  { id: 'tori', cat: 'shizen', e: '🐦', name: 'とり',
+    fact: 'せんろの ちかくでは カラスや ハト、かわの ちかくでは しろい サギが よく みつかるよ。とりの ほねは なかが すかすかで かるいから、そらを とべるんだ。',
+    flow: ['🥚', '🐣', '🐦'],
+    q: ['とりの ほねの なかは どうなっている？', 'すかすかで かるい', 'みずが いっぱい', 'てつで おもい'] },
+  { id: 'kumo', cat: 'shizen', e: '☁️', name: 'くも',
+    fact: 'くもは ちいさな みずの つぶや こおりの つぶが たくさん あつまった ものだよ。つぶが おおきく おもくなると、{雨|あめ}に なって おちてくるんだ。',
+    flow: ['🌊', '♨️', '☁️', '🌧️'],
+    q: ['くもは なにが あつまって できている？', 'みずや こおりの つぶ', 'わたあめ', 'けむり'] },
+  { id: 'hana', cat: 'shizen', e: '🌸', name: 'はな',
+    fact: 'せんろの そばには、はるは さくら、なつは ひまわり、あきは ひがんばなが さくよ。はなは ミツバチなどに かふんを はこんでもらって、たねを つくるんだ。',
+    flow: ['🌸', '🐝', '🌰', '🌱'],
+    q: ['はなの かふんを はこぶ むしは？', 'ミツバチ', 'ダンゴムシ', 'カブトムシの ようちゅう'] },
+
+  // ---- のりもの ----
+  { id: 'shinkansen', cat: 'norimono', e: '🚄', name: 'しんかんせん',
+    fact: 'しんかんせんは はやいと じそく 300キロくらいで はしるよ。ふみきりが ないから、とまらずに はやく はしれるんだ。はなが ながいのは、トンネルに はいるときの おおきな おとを へらすためだよ。',
+    flow: ['🚄', '🕳️', '🔇'],
+    q: ['しんかんせんの はなが ながいのは なぜ？', 'トンネルの おとを へらすため', 'にもつを いれるため', 'ねこが ねるため'] },
+  { id: 'kamotsu', cat: 'norimono', svg: 'kamotsu', name: 'かもつれっしゃ',
+    fact: 'かもつれっしゃは、ひとではなく にもつを はこぶ れっしゃだよ。コンテナを たくさん つないで、トラック 60だいぶんも いっぺんに はこべるんだ。だす ガスが すくなくて、ちきゅうに やさしいよ。',
+    flow: ['🏭', '📦', '🚃', '🏪'],
+    q: ['かもつれっしゃが はこぶ ものは？', 'にもつ', 'おきゃくさん', 'くもだけ'] },
+  { id: 'surechigai', cat: 'norimono', e: '🚆', name: 'すれちがう でんしゃ',
+    fact: 'せんろが 2ほん ならんでいる ところでは、いく でんしゃと くる でんしゃが すれちがうよ。にっぽんの でんしゃは ひだりがわを はしることが おおいんだ。くるまと おなじだね。',
+    flow: ['🚆', '↔️', '🚆'],
+    q: ['にっぽんの でんしゃは どちらがわを はしることが おおい？', 'ひだりがわ', 'みぎがわ', 'せんろの そと'] },
+  { id: 'bus', cat: 'norimono', e: '🚌', name: 'バス',
+    fact: 'バスは えきと まちを むすぶ のりものだよ。ろせんバスは きまった みちを、じこくひょうに あわせて はしるんだ。えきまえには バスの のりばが あつまっているよ。',
+    flow: ['🚉', '🚌', '🏠'],
+    q: ['バスの のりばが あつまっている ところは？', 'えきまえ', 'うみの なか', 'やまの てっぺん'] },
+  { id: 'truck', cat: 'norimono', e: '🚚', name: 'トラック',
+    fact: 'トラックは おみせや いえに にもつを とどけているよ。かもつれっしゃで はこんだ コンテナを、えきで トラックに のせかえて はこぶことも あるんだ。',
+    flow: ['🚃', '📦', '🚚', '🏪'],
+    q: ['かもつれっしゃの コンテナを えきから はこぶのは？', 'トラック', 'ふね', 'ひこうき'] },
+  { id: 'shovel', cat: 'norimono', svg: 'shovel', name: 'ショベルカー',
+    fact: 'ショベルカーは、うでの さきの バケットで つちを ほったり すくったり する こうじの くるまだよ。うでは オイル（あぶら）の ちからで うごいていて、とても ちからもち なんだ。',
+    flow: ['🛢️', '💪', '⛏️'],
+    q: ['ショベルカーの うでの さきの なまえは？', 'バケット', 'ハンドル', 'タイヤ'] },
+  { id: 'fune', cat: 'norimono', e: '🚢', name: 'ふね',
+    fact: 'おおきな ふねが うくのは、みずが したから おしかえす ちからが あるからだよ。てつで できた おもい ふねでも、かたちを くふうすると うかぶんだ。',
+    flow: ['🚢', '⬆️', '🌊'],
+    q: ['てつの おもい ふねが うかぶのは どうして？', 'みずが おしかえすから', 'かぜで ういているから', 'そこが わたで できているから'] },
+  { id: 'hikouki', cat: 'norimono', e: '✈️', name: 'ひこうき',
+    fact: 'ひこうきは つばさに かぜを うけて、うえに もちあげる ちからで とんでいるよ。くうこうの ちかくでは、ひくく とぶ ひこうきが みえることが あるんだ。',
+    flow: ['💨', '✈️', '⬆️'],
+    q: ['ひこうきを うえに もちあげるのは どこ？', 'つばさ', 'タイヤ', 'まど'] },
+  { id: 'jitensha', cat: 'norimono', e: '🚲', name: 'じてんしゃ',
+    fact: 'じてんしゃは ペダルを こぐと、チェーンが うしろの タイヤを まわすよ。えきの ちかくには、じてんしゃおきばが たくさん あるんだ。',
+    flow: ['🦶', '⛓️', '🛞', '🚲'],
+    q: ['ペダルの ちからを タイヤに つたえるのは？', 'チェーン', 'ベル', 'ライト'] },
+  { id: 'kyukyusha', cat: 'norimono', e: '🚑', name: 'きゅうきゅうしゃ',
+    fact: 'きゅうきゅうしゃは ぐあいの わるい ひとを びょういんへ はこぶよ。ピーポーの サイレンは、ちかづくと たかく、とおざかると ひくく きこえるんだ。ドップラーこうか というよ。',
+    flow: ['🏠', '🚑', '🏥'],
+    q: ['きゅうきゅうしゃが ひとを はこぶ さきは？', 'びょういん', 'がっこう', 'ゆうえんち'] },
+
+  // ---- たてもの ----
+  { id: 'tekkyo', box: true, cat: 'tatemono', e: '🌉', name: 'てっきょう',
+    fact: 'てっきょうは てつで できた はしだよ。でんしゃが わたると ゴーッと おおきな おとが するね。てつは あつい ひに すこし のびるので、すきまを あけて つくって あるんだ。',
+    flow: ['☀️', '📏', '🌉'],
+    q: ['てつは あつい ひに どうなる？', 'すこし のびる', 'とけて なくなる', 'みどりいろに なる'] },
+  { id: 'tonneru', cat: 'tatemono', svg: 'tonneru', name: 'トンネル',
+    fact: 'トンネルは やまや じめんの したを くぐる みちだよ。やまを まわりこまずに まっすぐ すすめるので、はやく つくんだ。なかに はいると、まどが かがみみたいに なるね。',
+    flow: ['⛰️', '🕳️', '🚆', '➡️'],
+    q: ['トンネルを つくると どうなる？', 'まっすぐ すすめて はやく つく', 'でんしゃが そらを とぶ', 'いつも {雨|あめ}が ふる'] },
+  { id: 'fumikiri', cat: 'tatemono', svg: 'fumikiri', name: 'ふみきり',
+    fact: 'ふみきりは せんろと みちが まじわる ところだよ。でんしゃが ちかづくと カンカン なって、しゃだんきが おりるんだ。ならんだ あかい ランプは かわりばんこに ひかるよ。',
+    flow: ['🚆', '🔔', '🚧', '🚗'],
+    q: ['しゃだんきが おりるのは いつ？', 'でんしゃが ちかづいたとき', 'はれた ひだけ', 'よるの あいだ ずっと'] },
+  { id: 'eki', cat: 'tatemono', e: '🚉', name: 'えき',
+    fact: 'えきは でんしゃに のったり おりたり する ところだよ。ホームの きいろい ブロックは、めの みえにくい ひとが あしの うらで わかるように つけて あるんだ。',
+    flow: ['🦶', '🟨', '🚉'],
+    q: ['ホームの きいろい ブロックは なんのため？', 'めの みえにくい ひとの ため', 'すべって あそぶため', 'ただの かざり'] },
+  { id: 'tettou', cat: 'tatemono', svg: 'tettou', name: 'てっとう',
+    fact: 'てっとうは、でんきを はこぶ でんせんを ささえる たかい とうだよ。はつでんしょで つくった でんきが、でんせんを とおって まちや でんしゃに とどくんだ。',
+    flow: ['🏭', '⚡', '🗼', '🏠'],
+    q: ['でんせんで はこんでいるのは？', 'でんき', 'みず', 'てがみ'] },
+  { id: 'suimon', box: true, cat: 'tatemono', svg: 'suimon', name: 'すいもん',
+    fact: 'すいもんは、かわの みずの りょうを ちょうせつする おおきな とびらだよ。おおあめの ときは しめたり あけたりして、みずが まちに あふれないように まもるんだ。',
+    flow: ['🌧️', '🏞️', '🚪', '🏘️'],
+    q: ['すいもんは なにを まもっている？', 'みずが まちに あふれないように', 'さかなが にげないように', 'でんしゃが とまらないように'] },
+  { id: 'biru', cat: 'tatemono', e: '🏢', name: 'ビル',
+    fact: 'たかい ビルは、じしんの ゆれを やわらげる しくみで たっているよ。てっぺんの あかい ランプは、ひこうきに「ここに ビルが あるよ」と しらせているんだ。',
+    flow: ['✈️', '🔴', '🏢'],
+    q: ['ビルの てっぺんの あかい ランプは だれに しらせる？', 'ひこうき', 'さかな', 'もぐら'] },
+  { id: 'kojo', cat: 'tatemono', e: '🏭', name: 'こうじょう',
+    fact: 'こうじょうでは、くるまや たべもの など いろいろな ものを つくっているよ。せんろが こうじょうの なかまで つながっていて、かもつれっしゃが にもつを はこぶ ところも あるんだ。',
+    flow: ['🪨', '🏭', '📦'],
+    q: ['こうじょうは なにを する ところ？', 'ものを つくる', 'どうぶつを かう', 'ねむる'] },
+  { id: 'jinja', cat: 'tatemono', e: '⛩️', name: 'じんじゃ',
+    fact: 'じんじゃの いりぐちには とりいが あるよ。あかい とりいが おおいのは、むかしから あかは わるい ものを よせつけない いろと いわれて きたからなんだ。',
+    flow: ['🚶', '⛩️', '🙏'],
+    q: ['じんじゃの いりぐちに ある ものは？', 'とりい', 'かいさつ', 'すべりだい'] },
+  { id: 'gakko', cat: 'tatemono', e: '🏫', name: 'がっこう',
+    fact: 'まどから みえる がっこうには、こうていや プールが あるね。こうていの まわりの たかい あみは、ボールが そとへ とびださないように するためだよ。',
+    flow: ['⚽', '🥅', '🏫'],
+    q: ['こうていの たかい あみは なんのため？', 'ボールが とびださないように', 'とりを つかまえる', 'せんたくものを ほす'] },
+
+  // ---- しごと ----
+  { id: 'kureen', cat: 'shigoto', e: '🏗️', name: 'クレーン',
+    fact: 'クレーンは ながい うでと ワイヤーで、おもい てっこつを たかい ところまで もちあげるよ。たかい ビルを たてる ときは、クレーンが じぶんで すこしずつ せを のばしていくんだ。',
+    flow: ['🔩', '🏗️', '🏢'],
+    q: ['おもい ものを つって もちあげる きかいは？', 'クレーン', 'ブランコ', 'すべりだい'] },
+  { id: 'nouka', cat: 'shigoto', e: '🧑‍🌾', name: 'はたけの ひと',
+    fact: 'のうかの ひとは、たねを まき、みずや ひりょうを やって、やさいや おこめを そだてるよ。トラクターで つちを たがやすと、ねっこが のびやすい ふかふかの つちに なるんだ。',
+    flow: ['🚜', '🌱', '🥕', '🍽️'],
+    q: ['つちを たがやす くるまは？', 'トラクター', 'しょうぼうしゃ', 'しんかんせん'] },
+  { id: 'tenken', cat: 'shigoto', e: '👷', name: 'せんろを まもる ひと',
+    fact: 'せんろは、でんしゃが はしらない よなかに よく てんけんしているよ。レールの すりへりや、ねじの ゆるみを しらべて なおすんだ。この ひとたちの おかげで、あんぜんに のれるんだね。',
+    flow: ['🌙', '👷', '🔧', '🚆'],
+    q: ['せんろの てんけんを よく するのは いつ？', 'よなか', 'おひるやすみ', 'でんしゃの やねの うえ'] },
+  { id: 'takuhai', cat: 'shigoto', e: '📦', name: 'たくはいびん',
+    fact: 'たくはいびんは、にもつを いえまで とどけるよ。にもつは よるの あいだに おおきな トラックで はこばれて、あさ ちかくの えいぎょうしょから くばられるんだ。',
+    flow: ['📦', '🚛', '🏢', '🚚', '🏠'],
+    q: ['たくはいびんが にもつを とどける さきは？', 'いえ', 'つき', 'うみの そこ'] },
+  { id: 'ekiin', cat: 'shigoto', e: '🧑‍💼', name: 'えきいんさん',
+    fact: 'えきいんさんは、のりかえを あんないしたり、ホームの あんぜんを みまもったり するよ。えきで こまった ときは、えきいんさんに きいてみよう。',
+    flow: ['❓', '🧑‍💼', '🙂'],
+    q: ['えきで こまった ときは だれに きく？', 'えきいんさん', 'ハト', 'じどうはんばいき'] },
+  { id: 'untenshi', cat: 'shigoto', e: '🧑‍✈️', name: 'うんてんしさん',
+    fact: 'うんてんしさんは、しんごうを ゆびさして「しんごう よし！」と こえに だして たしかめるよ。これを「しさかんこ」と いって、みおとしを ふせぐ くふうなんだ。',
+    flow: ['👀', '👉', '🗣️', '✅'],
+    q: ['ゆびさして こえに だす かくにんの なまえは？', 'しさかんこ', 'じゃんけん', 'しりとり'] },
+  { id: 'gomi', cat: 'shigoto', e: '🗑️', name: 'ごみしゅうしゅうしゃ',
+    fact: 'ごみしゅうしゅうしゃは、まちの ごみを あつめて せいそうこうじょうへ はこぶよ。うしろの くるくる まわる いたで ごみを おしこんで、たくさん つめるんだ。',
+    flow: ['🗑️', '🚛', '🏭', '♻️'],
+    q: ['あつめた ごみは どこへ はこぶ？', 'せいそうこうじょう', 'どうぶつえん', 'えきの ホーム'] },
+  { id: 'patokaa', cat: 'shigoto', e: '🚓', name: 'パトカー',
+    fact: 'パトカーは おまわりさんが のって、まちの あんぜんを まもる くるまだよ。しろと くろの いろは、とおくからでも すぐに わかるように するためなんだ。',
+    flow: ['👮', '🚓', '🏘️'],
+    q: ['パトカーの いろは？', 'しろと くろ', 'ピンクと みどり', 'ぜんぶ きいろ'] },
+  { id: 'solar', cat: 'shigoto', svg: 'solar', name: 'ソーラーパネル',
+    fact: 'ソーラーパネルは、おひさまの ひかりを でんきに かえる いただよ。やねや はらっぱに ならんでいて、ひが よく あたる みなみがわに むけて おいてあることが おおいんだ。',
+    flow: ['☀️', '🟦', '⚡', '🏠'],
+    q: ['ソーラーパネルは なにを でんきに かえる？', 'おひさまの ひかり', 'かぜの おと', '{雨|あめ}の あじ'] },
+  { id: 'sentaku', cat: 'shigoto', e: '👕', name: 'せんたくもの',
+    fact: 'ベランダに ほした せんたくものは、おひさまの ねつと かぜで みずが じょうはつして かわくよ。はれて かぜの ある ひは、はやく かわくんだ。',
+    flow: ['💧', '☀️', '💨', '👕'],
+    q: ['せんたくものが はやく かわくのは どんな ひ？', 'はれて かぜの ある ひ', '{雨|あめ}の ひ', 'くもりで かぜの ない ひ'] },
+];
+const ITEM = Object.fromEntries(ITEMS.map(it => [it.id, it]));
+
+const ROUTES = [
+  { id: 'toyoko', emoji: '🚃', color: '#d7261e',
+    name: '{東急東横線|とうきゅう とうよこせん}', short: 'とうよこせん',
+    tip: 'たまがわを わたる てっきょうを みのがさないで！',
+    pool: ['kawa', 'tekkyo', 'tonneru', 'biru', 'eki', 'surechigai', 'bus', 'truck', 'shovel', 'jitensha', 'tettou',
+           'jinja', 'gakko', 'kureen', 'takuhai', 'ekiin', 'untenshi', 'sentaku', 'solar', 'mori', 'tori', 'kumo',
+           'hana', 'patokaa', 'kyukyusha', 'gomi', 'hikouki'] },
+  { id: 'tokaido', emoji: '🚄', color: '#1b4f9c',
+    name: '{東海道新幹線|とうかいどう しんかんせん}', short: 'とうかいどう しんかんせん',
+    tip: 'とうきょうから のると、ふじさんは みぎがわの まど！',
+    pool: ['fujisan', 'umi', 'kawa', 'yama', 'tanbo', 'hatake', 'mori', 'tori', 'kumo', 'hana', 'shinkansen',
+           'surechigai', 'kamotsu', 'truck', 'fune', 'tekkyo', 'tonneru', 'tettou', 'kojo', 'biru', 'eki', 'suimon',
+           'solar', 'kureen', 'nouka', 'sentaku', 'gakko', 'jinja'] },
+  { id: 'keihin', emoji: '🚃', color: '#00a0d8',
+    name: 'JR {京浜東北線|けいひん とうほくせん}', short: 'けいひんとうほくせん',
+    tip: 'かもつれっしゃや しんかんせんと ならんで はしる ところが あるよ',
+    pool: ['kawa', 'tekkyo', 'surechigai', 'shinkansen', 'kamotsu', 'bus', 'truck', 'hikouki', 'fune', 'shovel',
+           'biru', 'eki', 'kojo', 'tettou', 'gakko', 'jinja', 'kureen', 'tenken', 'takuhai', 'ekiin', 'untenshi',
+           'sentaku', 'solar', 'tori', 'kumo', 'hana', 'jitensha', 'patokaa', 'kyukyusha'] },
+  { id: 'doko', emoji: '🌏', color: '#2e9e5b',
+    name: 'どこでも ビンゴ', short: 'どこでも ビンゴ',
+    tip: 'どの でんしゃでも あそべるよ',
+    pool: ['kawa', 'yama', 'tanbo', 'hatake', 'mori', 'tori', 'kumo', 'hana', 'surechigai', 'bus', 'truck',
+           'jitensha', 'shovel', 'tekkyo', 'tonneru', 'fumikiri', 'eki', 'tettou', 'biru', 'jinja', 'gakko',
+           'kureen', 'nouka', 'takuhai', 'ekiin', 'untenshi', 'sentaku', 'solar', 'patokaa', 'gomi'] },
+];
+const ROUTE = Object.fromEntries(ROUTES.map(r => [r.id, r]));
+
+const LINES = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+
+/* ============================================================
+   ほぞん（localStorage）
+   ============================================================ */
+const KEY = 'shaso-tanken-v1';
+function freshState() {
+  return { v: 1, sound: true, seq: 0, log: [], quiz: {}, badges: 0, bingoLog: [], card: null };
+}
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (!raw) return freshState();
+    const s = Object.assign(freshState(), JSON.parse(raw));
+    if (!Array.isArray(s.log)) s.log = [];
+    if (!Array.isArray(s.bingoLog)) s.bingoLog = [];
+    if (s.card && (!ROUTE[s.card.route] || !Array.isArray(s.card.cells) || s.card.cells.length !== 9)) s.card = null;
+    return s;
+  } catch (e) { return freshState(); }
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ほぞん できなくても あそべる */ }
+}
+let state = load();
+
+/* ============================================================
+   こまかい どうぐ
+   ============================================================ */
+const $ = sel => document.querySelector(sel);
+const ruby = s => String(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+const kana = s => String(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '$2');
+const pic = (it, extra = '') => (extra === 'sil' && it.box)
+  ? '<span class="pic sil q" aria-hidden="true">❔</span>'
+  : `<span class="pic ${extra}" aria-hidden="true">${it.svg ? SVG[it.svg] : it.e}</span>`;
+const pad = n => String(n).padStart(2, '0');
+const dayKey = ts => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
+const dateJa = ts => { const d = new Date(ts); return `${d.getMonth() + 1}がつ ${d.getDate()}にち`; };
+const timeJa = ts => { const d = new Date(ts); return `${d.getHours()}じ ${d.getMinutes()}ふん`; };
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+const foundSet = () => new Set(state.log.map(l => l.item));
+const rideDays = () => new Set(state.log.map(l => dayKey(l.ts)));
+const routeProgress = r => { const f = foundSet(); return { got: r.pool.filter(id => f.has(id)).length, all: r.pool.length }; };
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 1800);
+}
+
+/* ============================================================
+   おと（WebAudio の ごうせいおん だけ）と よみあげ
+   ============================================================ */
+let ac = null;
+function audio() {
+  if (!state.sound) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  } catch (e) { return null; }
+}
+function tone(freq, at, dur, type = 'triangle', vol = .22) {
+  const c = audio(); if (!c) return;
+  const t0 = c.currentTime + at;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t0);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(vol, t0 + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g).connect(c.destination);
+  o.start(t0); o.stop(t0 + dur + 0.05);
+}
+const SFX = {
+  tap:    () => tone(620, 0, .08, 'sine', .15),
+  stamp:  () => { tone(523, 0, .12, 'square', .12); tone(784, .09, .2, 'triangle', .22); },
+  undo:   () => { tone(440, 0, .1, 'sine', .15); tone(330, .08, .16, 'sine', .15); },
+  bingo:  () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .12, .25, 'square', .12));
+                  [523, 659, 784].forEach(f => tone(f, .55, .9, 'triangle', .14)); tone(1047, .55, .9, 'triangle', .14); },
+  ok:     () => { tone(880, 0, .12, 'triangle', .2); tone(1319, .1, .3, 'triangle', .2); },
+  ng:     () => tone(196, 0, .25, 'sawtooth', .08),
+  found:  () => { tone(1047, 0, .1, 'sine', .14); tone(1568, .08, .22, 'sine', .14); },
+};
+function sfx(name) { if (state.sound && SFX[name]) SFX[name](); }
+
+const canSpeak = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+function speak(text) {
+  if (!canSpeak || !state.sound) return false;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(kana(text).replace(/[「」（）]/g, ' '));
+    u.lang = 'ja-JP'; u.rate = .95; u.pitch = 1.15;
+    const ja = speechSynthesis.getVoices().find(v => /ja/i.test(v.lang));
+    if (ja) u.voice = ja;
+    speechSynthesis.speak(u);
+    return true;
+  } catch (e) { return false; }
+}
+function stopSpeak() { try { if (canSpeak) speechSynthesis.cancel(); } catch (e) {} }
+
+function renderSoundBtn() {
+  const b = $('#soundBtn');
+  b.textContent = state.sound ? '🔊' : '🔇';
+  b.setAttribute('aria-pressed', String(state.sound));
+  b.title = state.sound ? 'おと オン' : 'おと オフ';
+}
+$('#soundBtn').addEventListener('click', () => {
+  state.sound = !state.sound; save(); renderSoundBtn();
+  if (state.sound) sfx('tap'); else stopSpeak();
+  toast(state.sound ? '🔊 おと オン' : '🔇 おと オフ');
+});
+
+/* ============================================================
+   がめんの きりかえ
+   ============================================================ */
+let screen = 'home';
+function show(name) {
+  screen = name;
+  stopSpeak();
+  for (const id of ['home', 'bingo', 'zukan']) $('#' + id).hidden = id !== name;
+  $('#backBtn').classList.toggle('ghost', name === 'home');
+  $('#title').textContent = { home: 'しゃそう たんけん', bingo: 'たんけん ビンゴ', zukan: 'じぶんの ずかん' }[name];
+  ({ home: renderHome, bingo: renderBingo, zukan: renderZukan })[name]();
+  window.scrollTo(0, 0);
+}
+$('#backBtn').addEventListener('click', () => { sfx('tap'); show('home'); });
+
+/* ---------- ホーム ---------- */
+function renderHome() {
+  const f = foundSet(), c = state.card;
+  const stampedN = c ? c.stamped.filter(Boolean).length : 0;
+  $('#home').innerHTML = `
+    <div class="hero">
+      <div class="train" aria-hidden="true">🚃💨</div>
+      <h2>しゃそう たんけん<br>ビンゴ</h2>
+      <div class="rail"></div>
+      <p>でんしゃの まどから みえた ものを みつけよう！<br>みつけた ものは ずかんに のるよ</p>
+      <div class="chips">
+        <span class="chip">🗓️ たんけん ${rideDays().size}かい</span>
+        <span class="chip">🎖️ バッジ ${state.badges}こ</span>
+        <span class="chip">📖 ずかん ${f.size}/${ITEMS.length}</span>
+      </div>
+    </div>
+    ${c ? `<button class="resume" type="button" id="resumeBtn">
+        <span style="font-size:40px" aria-hidden="true">▶</span>
+        <span>つづきから<small>${ROUTE[c.route].short} ・ みつけた ${stampedN}/9</small></span>
+      </button>` : ''}
+    <h3 class="section-title">🚉 のる まえに ろせんを えらぼう</h3>
+    <div class="routes">
+      ${ROUTES.map(r => { const p = routeProgress(r); return `
+        <button class="route" type="button" data-route="${r.id}" style="--c:${r.color}">
+          <span class="r-emoji" aria-hidden="true">${r.emoji}</span>
+          <span class="r-body">
+            <span class="r-name">${ruby(r.name)}</span>
+            <span class="r-tip">${r.tip}</span>
+            <span class="prog"><span class="bar"><i style="width:${Math.round(p.got / p.all * 100)}%"></i></span>${p.got}/${p.all}</span>
+          </span>
+        </button>`; }).join('')}
+    </div>
+    <button class="bigbtn" type="button" id="toZukan">📖 じぶんの ずかんを ひらく</button>
+    <p class="note">
+      でんしゃの なかでは すわるか、つりかわに つかまって あそぼうね。<br>
+      おうちの方へ: 一度ひらけば電波のない区間でも動きます。位置情報・カメラ・マイクは使いません。<br>
+      記録はこの端末のブラウザにだけ保存されます。
+    </p>`;
+  const rb = $('#resumeBtn'); if (rb) rb.addEventListener('click', () => { sfx('tap'); show('bingo'); });
+  $('#home').querySelectorAll('.route').forEach(b => b.addEventListener('click', () => { sfx('tap'); newCard(b.dataset.route); show('bingo'); }));
+  $('#toZukan').addEventListener('click', () => { sfx('tap'); show('zukan'); });
+}
+
+/* ---------- ビンゴ ---------- */
+function newCard(routeId) {
+  const r = ROUTE[routeId];
+  state.card = { route: routeId, cells: shuffle(r.pool).slice(0, 9), stamped: Array(9).fill(null), awarded: [], ts: Date.now() };
+  save();
+}
+const doneLines = c => LINES.map((l, i) => l.every(k => c.stamped[k]) ? i : -1).filter(i => i >= 0);
+let resetArmed = false;
+
+function renderBingo() {
+  const c = state.card;
+  if (!c) { show('home'); return; }
+  const r = ROUTE[c.route];
+  const today = dayKey(Date.now()), days = rideDays();
+  const nth = days.size + (days.has(today) ? 0 : 1);
+  const lines = doneLines(c);
+  const onLine = new Set(lines.flatMap(i => LINES[i]));
+  resetArmed = false;
+  $('#bingo').innerHTML = `
+    <div class="bingo-wrap">
+      <div class="b-info">
+        <div class="b-route">${r.emoji} ${ruby(r.name)}</div>
+        <div class="b-meta">
+          <span class="chip">🗓️ たんけん ${nth}かいめ</span>
+          <span class="chip">🎖️ ビンゴ ${c.awarded.length}</span>
+        </div>
+        <p class="b-hint">👀 まどの そとを みて、みつけたら タップ！</p>
+      </div>
+      <div class="grid" style="--c:${r.color}" role="grid">
+        ${c.cells.map((id, i) => { const it = ITEM[id]; return `
+          <button class="cell ${c.stamped[i] ? 'on' : ''} ${onLine.has(i) ? 'line' : ''}" type="button" data-i="${i}" aria-pressed="${!!c.stamped[i]}" aria-label="${it.name}">
+            ${pic(it)}
+            <span class="nm">${it.name}</span>
+            ${c.stamped[i] ? '<span class="stamp"><span>みつけ<br>た！</span></span>' : ''}
+          </button>`; }).join('')}
+      </div>
+      <div class="b-actions">
+        <button class="btn" type="button" id="resetBtn">🔄 カードを かえる</button>
+        <button class="btn" type="button" id="bZukan">📖 ずかん</button>
+        <button class="btn" type="button" id="bEnd">🏠 おわる</button>
+      </div>
+    </div>`;
+  $('#bingo').querySelectorAll('.cell').forEach(b => b.addEventListener('click', () => tapCell(+b.dataset.i)));
+  $('#resetBtn').addEventListener('click', e => {
+    if (c.stamped.some(Boolean) && !resetArmed) {
+      resetArmed = true; e.currentTarget.classList.add('warn');
+      e.currentTarget.textContent = '❗ もういちど おすと かわるよ';
+      sfx('tap'); return;
+    }
+    sfx('tap'); newCard(c.route); renderBingo();
+  });
+  $('#bZukan').addEventListener('click', () => { sfx('tap'); show('zukan'); });
+  $('#bEnd').addEventListener('click', () => { sfx('tap'); show('home'); });
+}
+
+function tapCell(i) {
+  const c = state.card;
+  if (c.stamped[i]) {
+    const id = c.stamped[i];
+    state.log = state.log.filter(l => l.id !== id);
+    c.stamped[i] = null;
+    sfx('undo');
+  } else {
+    const item = c.cells[i];
+    const isNew = !foundSet().has(item);
+    const id = ++state.seq;
+    state.log.push({ id, item, route: c.route, ts: Date.now() });
+    c.stamped[i] = id;
+    sfx('stamp');
+    if (isNew) setTimeout(() => { sfx('found'); toast(`📖 ずかんに とうろく！ ${ITEM[item].name}`); }, 250);
+  }
+  const fresh = doneLines(c).filter(l => !c.awarded.includes(l));
+  if (fresh.length) {
+    c.awarded.push(...fresh);
+    state.badges += fresh.length;
+    state.bingoLog.push({ ts: Date.now(), route: c.route, n: fresh.length });
+  }
+  save();
+  renderBingo();
+  if (fresh.length) celebrate(c.stamped.every(Boolean));
+}
+
+function celebrate(perfect) {
+  sfx('bingo');
+  confetti();
+  openModal(`
+    <div class="bingo-pop">
+      <div class="medal" aria-hidden="true">🎖️</div>
+      <h3>ビンゴ！</h3>
+      <p>${perfect ? 'ぜんぶ みつけた！<br>パーフェクト たんけん！' : 'たて・よこ・ななめが そろったよ！'}<br>
+         <b>「たんけん たいちょう」バッジ</b>を もらったよ<br>（バッジ ぜんぶで ${state.badges}こ）</p>
+      <button class="bigbtn" type="button" data-close>つづける</button>
+    </div>`);
+  speak(perfect ? 'ぜんぶ みつけた！ パーフェクト たんけん！' : 'ビンゴ！ たんけん たいちょう バッジを もらったよ！');
+}
+function confetti() {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const box = document.createElement('div');
+  box.className = 'confetti';
+  const colors = ['#d8392b', '#f2b50f', '#2e9e5b', '#1a6fb5', '#8e5bd0', '#ff7eb6'];
+  for (let i = 0; i < 50; i++) {
+    const p = document.createElement('i');
+    p.style.left = Math.random() * 100 + 'vw';
+    p.style.background = colors[i % colors.length];
+    p.style.animationDuration = (1.6 + Math.random() * 1.6) + 's';
+    p.style.animationDelay = (Math.random() * .5) + 's';
+    box.appendChild(p);
+  }
+  document.body.appendChild(box);
+  setTimeout(() => box.remove(), 4000);
+}
+
+/* ---------- ずかん ---------- */
+let zTab = 'all';
+function renderZukan() {
+  const f = foundSet();
+  const quizN = Object.keys(state.quiz).filter(k => state.quiz[k] && ITEM[k]).length;
+  const list = ITEMS.filter(it => zTab === 'all' || it.cat === zTab);
+  $('#zukan').innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${f.size}<small style="font-size:16px">/${ITEMS.length}</small></b><span>📖 みつけた もの</span></div>
+      <div class="stat"><b>${rideDays().size}</b><span>🗓️ たんけん かいすう</span></div>
+      <div class="stat"><b>${state.badges}</b><span>🎖️ たいちょう バッジ</span></div>
+      <div class="stat"><b>${quizN}</b><span>⭐ クイズ せいかい</span></div>
+    </div>
+    <button class="bigbtn story-btn" type="button" id="storyBtn">🚃 ガタンくんの たんけん おはなし</button>
+    <h3 class="section-title">🚉 ろせんごとの たっせいりつ</h3>
+    <div class="rprog">
+      ${ROUTES.map(r => { const p = routeProgress(r); return `
+        <div class="row" style="--c:${r.color}">
+          <b>${r.emoji} ${ruby(r.name)}</b>
+          <div class="prog"><span class="bar"><i style="width:${Math.round(p.got / p.all * 100)}%"></i></span>${p.got}/${p.all}（${Math.round(p.got / p.all * 100)}％）</div>
+        </div>`; }).join('')}
+    </div>
+    <h3 class="section-title">🔎 みつけた もの</h3>
+    <div class="tabs" role="toolbar">
+      <button class="tab" type="button" data-tab="all" aria-pressed="${zTab === 'all'}">ぜんぶ</button>
+      ${CATS.map(ct => `<button class="tab" type="button" data-tab="${ct.id}" aria-pressed="${zTab === ct.id}">${ct.emoji} ${ct.name}</button>`).join('')}
+    </div>
+    <div class="tiles">
+      ${list.map(it => { const got = f.has(it.id); return `
+        <button class="tile ${got ? '' : 'off'}" type="button" data-id="${it.id}" aria-label="${got ? it.name : 'まだ みつけていない もの'}">
+          ${state.quiz[it.id] ? '<span class="star" aria-hidden="true">⭐</span>' : ''}
+          ${pic(it, got ? '' : 'sil')}
+          <span class="nm">${got ? it.name : '？？？'}</span>
+        </button>`; }).join('')}
+    </div>`;
+  $('#storyBtn').addEventListener('click', () => { sfx('tap'); openStory(); });
+  $('#zukan').querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => { sfx('tap'); zTab = b.dataset.tab; renderZukan(); }));
+  $('#zukan').querySelectorAll('.tile').forEach(b => b.addEventListener('click', () => { sfx('tap'); openItem(b.dataset.id); }));
+}
+
+function openItem(id) {
+  const it = ITEM[id], cat = CATS.find(c => c.id === it.cat);
+  const recs = state.log.filter(l => l.item === id).sort((a, b) => b.ts - a.ts);
+  if (!recs.length) {
+    const where = ROUTES.filter(r => r.pool.includes(id)).map(r => ruby(r.name)).join('、');
+    openModal(`
+      <div class="d-head">${pic(it, 'sil')}<div><h3>？？？</h3>
+        <span class="catchip" style="background:${cat.color}">${cat.emoji} ${cat.name}</span></div></div>
+      <p class="fact">まだ みつけて いないよ。<br>${where ? `${where} で みつかるかも！` : ''}<br>でんしゃの まどから さがしてみよう 👀</p>`);
+    return;
+  }
+  const [q, ...ans] = it.q;
+  const choices = shuffle(ans.map((a, k) => ({ a, ok: k === 0 })));
+  openModal(`
+    <div class="d-head">${pic(it)}<div><h3>${it.name}</h3>
+      <span class="catchip" style="background:${cat.color}">${cat.emoji} ${cat.name}</span></div></div>
+    <p class="fact">${ruby(it.fact)}</p>
+    ${canSpeak ? '<button class="btn speak" type="button" id="readBtn">🔈 よんで もらう</button>' : ''}
+    <h4 class="sub-h">🧩 しくみの え</h4>
+    <div class="flow" aria-hidden="true">${it.flow.map(x => `<span>${x}</span>`).join('<span class="arr">▶</span>')}</div>
+    <h4 class="sub-h">❓ 3たく クイズ ${state.quiz[id] ? '⭐' : ''}</h4>
+    <p class="quiz-q">${ruby(q)}</p>
+    <div class="choices">
+      ${choices.map((ch, k) => `<button class="choice" type="button" data-k="${k}">${['①', '②', '③'][k]} ${ruby(ch.a)}</button>`).join('')}
+    </div>
+    <p class="quiz-res" id="quizRes" aria-live="polite"></p>
+    <h4 class="sub-h">📝 きろく（${recs.length}かい みつけた）</h4>
+    <ul class="rec">
+      ${recs.slice(0, 12).map(l => `<li>${dateJa(l.ts)} ${timeJa(l.ts)} ・ ${ROUTE[l.route] ? ROUTE[l.route].short : ''}</li>`).join('')}
+    </ul>`);
+  const rd = $('#readBtn');
+  if (rd) rd.addEventListener('click', () => speak(it.name + '。' + it.fact));
+  let solved = false;
+  $('#modalBody').querySelectorAll('.choice').forEach(b => b.addEventListener('click', () => {
+    if (solved) return;
+    const ch = choices[+b.dataset.k];
+    if (ch.ok) {
+      solved = true; b.classList.add('ok'); sfx('ok');
+      $('#quizRes').textContent = '⭕ せいかい！ ずかんに ⭐ が ついたよ';
+      speak('せいかい！');
+      if (!state.quiz[id]) { state.quiz[id] = true; save(); }
+    } else {
+      b.classList.remove('ng'); void b.offsetWidth; b.classList.add('ng'); sfx('ng');
+      $('#quizRes').textContent = 'ざんねん！ もういちど かんがえてみよう';
+    }
+  }));
+}
+
+/* ---------- ガタンくんの おはなし（PIBO の よみきかせ ふう） ---------- */
+function buildStory() {
+  if (!state.log.length) {
+    return ['こんにちは、ガタンくんだよ。', 'まだ たんけんの きろくが ないみたい。でんしゃに のったら、まどの そとを みて ビンゴを してみてね。', 'たのしみに まってるよ！'];
+  }
+  const days = [...rideDays()].sort();
+  const last = days[days.length - 1];
+  const entries = state.log.filter(l => dayKey(l.ts) === last).sort((a, b) => a.ts - b.ts);
+  const routes = [...new Set(entries.map(l => l.route))].map(r => ROUTE[r] ? ROUTE[r].short : '').filter(Boolean);
+  const items = [...new Set(entries.map(l => l.item))];
+  const names = items.map(i => ITEM[i].name);
+  const firstSeen = items.filter(i => {
+    const first = state.log.filter(l => l.item === i).reduce((m, l) => Math.min(m, l.ts), Infinity);
+    return dayKey(first) === last;
+  });
+  const bingos = state.bingoLog.filter(b => dayKey(b.ts) === last).reduce((s, b) => s + (b.n || 1), 0);
+  const isToday = last === dayKey(Date.now());
+  const when = isToday ? 'きょう' : dateJa(entries[0].ts);
+  const shown = names.slice(0, 5).join('、');
+  const more = names.length > 5 ? `、ほかにも ${names.length - 5}こ` : '';
+  const pick = ITEM[(firstSeen.length ? firstSeen : items)[Math.floor(Math.random() * (firstSeen.length || items.length))]];
+  const parts = [
+    `こんにちは、ガタンくんだよ。${when}は、${routes.join(' と ')}で たんけんしたね。`,
+    `まどの そとに、${shown}${more}を みつけたよ。`,
+    firstSeen.length ? `はじめて みつけた ものも ${firstSeen.length}こ あったね。すごい！` : '',
+    bingos ? `ビンゴが ${bingos}かい そろって、たんけん たいちょうに なったね！` : 'ビンゴまで あと すこし。つぎは そろうと いいね。',
+    `ここで まめちしき。${pick.fact}`,
+    `たんけんは これで ${days.length}かいめ。つぎの たんけんも たのしみだね。またね！`,
+  ];
+  return parts.filter(Boolean);
+}
+function openStory() {
+  const paras = buildStory();
+  const text = paras.join('');
+  openModal(`
+    <div class="story-chara"><span class="face" aria-hidden="true">🚃</span><h3 style="margin:0;font-size:24px">ガタンくんの<br>たんけん おはなし</h3></div>
+    <div class="story-text">${paras.map(ruby).join('<br>')}</div>
+    ${canSpeak ? '<button class="bigbtn story-btn" type="button" id="storyRead">🔈 よみきかせ</button>' : '<p class="note">この たんまつでは よみあげが つかえないよ。おうちの ひとに よんで もらおう。</p>'}`);
+  const b = $('#storyRead');
+  if (b) b.addEventListener('click', () => { if (!speak(text)) toast('🔇 おとを オンに してね'); });
+  speak(text);
+}
+
+/* ---------- モーダル ---------- */
+function openModal(html) {
+  $('#modalBody').innerHTML = html;
+  $('#modal').hidden = false;
+  $('#modalBody').querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', closeModal));
+  $('#modal .sheet').scrollTop = 0;
+}
+function closeModal() {
+  $('#modal').hidden = true; stopSpeak();
+  if (screen === 'zukan') renderZukan();
+}
+$('#modalClose').addEventListener('click', () => { sfx('tap'); closeModal(); });
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+
+if (canSpeak) { try { speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged = () => {}; } catch (e) {} }
+renderSoundBtn();
+show('home');
+</script>
+</body>
+</html>
