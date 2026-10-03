@@ -222,6 +222,53 @@
       <ellipse cx="142" cy="78" rx="6" ry="4" fill="#ff8fb3" opacity=".7"/><ellipse cx="178" cy="78" rx="6" ry="4" fill="#ff8fb3" opacity=".7"/>
     </svg>`;
   }
+
+  // にょこすけ（「にょこにょこ えきめぐり」の いもむし）。いもを ひっぱる やく
+  function nyoko(face = 'normal', vine = false) {
+    const O = '#3f7f25', K = '#222';
+    const hx = 70, hy = 54, hr = 25;
+    let g = '';
+    if (vine) g += `<path d="M84,66 C86,100 80,130 80,160" stroke="#3c8a2e" stroke-width="7" fill="none" stroke-linecap="round"/>`;
+    // からだ（しっぽ → くび）
+    const segs = [[118, 146, 10], [102, 150, 11], [86, 150, 12], [70, 146, 13], [58, 134, 14], [54, 116, 15], [58, 98, 15], [64, 82, 15]];
+    segs.forEach(([x, y, r], i) => {
+      g += `<ellipse cx="${x}" cy="${y + r - 1}" rx="3.5" ry="4" fill="${O}"/>`;
+      g += `<circle cx="${x}" cy="${y}" r="${r}" fill="${i % 2 ? '#8ad65a' : '#9fe36c'}" stroke="${O}" stroke-width="3"/>`;
+      g += `<circle cx="${x - r * 0.3}" cy="${y - r * 0.35}" r="${r * 0.3}" fill="#fff" fill-opacity=".45"/>`;
+      if (i % 2 === 0 && i > 0) g += `<circle cx="${x}" cy="${y + 1}" r="2.8" fill="#ffd43b"/>`;
+    });
+    // しょっかく
+    g += `<path d="M${hx - 5},${hy - 20} Q${hx - 9},${hy - 36} ${hx - 14},${hy - 46}" stroke="${O}" stroke-width="3" fill="none"/>`;
+    g += `<path d="M${hx + 8},${hy - 20} Q${hx + 11},${hy - 36} ${hx + 14},${hy - 45}" stroke="${O}" stroke-width="3" fill="none"/>`;
+    g += `<circle cx="${hx - 14}" cy="${hy - 46}" r="5.5" fill="#ff8fab" stroke="${O}" stroke-width="2"/><circle cx="${hx + 14}" cy="${hy - 45}" r="5.5" fill="#ff8fab" stroke="${O}" stroke-width="2"/>`;
+    // あたま
+    g += `<circle cx="${hx}" cy="${hy}" r="${hr}" fill="#a8ea72" stroke="${O}" stroke-width="3"/><circle cx="${hx - 7}" cy="${hy - 9}" r="7" fill="#fff" fill-opacity=".4"/>`;
+    // め
+    const E = [[hx + 3, hy - 6, 7.5], [hx + 16, hy - 7, 6.6]];
+    const st = `stroke="${K}" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"`;
+    E.forEach(([x, y, r], i) => {
+      if (face === 'normal' || face === 'flat') g += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="${x + 2}" cy="${y + 0.7}" r="${r * 0.5}" fill="${K}"/><circle cx="${x + 3}" cy="${y - 1.2}" r="1.5" fill="#fff"/>`;
+      else if (face === 'wow') g += `<circle cx="${x}" cy="${y}" r="${r + 1.2}" fill="#fff" stroke="${K}" stroke-width="2"/><circle cx="${x + 0.6}" cy="${y}" r="${r * 0.25}" fill="${K}"/>`;
+      else if (face === 'laugh' || face === 'happy') g += `<path d="M${x - r * 0.75},${y + 2} Q${x},${y - r * 0.9} ${x + r * 0.75},${y + 2}" ${st}/>`;
+      else if (face === 'scrunch' || face === 'effort') { const d = i ? -1 : 1; g += `<path d="M${x - 4 * d},${y - 4} L${x + 4 * d},${y} L${x - 4 * d},${y + 4}" ${st}/>`; }
+      else if (face === 'dizzy') g += `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${K}" stroke-width="2"/><path d="M${x},${y} m-1,0 a1,1 0 1,1 2,0 a2.5,2.5 0 1,1 -5,0 a4,4 0 1,1 8,0" stroke="${K}" stroke-width="1.6" fill="none"/>`;
+      else if (face === 'love') g += `<path transform="translate(${x},${y})" d="M0,5 C-9,-1 -6,-9 0,-4 C6,-9 9,-1 0,5Z" fill="#ff4d6d"/>`;
+    });
+    // ほっぺ
+    g += `<circle cx="${hx - 3}" cy="${hy + 8}" r="5" fill="#ff7896" fill-opacity=".55"/>`;
+    // くち
+    const mx = hx + 12, my = hy + 9;
+    if (face === 'laugh') g += `<path d="M${mx - 7},${my - 1} h14 a7,7 0 0,1 -14,0z" fill="#b3261e"/><circle cx="${mx}" cy="${my + 3}" r="2.8" fill="#ff8fa3"/>`;
+    else if (face === 'wow') g += `<ellipse cx="${mx}" cy="${my + 1}" rx="4" ry="5.5" fill="#b3261e"/>`;
+    else if (face === 'scrunch' || face === 'flat') g += `<path d="M${mx - 5},${my + 1} h10" ${st}/>`;
+    else if (face === 'effort') g += `<rect x="${mx - 7}" y="${my - 3}" width="14" height="8" rx="3" fill="#fff" stroke="${K}" stroke-width="2"/><path d="M${mx - 7},${my + 1} h14" stroke="${K}" stroke-width="1.5"/>`;
+    else if (face === 'dizzy') g += `<path d="M${mx - 6},${my} l3,-2.5 l3,2.5 l3,-2.5 l3,2.5" ${st}/>`;
+    else g += `<path d="M${mx - 6},${my - 2} Q${mx},${my + 5} ${mx + 6},${my - 2}" ${st}/>`;
+    if (face === 'effort') g += `<path d="M${hx - 26},${hy - 22} q-6,9 0,12 q6,-3 0,-12z" fill="#74c0fc"/>`;
+    if (face === 'scrunch') g += `<circle cx="${hx + 26}" cy="${hy + 1}" r="2.6" fill="#ff8fab"/>`;
+    return `<svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${g}</svg>`;
+  }
+
   // れんけつ（ずかん・サムネ用）
   function chainSVG() {
     const one = (x, y, s) => `<g transform="translate(${x},${y}) scale(${s})"><path d="M28,78 C24,40 70,22 106,24 C150,26 180,50 176,82 C172,114 136,130 98,128 C58,126 32,112 28,78 Z" fill="#a3407c" stroke="#6b2350" stroke-width="6"/><circle cx="82" cy="70" r="9" fill="${DARK}"/><circle cx="122" cy="70" r="9" fill="${DARK}"/><path d="M86,90 q14,14 28,0" fill="none" stroke="${DARK}" stroke-width="6" stroke-linecap="round"/></g>`;
@@ -233,25 +280,25 @@
 
   /* ================= ごほうび（へんてこ いも） ================= */
   const R = [
-    { id: 'futsu', name: 'ふつうの いも', serif: '……ふつうです。', desc: 'なにも おきない。それが かえって おもしろい。', svg: { eyes: 'dot', mouth: 'flat' }, anim: 'a-land', snd: 'oh', w: 4, kid: ['😐', 'ふつうだ…'] },
-    { id: 'bero', name: 'べろべろ いも', serif: 'べろべろ ばあ〜〜！', desc: 'めが ぎょろぎょろ。したを ぺろーん。', svg: { eyes: 'googly', mouth: 'tongue' }, anim: 'a-wiggle', snd: 'boing', fx: 'pop', kid: ['🤣', 'へんなかお！'] },
-    { id: 'onara', name: 'おなら いも', serif: 'ぷぅ〜〜〜っ！', desc: 'ほりだした とたんに おならを した。くさい！', svg: { eyes: 'happy', mouth: 'o', cheeks: true }, anim: 'a-fart', fx: 'fart', kid: ['🤢', 'くさっ！'] },
-    { id: 'pantsu', name: 'パンツ いも', serif: 'いや〜ん！ みないで〜！', desc: 'つちの なかで パンツを はいていた。みずたま もよう。', svg: { eyes: 'shut', mouth: 'wavy', cheeks: true, acc: ['pants', 'sweat'] }, anim: 'a-shy', snd: 'kyaa', fx: 'hearts', kid: ['😳', 'ごめん！'] },
-    { id: 'oshiri', name: 'おしり いも', serif: 'ぷりんっ ぷりんっ♪', desc: 'どこから みても おしり。かおは どこ？', svg: { body: 'butt' }, anim: 'a-twerk', snd: 'puri', fx: 'puri', kid: ['🤣', 'おしりだ〜！'] },
-    { id: 'ousama', name: 'ひげの おうさま いも', serif: 'わしが いもの おうさま じゃ！', desc: 'りっぱな ひげと かんむり。ちょっと いばっている。', svg: { eyes: 'normal', mouth: 'smile', acc: ['mustache', 'crown'] }, anim: 'a-land', snd: 'fanfare', fx: 'confetti', kid: ['🙇', 'ははーっ！'] },
-    { id: 'afro', name: 'アフロ いも', serif: 'イェーイ！ ノってるかーい！', desc: 'つちの なかで パーマを かけた。', svg: { mouth: 'laugh', acc: ['afro', 'sunglasses'] }, anim: 'a-dance', snd: 'dance', fx: 'notes', kid: ['🕺', 'イェーイ！'] },
-    { id: 'nebo', name: 'ねぼすけ いも', serif: 'むにゃむにゃ… あと 5ふん…', desc: 'ほりだしても おきない。はなちょうちんが でている。', svg: { eyes: 'sleepy', mouth: 'o', acc: ['bubble'] }, anim: 'a-sleep', snd: 'snore', fx: 'zzz', night: true, kid: ['😅', 'おきてー！'] },
-    { id: 'kushami', name: 'くしゃみ いも', serif: 'は… は… はっくしょーん！！', desc: 'はなに つちが はいって くしゃみが とまらない。', svg: { eyes: 'shut', mouth: 'laugh' }, anim: 'a-sneeze', snd: 'sneeze', fx: 'sneeze', kid: ['😵', 'うわー！'] },
-    { id: 'dance', name: 'おどる いも', serif: 'いも いも ダンス〜♪', desc: 'ほりだされて うれしくて おどりだした。', svg: { eyes: 'happy', mouth: 'laugh', cheeks: true, acc: ['sprout'] }, anim: 'a-dance', snd: 'dance', fx: 'notes', kid: ['💃', 'いっしょに！'] },
-    { id: 'jumbo', name: 'ジャンボ いも', serif: 'ドーーーン！！', desc: 'おおきすぎて しりもちを ついた。', svg: { eyes: 'normal', mouth: 'laugh', cheeks: true }, anim: 'a-jumbo', snd: 'thud', fx: 'fall', pulls: 12, pullMsg: 'お、おもい…！ がんばれ〜！', kid: ['😵', 'すってんころりん！'] },
-    { id: 'chibi', name: 'ちっちゃいも', serif: '……ぴっ。', desc: 'すごく がんばって ひっぱったのに、これ だけ。', svg: { eyes: 'normal', mouth: 'o' }, anim: 'a-chibi', snd: 'tiny', fx: 'chibi', pulls: 12, pullMsg: 'これは おおものの よかん…！', kid: ['😑', 'ちっちゃ！'] },
-    { id: 'renketsu', name: 'いもいも れんけつ', serif: 'まだまだ でるよ〜！', desc: 'ひっぱっても ひっぱっても いもが つながって でてくる。', special: 'chain', pulls: 9, count: 8, kid: ['😆', 'まだでる〜！'] },
-    { id: 'mogura', name: 'サングラス もぐら', serif: 'まぶしっ！ …いもじゃ ないよ。', desc: 'いもだと おもったら もぐらだった。', special: 'mole', anim: 'a-wiggle', snd: 'mole', count: 0, kid: ['😲', 'もぐら!?'] },
-    { id: 'imomushi', name: 'いもむし', serif: 'いも…むし です。よろしく。', desc: '「いも」は「いも」でも、むしの ほう だった。', special: 'worm', anim: 'a-wiggle', snd: 'worm', count: 0, kid: ['🤣', 'そっちか〜！'] },
-    { id: 'imouto', name: 'いもうと', serif: 'みつけてくれて ありがと♪', desc: '「いも」は「いも」でも、いもうと だった。', svg: { eyes: 'big', mouth: 'smile', cheeks: true, acc: ['ribbon'] }, anim: 'a-wiggle', snd: 'kira', fx: 'hearts', kid: ['😆', 'いもうと!?'] },
-    { id: 'obake', name: 'おばけ いも', serif: 'うらめし いも〜〜', desc: 'ふわふわ うかぶ。ぜんぜん こわくない。', svg: { body: 'ghost', color: 'ghost', eyes: 'shut', mouth: 'tongue', acc: ['tenkan'] }, anim: 'a-float', snd: 'ghost', night: true, kid: ['😱', 'でた〜！'] },
-    { id: 'rocket', name: 'ロケット いも', serif: 'いってきまーす！', desc: 'ほりだした とたん、うちゅうへ とんでいった。', svg: { eyes: 'happy', mouth: 'laugh', acc: ['goggles'] }, anim: 'a-rocket', fx: 'rocket', kid: ['😮', 'いってらっしゃーい！'] },
-    { id: 'kin', name: 'きんの いも', serif: 'キラーン☆', desc: 'めったに でない まぼろしの いも。すごい！', svg: { color: 'gold', eyes: 'star', mouth: 'laugh' }, anim: 'a-gold', snd: 'fanfare', fx: 'sparkle', gold: true, w: 1.2, rare: true, kid: ['🤩', 'すごーい！'] },
+    { id: 'futsu', name: 'ふつうの いも', serif: '……ふつうです。', desc: 'なにも おきない。それが かえって おもしろい。', svg: { eyes: 'dot', mouth: 'flat' }, anim: 'a-land', snd: 'oh', w: 4, kid: ['flat', 'ふつうだ…'] },
+    { id: 'bero', name: 'べろべろ いも', serif: 'べろべろ ばあ〜〜！', desc: 'めが ぎょろぎょろ。したを ぺろーん。', svg: { eyes: 'googly', mouth: 'tongue' }, anim: 'a-wiggle', snd: 'boing', fx: 'pop', kid: ['laugh', 'へんなかお！'] },
+    { id: 'onara', name: 'おなら いも', serif: 'ぷぅ〜〜〜っ！', desc: 'ほりだした とたんに おならを した。くさい！', svg: { eyes: 'happy', mouth: 'o', cheeks: true }, anim: 'a-fart', fx: 'fart', kid: ['scrunch', 'くさっ！'] },
+    { id: 'pantsu', name: 'パンツ いも', serif: 'いや〜ん！ みないで〜！', desc: 'つちの なかで パンツを はいていた。みずたま もよう。', svg: { eyes: 'shut', mouth: 'wavy', cheeks: true, acc: ['pants', 'sweat'] }, anim: 'a-shy', snd: 'kyaa', fx: 'hearts', kid: ['wow', 'ごめん！'] },
+    { id: 'oshiri', name: 'おしり いも', serif: 'ぷりんっ ぷりんっ♪', desc: 'どこから みても おしり。かおは どこ？', svg: { body: 'butt' }, anim: 'a-twerk', snd: 'puri', fx: 'puri', kid: ['laugh', 'おしりだ〜！'] },
+    { id: 'ousama', name: 'ひげの おうさま いも', serif: 'わしが いもの おうさま じゃ！', desc: 'りっぱな ひげと かんむり。ちょっと いばっている。', svg: { eyes: 'normal', mouth: 'smile', acc: ['mustache', 'crown'] }, anim: 'a-land', snd: 'fanfare', fx: 'confetti', kid: ['happy', 'ははーっ！'] },
+    { id: 'afro', name: 'アフロ いも', serif: 'イェーイ！ ノってるかーい！', desc: 'つちの なかで パーマを かけた。', svg: { mouth: 'laugh', acc: ['afro', 'sunglasses'] }, anim: 'a-dance', snd: 'dance', fx: 'notes', kid: ['laugh', 'イェーイ！'] },
+    { id: 'nebo', name: 'ねぼすけ いも', serif: 'むにゃむにゃ… あと 5ふん…', desc: 'ほりだしても おきない。はなちょうちんが でている。', svg: { eyes: 'sleepy', mouth: 'o', acc: ['bubble'] }, anim: 'a-sleep', snd: 'snore', fx: 'zzz', night: true, kid: ['effort', 'おきてー！'] },
+    { id: 'kushami', name: 'くしゃみ いも', serif: 'は… は… はっくしょーん！！', desc: 'はなに つちが はいって くしゃみが とまらない。', svg: { eyes: 'shut', mouth: 'laugh' }, anim: 'a-sneeze', snd: 'sneeze', fx: 'sneeze', kid: ['dizzy', 'うわー！'] },
+    { id: 'dance', name: 'おどる いも', serif: 'いも いも ダンス〜♪', desc: 'ほりだされて うれしくて おどりだした。', svg: { eyes: 'happy', mouth: 'laugh', cheeks: true, acc: ['sprout'] }, anim: 'a-dance', snd: 'dance', fx: 'notes', kid: ['laugh', 'いっしょに！'] },
+    { id: 'jumbo', name: 'ジャンボ いも', serif: 'ドーーーン！！', desc: 'おおきすぎて しりもちを ついた。', svg: { eyes: 'normal', mouth: 'laugh', cheeks: true }, anim: 'a-jumbo', snd: 'thud', fx: 'fall', pulls: 12, pullMsg: 'お、おもい…！ がんばれ〜！', kid: ['dizzy', 'すってんころりん！'] },
+    { id: 'chibi', name: 'ちっちゃいも', serif: '……ぴっ。', desc: 'すごく がんばって ひっぱったのに、これ だけ。', svg: { eyes: 'normal', mouth: 'o' }, anim: 'a-chibi', snd: 'tiny', fx: 'chibi', pulls: 12, pullMsg: 'これは おおものの よかん…！', kid: ['flat', 'ちっちゃ！'] },
+    { id: 'renketsu', name: 'いもいも れんけつ', serif: 'まだまだ でるよ〜！', desc: 'ひっぱっても ひっぱっても いもが つながって でてくる。', special: 'chain', pulls: 9, count: 8, kid: ['laugh', 'まだでる〜！'] },
+    { id: 'mogura', name: 'サングラス もぐら', serif: 'まぶしっ！ …いもじゃ ないよ。', desc: 'いもだと おもったら もぐらだった。', special: 'mole', anim: 'a-wiggle', snd: 'mole', count: 0, kid: ['wow', 'もぐら!?'] },
+    { id: 'imomushi', name: 'いもむし', serif: 'いも…むし です。よろしく。', desc: '「いも」は「いも」でも、むしの ほう。にょこすけの いとこ らしい。', special: 'worm', anim: 'a-wiggle', snd: 'worm', count: 0, kid: ['love', 'いとこだ〜！'] },
+    { id: 'imouto', name: 'いもうと', serif: 'みつけてくれて ありがと♪', desc: '「いも」は「いも」でも、いもうと だった。', svg: { eyes: 'big', mouth: 'smile', cheeks: true, acc: ['ribbon'] }, anim: 'a-wiggle', snd: 'kira', fx: 'hearts', kid: ['wow', 'いもうと!?'] },
+    { id: 'obake', name: 'おばけ いも', serif: 'うらめし いも〜〜', desc: 'ふわふわ うかぶ。ぜんぜん こわくない。', svg: { body: 'ghost', color: 'ghost', eyes: 'shut', mouth: 'tongue', acc: ['tenkan'] }, anim: 'a-float', snd: 'ghost', night: true, kid: ['wow', 'でた〜！'] },
+    { id: 'rocket', name: 'ロケット いも', serif: 'いってきまーす！', desc: 'ほりだした とたん、うちゅうへ とんでいった。', svg: { eyes: 'happy', mouth: 'laugh', acc: ['goggles'] }, anim: 'a-rocket', fx: 'rocket', kid: ['wow', 'いってらっしゃーい！'] },
+    { id: 'kin', name: 'きんの いも', serif: 'キラーン☆', desc: 'めったに でない まぼろしの いも。すごい！', svg: { color: 'gold', eyes: 'star', mouth: 'laugh' }, anim: 'a-gold', snd: 'fanfare', fx: 'sparkle', gold: true, w: 1.2, rare: true, kid: ['love', 'すごーい！'] },
   ];
   const byId = Object.fromEntries(R.map((r) => [r.id, r]));
   function art(r) {
@@ -531,7 +578,7 @@
     $('pullMsg').textContent = reward.pullMsg || 'れんだで ひっぱれ〜！';
     $('gauge').style.width = '0%';
     $('pullShout').textContent = '';
-    $('pullKid').textContent = '🧒';
+    $('pullKid').innerHTML = nyoko('normal', true);
     $('pullBump').style.setProperty('--b', .6);
     $('pull').hidden = false;
   }
@@ -548,7 +595,7 @@
     const sh = $('pullShout');
     sh.textContent = SHOUTS[pull.n % 2];
     sh.classList.remove('go'); void sh.offsetWidth; sh.classList.add('go');
-    if (p > 0.6) $('pullKid').textContent = '😣';
+    if (pull.n === 1 || (p > 0.6 && !pull.hard)) { pull.hard = p > 0.6; $('pullKid').innerHTML = nyoko(p > 0.6 ? 'scrunch' : 'effort', true); }
     if (pull.n >= pull.need) {
       pull.done = true;
       sh.textContent = 'すっぽーん！';
@@ -592,7 +639,7 @@
     return d;
   }
   function kidSay(face, text) {
-    $('revealKid').innerHTML = `${face}<span class="say">${text}</span>`;
+    $('revealKid').innerHTML = `${nyoko(face)}<span class="say">${text}</span>`;
   }
 
   function showReveal(r) {
@@ -601,7 +648,7 @@
     ov.className = 'overlay reveal' + (r.night ? ' night' : '') + (r.gold ? ' gold' : '');
     $('fx').innerHTML = '';
     $('revealKid').className = 'reveal-kid';
-    $('revealKid').textContent = '🧒';
+    $('revealKid').innerHTML = nyoko('wow');
     $('revealCard').classList.remove('show');
     const hero = $('revealHero');
     hero.style.width = r.special === 'chain' ? 'min(520px, 94vw)' : '';
@@ -637,7 +684,7 @@
           bigText('ぷぅ〜〜〜っ！', '#c6f26b', '#4f7a14', true);
           for (let i = 0; i < 7; i++) later(() => puff(), i * 110);
         }, 900);
-        later(() => { kidSay('🤢', 'くさっ！'); $('revealKid').classList.add('kid-jump'); }, 1300);
+        later(() => { kidSay('scrunch', 'くさっ！'); $('revealKid').classList.add('kid-jump'); }, 1300);
         later(() => burst(['🪰', '💨'], 5, { x: 50, y: 50 }), 1500);
         cardAt = 2300; break;
       case 'zzz':
@@ -649,12 +696,12 @@
           $('revealStage').classList.add('shake-screen');
           for (let i = 0; i < 18; i++) particle(pick(['🟤', '💨', '🍂', '💦']), 46, 58, { dx: 120 + rand(260), dy: -rand(160) + 40, s: 20 + rand(18), d: 0.9 });
         }, 1250);
-        later(() => kidSay('😵', 'うわー！'), 1350);
+        later(() => kidSay('dizzy', 'うわー！'), 1350);
         later(() => $('revealStage').classList.remove('shake-screen'), 2100);
         cardAt = 2200; break;
       case 'fall':
         later(() => { $('revealStage').classList.add('shake-screen'); bigText('ドーーーン！！', '#fff', '#8a4b2a'); }, 600);
-        later(() => { $('revealKid').classList.add('kid-fall'); kidSay('😵', 'すってんころりん！'); SND.boing(); }, 900);
+        later(() => { $('revealKid').classList.add('kid-fall'); kidSay('dizzy', 'すってんころりん！'); SND.boing(); }, 900);
         later(() => $('revealStage').classList.remove('shake-screen'), 1500);
         cardAt = 2000; break;
       case 'chibi':
