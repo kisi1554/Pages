@@ -433,6 +433,7 @@ function renderCard() {
           <div class="word">${rubyHTML(w.segs, { hide: w.focus, hl: w.kanji })}</div>
           <div class="hint">${w.emoji} <span>なんて よむかな？</span></div>
           <button class="big-btn" id="flipBtn">めくる 👆</button>
+          <div class="swipe-hint">👈 よこに スライドしても めくれるよ</div>
         </div>
       </div>
     </div>`;
@@ -445,6 +446,7 @@ function renderCard() {
           <button class="big-btn alt" id="againBtn">もう いっかい 🔁</button>
           <button class="big-btn" id="gotBtn">おぼえた！ ⭕</button>
         </div>
+        <div class="swipe-hint">スライドでも OK　👈 おぼえた ／ もう いっかい 👉</div>
       </div>`;
       $('#flip').classList.add('turned');
       speak(w.yomi);
@@ -519,7 +521,8 @@ function answer(w, choices, idx) {
   $('#after').innerHTML = `<div class="result-line ${ok ? 'good' : 'bad'}">${ok ? pick(['せいかい！', 'すごい！', 'ぴったり！', 'やったね！']) : 'おしい！ こたえは こちら'}</div>
     <div class="word small">${rubyHTML(w.segs, { hl: w.kanji })}</div>
     ${infoHTML(w)}
-    <button class="big-btn" id="nextBtn">つぎの えきへ ▶</button>`;
+    <button class="big-btn" id="nextBtn">つぎの えきへ ▶</button>
+    <div class="swipe-hint">👈 ひだりへ スライドしても すすめるよ</div>`;
   speak(w.yomi);
   $('#nextBtn').onclick = () => { SFX.tap(); SES.i++; renderCard(); };
   $('#nextBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -529,6 +532,60 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-say]');
   if (b) { e.stopPropagation(); const was = S.voice; S.voice = true; speak(b.dataset.say); S.voice = was; }
 });
+
+/* ---------------- よこに スライドして すすむ ----------------
+   ひだりへ = すすむ（めくる・おぼえた・つぎへ）／ みぎへ = もう いっかい（めくった あとだけ） */
+(() => {
+  const box = $('#cardBox');
+  let sx = 0, sy = 0, dx = 0, id = null, dragging = false, moved = false;
+  const card = () => box.querySelector('.card');
+  const leftBtn = () => box.querySelector('#flipBtn, #gotBtn, #nextBtn');
+  const rightBtn = () => box.querySelector('#againBtn');
+  const ignore = t => t.closest('.choice, .say');      // えらぶ ボタンの うえでは はじめない
+
+  box.addEventListener('pointerdown', e => {
+    if (!card() || ignore(e.target) || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    sx = e.clientX; sy = e.clientY; dx = 0; id = e.pointerId; dragging = false; moved = false;
+  });
+  box.addEventListener('pointermove', e => {
+    if (e.pointerId !== id) return;
+    const x = e.clientX - sx, y = e.clientY - sy;
+    if (!dragging) {
+      if (Math.abs(y) > 14 && Math.abs(y) > Math.abs(x)) { id = null; return; }   // たてスクロール
+      if (Math.abs(x) < 10) return;
+      dragging = true; moved = true;
+      try { box.setPointerCapture(id); } catch (err) { /* なくても よい */ }
+    }
+    dx = x;
+    const can = dx < 0 ? leftBtn() : rightBtn();
+    const c = card();
+    c.style.transition = 'none';
+    c.style.transform = `translateX(${can ? dx : dx * 0.25}px) rotate(${dx / 30}deg)`;
+    c.classList.toggle('go-left', !!can && dx < -60);
+    c.classList.toggle('go-right', !!can && dx > 60);
+  });
+  const end = e => {
+    if (e.pointerId !== id) return;
+    id = null;
+    const c = card();
+    if (!dragging || !c) return;
+    dragging = false;
+    const btn = dx < -70 ? leftBtn() : dx > 70 ? rightBtn() : null;
+    c.classList.remove('go-left', 'go-right');
+    c.style.transition = '';
+    setTimeout(() => { moved = false; }, 0);            // この あとに くる クリックだけ むしする
+    if (!btn) { c.style.transform = ''; return; }
+    if (btn.id === 'flipBtn') { c.style.transform = ''; setTimeout(() => btn.click(), 0); return; }   // めくるだけ
+    c.style.transform = `translateX(${dx < 0 ? -120 : 120}vw) rotate(${dx < 0 ? -12 : 12}deg)`;
+    c.style.opacity = '0';
+    setTimeout(() => btn.click(), 180);
+  };
+  box.addEventListener('pointerup', end);
+  box.addEventListener('pointercancel', e => { dx = 0; end(e); });
+  box.addEventListener('click', e => {                  // スライドした あとの クリックは むし
+    if (moved) { e.stopPropagation(); e.preventDefault(); moved = false; }
+  }, true);
+})();
 
 /* ---------------- しゅうてん ---------------- */
 function finishSession() {
