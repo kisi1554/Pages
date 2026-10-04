@@ -1325,6 +1325,26 @@ const RAW_LINES = [
     ],
   },
   {
+    id: 'shinkansen-hikari',
+    name: '新幹線ひかり',
+    yomi: 'しんかんせん ひかり',
+    company: 'JR東海',
+    color: '#e0453a',
+    ink: '#8e221b',
+    symbol: '🚄',
+    note: 'のぞみと こだまの あいだ。静岡や浜松にも とまる新幹線',
+    stations: [
+      ['東京', 'とうきょう'],
+      ['品川', 'しながわ'],
+      ['新横浜', 'しんよこはま'],
+      ['静岡', 'しずおか'],
+      ['浜松', 'はままつ'],
+      ['名古屋', 'なごや'],
+      ['京都', 'きょうと'],
+      ['新大阪', 'しんおおさか'],
+    ],
+  },
+  {
     id: 'shinkansen-tokaido',
     name: '新幹線こだま',
     yomi: 'しんかんせん こだま',
@@ -2326,6 +2346,7 @@ const TRAIN_OVERRIDES = {
 
   // 新幹線(白い車体 + 帯、先頭が とがっている)
   'shinkansen-nozomi': { kind: 'shinkansen', body: '#f7f9fc', band: '#0b318f' },
+  'shinkansen-hikari': { kind: 'shinkansen', body: '#f7f9fc', band: '#e0453a' },
   'shinkansen-tokaido': { kind: 'shinkansen', body: '#f7f9fc', band: '#5b9bd5' },
   'shinkansen-tohoku': { kind: 'shinkansen', body: '#f2f6f4', band: '#00a650' },
   'shinkansen-joetsu': { kind: 'shinkansen', body: '#f7f9fc', band: '#e95098' },
