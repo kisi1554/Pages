@@ -198,6 +198,8 @@ let current = 'home';
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => { s.hidden = s.id !== id; });
   $('#bottomNav').hidden = id === 'home' || id === 'study';
+  document.body.classList.toggle('has-nav', !$('#bottomNav').hidden);
+  document.body.dataset.screen = id;
   current = id;
   window.scrollTo(0, 0);
   if (id === 'home') renderHome();
@@ -274,26 +276,33 @@ function buildDaily() {
   return shuffle(list);
 }
 const countUnseen = () => WORDS.filter(w => !st(w)).length;
-/* あたらしい ことばは、はじめた かんじ（3こ くらい）から 1つずつ。おわったら つぎの かんじへ */
+/* あたらしい ことばは 80字から ランダムに えらんだ かんじから。
+   1かいごとに 2こ あたらしい かんじを はじめ（さいしょは 5こ）、のこりは
+   はじめた かんじのうち まだ ことばが すくない ものから 1〜2こずつ。おなじ かんじばかり つづかない */
+const PER = 2;
+function startRandomKanji() {
+  const left = KANJI.filter(k => !S.started.includes(k.index));
+  if (!left.length) return false;
+  S.started.push(pick(left).index);
+  return true;
+}
 function pickNew(n) {
   const out = [], per = {};
-  const active = () => S.started.map(i => KANJI[i]).filter(k => k.words.some(w => !st(w) && !out.includes(w)));
+  if (!n) return out;
+  for (let i = 0, m = S.started.length < 5 ? 5 - S.started.length : 2; i < m; i++) startRandomKanji();
+  const seen = k => k.words.filter(w => st(w) || out.includes(w)).length;
+  const hasNew = k => k.words.some(w => !st(w) && !out.includes(w));
   let guard = 0;
-  while (out.length < n && guard++ < 200) {
-    let act = active();
-    const capped = act.length && act.every(k => (per[k.k] || 0) >= 2);
-    if (act.length < 3 || capped) {
-      const next = KANJI.find(k => !S.started.includes(k.index));
-      if (next) { S.started.push(next.index); act = active(); }
-      else if (!act.length || capped) {
-        if (!act.length) break;
-        act.forEach(k => { per[k.k] = 0; });
-      }
+  while (out.length < n && guard++ < 300) {
+    let cand = S.started.map(i => KANJI[i]).filter(k => hasNew(k) && (per[k.k] || 0) < PER);
+    if (!cand.length) {
+      if (startRandomKanji()) continue;
+      if (!S.started.some(i => hasNew(KANJI[i]))) break;
+      Object.keys(per).forEach(c => { per[c] = 0; });
+      continue;
     }
-    const k = act.filter(k => (per[k.k] || 0) < 2).sort((a, b) => (per[a.k] || 0) - (per[b.k] || 0) || a.index - b.index)[0];
-    if (!k) break;
+    const k = shuffle(cand).sort((a, b) => seen(a) - seen(b))[0];
     const w = k.words.find(w => !st(w) && !out.includes(w) && !w.eki) || k.words.find(w => !st(w) && !out.includes(w));
-    if (!w) break;
     out.push(w); per[k.k] = (per[k.k] || 0) + 1;
   }
   return out;
@@ -462,7 +471,7 @@ function renderCard() {
   box.innerHTML = `<div class="card quiz" id="card">
     ${head(w, yomi ? '❓ なんて よむ？' : '❓ どの ことば？')}
     ${yomi
-      ? `<div class="word">${rubyHTML(w.segs, { hide: w.focus, hl: w.kanji })}</div>`
+      ? `<div class="word prompt">${rubyHTML(w.segs, { hide: w.focus, hl: w.kanji })}</div>`
       : `<div class="ask"><div class="ask-yomi">「${esc(w.yomi)}」</div><div class="imi"><span class="em">${w.emoji}</span>${textHTML(w.imi)}</div></div>`}
     <div class="choices ${yomi ? 'yomi-c' : 'kaki-c'}">
       ${choices.map((c, i) => `<button class="choice" data-i="${i}">${c.label}</button>`).join('')}
@@ -518,14 +527,17 @@ function answer(w, choices, idx) {
   grade(w, ok);
   addToday(); save();
   renderCombo(); renderTrack();
-  $('#after').innerHTML = `<div class="result-line ${ok ? 'good' : 'bad'}">${ok ? pick(['せいかい！', 'すごい！', 'ぴったり！', 'やったね！']) : 'おしい！ こたえは こちら'}</div>
-    <div class="word small">${rubyHTML(w.segs, { hl: w.kanji })}</div>
+  const ct = $('#card .ctype');                       // 「なんて よむ？」の ところに けっかを だす
+  ct.className = 'ctype result-line ' + (ok ? 'good' : 'bad');
+  ct.innerHTML = ok ? '⭕ ' + pick(['せいかい！', 'すごい！', 'ぴったり！', 'やったね！'])
+    : `❌ おしい！<small>えらんだ のは「${choices[idx].label}」</small>`;
+  $('#after').innerHTML = `<div class="word small">${rubyHTML(w.segs, { hl: w.kanji })}</div>
     ${infoHTML(w)}
     <button class="big-btn" id="nextBtn">つぎの えきへ ▶</button>
     <div class="swipe-hint">👈 ひだりへ スライドしても すすめるよ</div>`;
   speak(w.yomi);
   $('#nextBtn').onclick = () => { SFX.tap(); SES.i++; renderCard(); };
-  $('#nextBtn').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  $('#card').classList.add('answered');
 }
 
 document.addEventListener('click', e => {
