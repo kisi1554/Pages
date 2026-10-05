@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>せんろ つくろう！</title>
+<meta name="description" content="ゆびで なぞるだけで せんろが できる！ きょだいな コースを つくって でんしゃを はしらせよう。">
+<meta name="theme-color" content="#2f7fe0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛤️</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --ink: #1f2f45;
+    --accent: #2f7fe0;
+    --on: #ff8a00;
+    --grass: #93d16c;
+  }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--grass); color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体", "Meiryo", system-ui, sans-serif;
+    user-select: none; -webkit-user-select: none; overscroll-behavior: none; -webkit-text-size-adjust: 100%;
+  }
+  canvas { position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; display: block; }
+  #fg { touch-action: none; cursor: crosshair; }
+  #fg.pan { cursor: grab; }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+
+  #top {
+    position: fixed; left: 0; right: 0; top: 0; display: flex; gap: 8px;
+    align-items: flex-start; justify-content: space-between;
+    padding: calc(env(safe-area-inset-top) + 8px) 10px 0; pointer-events: none;
+  }
+  #top > * { pointer-events: auto; }
+  #stat {
+    background: rgba(255,255,255,.9); border-radius: 14px; padding: 6px 12px;
+    font-weight: 700; font-size: 13px; line-height: 1.45; box-shadow: 0 2px 8px rgba(0,0,0,.15);
+    white-space: nowrap;
+  }
+  #stat b { font-size: 16px; color: var(--accent); }
+  #btns { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .rb {
+    width: 54px; height: 54px; border-radius: 14px; border: none; background: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2); font-size: 22px; line-height: 1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0;
+  }
+  .rb small { font-size: 9.5px; font-weight: 700; letter-spacing: -.02em; }
+  .rb.on { background: #fff4e0; box-shadow: 0 0 0 3px var(--on), 0 2px 8px rgba(0,0,0,.2); }
+  .rb:active, .tool:active { transform: scale(.94); }
+
+  #zoom { position: fixed; right: 10px; bottom: calc(env(safe-area-inset-bottom) + 100px); display: flex; flex-direction: column; gap: 8px; }
+  #zoom .rb { font-size: 28px; font-weight: 700; }
+
+  #tools {
+    position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 6px; overflow-x: auto;
+    padding: 8px 10px calc(env(safe-area-inset-bottom) + 8px); background: rgba(255,255,255,.72);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); scrollbar-width: none;
+    justify-content: safe center;
+  }
+  #tools::-webkit-scrollbar { display: none; }
+  .tool {
+    flex: 0 0 auto; width: 72px; height: 74px; border-radius: 16px; background: #fff;
+    border: 3px solid transparent; box-shadow: 0 2px 6px rgba(0,0,0,.15);
+    font-size: 30px; line-height: 1; display: flex; flex-direction: column; align-items: center;
+    justify-content: center; gap: 4px; padding: 0;
+  }
+  .tool span { font-size: 12px; font-weight: 700; }
+  .tool.on { border-color: var(--on); background: #fff4e0; }
+
+  #sub {
+    position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom) + 98px);
+    background: rgba(255,255,255,.95); border-radius: 18px; padding: 8px; box-shadow: 0 4px 14px rgba(0,0,0,.2);
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center;
+    width: max-content; max-width: calc(100vw - 90px);
+  }
+  #sub[hidden] { display: none; }
+  .ty {
+    width: 64px; height: 60px; border-radius: 12px; border: 3px solid transparent; background: #f3f6fa;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 0;
+  }
+  .ty i { display: block; width: 40px; height: 16px; border-radius: 8px 14px 14px 8px; border: 2px solid rgba(0,0,0,.35); }
+  .ty span { font-size: 9.5px; font-weight: 700; line-height: 1.15; text-align: center; }
+  .ty.on { border-color: var(--on); background: #fff4e0; }
+  .len { display: flex; align-items: center; gap: 4px; padding: 0 4px; font-weight: 700; font-size: 13px; }
+  .len button { width: 40px; height: 40px; border-radius: 50%; border: none; background: #e3edf9; font-size: 22px; font-weight: 700; }
+  .len b { font-size: 20px; min-width: 1.6em; text-align: center; color: var(--accent); }
+
+  #toast {
+    position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 76px); transform: translateX(-50%);
+    background: rgba(31,47,69,.92); color: #fff; padding: 10px 16px; border-radius: 14px;
+    font-weight: 700; font-size: 15px; line-height: 1.5; text-align: center; max-width: min(92vw, 520px);
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+
+  .modal { position: fixed; inset: 0; background: rgba(20,30,45,.45); display: grid; place-items: center; padding: 16px; }
+  .modal[hidden] { display: none; }
+  .sheet {
+    background: #fff; border-radius: 22px; padding: 18px; width: min(460px, 100%); max-height: 90vh; overflow: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  }
+  .sheet h2 { margin: 0 0 10px; font-size: 22px; text-align: center; }
+  .sheet p { margin: 6px 0; font-size: 14px; line-height: 1.6; }
+  .gen { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 8px 0 14px; }
+  .gen button {
+    border: none; border-radius: 16px; padding: 12px 4px; background: #e8f2fd; font-size: 30px; line-height: 1.2;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
+  }
+  .gen button span { display: block; font-size: 13px; font-weight: 700; margin-top: 4px; }
+  .gen button:last-child { background: #fff0d8; }
+  .wide { display: block; width: 100%; border: none; border-radius: 14px; padding: 14px; font-size: 16px; font-weight: 700; background: #eef2f6; margin-top: 8px; }
+  .wide.warn { background: #ffe6e3; color: #b3261e; }
+  details { margin-top: 10px; background: #f6f9fc; border-radius: 14px; padding: 10px 14px; }
+  summary { font-weight: 700; font-size: 16px; cursor: pointer; }
+  details ul { margin: 8px 0 2px; padding-left: 1.2em; font-size: 14px; line-height: 1.7; }
+
+  @media (max-width: 520px) {
+    .rb { width: 46px; height: 48px; font-size: 19px; }
+    .rb small { font-size: 8.5px; }
+    #btns { max-width: 56vw; }
+    #stat { font-size: 11px; padding: 5px 9px; }
+    #stat b { font-size: 14px; }
+    .tool { width: 62px; height: 66px; font-size: 26px; }
+    .tool span { font-size: 11px; }
+    #sub { bottom: calc(env(safe-area-inset-bottom) + 88px); max-width: calc(100vw - 20px); }
+    #zoom { bottom: calc(env(safe-area-inset-bottom) + 90px); }
+    .ty { width: 56px; height: 56px; }
+    #toast { top: calc(env(safe-area-inset-top) + 124px); }
+  }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<canvas id="fg"></canvas>
+
+<div id="top">
+  <div id="stat"></div>
+  <div id="btns">
+    <button class="rb" id="bUndo"><span>↩️</span><small>もどす</small></button>
+    <button class="rb" id="bFit"><span>🔭</span><small>ぜんぶ みる</small></button>
+    <button class="rb" id="bFollow"><span>🎥</span><small>おいかける</small></button>
+    <button class="rb" id="bSpeed"><span>🚃</span><small>ふつう</small></button>
+    <button class="rb" id="bSound"><span>🔊</span><small>おと</small></button>
+    <button class="rb" id="bMenu"><span>🌏</span><small>メニュー</small></button>
+  </div>
+</div>
+
+<div id="zoom">
+  <button class="rb" id="zIn" aria-label="おおきく">＋</button>
+  <button class="rb" id="zOut" aria-label="ちいさく">－</button>
+</div>
+
+<div id="sub" hidden></div>
+
+<nav id="tools">
+  <button class="tool" data-tool="view">👆<span>みる</span></button>
+  <button class="tool" data-tool="draw">✏️<span>せんろ</span></button>
+  <button class="tool" data-tool="train">🚃<span>でんしゃ</span></button>
+  <button class="tool" data-tool="eki">🚉<span>えき</span></button>
+  <button class="tool" data-tool="tun">⛰️<span>トンネル</span></button>
+  <button class="tool" data-tool="fumi">🚧<span>ふみきり</span></button>
+  <button class="tool" data-tool="deco">🌳<span>き・いえ</span></button>
+  <button class="tool" data-tool="erase">🧽<span>けす</span></button>
+</nav>
+
+<div id="toast"></div>
+
+<div id="menu" class="modal" hidden>
+  <div class="sheet">
+    <h2>🌏 メニュー</h2>
+    <p>おおきな コースを じどうで つくるよ。いまの せんろの となりに できるよ。</p>
+    <div class="gen">
+      <button data-gen="1.4">🚃<span>おおきい</span></button>
+      <button data-gen="2.8">🚄<span>とても おおきい</span></button>
+      <button data-gen="6">🌏<span>きょだい！</span></button>
+    </div>
+    <button class="wide warn" id="bClear">🧹 ぜんぶ けす</button>
+    <details>
+      <summary>❓ あそびかた</summary>
+      <ul>
+        <li>✏️ <b>せんろ</b>：ゆびで なぞると せんろが できるよ。せんろを タップすると くるっと まわるよ。</li>
+        <li>せんろに せんろを つなぐと <b>ポイント</b>（わかれみち）や <b>クロス</b> に なるよ。</li>
+        <li>👆 <b>みる</b>：ゆびで うごかせるよ。ポイントの ▶ を タップすると いくさきが かわるよ。でんしゃを タップすると とまる・はしる。</li>
+        <li>🚃 <b>でんしゃ</b>：せんろを タップすると でんしゃが でるよ。ながさも えらべるよ。</li>
+        <li>🚉 えき・⛰️ トンネル・🚧 ふみきり は まっすぐの せんろに おけるよ。</li>
+        <li>ふたつの ゆびで ひろげたり ちぢめたり できるよ。</li>
+        <li>🎥 <b>おいかける</b> で でんしゃに ついていくよ。</li>
+        <li>まちがえたら ↩️ <b>もどす</b>。つくった せんろは じどうで のこるよ。</li>
+      </ul>
+    </details>
+    <button class="wide" id="bClose">とじる</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ===== きほん =====
+const DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0]; // 0:うえ 1:みぎ 2:した 3:ひだり
+const opp = e => (e + 2) & 3;
+const K = (x, y) => (x + 32768) * 65536 + (y + 32768);
+const KX = k => Math.floor(k / 65536) - 32768;
+const KY = k => (k % 65536) - 32768;
+const MID = e => [.5 + DX[e] * .5, .5 + DY[e] * .5];
+const PL = (a, b) => b === opp(a) ? 1 : Math.PI / 4;
+const TS = 56;               // 1マスの おおきさ（zoom=1 のとき）
+const CARP = .8, BOG = .55;  // しゃりょうの かんかく・しゃりょうの ながさ
+const ZMIN = .045, ZMAX = 3;
+const SPEEDS = [1.4, 2.6, 4.6], SPEED_ICON = ['🐢', '🚃', '🚄'], SPEED_NAME = ['ゆっくり', 'ふつう', 'はやい'];
+const TYPES = [
+  { name: 'しろい しんかんせん', body: '#f6f8fb', stripe: '#1f5fc4', nose: 1, sp: 1.35 },
+  { name: 'みどりの しんかんせん', body: '#1e9a63', stripe: '#f0f2f4', nose: 1, sp: 1.35 },
+  { name: 'きいろい しんかんせん', body: '#ffd93b', stripe: '#2457b8', nose: 1, sp: 1.3 },
+  { name: 'みどりの でんしゃ', body: '#d3d9df', stripe: '#36b14a', sp: 1 },
+  { name: 'あかい でんしゃ', body: '#e2343c', stripe: '#f6f6f6', sp: 1.1 },
+  { name: 'きかんしゃ', body: '#262626', stripe: '#b8312f', loco: 1, coach: '#7d3f22', sp: .85 },
+];
+const DECOS = ['🌳', '🌲', '🏠', '🏡', '🌷', '🏢', '🌻', '🐄', '🏫', '🌸'];
+const ARC = {};
+for (let a = 0; a < 4; a++) for (let b = 0; b < 4; b++) {
+  if (a === b || b === opp(a)) continue;
+  const cx = .5 + (DX[a] + DX[b]) * .5, cy = .5 + (DY[a] + DY[b]) * .5;
+  const A = MID(a), B = MID(b);
+  const t0 = Math.atan2(A[1] - cy, A[0] - cx), t1 = Math.atan2(B[1] - cy, B[0] - cx);
+  let d = t1 - t0; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
+  ARC[a * 4 + b] = { cx, cy, t0, d };
+}
+function local(a, b, p) {
+  if (b === opp(a)) { const A = MID(a), B = MID(b); return [A[0] + (B[0] - A[0]) * p, A[1] + (B[1] - A[1]) * p]; }
+  const c = ARC[a * 4 + b], th = c.t0 + c.d * p;
+  return [c.cx + .5 * Math.cos(th), c.cy + .5 * Math.sin(th)];
+}
+const rpos = r => { const l = local(r.a, r.b, r.p); return [r.x + l[0], r.y + l[1]]; };
+const rnd = n => Math.floor(Math.random() * n);
+
+// ===== じょうたい =====
+let tiles = new Map(), specials = new Set(), trains = [];
+const cam = { x: 0, y: 0, z: 1 };
+let tool = 'draw', speedLv = 1, sound = true, followId = 0, trType = 0, trCars = 4;
+let bgDirty = true, statDirty = true, quiet = false, trainSeq = 1;
+let undoStack = [], rec = null;
+
+const get = (x, y) => tiles.get(K(x, y));
+const newT = () => ({ p: [], k: '', sw: 0, d: '' });
+const clone = t => t ? { p: t.p.map(q => [q[0], q[1]]), k: t.k, sw: t.sw, d: t.d } : null;
+const isStraight1 = t => !!t && t.p.length === 1 && t.p[0][1] === opp(t.p[0][0]);
+const usesEdge = (t, e) => !!t && t.p.some(q => q[0] === e || q[1] === e);
+const linked = (x, y, e) => usesEdge(get(x + DX[e], y + DY[e]), opp(e));
+const hasPath = (t, a, b) => !!t && t.p.some(q => (q[0] === a && q[1] === b) || (q[0] === b && q[1] === a));
+
+function norm(t) {
+  if (!t) return null;
+  const seen = new Set();
+  t.p = t.p.filter(q => {
+    if (q[0] === q[1]) return false;
+    const id = Math.min(q[0], q[1]) * 4 + Math.max(q[0], q[1]);
+    if (seen.has(id)) return false; seen.add(id); return true;
+  });
+  if (t.p.length) t.d = '';
+  if (t.k && !isStraight1(t)) t.k = '';
+  if (t.sw >= t.p.length) t.sw = 0;
+  if (!t.p.length && !t.d) return null;
+  return t;
+}
+function rawSet(k, t) {
+  if (t) tiles.set(k, t); else tiles.delete(k);
+  if (t && (t.k === 'tun' || t.k === 'fumi')) specials.add(k); else specials.delete(k);
+  bgDirty = statDirty = true;
+}
+function put(x, y, t) {
+  const k = K(x, y);
+  if (rec && !rec.has(k)) rec.set(k, clone(tiles.get(k)));
+  rawSet(k, norm(t));
+}
+function begin() { rec = new Map(); }
+function commit() {
+  if (rec && rec.size) { undoStack.push(rec); if (undoStack.length > 60) undoStack.shift(); scheduleSave(); }
+  rec = null; checkTrains();
+}
+function cancelAction() {
+  if (!rec) return;
+  const r = rec; rec = null;
+  for (const [k, t] of r) rawSet(k, clone(t));
+}
+function undo() {
+  const r = undoStack.pop();
+  if (!r) { toast('もどせる ものが ないよ'); return; }
+  for (const [k, t] of r) rawSet(k, clone(t));
+  checkTrains(); scheduleSave(); sfx.erase();
+}
+
+// ===== せんろを つなぐ ルール =====
+// ストロークの はし：dir の ほうこうへ つなげる
+function endApply(x, y, dir) {
+  const t = clone(get(x, y)) || newT();
+  if (usesEdge(t, dir)) return;
+  if (!t.p.length) t.p = [[opp(dir), dir]];
+  else {
+    let done = false;
+    for (let i = 0; i < t.p.length && !done; i++) {
+      const [p, q] = t.p[i], lp = linked(x, y, p), lq = linked(x, y, q);
+      if (lp && !lq) { t.p[i] = [p, dir]; done = true; }
+      else if (lq && !lp) { t.p[i] = [q, dir]; done = true; }
+      else if (!lp && !lq && t.p.length === 1) { t.p[i] = [opp(dir), dir]; done = true; }
+    }
+    if (!done) {
+      if (t.p.length >= 3) { t.p = [[opp(dir), dir]]; t.sw = 0; }
+      else {
+        const es = new Set(); t.p.forEach(q => { es.add(q[0]); es.add(q[1]); });
+        const X = es.has(opp(dir)) ? opp(dir) : [...es][0];
+        t.p.push([X, dir]); t.sw = t.p.length - 1;
+      }
+    }
+  }
+  put(x, y, t);
+}
+// ストロークの とちゅう：a から b へ とおりぬける
+function middleApply(x, y, a, b) {
+  if (a === b) return;
+  const t = clone(get(x, y)) || newT();
+  if (hasPath(t, a, b)) return;
+  if (t.p.length) {
+    for (let i = 0; i < t.p.length; i++) {
+      const [p, q] = t.p[i]; let o = -1;
+      if (p === a || p === b) o = q; else if (q === a || q === b) o = p;
+      if (o >= 0 && !linked(x, y, o)) { t.p[i] = [a, b]; put(x, y, t); return; }
+    }
+    if (t.p.length >= 3) { t.p = [[a, b]]; t.sw = 0; }
+    else { t.p.push([a, b]); t.sw = t.p.length - 1; }
+  } else t.p = [[a, b]];
+  put(x, y, t);
+}
+const edgeTo = (f, t) => { const dx = t.x - f.x, dy = t.y - f.y; return dx > 0 ? 1 : dx < 0 ? 3 : dy > 0 ? 2 : 0; };
+class Stroke {
+  constructor() { this.L = []; }
+  add(x, y) {
+    const L = this.L;
+    if (L.length) {
+      const l = L[L.length - 1];
+      if (l.x === x && l.y === y) return;
+      let cx = l.x, cy = l.y, g = 0;
+      while (Math.abs(x - cx) + Math.abs(y - cy) > 1 && g++ < 2000) {
+        if (Math.abs(x - cx) >= Math.abs(y - cy)) cx += Math.sign(x - cx); else cy += Math.sign(y - cy);
+        this.step(cx, cy);
+      }
+    }
+    this.step(x, y);
+  }
+  step(x, y) {
+    const L = this.L;
+    L.push({ x, y, base: clone(get(x, y)) });
+    const n = L.length; if (n < 2) return;
+    const cur = L[n - 1], pr = L[n - 2], toPrev = edgeTo(cur, pr), toCur = opp(toPrev);
+    put(pr.x, pr.y, clone(pr.base));
+    if (n === 2) endApply(pr.x, pr.y, toCur);
+    else middleApply(pr.x, pr.y, edgeTo(pr, L[n - 3]), toCur);
+    endApply(cur.x, cur.y, toPrev);
+    sfx.put();
+  }
+}
+function rectLoop(x, y, w, h) {
+  const s = new Stroke();
+  for (let i = 0; i <= w; i++) s.add(x + i, y);
+  for (let j = 1; j <= h; j++) s.add(x + w, y + j);
+  for (let i = w - 1; i >= 0; i--) s.add(x + i, y + h);
+  for (let j = h - 1; j >= 0; j--) s.add(x, y + j);
+}
+function tapTrack(x, y) {
+  const t = clone(get(x, y));
+  if (!t || !t.p.length) { const n = newT(); n.p = [[3, 1]]; put(x, y, n); sfx.put(); return; }
+  t.p = t.p.map(q => [(q[0] + 1) & 3, (q[1] + 1) & 3]);
+  put(x, y, t); sfx.click();
+}
+function sharedEdge(t) {
+  if (!t || t.p.length < 2) return -1;
+  const cnt = [0, 0, 0, 0];
+  t.p.forEach(q => { cnt[q[0]]++; cnt[q[1]]++; });
+  const q = t.p[t.sw];
+  if (cnt[q[0]] > 1) return q[0];
+  if (cnt[q[1]] > 1) return q[1];
+  return cnt.findIndex(c => c > 1);
+}
+
+// ===== でんしゃ =====
+function chooseExit(t, e) {
+  if (!t) return -1;
+  const c = [];
+  for (const q of t.p) { if (q[0] === e) c.push(q[1]); else if (q[1] === e) c.push(q[0]); }
+  if (!c.length) return -1;
+  if (c.length === 1) return c[0];
+  const q = t.p[t.sw];
+  if (q) { if (q[0] === e) return q[1]; if (q[1] === e) return q[0]; }
+  return c[0];
+}
+// role 0:せんとう 1:うしろの しゃりょう 2:うしろむきに たどる（でんしゃを おくとき）
+function advance(tr, r, dist, role) {
+  let moved = 0, g = 0;
+  while (g++ < 5000) {
+    const len = PL(r.a, r.b), rem = (1 - r.p) * len;
+    if (dist <= rem) { r.p += dist / len; return moved + dist; }
+    dist -= rem; moved += rem; r.p = 1;
+    const nx = r.x + DX[r.b], ny = r.y + DY[r.b], e = opp(r.b), t = get(nx, ny);
+    let ex;
+    if (role === 1) { const c = tr.ch.get(K(nx, ny) * 4 + e); ex = (c !== undefined && hasPath(t, e, c)) ? c : chooseExit(t, e); }
+    else ex = chooseExit(t, e);
+    if (ex < 0) { r.blocked = true; return moved; }
+    if (role === 0) tr.ch.set(K(nx, ny) * 4 + e, ex);
+    else if (role === 2) tr.ch.set(K(nx, ny) * 4 + ex, e);
+    r.x = nx; r.y = ny; r.a = e; r.b = ex; r.p = 0;
+    if (role === 0 && tr.live) onEnter(tr);
+  }
+  return moved;
+}
+function spawnTrain(x, y, ty, n, silent) {
+  const t = get(x, y);
+  if (!t || !t.p.length) return false;
+  if (trains.length >= 20) { toast('でんしゃは 20だい まで だよ'); return false; }
+  const q = t.p[t.sw] || t.p[0];
+  const tr = { id: trainSeq++, ty, n, r: [], ch: new Map(), flip: false, wait: 0, stop: false, rev: false, live: false, smoke: 0, moving: false };
+  const lead = { x, y, a: q[0], b: q[1], p: .5 };
+  tr.ch.set(K(x, y) * 4 + lead.a, lead.b);
+  advance(tr, lead, (n - 1) * CARP + BOG, 0);
+  delete lead.blocked;
+  tr.ch.set(K(lead.x, lead.y) * 4 + lead.a, lead.b);
+  const back = { x: lead.x, y: lead.y, a: lead.b, b: lead.a, p: 1 - lead.p };
+  const rs = [{ ...lead }], offs = [];
+  for (let c = 0; c < n; c++) offs.push(c * CARP, c * CARP + BOG);
+  for (let i = 1; i < offs.length; i++) {
+    advance(tr, back, offs[i] - offs[i - 1], 2);
+    if (back.blocked) break;
+    rs.push({ x: back.x, y: back.y, a: back.b, b: back.a, p: 1 - back.p });
+  }
+  const cars = Math.floor(rs.length / 2);
+  if (cars < 1) { if (!silent) toast('せんろが みじかすぎるよ'); return false; }
+  tr.n = cars; tr.r = rs.slice(0, cars * 2);
+  tr.live = true; trains.push(tr); statDirty = true;
+  if (!silent) { sfx.toot(TYPES[ty].loco); if (cars < n) toast(`せんろが みじかいので ${cars}りょう に したよ`); }
+  scheduleSave();
+  return tr;
+}
+function reverseTrain(tr) {
+  tr.ch.clear();
+  for (const r of tr.r) {
+    tr.ch.set(K(r.x, r.y) * 4 + r.b, r.a);
+    const a = r.a; r.a = r.b; r.b = a; r.p = 1 - r.p;
+  }
+  tr.r.reverse(); tr.flip = !tr.flip;
+}
+let lastJoint = 0;
+function onEnter(tr) {
+  if (tr.id === followId) {
+    const now = performance.now();
+    if (now - lastJoint > 90) { lastJoint = now; sfx.joint(); }
+  }
+}
+function updTrain(tr, dt) {
+  tr.moving = false;
+  if (tr.stop) return;
+  if (tr.wait > 0) {
+    tr.wait -= dt; if (tr.wait > 0) return;
+    if (tr.rev) { tr.rev = false; reverseTrain(tr); }
+    return;
+  }
+  let d = SPEEDS[speedLv] * TYPES[tr.ty].sp * dt, station = false;
+  const L = tr.r[0], t = get(L.x, L.y);
+  if (t && t.k === 'eki' && L.p < .5) {
+    const need = (.5 - L.p) * PL(L.a, L.b);
+    if (d >= need) { d = need; station = true; }
+  }
+  const m = advance(tr, L, d, 0);
+  for (let i = 1; i < tr.r.length; i++) { advance(tr, tr.r[i], m, 1); delete tr.r[i].blocked; }
+  tr.moving = m > 0;
+  if (L.blocked) { delete L.blocked; tr.wait = .6; tr.rev = true; }
+  else if (station) {
+    tr.wait = 2.2;
+    const p = rpos(L);
+    if (tr.id === followId || onScreen(p[0], p[1], 0)) sfx.chime();
+  }
+}
+function checkTrains() {
+  const before = trains.length;
+  trains = trains.filter(tr => tr.r.every(r => hasPath(get(r.x, r.y), r.a, r.b)));
+  if (trains.length < before) { toast('でんしゃが せんろから はずれちゃった'); scheduleSave(); }
+  if (!trains.some(t => t.id === followId)) setFollow(0);
+  statDirty = true;
+}
+function carEnds(tr, c) {
+  const n = tr.n, fi = tr.flip ? 2 * n - 1 - 2 * c : 2 * c, bi = tr.flip ? 2 * n - 2 - 2 * c : 2 * c + 1;
+  return [rpos(tr.r[fi]), rpos(tr.r[bi])];
+}
+function hitTrain(wx, wy) {
+  let best = null, bd = .55;
+  for (const tr of trains) for (let c = 0; c < tr.n; c++) {
+    const [F, B] = carEnds(tr, c);
+    const d = Math.hypot((F[0] + B[0]) / 2 - wx, (F[1] + B[1]) / 2 - wy);
+    if (d < bd) { bd = d; best = tr; }
+  }
+  return best;
+}
+
+// ===== おと（WebAudio の ごうせいおん） =====
+let AC = null;
+function ensureAudio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+  if (AC && AC.state === 'suspended') AC.resume().catch(() => {});
+}
+function tone(f, dur, type = 'sine', vol = .2, when = 0, f2 = 0) {
+  if (!sound || !AC || quiet) return;
+  try {
+    const t = AC.currentTime + when, o = AC.createOscillator(), g = AC.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + .02);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(AC.destination); o.start(t); o.stop(t + dur + .05);
+  } catch (e) { /* なにもしない */ }
+}
+let lastPut = 0;
+const sfx = {
+  toot(sl) {
+    if (sl) { tone(660, .35, 'sine', .12); tone(830, .35, 'sine', .09); tone(660, .7, 'sine', .12, .4); tone(830, .7, 'sine', .09, .4); }
+    else { tone(440, .45, 'sawtooth', .05); tone(554, .45, 'sawtooth', .04); tone(440, .3, 'sawtooth', .05, .5); tone(554, .3, 'sawtooth', .04, .5); }
+  },
+  chime() { tone(880, .5, 'sine', .12); tone(740, .5, 'sine', .12, .28); tone(587, .8, 'sine', .12, .56); },
+  kan(h) { tone(h ? 960 : 880, .16, 'square', .025); },
+  click() { tone(1500, .05, 'square', .035); },
+  put() { const n = performance.now(); if (n - lastPut < 55) return; lastPut = n; tone(520, .07, 'triangle', .1, 0, 760); },
+  erase() { const n = performance.now(); if (n - lastPut < 55) return; lastPut = n; tone(330, .1, 'triangle', .1, 0, 160); },
+  joint() { tone(130, .06, 'triangle', .14); tone(115, .06, 'triangle', .12, .1); },
+  pop() { tone(700, .12, 'sine', .12, 0, 1200); },
+};
+
+// ===== がめん =====
+const bg = document.getElementById('bg'), fg = document.getElementById('fg');
+const bctx = bg.getContext('2d'), fctx = fg.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  W = innerWidth; H = innerHeight; DPR = Math.min(2, window.devicePixelRatio || 1);
+  for (const c of [bg, fg]) { c.width = Math.round(W * DPR); c.height = Math.round(H * DPR); }
+  bgDirty = true;
+}
+addEventListener('resize', resize);
+const S = () => cam.z * TS;
+const toWorld = (px, py) => { const s = S(); return { x: cam.x + (px - W / 2) / s, y: cam.y + (py - H / 2) / s }; };
+const sx = wx => (wx - cam.x) * S() + W / 2;
+const sy = wy => (wy - cam.y) * S() + H / 2;
+function onScreen(wx, wy, m) {
+  const s = S(), x = sx(wx), y = sy(wy), mm = m * s;
+  return x > -mm && x < W + mm && y > -mm && y < H + mm;
+}
+function visibleTiles() {
+  const s = S();
+  const x0 = Math.floor(cam.x - W / 2 / s) - 1, x1 = Math.floor(cam.x + W / 2 / s) + 1;
+  const y0 = Math.floor(cam.y - H / 2 / s) - 1, y1 = Math.floor(cam.y + H / 2 / s) + 1;
+  const out = [];
+  if ((x1 - x0 + 1) * (y1 - y0 + 1) < tiles.size) {
+    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const t = tiles.get(K(x, y)); if (t) out.push({ x, y, t }); }
+  } else {
+    for (const [k, t] of tiles) { const x = KX(k), y = KY(k); if (x >= x0 && x <= x1 && y >= y0 && y <= y1) out.push({ x, y, t }); }
+  }
+  return { out, x0, x1, y0, y1 };
+}
+function tileTf(c, x, y, s) { c.setTransform(s * DPR, 0, 0, s * DPR, sx(x) * DPR, sy(y) * DPR); }
+function pathStroke(c, a, b, off) {
+  c.beginPath();
+  if (b === opp(a)) {
+    const A = MID(a), B = MID(b), nx = -DY[b] * off, ny = DX[b] * off;
+    c.moveTo(A[0] + nx, A[1] + ny); c.lineTo(B[0] + nx, B[1] + ny);
+  } else {
+    const r = ARC[a * 4 + b];
+    c.arc(r.cx, r.cy, .5 + off, r.t0, r.t0 + r.d, r.d < 0);
+  }
+  c.stroke();
+}
+function axisRot(c, t) { c.translate(.5, .5); if (t.p[0][0] % 2 === 0) c.rotate(Math.PI / 2); }
+
+function drawBg() {
+  bgDirty = false;
+  const c = bctx, s = S();
+  c.setTransform(1, 0, 0, 1, 0, 0);
+  c.fillStyle = '#93d16c'; c.fillRect(0, 0, bg.width, bg.height);
+  const { out, x0, x1, y0, y1 } = visibleTiles();
+  if (s >= 18) {
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    c.strokeStyle = 'rgba(255,255,255,.22)'; c.lineWidth = 1; c.beginPath();
+    for (let x = x0; x <= x1; x++) { const X = Math.round(sx(x)) + .5; c.moveTo(X, 0); c.lineTo(X, H); }
+    for (let y = y0; y <= y1; y++) { const Y = Math.round(sy(y)) + .5; c.moveTo(0, Y); c.lineTo(W, Y); }
+    c.stroke();
+  }
+  if (s < 11) { // とおくから みたとき：かんたんに
+    c.setTransform(DPR, 0, 0, DPR, 0, 0);
+    c.fillStyle = '#7fc25a';
+    if (s >= 4) for (const o of out) if (o.t.d) c.fillRect(sx(o.x) + s * .2, sy(o.y) + s * .2, s * .6, s * .6);
+    c.lineWidth = Math.max(1.6, s * .46); c.lineCap = 'round'; c.lineJoin = 'round';
+    c.strokeStyle = '#2f7fe0'; c.beginPath();
+    for (const o of out) {
+      const X = sx(o.x), Y = sy(o.y);
+      for (const q of o.t.p) {
+        const A = MID(q[0]), B = MID(q[1]);
+        c.moveTo(X + A[0] * s, Y + A[1] * s);
+        if (q[1] === opp(q[0])) c.lineTo(X + B[0] * s, Y + B[1] * s);
+        else c.quadraticCurveTo(X + s / 2, Y + s / 2, X + B[0] * s, Y + B[1] * s);
+      }
+    }
+    c.stroke();
+    c.fillStyle = '#e3dccd';
+    for (const o of out) if (o.t.k === 'eki') c.fillRect(sx(o.x), sy(o.y), s, s);
+    c.lineCap = 'butt';
+    return;
+  }
+  // 1) えきの ホーム・ふみきりの みち
+  for (const o of out) {
+    const t = o.t; if (!t.k || t.k === 'tun') continue;
+    tileTf(c, o.x, o.y, s); axisRot(c, t);
+    if (t.k === 'eki') {
+      c.fillStyle = '#e3dccd'; c.fillRect(-.5, -.5, 1, .24); c.fillRect(-.5, .26, 1, .24);
+      c.fillStyle = '#f2c200'; c.fillRect(-.5, -.29, 1, .03); c.fillRect(-.5, .26, 1, .03);
+      c.fillStyle = '#b9b1a0'; c.fillRect(-.5, -.5, 1, .03); c.fillRect(-.5, .47, 1, .03);
+    } else if (t.k === 'fumi') {
+      c.fillStyle = '#6d6d72'; c.fillRect(-.36, -1.5, .72, 3);
+      c.fillStyle = '#fff'; c.fillRect(-.36, -1.5, .03, 3); c.fillRect(.33, -1.5, .03, 3);
+      for (let i = -1.4; i < 1.5; i += .4) c.fillRect(-.015, i, .03, .2);
+    }
+  }
+  // 2) せんろ
+  c.lineCap = 'butt';
+  for (const o of out) {
+    const t = o.t; if (!t.p.length) continue;
+    tileTf(c, o.x, o.y, s);
+    const sh = sharedEdge(t);
+    const order = t.p.map((q, i) => i).sort((i, j) => (i === t.sw) - (j === t.sw));
+    for (const i of order) {
+      const q = t.p[i], dim = sh >= 0 && i !== t.sw && (q[0] === sh || q[1] === sh);
+      c.lineWidth = .46; c.strokeStyle = dim ? '#8db8ec' : '#2f7fe0'; pathStroke(c, q[0], q[1], 0);
+      c.lineWidth = .045; c.strokeStyle = dim ? '#6a98d2' : '#1b5cb2';
+      pathStroke(c, q[0], q[1], -.12); pathStroke(c, q[0], q[1], .12);
+      if (s >= 30) { c.lineWidth = .02; c.strokeStyle = 'rgba(255,255,255,.35)'; pathStroke(c, q[0], q[1], 0); }
+    }
+    for (let e = 0; e < 4; e++) {
+      if (!usesEdge(t, e)) continue;
+      c.save(); c.translate(.5, .5); c.rotate((e - 1) * Math.PI / 2);
+      if (linked(o.x, o.y, e)) { c.fillStyle = 'rgba(15,50,110,.55)'; c.fillRect(.485, -.23, .03, .46); }
+      else {
+        c.fillStyle = '#d63a2f'; c.fillRect(.36, -.27, .13, .54);
+        c.fillStyle = '#fff'; c.fillRect(.36, -.09, .13, .18);
+      }
+      c.restore();
+    }
+    if (sh >= 0 && s >= 20) { // ポイントの やじるし
+      const q = t.p[t.sw], other = q[0] === sh ? q[1] : q[0];
+      const P = local(sh, other, .42), P2 = local(sh, other, .5);
+      const ang = Math.atan2(P2[1] - P[1], P2[0] - P[0]);
+      c.save(); c.translate(P[0], P[1]); c.rotate(ang);
+      c.beginPath(); c.moveTo(.17, 0); c.lineTo(-.1, -.13); c.lineTo(-.1, .13); c.closePath();
+      c.fillStyle = '#ffde3b'; c.fill(); c.lineWidth = .03; c.strokeStyle = '#7a5a00'; c.stroke();
+      c.restore();
+    }
+  }
+  // 3) き・いえ・えきの かんばん
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.font = `${Math.round(s * .78)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  for (const o of out) if (o.t.d) c.fillText(o.t.d, sx(o.x) + s / 2, sy(o.y) + s * .54);
+  if (s >= 34) {
+    c.font = `${Math.round(s * .3)}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+    for (const o of out) {
+      if (o.t.k !== 'eki') continue;
+      const ax = o.t.p[0][0] % 2 === 1, pv = get(o.x - (ax ? 1 : 0), o.y - (ax ? 0 : 1));
+      if (pv && pv.k === 'eki') continue;
+      c.fillText('🚉', sx(o.x) + s * (ax ? .2 : .13), sy(o.y) + s * (ax ? .13 : .2));
+    }
+  }
+}
+
+// ===== でんしゃを かく =====
+let smoke = [], kanT = 0, kanH = false;
+function drawCar(c, F, B, ty, ci, n, s) {
+  const fx = sx(F[0]), fy = sy(F[1]), bx = sx(B[0]), by = sy(B[1]);
+  const ang = Math.atan2(fy - by, fx - bx), mx = (fx + bx) / 2, my = (fy + by) / 2;
+  const L = Math.hypot(fx - bx, fy - by) + .24 * s, w = .4 * s, hl = L / 2, hw = w / 2;
+  const isLoco = ty.loco && ci === 0;
+  const body = ty.loco && !isLoco ? ty.coach : ty.body;
+  if (s < 11) {
+    c.strokeStyle = body === '#f6f8fb' ? '#ffffff' : body; c.lineWidth = Math.max(2.5, w);
+    c.lineCap = 'round'; c.beginPath(); c.moveTo(bx, by); c.lineTo(fx, fy); c.stroke(); c.lineCap = 'butt';
+    return;
+  }
+  c.save(); c.translate(mx, my); c.rotate(ang);
+  // かげ
+  c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(-hl + s * .03, -hw + s * .05, L, w);
+  const noseF = ty.nose && ci === 0, noseB = ty.nose && ci === n - 1;
+  const nl = Math.min(L * .42, .36 * s), r = w * .3;
+  c.beginPath();
+  c.moveTo(noseB ? -hl + nl : -hl + r, -hw);
+  if (noseF) { c.lineTo(hl - nl, -hw); c.bezierCurveTo(hl - nl * .3, -hw, hl, -hw * .35, hl, 0); c.bezierCurveTo(hl, hw * .35, hl - nl * .3, hw, hl - nl, hw); }
+  else { c.lineTo(hl - r, -hw); c.quadraticCurveTo(hl, -hw, hl, -hw + r); c.lineTo(hl, hw - r); c.quadraticCurveTo(hl, hw, hl - r, hw); }
+  if (noseB) { c.lineTo(-hl + nl, hw); c.bezierCurveTo(-hl + nl * .3, hw, -hl, hw * .35, -hl, 0); c.bezierCurveTo(-hl, -hw * .35, -hl + nl * .3, -hw, -hl + nl, -hw); }
+  else { c.lineTo(-hl + r, hw); c.quadraticCurveTo(-hl, hw, -hl, hw - r); c.lineTo(-hl, -hw + r); c.quadraticCurveTo(-hl, -hw, -hl + r, -hw); }
+  c.closePath();
+  c.fillStyle = body; c.fill();
+  c.save(); c.clip();
+  if (isLoco) {
+    c.fillStyle = '#3d3d3d'; c.fillRect(-hl * .35, -hw * .62, hl * 1.35, hw * 1.24);
+    c.fillStyle = '#8b1f1f'; c.fillRect(-hl, -hw, L * .3, w);
+    c.fillStyle = '#5a1010'; c.fillRect(-hl + L * .05, -hw * .7, L * .2, hw * 1.4);
+  } else {
+    c.fillStyle = ty.loco ? '#f1e3c4' : ty.stripe;
+    c.fillRect(-hl, -hw, L, w * .2); c.fillRect(-hl, hw - w * .2, L, w * .2);
+    c.fillStyle = ty.loco ? '#5a2d17' : 'rgba(0,0,0,.12)';
+    const u = L / 6; for (let i = 1; i < 6; i += 2) c.fillRect(-hl + u * i, -hw * .32, u * .7, hw * .64);
+  }
+  c.restore();
+  c.lineWidth = Math.max(1, s * .022); c.strokeStyle = 'rgba(0,0,0,.5)'; c.stroke();
+  if (isLoco) {
+    c.fillStyle = '#555'; c.beginPath(); c.arc(hl - w * .3, 0, w * .3, 0, 7); c.fill();
+    c.fillStyle = '#111'; c.beginPath(); c.arc(hl - w * .62, 0, w * .16, 0, 7); c.fill();
+    c.fillStyle = '#d4a017'; c.beginPath(); c.arc(hl - w * 1.05, 0, w * .12, 0, 7); c.fill();
+  }
+  c.fillStyle = '#1d2a3a';
+  if (noseF) { c.beginPath(); c.ellipse(hl - nl * .58, 0, nl * .2, hw * .55, 0, 0, 7); c.fill(); }
+  if (noseB) { c.beginPath(); c.ellipse(-hl + nl * .58, 0, nl * .2, hw * .55, 0, 0, 7); c.fill(); }
+  if (!ty.nose && !ty.loco) {
+    if (ci === 0) c.fillRect(hl - w * .2, -hw * .7, w * .12, hw * 1.4);
+    if (ci === n - 1) c.fillRect(-hl + w * .08, -hw * .7, w * .12, hw * 1.4);
+  }
+  c.restore();
+}
+function gateClosed(x, y, pos) {
+  const cx = x + .5, cy = y + .5;
+  for (const p of pos) if (Math.abs(p[0] - cx) < 1.9 && Math.abs(p[1] - cy) < 1.9) return true;
+  return false;
+}
+function drawFg(dt) {
+  const c = fctx, s = S();
+  c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, fg.width, fg.height);
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const pos = [];
+  for (const tr of trains) {
+    const ty = TYPES[tr.ty], L0 = rpos(tr.r[0]);
+    const vis = onScreen(L0[0], L0[1], tr.n * CARP + 2);
+    for (let ci = 0; ci < tr.n; ci++) {
+      const [F, B] = carEnds(tr, ci);
+      pos.push([(F[0] + B[0]) / 2, (F[1] + B[1]) / 2]);
+      if (vis) drawCar(c, F, B, ty, ci, tr.n, s);
+      if (ty.loco && ci === 0 && tr.moving) {
+        tr.smoke += dt;
+        if (tr.smoke > .13 && smoke.length < 300) {
+          tr.smoke = 0;
+          smoke.push({ x: B[0] + (F[0] - B[0]) * .85, y: B[1] + (F[1] - B[1]) * .85, life: 1, r: .12 });
+        }
+      }
+    }
+    if (tr.id === followId && vis && s >= 11) {
+      c.font = `${Math.round(Math.max(16, s * .45))}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.fillText('🎥', sx(L0[0]), sy(L0[1]) - s * .35);
+    }
+    if (tr.stop && vis && s >= 11) {
+      c.font = `${Math.round(Math.max(14, s * .4))}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+      c.fillText('⏸️', sx(L0[0]), sy(L0[1]) - s * .3);
+    }
+  }
+  // けむり
+  for (const p of smoke) { p.life -= dt * .9; p.r += dt * .35; p.y -= dt * .25; }
+  smoke = smoke.filter(p => p.life > 0);
+  for (const p of smoke) {
+    c.fillStyle = `rgba(245,245,245,${(p.life * .7).toFixed(3)})`;
+    c.beginPath(); c.arc(sx(p.x), sy(p.y), p.r * s, 0, 7); c.fill();
+  }
+  // トンネル・ふみきり
+  let anyClosed = false;
+  for (const k of specials) {
+    const t = tiles.get(k); if (!t) continue;
+    const x = KX(k), y = KY(k);
+    if (!onScreen(x + .5, y + .5, 2)) continue;
+    if (s < 11) {
+      if (t.k === 'tun') { c.setTransform(DPR, 0, 0, DPR, 0, 0); c.fillStyle = '#5c9a40'; c.fillRect(sx(x), sy(y), s + .6, s + .6); }
+      continue;
+    }
+    tileTf(c, x, y, s); axisRot(c, t);
+    if (t.k === 'tun') {
+      c.fillStyle = '#6aad4c'; c.fillRect(-.51, -.48, 1.02, .96);
+      c.fillStyle = '#4c8a33'; c.fillRect(-.51, -.48, 1.02, .07); c.fillRect(-.51, .41, 1.02, .07);
+      c.fillStyle = 'rgba(255,255,255,.12)'; c.beginPath(); c.ellipse(0, -.1, .3, .16, 0, 0, 7); c.fill();
+      const ax = t.p[0][0] % 2; // 1:よこ 0:たて
+      for (const sg of [1, -1]) {
+        const e = ax === 1 ? (sg > 0 ? 1 : 3) : (sg > 0 ? 2 : 0);
+        const nt = get(x + DX[e], y + DY[e]);
+        if (nt && nt.k === 'tun' && nt.p[0][0] % 2 === ax) continue;
+        c.fillStyle = '#9a8f80'; c.fillRect(sg > 0 ? .36 : -.5, -.33, .14, .66);
+        c.fillStyle = '#1b1b1b'; c.fillRect(sg > 0 ? .42 : -.5, -.24, .08, .48);
+      }
+    } else if (t.k === 'fumi') {
+      const closed = gateClosed(x, y, pos);
+      if (closed) anyClosed = true;
+      const blink = (performance.now() / 350 | 0) % 2;
+      for (const sg of [1, -1]) {
+        const yy = sg * .4;
+        c.fillStyle = '#333'; c.beginPath(); c.arc(sg * .42, yy, .06, 0, 7); c.fill();
+        c.fillStyle = closed ? ((blink ^ (sg > 0)) ? '#ff2a1a' : '#5a1510') : '#5a1510';
+        c.beginPath(); c.arc(sg * .42, yy + sg * .1, .045, 0, 7); c.fill();
+        const len = closed ? .72 : .14;
+        const x0 = sg > 0 ? .4 - len : -.4;
+        c.fillStyle = '#ffd400'; c.fillRect(x0, yy - .025, len, .05);
+        c.fillStyle = '#222';
+        for (let i = 0; i < len - .05; i += .12) c.fillRect(x0 + i + .03, yy - .025, .05, .05);
+      }
+    }
+  }
+  if (anyClosed) {
+    kanT -= dt;
+    if (kanT <= 0) { kanT = .32; kanH = !kanH; sfx.kan(kanH); }
+  }
+}
+
+// ===== ループ =====
+let lastT = performance.now(), statT = 0;
+function frame(now) {
+  const dt = Math.min(.05, (now - lastT) / 1000); lastT = now;
+  for (const tr of trains) updTrain(tr, dt);
+  if (followId) {
+    const tr = trains.find(t => t.id === followId);
+    if (tr) {
+      const p = rpos(tr.r[Math.min(tr.r.length - 1, 1)]), k = Math.min(1, dt * 4);
+      cam.x += (p[0] - cam.x) * k; cam.y += (p[1] - cam.y) * k; bgDirty = true;
+    }
+  }
+  if (bgDirty) drawBg();
+  drawFg(dt);
+  statT -= dt;
+  if (statDirty && statT <= 0) { statT = .3; statDirty = false; updStat(); }
+  requestAnimationFrame(frame);
+}
+const statEl = document.getElementById('stat');
+function updStat() {
+  let n = 0, len = 0;
+  for (const t of tiles.values()) if (t.p.length) { n++; for (const q of t.p) len += PL(q[0], q[1]); }
+  const m = len * .216; // プラレールの まっすぐ1ほんは やく21.6cm
+  const ms = m >= 1000 ? (m / 1000).toFixed(2) + 'キロメートル' : (m < 10 ? m.toFixed(1) : Math.round(m)) + 'メートル';
+  statEl.innerHTML = `🛤️ せんろ <b>${n.toLocaleString()}</b>まい<br>📏 やく <b>${ms}</b>　🚃 <b>${trains.length}</b>だい`;
+}
+
+// ===== トースト =====
+const toastEl = document.getElementById('toast'); let toastTimer = 0;
+function toast(msg, ms = 2600) {
+  toastEl.textContent = msg; toastEl.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+
+// ===== そうさ =====
+const ptrs = new Map(); let gest = null;
+const DRAG_TOOLS = ['erase', 'deco', 'eki', 'tun', 'fumi'];
+fg.addEventListener('contextmenu', e => e.preventDefault());
+fg.addEventListener('pointerdown', e => {
+  ensureAudio();
+  try { fg.setPointerCapture(e.pointerId); } catch (_) {}
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2) {
+    if (gest && gest.kind !== 'pan') cancelAction();
+    startPinch(); return;
+  }
+  if (ptrs.size > 2) return;
+  const w = toWorld(e.clientX, e.clientY);
+  const pan = tool === 'view' || tool === 'train' || e.button === 1 || e.button === 2;
+  gest = { kind: pan ? 'pan' : tool, sx: e.clientX, sy: e.clientY, moved: false, tx: Math.floor(w.x), ty: Math.floor(w.y), cx: cam.x, cy: cam.y, last: null, dragging: false };
+  if (gest.kind === 'draw') { begin(); gest.stroke = new Stroke(); gest.stroke.add(gest.tx, gest.ty); }
+  else if (DRAG_TOOLS.includes(gest.kind)) begin();
+});
+fg.addEventListener('pointermove', e => {
+  const p = ptrs.get(e.pointerId); if (!p) return;
+  p.x = e.clientX; p.y = e.clientY;
+  if (!gest) return;
+  if (gest.kind === 'pinch') { movePinch(); return; }
+  if (Math.hypot(p.x - gest.sx, p.y - gest.sy) > 8) gest.moved = true;
+  if (gest.kind === 'pan') {
+    if (!gest.moved) return;
+    if (followId) setFollow(0);
+    const s = S(); cam.x = gest.cx - (p.x - gest.sx) / s; cam.y = gest.cy - (p.y - gest.sy) / s; bgDirty = true;
+    return;
+  }
+  const w = toWorld(p.x, p.y), tx = Math.floor(w.x), ty = Math.floor(w.y);
+  if (gest.kind === 'draw') { gest.stroke.add(tx, ty); return; }
+  if (!gest.dragging && tx === gest.tx && ty === gest.ty) return;
+  if (!gest.dragging) { gest.dragging = true; gest.last = { x: gest.tx, y: gest.ty }; dragOp(gest.kind, gest.tx, gest.ty); }
+  let cx = gest.last.x, cy = gest.last.y, g = 0;
+  while ((cx !== tx || cy !== ty) && g++ < 2000) {
+    if (Math.abs(tx - cx) >= Math.abs(ty - cy)) cx += Math.sign(tx - cx); else cy += Math.sign(ty - cy);
+    dragOp(gest.kind, cx, cy);
+  }
+  gest.last = { x: tx, y: ty };
+});
+function endPointer(e) {
+  if (!ptrs.has(e.pointerId)) return;
+  ptrs.delete(e.pointerId);
+  if (!gest) return;
+  if (gest.kind === 'pinch') { if (ptrs.size === 0) gest = null; return; }
+  const g = gest; gest = null;
+  if (e.type === 'pointercancel') { cancelAction(); return; }
+  if (g.kind === 'pan') { if (!g.moved) tapPan(g.sx, g.sy); return; }
+  if (g.kind === 'draw') { if (g.stroke.L.length === 1) tapTrack(g.tx, g.ty); commit(); return; }
+  if (!g.dragging) tapOp(g.kind, g.tx, g.ty, g.sx, g.sy);
+  commit();
+}
+fg.addEventListener('pointerup', endPointer);
+fg.addEventListener('pointercancel', endPointer);
+function startPinch() {
+  const [a, b] = [...ptrs.values()];
+  gest = { kind: 'pinch', d0: Math.hypot(a.x - b.x, a.y - b.y) || 1, z0: cam.z, w0: toWorld((a.x + b.x) / 2, (a.y + b.y) / 2) };
+}
+function movePinch() {
+  const v = [...ptrs.values()]; if (v.length < 2) return;
+  const [a, b] = v, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  cam.z = Math.max(ZMIN, Math.min(ZMAX, gest.z0 * Math.hypot(a.x - b.x, a.y - b.y) / gest.d0));
+  if (!followId) { const s = S(); cam.x = gest.w0.x - (mx - W / 2) / s; cam.y = gest.w0.y - (my - H / 2) / s; }
+  bgDirty = true; scheduleSave();
+}
+fg.addEventListener('wheel', e => {
+  e.preventDefault();
+  const w = toWorld(e.clientX, e.clientY);
+  cam.z = Math.max(ZMIN, Math.min(ZMAX, cam.z * Math.exp(-e.deltaY * .0015)));
+  if (!followId) { const s = S(); cam.x = w.x - (e.clientX - W / 2) / s; cam.y = w.y - (e.clientY - H / 2) / s; }
+  bgDirty = true; scheduleSave();
+}, { passive: false });
+function zoomBy(f) { cam.z = Math.max(ZMIN, Math.min(ZMAX, cam.z * f)); bgDirty = true; scheduleSave(); }
+
+function tapPan(px, py) {
+  const w = toWorld(px, py), tr = hitTrain(w.x, w.y);
+  if (tr) { tr.stop = !tr.stop; sfx.toot(TYPES[tr.ty].loco); toast(tr.stop ? 'とまれ！' : 'しゅっぱつ しんこう！', 1200); return; }
+  const x = Math.floor(w.x), y = Math.floor(w.y), t = get(x, y);
+  if (tool === 'train') {
+    if (!t || !t.p.length) { toast('せんろの うえを タップしてね'); return; }
+    spawnTrain(x, y, trType, trCars);
+    return;
+  }
+  if (t && sharedEdge(t) >= 0) {
+    const sh = sharedEdge(t);
+    let i = t.sw;
+    for (let g = 0; g < t.p.length; g++) { i = (i + 1) % t.p.length; if (t.p[i][0] === sh || t.p[i][1] === sh) break; }
+    t.sw = i; bgDirty = true; sfx.click(); scheduleSave();
+  }
+}
+function dragOp(kind, x, y) {
+  const t = get(x, y);
+  if (kind === 'erase') { if (t) { put(x, y, null); sfx.erase(); } }
+  else if (kind === 'deco') { if (!t) { const n = newT(); n.d = DECOS[rnd(DECOS.length)]; put(x, y, n); sfx.put(); } }
+  else if (isStraight1(t) && t.k !== kind) { const n = clone(t); n.k = kind; put(x, y, n); sfx.put(); }
+}
+function tapOp(kind, x, y, px, py) {
+  const t = get(x, y);
+  if (kind === 'erase') {
+    const w = toWorld(px, py), tr = hitTrain(w.x, w.y);
+    if (tr) { trains = trains.filter(q => q !== tr); if (followId === tr.id) setFollow(0); sfx.pop(); statDirty = true; scheduleSave(); return; }
+    if (t) { put(x, y, null); sfx.erase(); }
+    return;
+  }
+  if (kind === 'deco') {
+    if (t && t.p.length) { toast('くさの ところに おいてね'); return; }
+    const n = newT(); n.d = t ? DECOS[(DECOS.indexOf(t.d) + 1) % DECOS.length] : DECOS[rnd(DECOS.length)];
+    put(x, y, n); sfx.put(); return;
+  }
+  if (!isStraight1(t)) { toast('まっすぐの せんろに おいてね'); return; }
+  const n = clone(t); n.k = t.k === kind ? '' : kind; put(x, y, n); sfx.put();
+}
+
+// ===== ボタン =====
+const $ = id => document.getElementById(id);
+const HINTS = {
+  view: 'ゆびで うごかせるよ。ポイントの ▶ や でんしゃを タップしてね',
+  draw: 'ゆびで なぞると せんろが できるよ。タップで くるっと まわる',
+  train: 'でんしゃを えらんで、せんろを タップしてね',
+  eki: 'まっすぐの せんろを タップ・なぞると えきに なるよ',
+  tun: 'まっすぐの せんろを なぞると トンネルに なるよ',
+  fumi: 'まっすぐの せんろを タップすると ふみきりに なるよ',
+  deco: 'くさの ところを タップ・なぞると き や いえが おけるよ',
+  erase: 'なぞった ところを けすよ。でんしゃを タップすると でんしゃが きえるよ',
+};
+function setTool(t, silent) {
+  tool = t;
+  document.querySelectorAll('.tool').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  fg.classList.toggle('pan', t === 'view' || t === 'train');
+  $('sub').hidden = t !== 'train';
+  if (!silent) { toast(HINTS[t]); sfx.click(); }
+  scheduleSave();
+}
+document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => { ensureAudio(); setTool(b.dataset.tool); }));
+function buildSub() {
+  const sub = $('sub'); sub.innerHTML = '';
+  TYPES.forEach((ty, i) => {
+    const b = document.createElement('button');
+    b.className = 'ty' + (i === trType ? ' on' : '');
+    b.innerHTML = `<i style="background:${ty.body};border-right-color:${ty.stripe};box-shadow:inset 0 -4px 0 ${ty.loco ? ty.stripe : ty.stripe}"></i><span>${ty.name.replace(' ', '<br>')}</span>`;
+    b.addEventListener('click', () => { trType = i; buildSub(); sfx.click(); scheduleSave(); });
+    sub.appendChild(b);
+  });
+  const len = document.createElement('div'); len.className = 'len';
+  len.innerHTML = `<button aria-label="みじかく">−</button><b>${trCars}</b>りょう<button aria-label="ながく">＋</button>`;
+  const [m, p] = len.querySelectorAll('button');
+  m.addEventListener('click', () => { trCars = Math.max(1, trCars - 1); buildSub(); sfx.click(); scheduleSave(); });
+  p.addEventListener('click', () => { trCars = Math.min(16, trCars + 1); buildSub(); sfx.click(); scheduleSave(); });
+  sub.appendChild(len);
+}
+function setFollow(id) {
+  followId = id;
+  $('bFollow').classList.toggle('on', !!id);
+}
+$('bUndo').addEventListener('click', () => { ensureAudio(); undo(); });
+$('bFit').addEventListener('click', () => { ensureAudio(); setFollow(0); fitAll(); sfx.click(); });
+$('bFollow').addEventListener('click', () => {
+  ensureAudio();
+  if (!trains.length) { toast('でんしゃが いないよ。🚃 で おいてね'); return; }
+  const i = trains.findIndex(t => t.id === followId);
+  const next = i + 1 < trains.length ? trains[i + 1] : null;
+  setFollow(next ? next.id : 0);
+  if (next) { cam.z = Math.max(cam.z, .9); bgDirty = true; toast(`${TYPES[next.ty].name} を おいかけるよ`, 1600); sfx.toot(TYPES[next.ty].loco); }
+  else toast('おいかけるのを やめたよ', 1400);
+});
+function setSpeedUI() { const b = $('bSpeed'); b.firstElementChild.textContent = SPEED_ICON[speedLv]; b.lastElementChild.textContent = SPEED_NAME[speedLv]; }
+$('bSpeed').addEventListener('click', () => { ensureAudio(); speedLv = (speedLv + 1) % 3; setSpeedUI(); sfx.click(); toast(SPEED_NAME[speedLv] + ' はしるよ', 1200); scheduleSave(); });
+function setSoundUI() { $('bSound').firstElementChild.textContent = sound ? '🔊' : '🔇'; }
+$('bSound').addEventListener('click', () => { ensureAudio(); sound = !sound; setSoundUI(); sfx.click(); scheduleSave(); });
+$('bMenu').addEventListener('click', () => { ensureAudio(); clearArm = false; $('bClear').textContent = '🧹 ぜんぶ けす'; $('menu').hidden = false; });
+$('bClose').addEventListener('click', () => { $('menu').hidden = true; });
+$('menu').addEventListener('click', e => { if (e.target.id === 'menu') $('menu').hidden = true; });
+$('zIn').addEventListener('click', () => zoomBy(1.35));
+$('zOut').addEventListener('click', () => zoomBy(1 / 1.35));
+let clearArm = false;
+$('bClear').addEventListener('click', () => {
+  if (!clearArm) { clearArm = true; $('bClear').textContent = 'ほんとうに けす？（もういちど おしてね）'; return; }
+  clearArm = false; $('bClear').textContent = '🧹 ぜんぶ けす';
+  begin(); for (const k of [...tiles.keys()]) put(KX(k), KY(k), null); commit();
+  trains = []; setFollow(0); statDirty = true; scheduleSave();
+  $('menu').hidden = true; toast('まっさらに なったよ。↩️ もどす で もとに もどせるよ', 3200);
+});
+document.querySelectorAll('[data-gen]').forEach(b => b.addEventListener('click', () => {
+  $('menu').hidden = true; genCourse(+b.dataset.gen);
+}));
+
+// ===== おおきな コースを つくる =====
+function bounds() {
+  if (!tiles.size) return null;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (const k of tiles.keys()) { const x = KX(k), y = KY(k); if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  return { x0, x1, y0, y1 };
+}
+function fitAll() {
+  const b = bounds();
+  if (!b) { cam.x = 0; cam.y = 0; cam.z = 1; bgDirty = true; return; }
+  const bw = b.x1 - b.x0 + 3, bh = b.y1 - b.y0 + 3;
+  cam.z = Math.max(ZMIN, Math.min(1.4, Math.min(W / bw, (H - 190) / bh) / TS));
+  cam.x = (b.x0 + b.x1 + 1) / 2; cam.y = (b.y0 + b.y1 + 1) / 2 + 20 / S();
+  bgDirty = true; scheduleSave();
+}
+function markRun(x, y, kind, len) {
+  const t = get(x, y); if (!isStraight1(t)) return;
+  const ax = t.p[0][0] % 2 === 1, dx = ax ? 1 : 0, dy = ax ? 0 : 1;
+  for (let i = 0; i < len; i++) {
+    const u = get(x + dx * i, y + dy * i);
+    if (!isStraight1(u) || u.p[0][0] % 2 !== t.p[0][0] % 2) return;
+  }
+  for (let i = 0; i < len; i++) { const n = clone(get(x + dx * i, y + dy * i)); n.k = kind; put(x + dx * i, y + dy * i, n); }
+}
+function genCourse(scale) {
+  const b = bounds();
+  const Wd = Math.round(22 * scale + rnd(10 * scale)), Hd = Math.round(14 * scale + rnd(6 * scale));
+  const ox = b ? b.x1 + 6 : -Math.floor(Wd / 2), oy = b ? Math.round((b.y0 + b.y1) / 2 - Hd / 2) : -Math.floor(Hd / 2);
+  quiet = true; begin();
+  rectLoop(ox, oy, Wd, Hd);
+  const loops = 2 + Math.round(1.6 * scale);
+  for (let i = 0; i < loops; i++) {
+    const w = Math.max(5, Math.round(Wd * (.2 + Math.random() * .4)));
+    const h = Math.max(4, Math.round(Hd * (.2 + Math.random() * .45)));
+    const x = ox - Math.round(w * .3) + rnd(Math.max(1, Wd - Math.round(w * .4)));
+    const y = oy - Math.round(h * .3) + rnd(Math.max(1, Hd - Math.round(h * .4)));
+    rectLoop(x, y, w, h);
+  }
+  // えき・トンネル・ふみきり
+  markRun(ox + Math.floor(Wd / 2) - 1, oy, 'eki', 3);
+  markRun(ox + 3, oy + Hd, 'tun', Math.min(8, 3 + Math.round(scale * 1.2)));
+  markRun(ox, oy + Math.floor(Hd / 2), 'fumi', 1);
+  markRun(ox + Wd, oy + 2, 'eki', 3);
+  const extra = Math.round(3 * scale);
+  for (let i = 0; i < extra * 6; i++) {
+    const x = ox + rnd(Wd + 1), y = oy + rnd(Hd + 1), r = Math.random();
+    if (isStraight1(get(x, y)) && !get(x, y).k) markRun(x, y, r < .45 ? 'eki' : r < .75 ? 'tun' : 'fumi', r < .45 ? 3 : r < .75 ? 4 : 1);
+  }
+  // き・いえ
+  for (let y = oy - 3; y <= oy + Hd + 3; y++) for (let x = ox - 3; x <= ox + Wd + 3; x++) {
+    if (get(x, y)) continue;
+    let near = false;
+    for (let dy = -2; dy <= 2 && !near; dy++) for (let dx = -2; dx <= 2; dx++) { const t = get(x + dx, y + dy); if (t && t.p.length) { near = true; break; } }
+    if (Math.random() < (near ? .14 : .05)) { const n = newT(); n.d = DECOS[rnd(DECOS.length)]; put(x, y, n); }
+  }
+  commit();
+  // でんしゃ
+  const nTr = Math.min(20 - trains.length, 2 + Math.round(scale));
+  for (let i = 0; i < nTr; i++) {
+    const x = ox + 2 + Math.round((Wd - 4) * (i + .5) / nTr);
+    spawnTrain(x, i % 2 ? oy : oy + Hd, rnd(TYPES.length), 3 + rnd(3 + Math.round(scale)), true);
+  }
+  quiet = false;
+  setFollow(0); fitAll();
+  sfx.toot(); updStat();
+  toast(`できた！ せんろ ${countTrack().toLocaleString()}まい の コースだよ`, 3200);
+}
+const countTrack = () => { let n = 0; for (const t of tiles.values()) if (t.p.length) n++; return n; };
+
+// ===== ほぞん（localStorage） =====
+const SAVE_KEY = 'senro-tsukuro-v1';
+let saveTimer = 0;
+function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 800); }
+function save() {
+  try {
+    const T = [];
+    for (const [k, t] of tiles) T.push([KX(k), KY(k), t.p.map(q => '' + q[0] + q[1]).join(''), t.k, t.sw, t.d]);
+    const R = trains.map(tr => ({ ty: tr.ty, n: tr.n, f: tr.flip ? 1 : 0, s: tr.stop ? 1 : 0, r: tr.r.map(r => [r.x, r.y, r.a, r.b, Math.round(r.p * 1000) / 1000]) }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, T, R, cam: { x: cam.x, y: cam.y, z: cam.z }, o: { sound, speedLv, trType, trCars, tool } }));
+  } catch (e) { /* ほぞん できなくても あそべる */ }
+}
+function load() {
+  let d = null;
+  try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { d = null; }
+  if (!d || d.v !== 1) return false;
+  try {
+    for (const [x, y, ps, k, sw, deco] of d.T) {
+      const t = { p: [], k: k || '', sw: sw || 0, d: deco || '' };
+      for (let i = 0; i + 1 < ps.length; i += 2) t.p.push([+ps[i], +ps[i + 1]]);
+      const nt = norm(t); if (nt) rawSet(K(x, y), nt);
+    }
+    for (const r of d.R || []) {
+      const tr = { id: trainSeq++, ty: r.ty % TYPES.length, n: r.n, r: [], ch: new Map(), flip: !!r.f, wait: 0, stop: !!r.s, rev: false, live: true, smoke: 0, moving: false };
+      tr.r = r.r.map(a => ({ x: a[0], y: a[1], a: a[2], b: a[3], p: a[4] }));
+      if (tr.r.length !== tr.n * 2) continue;
+      for (const q of tr.r) tr.ch.set(K(q.x, q.y) * 4 + q.a, q.b);
+      trains.push(tr);
+    }
+    trains = trains.filter(tr => tr.r.every(r => hasPath(get(r.x, r.y), r.a, r.b)));
+    if (d.cam) { cam.x = +d.cam.x || 0; cam.y = +d.cam.y || 0; cam.z = Math.max(ZMIN, Math.min(ZMAX, +d.cam.z || 1)); }
+    if (d.o) {
+      sound = d.o.sound !== false; speedLv = (d.o.speedLv | 0) % 3; trType = (d.o.trType | 0) % TYPES.length;
+      trCars = Math.max(1, Math.min(16, d.o.trCars | 0 || 4)); if (HINTS[d.o.tool]) tool = d.o.tool;
+    }
+    return true;
+  } catch (e) { return false; }
+}
+setInterval(save, 10000);
+addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+// ===== はじめの コース =====
+function starter() {
+  quiet = true;
+  rectLoop(-5, -3, 10, 6);
+  markRun(-1, -3, 'eki', 3);
+  markRun(-5, 0, 'fumi', 1);
+  markRun(1, 3, 'tun', 3);
+  for (const [x, y, d] of [[-7, -2, '🌳'], [7, 1, '🌲'], [0, 0, '🏠'], [-2, 1, '🌳'], [3, -1, '🌷'], [7, -3, '🏢'], [-7, 2, '🌻'], [2, 1, '🌳']]) {
+    const n = newT(); n.d = d; put(x, y, n);
+  }
+  spawnTrain(-3, 3, 0, 3, true);
+  quiet = false;
+  cam.x = .5; cam.y = .8; cam.z = Math.max(.35, Math.min(1.1, W / (14 * TS)));
+}
+
+// ===== スタート =====
+resize();
+if (!load() || !tiles.size) { tiles.clear(); specials.clear(); trains = []; starter(); tool = 'draw'; }
+undoStack = [];
+setTool(tool, true); setSpeedUI(); setSoundUI(); buildSub(); updStat();
+toast('ゆびで なぞると せんろが できるよ！ 🌏 メニューで きょだいな コースも つくれるよ', 4200);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
