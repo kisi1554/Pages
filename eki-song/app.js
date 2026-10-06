@@ -5,7 +5,7 @@ const $ = id => document.getElementById(id);
 
 /* ---------- ほぞん ---------- */
 const SAVE_KEY = 'eki-song-lena-v1';
-const S = { sound: true, song: 'pop', dir: {}, done: {}, plays: 0 };
+const S = { sound: true, song: 'pop', dir: {}, done: {}, plays: 0, anki: false, hide: false };
 try {
   const raw = localStorage.getItem(SAVE_KEY);
   if (raw) Object.assign(S, JSON.parse(raw));
@@ -151,6 +151,9 @@ function prepare(fromK) {
   V.fromK = fromK; V.segIdx = -1;
   $('dirBtn').textContent = '⇄ ' + V.line.dirs[S.dir[V.line.id] ? 1 : 0];
   renderRoute();
+  renderAlist();
+  renderAnki();
+  markAnki(fromK - 1);
   const st = V.list[fromK];
   showStation(st, fromK, true);
   $('yomi').innerHTML = esc(st.yomi);
@@ -159,6 +162,41 @@ function prepare(fromK) {
   $('progBar').style.width = '0%';
   setMouth('smile');
   setDance(false);
+}
+
+/* ---------- えきめい あんきモード（たてながの ショートどうが ふう） ---------- */
+function renderAnki() {
+  $('stage').classList.toggle('shorts', S.anki);
+  $('alist').classList.toggle('hide', S.hide);
+  $('ankiBtn').setAttribute('aria-pressed', String(S.anki));
+  $('ankiBtn').textContent = S.anki ? '📺 ふつうの がめん' : '📱 あんきモード';
+  $('hideBtn').hidden = !S.anki;
+  $('hideBtn').setAttribute('aria-pressed', String(S.hide));
+  $('hideBtn').textContent = S.hide ? '👀 つぎも みせる' : '🙈 つぎを かくす';
+  if (V.line) $('shead').innerHTML = `<span>【えきめい あんき】</span><b>${V.line.title}</b>`;
+}
+function renderAlist() {
+  $('alist').innerHTML = V.list.map((st, k) =>
+    `<li data-k="${k}"><span class="an">${esc(st.num || '')}</span><span class="nm">${esc(st.kanji)}<small>${esc(st.yomi)}</small></span></li>`).join('');
+}
+function markAnki(k) {
+  const items = $('alist').children;
+  for (let i = 0; i < items.length; i++) {
+    items[i].classList.toggle('past', i < k);
+    items[i].classList.toggle('now', i === k);
+    items[i].classList.toggle('future', i > k);
+  }
+  const cur = items[k];
+  if (cur) $('alist').scrollTo({ top: cur.offsetTop - $('alist').clientHeight / 2 + cur.offsetHeight / 2, behavior: 'smooth' });
+}
+$('alist').addEventListener('click', e => {
+  const li = e.target.closest('[data-k]'); if (li) startFrom(+li.dataset.k);
+});
+$('ankiBtn').addEventListener('click', () => { S.anki = !S.anki; save(); renderAnki(); markAnki(Math.max(0, currentK())); });
+$('hideBtn').addEventListener('click', () => { S.hide = !S.hide; save(); renderAnki(); });
+function currentK() {
+  const seg = V.song && V.song.segs[V.segIdx];
+  return seg && seg.kind === 'station' ? seg.k : V.fromK - 1;
 }
 
 function renderRoute() {
@@ -247,16 +285,19 @@ function onSeg(seg) {
       d.classList.toggle('past', i < seg.k);
       d.classList.toggle('now', i === seg.k);
     });
+    markAnki(seg.k);
     const cur = document.querySelector('#route .dot.now');
     if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
     $('sign').classList.remove('pop'); void $('sign').offsetWidth; $('sign').classList.add('pop');
   } else if (seg.kind === 'lyric') {
+    $('lyric').classList.add('call');
     $('count').textContent = '';
     $('num').hidden = true;
     $('kanji').textContent = '♪';
     $('yomi').innerHTML = seg.mora.map(m => `<span>${esc(m.text)}</span>`).join('');
     $('next').innerHTML = '';
   } else if (seg.kind === 'intro') {
+    $('lyric').classList.add('call');
     $('kanji').textContent = '🎤';
     $('yomi').textContent = 'もうすぐ はじまるよ…';
     $('num').hidden = true; $('count').textContent = '';
@@ -264,10 +305,13 @@ function onSeg(seg) {
 }
 
 function showStation(st, k, still) {
-  $('num').hidden = false;
+  $('lyric').classList.remove('call');
   const m = st.num.match(/^([A-Z]+)(\d+)$/);
-  $('num').querySelector('small').textContent = m[1];
-  $('num').querySelector('b').textContent = m[2];
+  $('num').hidden = !m;                         // えきナンバーが ない えきも ある
+  if (m) {
+    $('num').querySelector('small').textContent = m[1];
+    $('num').querySelector('b').textContent = m[2];
+  }
   $('kanji').textContent = st.kanji;
   $('kanji').classList.toggle('long', st.kanji.length >= 7);
   $('count').textContent = still ? '' : `${k + 1} / ${V.list.length}`;
