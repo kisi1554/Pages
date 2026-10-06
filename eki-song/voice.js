@@ -57,9 +57,10 @@ const MOTIFS = [
 ];
 
 const NUM_KANA = ['', 'いち', 'に', 'さん', 'よん', 'ご', 'ろく', 'なな', 'はち', 'きゅう'];
+const HUNDRED = ['', 'ひゃく', 'にひゃく', 'さんびゃく', 'よんひゃく', 'ごひゃく', 'ろっぴゃく', 'ななひゃく', 'はっぴゃく', 'きゅうひゃく'];
 function numKana(n) {
-  const t = Math.floor(n / 10), o = n % 10;
-  return (t ? (t > 1 ? NUM_KANA[t] : '') + 'じゅう' : '') + NUM_KANA[o];
+  const h = Math.floor(n / 100), t = Math.floor(n / 10) % 10, o = n % 10;
+  return HUNDRED[h] + (t ? (t > 1 ? NUM_KANA[t] : '') + 'じゅう' : '') + NUM_KANA[o];
 }
 
 function snapTo(midi, tones, key) {
