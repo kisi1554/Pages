@@ -478,7 +478,7 @@ const Brain = (function () {
     const pool = WORDS.filter(inLevel);
     /* であったけど まだ おぼえてない ことばを おおめに */
     const weak = pool.filter((x) => isMet(x.w) && !isKnown(x.w));
-    const word = weak.length && Math.random() < 0.6 ? pick(weak) : pick(pool);
+    const word = weak.length && Math.random() < 0.6 ? pick(weak) : pick(levelPool(pool));
     const others = shuffle(pool.filter((x) => x.w !== word.w && x.m !== word.m)).slice(0, 2);
     const opts = shuffle([word].concat(others));
     const type = Math.random() < 0.5 ? 'meaning' : 'word';
@@ -829,8 +829,14 @@ const Brain = (function () {
     return false;
   }
 
+  /* えらんだ むずかしさの ことばを おおめに(やさしい ことばばかりに ならない ように) */
+  function levelPool(list) {
+    const exact = list.filter((x) => x.lv === mem.level);
+    return exact.length && Math.random() < 0.7 ? exact : list;
+  }
+
   function teachNew(r) {
-    const pool = WORDS.filter((x) => inLevel(x) && !isMet(x.w));
+    const pool = levelPool(WORDS.filter((x) => inLevel(x) && !isMet(x.w)));
     const word = pool.length ? pick(pool) : pick(WORDS.filter(inLevel));
     say(r, pickFresh('teachNew', [
       '@smug ルディの ことばを わけて ほしいの? しかたないニャ',

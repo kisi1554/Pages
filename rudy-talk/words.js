@@ -448,8 +448,12 @@ const IIKAE = [
  * ことばを ふやす ための どうぐ。words-*.js から よぶ。
  *   [w, y, lv, m, e, f] の はいれつを わたす(f は なくて よい)
  */
+const WORD_SET = new Set(WORDS.map((x) => x.w));
 function addWords(list) {
   list.forEach((a) => {
+    /* おなじ ことばが 2かい でてきたら、さきの ほうを つかう */
+    if (WORD_SET.has(a[0])) return;
+    WORD_SET.add(a[0]);
     const x = { w: a[0], y: a[1], lv: a[2], m: a[3], e: a[4] };
     if (a[5]) x.f = a[5];
     WORDS.push(x);
