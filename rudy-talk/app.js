@@ -544,7 +544,7 @@
   function startTalk() {
     Sound.unlock();
     const mem = Brain.mem();
-    mem.name = $('in-name').value.trim().slice(0, 8) || Brain.DEFAULT_NAME;
+    mem.name = Brain.fixName($('in-name').value.slice(0, 8)) || Brain.DEFAULT_NAME;
     save();
     $('screen-start').classList.remove('is-active');
     $('screen-talk').classList.add('is-active');

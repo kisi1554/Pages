@@ -177,6 +177,17 @@ const Brain = (function () {
   /* なまえを いれなかった ときの なまえ */
   const DEFAULT_NAME = 'あお';
 
+  /*
+   * 「あお」の ききまちがい・かきまちがいを なおす。
+   * おんせいにんしきは「あお」を「ああ」「青」と きくことが あるので、
+   * そのまま ほぞん されると「ああ」と よばれて しまう。
+   */
+  function fixName(name) {
+    const s = String(name || '').trim();
+    if (/^(ああ|青|アオ|あおー|あおう)$/.test(s)) return DEFAULT_NAME;
+    return s;
+  }
+
   let mem = { name: DEFAULT_NAME, level: 2, words: {}, mitome: 0, quizOk: 0 };
   const st = {
     mode: 'chat', // chat | quiz | iikae
@@ -196,6 +207,7 @@ const Brain = (function () {
   function init(m) {
     mem = Object.assign({ name: DEFAULT_NAME, level: 2, words: {}, mitome: 0, quizOk: 0 }, m || {});
     if (!mem.words || typeof mem.words !== 'object') mem.words = {};
+    mem.name = fixName(mem.name);
   }
 
   const rec = (w) => {
@@ -851,11 +863,11 @@ const Brain = (function () {
   /* ============================ メイン ============================ */
 
   function setName(raw) {
-    const m = raw.match(/(?:なまえは|名前は)\s*([^\s、。!！?？]{1,8}?)\s*(?:です|だよ|だ|って|と|$)/)
+    const m = raw.match(/(?:なまえは|名前は)\s*([^\s、。!！?？]{1,8}?)\s*(?:です|だよ|だ$|って|$)/)
       || raw.match(/(?:ぼくは|わたしは|おれは|僕は|私は|俺は)\s*([^\s、。!！?？]{1,8}?)\s*(?:です|っていいます|といいます)/)
       || raw.match(/^([^\s、。!！?？]{1,8}?)\s*(?:って\s*よんで|って\s*呼んで|といいます|っていいます)/);
     if (!m) return null;
-    const name = m[1].replace(/(くん|ちゃん|さん)$/, '');
+    const name = fixName(m[1].replace(/(くん|ちゃん|さん)$/, ''));
     if (!name || /(すき|好き|きらい|いい|げんき|元気|ねむ|つかれ|うれし|かなし|たのし|さい$|歳$|ねん|年)/.test(name)) return null;
     return name;
   }
@@ -1079,6 +1091,7 @@ const Brain = (function () {
     RANKS,
     mem: () => mem,
     DEFAULT_NAME,
+    fixName,
     mode: () => st.mode,
     words: WORDS,
     word: (w) => W[w],
