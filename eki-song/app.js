@@ -95,6 +95,7 @@ function renderHome() {
   };
   $('lineCards').innerHTML = LINE_IDS.map(card).join('');
   $('oboeCards').innerHTML = OBOE_IDS.map(card).join('');
+  $('shinCards').innerHTML = SHIN_IDS.map(card).join('');
 }
 $('songChips').addEventListener('click', e => {
   const b = e.target.closest('[data-song]'); if (!b) return;
@@ -102,7 +103,7 @@ $('songChips').addEventListener('click', e => {
   hop($('homeLena'));
   quickSing(SONGS[S.song].id === 'lofi' ? 'ふわぁ' : 'いぇーい', [74, 79, 83, 86]);
 });
-for (const box of ['lineCards', 'oboeCards']) $(box).addEventListener('click', e => {
+for (const box of ['lineCards', 'shinCards', 'oboeCards']) $(box).addEventListener('click', e => {
   const b = e.target.closest('[data-line]'); if (b) openLine(b.dataset.line);
 });
 let helloI = 0;
