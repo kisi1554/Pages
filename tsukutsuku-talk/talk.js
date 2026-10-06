@@ -11,14 +11,28 @@
 const Tsuku = (function () {
   /* カタカナ → ひらがな、きごう・くうはくを けす */
   const V = typeof TsukuVocab === 'object' ? TsukuVocab : {};
+  const D = typeof TsukuDict === 'object' ? TsukuDict : { words: [], cats: {} };
+  // じてんの かんじも よみかえ表に いれる(よく つかう 1もじの かんじは ほかの ことばを こわすので いれない)
+  const BLOCK1 = '日月火水木金土年人時分上下中大小子手目口本出入生見行来気名前後今何先学校心力足音天色一十百千万億零間方家車電話歯血息声頭顔鼻芽根葉実種花草竹石雨雪風雲星空海山川池田林森島橋道町村市国王赤青白黒';
+  V.kana = V.kana || [];
+  D.words.forEach((w) => {
+    if (w.kanji && (w.kanji.length > 1 || BLOCK1.indexOf(w.kanji) < 0)) V.kana.push([w.kanji, w.kana]);
+  });
   // ながい ことばから さきに おきかえる(「大好き」を「好き」より さきに)
   const KANA = (V.kana || []).slice().sort((a, b) => b[0].length - a[0].length);
 
-  function norm(s) {
-    let t = String(s || '');
+  // かんじが あるときだけ よみかえ表を みる(じてんの よみがなは かんじが ないので はやい)
+  const HAS_KANJI = /[\u3400-\u9fff々]/;
+  function kanaMap(t) {
+    if (!HAS_KANJI.test(t)) return t;
     KANA.forEach(([k, v]) => {
       if (t.indexOf(k) >= 0) t = t.split(k).join(v);
     });
+    return t;
+  }
+
+  function norm(s) {
+    let t = kanaMap(String(s || ''));
     return t
       .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
       .replace(/[\sー〜~、。！!？?・,.　「」『』（）()]/g, '')
@@ -291,29 +305,58 @@ const Tsuku = (function () {
     );
   }
 
+  // じてんの カテゴリ クイズ(「どうぶつ クイズ」など)
+  TOPICS.unshift({
+    id: 'catquiz',
+    first: true,
+    special: 'catquiz',
+    mood: 'smug',
+    say: [],
+    keys: Object.keys(D.cats)
+      .filter((k) => !D.cats[k].sentence)
+      .map((k) => D.cats[k].label.split('・')[0] + 'くいず')
+      .concat(['なーんだくいず', 'あてっこ', 'あてっこくいず']),
+  });
+
   // キーワードも norm で そろえる(「しーっ」→「しっ」など)
   TOPICS.forEach((t) => (t.keys = t.keys.map(norm).filter(Boolean)));
 
   /* いちばん ながく あった キーワードの わだいを えらぶ(おなじ ながさなら うえの わだい) */
   // weak の わだい(「きょう」「つくぼう」「セミ」など ひろい ことば)は、ほかに あわない ときだけ
   function bestTopic(n, skip) {
+    lastLen = 0;
+    lastKey = '';
+    bestTopic.len = 0;
+    bestTopic.key = '';
     if (!n) return null;
     const find = (weak) => {
       let best = null;
       let len = 0;
+      let bk = '';
       for (const t of TOPICS) {
         if ((skip && skip(t)) || !!t.weak !== weak) continue;
         for (const k of t.keys) {
           if (k.length > len && n.indexOf(k) >= 0) {
             best = t;
             len = k.length;
+            bk = k;
           }
         }
       }
+      if (best) {
+        lastLen = len;
+        lastKey = bk;
+      }
       return best;
     };
-    return find(false) || find(true);
+    const a = find(false);
+    const r = a || find(true);
+    bestTopic.len = lastLen;
+    bestTopic.key = lastKey;
+    return r;
   }
+  let lastLen = 0;
+  let lastKey = '';
   ['today', 'fact', 'callName', 'hello'].forEach((id) => {
     const t = TOPICS.find((x) => x.id === id);
     if (t) t.weak = true;
@@ -365,18 +408,22 @@ const Tsuku = (function () {
   /* つづきの ある かいわ(なぞなぞ・じゃんけん・しつもんの こたえ) */
   const state = { riddle: null, janken: false, asked: null, shiritori: null, math: null };
   // これらの わだいは つづきの とちゅうでも ゆうせん する
-  const STRONG = ['shiritori', 'math', 'date', 'time', 'noise', 'revenge', 'why', 'tease', 'sorry', 'promise', 'forgive', 'comeback', 'kidsorry', 'hide', 'seek', 'sing', 'bye', 'riddle', 'janken'];
+  const STRONG = ['catquiz', 'shiritori', 'math', 'date', 'time', 'noise', 'revenge', 'why', 'tease', 'sorry', 'promise', 'forgive', 'comeback', 'kidsorry', 'hide', 'seek', 'sing', 'bye', 'riddle', 'janken'];
   const GIVEUP = ['わからない', 'わかんない', 'こうさん', 'しらない', 'おしえて', 'ぎぶあっぷ', 'こたえは'];
 
   const R = (text, mood, chips, action) => ({ text, mood: mood || 'smug', chips: chips || chipsFor(null), action: action || null });
 
-  function startRiddle() {
+  function startRiddle(cat) {
     const list = V.riddles || [];
     let r = pick(list);
     if (state.lastRiddle && list.length > 1) while (r === state.lastRiddle) r = pick(list);
+    if (cat || Math.random() < 0.5) {
+      const q = dictQuiz(cat);
+      if (q) r = q;
+    }
     state.riddle = { r, miss: 0 };
     state.lastRiddle = r;
-    return R('なぞなぞ いくよ〜。' + r.q, 'smug', ['わからない', 'ヒント ちょうだい']);
+    return R((cat ? '' : 'なぞなぞ いくよ〜。') + r.q, 'smug', ['わからない', 'ヒント ちょうだい']);
   }
 
   function riddleAnswer(n) {
@@ -431,6 +478,125 @@ const Tsuku = (function () {
     return R(pickFresh(list).replace(/%Q/g, q), 'happy');
   }
 
+  /* ---------------- ことば じてん ---------------- */
+  // ー を のこした まま そろえる(「チーズ」と「ちず」を わける ため)
+  function normKeep(s) {
+    const t = kanaMap(String(s || ''));
+    return t
+      .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
+      .replace(/[〜~]/g, 'ー')
+      .replace(/[、。！!？?・,.「」『』（）()]/g, ' ')
+      .replace(/[\s　]+/g, ' ')
+      .trim()
+      .toLowerCase();
+  }
+  const DIDX = {};
+  D.words.forEach((w) => {
+    const k = normKeep(w.kana);
+    (DIDX[k] = DIDX[k] || []).push(w);
+  });
+  const DKEYS = Object.keys(DIDX).sort((a, b) => b.length - a.length);
+  const AFTER = 'はがをにのもとでやよねだっすみかほ ';
+  const BEFORE = 'のとはがをもでにや ';
+
+  // いちばん ながく あう ことばを さがす。2もじ いかは まえうしろが くぎれ の ときだけ
+  function dictFind(raw) {
+    const s = normKeep(raw);
+    if (!s) return null;
+    const flat = s.replace(/ /g, '');
+    for (const k of DKEYS) {
+      if (k.length >= 3) {
+        if (flat.indexOf(k) >= 0) return { key: k, list: DIDX[k], len: k.replace(/ー/g, '').length };
+        continue;
+      }
+      let i = s.indexOf(k);
+      while (i >= 0) {
+        const prev = i === 0 ? ' ' : s[i - 1];
+        const next = i + k.length >= s.length ? ' ' : s[i + k.length];
+        if (BEFORE.indexOf(prev) >= 0 && AFTER.indexOf(next) >= 0) return { key: k, list: DIDX[k], len: k.replace(/ー/g, '').length };
+        i = s.indexOf(k, i + 1);
+      }
+    }
+    return null;
+  }
+
+  const fillW = (t, w) =>
+    t.replace(/%W/g, w.show).replace(/%T/g, w.trait).replace(/%L/g, (D.cats[w.cat] || {}).label || '');
+
+  function dictLine(w) {
+    if (w.sentence) return w.trait;
+    const cm = (D.comments || {})[w.cat] || (D.comments || {}).default || [''];
+    return fillW(pickFresh(D.templates || ['%Wは %T。']), w).replace(/%C/g, fillW(pickFresh(cm), w));
+  }
+
+  function dictReply(h) {
+    const cats = [];
+    h.list.forEach((w) => cats.indexOf(w.cat) < 0 && cats.push(w.cat));
+    const label = (c) => (D.cats[c] || {}).label || '';
+    let text;
+    if (cats.length > 1 && D.ambiguous) {
+      text = pick(D.ambiguous).replace(/%W/g, h.list[0].show).replace('%L1', label(cats[0])).replace('%L2', label(cats[1])).replace(/%L1/g, label(cats[0])).replace(/%L2/g, label(cats[1]));
+    } else {
+      text = dictLine(pick(h.list));
+    }
+    const w = h.list[0];
+    const quiz = D.cats[w.cat] && !D.cats[w.cat].sentence ? label(w.cat).split('・')[0] + ' クイズ' : 'なぞなぞ だして';
+    return R(text, w.sentence ? 'happy' : 'smug', [quiz, 'しりとり しよう', 'かくれんぼ しよう']);
+  }
+
+  // じてんから なーんだクイズを つくる(cat を しぼる ことも できる)
+  const QUIZ_WORDS = D.words.filter((w) => !w.sentence && w.trait && w.trait.indexOf(w.kana) < 0 && norm(w.trait).indexOf(norm(w.kana)) < 0);
+  function dictQuiz(cat) {
+    const pool = cat ? QUIZ_WORDS.filter((w) => w.cat === cat) : QUIZ_WORDS;
+    if (!pool.length) return null;
+    const w = pick(pool);
+    const lab = (D.cats[w.cat] || {}).label || '';
+    const first = w.show[0];
+    return {
+      q: pick(D.quizIntro || ['%T。これ なーんだ？']).replace(/%T/g, w.trait).replace(/%L/g, lab),
+      a: [norm(w.kana), norm(w.show)].filter(Boolean),
+      ans: w.show,
+      hint: `「${first}」から はじまる ことば だよ`,
+    };
+  }
+
+  /*
+   * じてんと わだいの どちらで こたえるか
+   *  - わだいが ない → じてん
+   *  - つくぼうの ひとこと がたの ことば(うごき・きもち)は、わだいが あれば わだい
+   *  - ひろい わだい(weak)より ながい ことば → じてん
+   *  - ふつうの わだい: じてんの ことばが わだいの キーワードを ふくむ(「ティラノサウルス」⊃「ティラノ」)ときだけ じてん
+   */
+  function useDictFor(dh, topic, tlen, tkey, rnd) {
+    if (!topic) return true;
+    if (dh.list.every((w) => w.sentence)) return false;
+    if (topic.special || topic.first || topic.action || topic.game) return false;
+    if (topic.weak) return dh.len > tlen;
+    if (dh.key.replace(/ー/g, '').indexOf(tkey) < 0) return false;
+    return dh.len > tlen || (dh.len === tlen && (!rnd || Math.random() < 0.5));
+  }
+
+  const ANY = null;
+  const ASKCATS = {
+    food: ['food', 'fruit', 'veggie', 'sweets', 'drink'],
+    snack: ['sweets', 'food', 'fruit', 'drink'],
+    dislike: ['food', 'fruit', 'veggie', 'sweets', 'drink', 'animal', 'bug', 'bird', 'sea', 'thing', 'nature', 'person', 'event'],
+    color: ['color'],
+    animal: ['animal', 'bird', 'sea', 'bug'],
+    vehicle: ['vehicle'],
+    place: ['place', 'event', 'nature'],
+    play: ['toy', 'sport', 'place', 'action'],
+    sport: ['sport', 'toy', 'action'],
+    hero: ['story', 'person'],
+    dream: ['person', 'sport', 'vehicle', 'animal'],
+    season: ['event', 'nature'],
+    scary: ANY,
+    good: ANY,
+    tell: ANY,
+    want: ANY,
+    friendName: ANY,
+  };
+
   /* ---------------- しりとり ---------------- */
   const SMALL = { ぁ: 'あ', ぃ: 'い', ぅ: 'う', ぇ: 'え', ぉ: 'お', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ', っ: 'つ', ゎ: 'わ' };
   function lastKana(w) {
@@ -438,7 +604,15 @@ const Tsuku = (function () {
     return SMALL[c] || c;
   }
   const SL = V.shiritoriLines || {};
-  const WORDS = V.shiritori || [];
+  // しりとりの ことば: vocab の ことば + じてんの ことば(ひらがなに そろえて、みせる ときは もとの かきかた)
+  const SHOW = {};
+  (V.shiritori || []).forEach((w) => (SHOW[w] = w));
+  D.words.forEach((w) => {
+    const k = norm(w.kana);
+    // しりとりは なまえの ことば だけ(うごき・きもちの ことばは つかわない)
+    if (!w.sentence && k.length >= 2 && /^[ぁ-ゖ]+$/.test(k) && !SHOW[k]) SHOW[k] = w.show;
+  });
+  const WORDS = Object.keys(SHOW);
 
   function shiritoriStart() {
     state.shiritori = { need: 'り', used: ['しりとり'], turns: 0, miss: 0 };
@@ -464,7 +638,11 @@ const Tsuku = (function () {
     st.turns++;
     st.miss = 0;
     const need = lastKana(n);
-    const cands = WORDS.filter((w) => w[0] === need && st.used.indexOf(w) < 0 && lastKana(w) !== 'ん');
+    let cands = WORDS.filter((w) => w[0] === need && st.used.indexOf(w) < 0 && lastKana(w) !== 'ん');
+    const short = cands.filter((w) => w.length <= 5);
+    if (short.length) cands = short; // こどもに わかりやすい みじかい ことばを えらぶ
+    const easy = cands.filter((w) => 'ぷぺぴぽぱづぢぬるりれ'.indexOf(lastKana(w)) < 0);
+    if (easy.length) cands = easy; // つぎの もじが むずかしい ことばは なるべく さける
     if (!cands.length || (st.turns >= 6 && Math.random() < 0.2)) {
       state.shiritori = null;
       return R(pickFresh(SL.lose).replace(/%L/g, need), 'shocked', ['もう いっかい しりとり', 'やったー', 'かくれんぼ しよう']);
@@ -472,7 +650,7 @@ const Tsuku = (function () {
     const w = pick(cands);
     st.used.push(w);
     st.need = lastKana(w);
-    return R(pickFresh(SL.ok).replace(/%W/g, w).replace(/%L/g, st.need), 'smug', ['やめる']);
+    return R(pickFresh(SL.ok).replace(/%W/g, SHOW[w] || w).replace(/%L/g, st.need), 'smug', ['やめる']);
   }
 
   /* ---------------- けいさん ---------------- */
@@ -515,6 +693,13 @@ const Tsuku = (function () {
       return R(`きょうは ${now.getMonth() + 1}がつ ${now.getDate()}にち、${wd} だよ。${tail}`, 'smug');
     }
     if (topic.special === 'shiritori') return shiritoriStart();
+    if (topic.special === 'catquiz') {
+      const lab = (k) => norm(D.cats[k].label.split('・')[0]);
+      const c = Object.keys(D.cats)
+        .filter((k) => !D.cats[k].sentence && n.indexOf(lab(k)) >= 0)
+        .sort((x, y) => lab(y).length - lab(x).length)[0];
+      return startRiddle(c || null) ;
+    }
     if (topic.special === 'math') {
       const m = n.match(MATH_RE);
       if (m) {
@@ -553,7 +738,7 @@ const Tsuku = (function () {
       const fits = n[0] === st.need || /やめ|おしまい|おわり/.test(n);
       if (/^(いや|いやだ)$/.test(n) || (topic && topic.id === 'bye')) state.shiritori = null;
       else if (fits) return shiritoriAnswer(n);
-      else if (topic && topic.id !== 'shiritori') state.shiritori = null; // ちがう はなしに なった
+      else if (topic && topic.id !== 'shiritori' && (STRONG.indexOf(topic.id) >= 0 || n.length > 5)) state.shiritori = null; // ちがう はなしに なった
       else if (++st.miss >= 3) {
         state.shiritori = null;
         return R('しりとり、いったん おやすみ しよっか。また やろうね', 'happy');
@@ -571,8 +756,18 @@ const Tsuku = (function () {
       if (h >= 0) return jankenPlay(h);
       state.janken = false;
     }
+    const tlen = bestTopic.len;
+    const tkey = bestTopic.key;
+    const dh = dictFind(input);
     // ききかえしの こたえ: ほかの わだいに あわない か、みじかい ことば(「ピーマン」など)
-    if (state.asked && n && !strong && (!topic || (n.length <= 4 && !topic.first))) return askAnswer(input, n);
+    // じてんの ことばなら、しつもんに あう しゅるい(たべもの → たべもの・くだもの…)の ときだけ こたえと みなす
+    const fitsAsk = !dh || !ASKCATS[state.asked] || dh.list.some((w) => ASKCATS[state.asked].indexOf(w.cat) >= 0);
+    if (state.asked && n && !strong && fitsAsk && (!topic || (n.length <= 4 && !topic.first) || dh)) {
+      const r = askAnswer(input, n);
+      const w = dh && dh.list.find((x) => !x.sentence);
+      if (w) r.text = join(r.text, `${w.show}は ${w.trait}`);
+      return r;
+    }
     state.riddle = null;
     state.janken = false;
     state.asked = null;
@@ -585,6 +780,12 @@ const Tsuku = (function () {
       // とくべつ じゃ なかった → つぎに あう わだいを さがす
       topic = bestTopic(n, (t) => t.special);
     }
+
+    // じてんの ことばの ほうが ながく あったら じてんで こたえる(おなじ ながさなら はんぶんずつ)
+    // つくぼうの ひとこと がたの ことば(うごき・きもち)は、わだいが あれば わだいを ゆうせん
+    if (dh && useDictFor(dh, topic, tlen, tkey, true)) return dictReply(dh);
+    // 「ぞう しってる？」の ように きかれたら じてんで こたえる
+    if (dh && topic && ['know', 'callName', 'listen', 'look'].indexOf(topic.id) >= 0 && !dh.list[0].sentence) return dictReply(dh);
 
     if (topic && topic.game === 'riddle') return startRiddle();
     if (topic && topic.game === 'janken') {
@@ -610,8 +811,13 @@ const Tsuku = (function () {
     // テストよう: どの わだいに あたるか
     matchId(input) {
       const t = bestTopic(norm(input));
+      const tl = bestTopic.len;
+      const dh = dictFind(input);
+      if (dh && useDictFor(dh, t, tl, bestTopic.key, false)) return 'dict:' + dh.key;
       return t ? t.id : null;
     },
+    dictFind,
+    dict: D,
     topics: TOPICS,
     norm,
     pick,
