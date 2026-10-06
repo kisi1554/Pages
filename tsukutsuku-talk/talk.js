@@ -305,6 +305,23 @@ const Tsuku = (function () {
     );
   }
 
+  // 「すきな 〇〇は？」(たべもの・いろ・きせつ・きらいな ものは もとの わだいで こたえる)
+  const FAVKEYS = [
+    ['どうぶつ', 'animal'], ['とり', 'bird'], ['さかな', 'sea'], ['うみのいきもの', 'sea'], ['むし', 'bug'],
+    ['くだもの', 'fruit'], ['やさい', 'veggie'], ['おやつ', 'sweets'], ['おかし', 'sweets'], ['のみもの', 'drink'],
+    ['のりもの', 'vehicle'], ['ばしょ', 'place'], ['おもちゃ', 'toy'], ['あそび', 'toy'], ['すぽつ', 'sport'],
+    ['はな', 'plant'], ['しょくぶつ', 'plant'], ['おはなし', 'story'], ['えほん', 'story'], ['ぎょうじ', 'event'],
+    ['しごと', 'person'], ['ことば', null],
+  ].filter(([, c]) => c === null || D.cats[c]);
+  TOPICS.unshift({
+    id: 'favq',
+    first: true,
+    special: 'favq',
+    mood: 'shy',
+    say: [],
+    keys: FAVKEYS.map(([k]) => 'すきな' + k),
+  });
+
   // じてんの カテゴリ クイズ(「どうぶつ クイズ」など)
   TOPICS.unshift({
     id: 'catquiz',
@@ -397,10 +414,36 @@ const Tsuku = (function () {
     'なんで なくの？',
   ];
 
-  function chipsFor(topic) {
-    if (topic && topic.chips) return topic.chips;
-    const pool = DEFAULT_CHIPS.slice().sort(() => Math.random() - 0.5);
-    return pool.slice(0, 4);
+  /*
+   * えらべる ことば(チップ) 4つ
+   *  - わだいが あれば その つづき(chips.js の follow ＋ わだいの chips)から 3つ
+   *  - のこりは ふだんの グループ(あそび・しつもん・セミ・はなし・ものしり)から ばらばらに
+   *  - ときどき じてんの ことばから「〇〇 しってる？」を まぜる
+   */
+  const C = typeof TsukuChips === 'object' ? TsukuChips : { groups: {}, follow: {} };
+  const GROUPS = Object.keys(C.groups || {}).filter((g) => C.groups[g].length);
+  const shuffle = (a) => a.slice().sort(() => Math.random() - 0.5);
+  const CHIP_WORDS = D.words.filter((w) => !w.sentence && w.show.length <= 7);
+  function dictChip(w) {
+    const x = w || pick(CHIP_WORDS);
+    if (!x) return null;
+    const lab = ((D.cats[x.cat] || {}).label || '').split('・')[0];
+    return pick(C.dict || ['%W しってる？']).replace(/%W/g, x.show).replace(/%L/g, lab);
+  }
+  function chipsFor(topic, extra) {
+    const out = [];
+    const addc = (c) => c && out.indexOf(c) < 0 && out.length < 4 && out.push(c);
+    const follow = topic ? ((C.follow || {})[topic.id] || []).concat(topic.chips || []) : [];
+    shuffle(follow).slice(0, 3).forEach(addc);
+    (extra || []).forEach(addc);
+    if (!GROUPS.length) shuffle(DEFAULT_CHIPS).forEach(addc);
+    if (Math.random() < 0.35) addc(dictChip());
+    let guard = 0;
+    while (out.length < 4 && guard++ < 20) {
+      const g = C.groups[pick(GROUPS)] || DEFAULT_CHIPS;
+      addc(pick(g));
+    }
+    return out;
   }
 
   let turns = 0;
@@ -474,7 +517,10 @@ const Tsuku = (function () {
     if (/^(ない|ないよ|いない|なし)$/.test(n) || /くない|じゃない/.test(n)) {
       return R(pick(['ほんとに〜？ %N、つよがり いってない？ ぷぷっ', 'ふーん、ないんだ。%Nって ふしぎ〜']), 'smug');
     }
-    const list = (V.asks || {})[id] || ['「%Q」かあ。ふーん、おぼえとくね'];
+    const list = (V.asks || {})[id] ||
+      (id === 'fav'
+        ? ['「%Q」かあ。いいね！ ぼくも すきに なりそう', '「%Q」！ %Nの すきな もの、おぼえとくね', 'へえ〜「%Q」なんだ。こんど いっしょに みたいな', '「%Q」！ %N、いい しゅみ してるじゃん。…ぼくの つぎに']
+        : ['「%Q」かあ。ふーん、おぼえとくね']);
     return R(pickFresh(list).replace(/%Q/g, q), 'happy');
   }
 
@@ -495,7 +541,10 @@ const Tsuku = (function () {
     const k = normKeep(w.kana);
     (DIDX[k] = DIDX[k] || []).push(w);
   });
-  const DKEYS = Object.keys(DIDX).sort((a, b) => b.length - a.length);
+  const DKEYS_ALL = Object.keys(DIDX).sort((a, b) => b.length - a.length);
+  // ものの ことば(なまえ)を さきに さがし、うごき・きもちの ことばは あとで さがす
+  const DKEYS_N = DKEYS_ALL.filter((k) => DIDX[k].some((w) => !w.sentence));
+  const DKEYS_S = DKEYS_ALL.filter((k) => DIDX[k].every((w) => w.sentence));
   const AFTER = 'はがをにのもとでやよねだっすみかほ ';
   const BEFORE = 'のとはがをもでにや ';
 
@@ -503,10 +552,19 @@ const Tsuku = (function () {
   function dictFind(raw) {
     const s = normKeep(raw);
     if (!s) return null;
+    return dictScan(s, DKEYS_N) || dictScan(s, DKEYS_S);
+  }
+  function dictScan(s, keys) {
     const flat = s.replace(/ /g, '');
-    for (const k of DKEYS) {
+    for (const k of keys) {
       if (k.length >= 3) {
         if (flat.indexOf(k) >= 0) return { key: k, list: DIDX[k], len: k.replace(/ー/g, '').length };
+        continue;
+      }
+      if (k.length === 1) {
+        // 1もじの ことば(「か」「め」など)は、その もじ だけ か「〇は」「〇って」の ときだけ
+        const re = /^(は|が|を|に|の|も|って|と|で|や|よ|ね|かな)?$/;
+        if (s.split(' ').some((tok) => tok[0] === k && re.test(tok.slice(1)))) return { key: k, list: DIDX[k], len: 1 };
         continue;
       }
       let i = s.indexOf(k);
@@ -540,8 +598,13 @@ const Tsuku = (function () {
       text = dictLine(pick(h.list));
     }
     const w = h.list[0];
-    const quiz = D.cats[w.cat] && !D.cats[w.cat].sentence ? label(w.cat).split('・')[0] + ' クイズ' : 'なぞなぞ だして';
-    return R(text, w.sentence ? 'happy' : 'smug', [quiz, 'しりとり しよう', 'かくれんぼ しよう']);
+    const extra = [];
+    if (D.cats[w.cat] && !D.cats[w.cat].sentence) {
+      const lab = label(w.cat).split('・')[0];
+      const same = CHIP_WORDS.filter((x) => x.cat === w.cat && x !== w);
+      extra.push(lab + ' クイズ', dictChip(pick(same)), `すきな ${lab}は？`);
+    }
+    return R(text, w.sentence ? 'happy' : 'smug', chipsFor(null, shuffle(extra)));
   }
 
   // じてんから なーんだクイズを つくる(cat を しぼる ことも できる)
@@ -572,6 +635,8 @@ const Tsuku = (function () {
     if (dh.list.every((w) => w.sentence)) return false;
     if (topic.special || topic.first || topic.action || topic.game) return false;
     if (topic.weak) return dh.len > tlen;
+    // 「ゾウ かわいい」「カレー だいすき」は ほめことばより ことばの はなしを する
+    if (topic.id === 'praise') return true;
     if (dh.key.replace(/ー/g, '').indexOf(tkey) < 0) return false;
     return dh.len > tlen || (dh.len === tlen && (!rnd || Math.random() < 0.5));
   }
@@ -590,6 +655,7 @@ const Tsuku = (function () {
     hero: ['story', 'person'],
     dream: ['person', 'sport', 'vehicle', 'animal'],
     season: ['event', 'nature'],
+    fav: ANY, // state.askCat で しぼる(下)
     scary: ANY,
     good: ANY,
     tell: ANY,
@@ -693,6 +759,25 @@ const Tsuku = (function () {
       return R(`きょうは ${now.getMonth() + 1}がつ ${now.getDate()}にち、${wd} だよ。${tail}`, 'smug');
     }
     if (topic.special === 'shiritori') return shiritoriStart();
+    if (topic.special === 'favq') {
+      const cat = FAVKEYS.find(([k]) => n.indexOf(k) >= 0);
+      const c = cat ? cat[1] : null;
+      const pool = D.words.filter((w) => !w.sentence && (!c || w.cat === c));
+      if (!pool.length) return null;
+      // つくぼうの いちばんは カテゴリごとに きまってる(なんど きいても おなじ)
+      const key = c || 'all';
+      let h = 0;
+      for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 9973;
+      const w = pool[h % pool.length];
+      const lab = c ? (D.cats[c].label || '').split('・')[0] : 'ことば';
+      state.asked = 'fav';
+      state.askCat = c;
+      return R(pick([
+        `ぼくの すきな ${lab}は「${w.show}」！ ${w.show}は ${w.trait}。%Nは？`,
+        `うーん…「${w.show}」かな。${w.trait}ところが すき。%Nの すきな ${lab}は？`,
+        `ないしょ…と おもったけど おしえて あげる。「${w.show}」！ %Nは なにが すき？`,
+      ]), 'shy', chipsFor(null, shuffle(CHIP_WORDS.filter((x) => !c || x.cat === c)).slice(0, 3).map((x) => x.show)));
+    }
     if (topic.special === 'catquiz') {
       const lab = (k) => norm(D.cats[k].label.split('・')[0]);
       const c = Object.keys(D.cats)
@@ -761,7 +846,8 @@ const Tsuku = (function () {
     const dh = dictFind(input);
     // ききかえしの こたえ: ほかの わだいに あわない か、みじかい ことば(「ピーマン」など)
     // じてんの ことばなら、しつもんに あう しゅるい(たべもの → たべもの・くだもの…)の ときだけ こたえと みなす
-    const fitsAsk = !dh || !ASKCATS[state.asked] || dh.list.some((w) => ASKCATS[state.asked].indexOf(w.cat) >= 0);
+    const askCats = state.asked === 'fav' && state.askCat ? [state.askCat] : ASKCATS[state.asked];
+    const fitsAsk = !dh || !askCats || dh.list.some((w) => askCats.indexOf(w.cat) >= 0);
     if (state.asked && n && !strong && fitsAsk && (!topic || (n.length <= 4 && !topic.first) || dh)) {
       const r = askAnswer(input, n);
       const w = dh && dh.list.find((x) => !x.sentence);
@@ -804,7 +890,9 @@ const Tsuku = (function () {
     }
     // わからない ときは あいづち、ときどき からかう
     const text = Math.random() < 0.35 ? pickFresh(TEASE) : pickFresh(AIZUCHI);
-    return R(text, 'smug');
+    const r = R(text, 'smug');
+    r.fallback = true;
+    return r;
   }
 
   return {
@@ -818,6 +906,10 @@ const Tsuku = (function () {
     },
     dictFind,
     dict: D,
+    // テストよう: つづきの かいわを わすれる
+    reset() {
+      Object.keys(state).forEach((k) => (state[k] = null));
+    },
     topics: TOPICS,
     norm,
     pick,

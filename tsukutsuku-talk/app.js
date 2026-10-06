@@ -365,7 +365,7 @@
           say(Tsuku.pick(['どう？ じょうずでしょ。%Nも まねして みて', 'ウイヨース！ …%N、はくしゅは？']), 'smug');
         }, len * 1000 + 200);
       });
-      setChips(['すごいね', 'もう いっかい ないて', 'かくれんぼ しよう']);
+      setChips(Tsuku.chipsFor(null, ['すごいね', 'もう いっかい ないて']));
       return;
     }
     if (r.action === 'seek' || r.action === 'hide') {
@@ -458,7 +458,7 @@
       ? 'あ、%N また きたの？ ひまなんだね〜。…うそうそ、うれしいよ。きょうも かくれんぼ する？'
       : 'やあ、%N。ぼくは ツクツクボウシの つくぼう。かくれんぼなら だれにも まけないよ。%Nには ぜったい みつけられないけどね〜';
     say(first, 'smug');
-    setChips(['かくれんぼ しよう', 'ぼくが かくれる', 'なきごえ きかせて', 'なんで いじわる いうの？']);
+    setChips(Tsuku.chipsFor(null, ['かくれんぼ しよう', 'なんで いじわる いうの？']));
   }
   $('startBtn').addEventListener('click', begin);
   $('nameInput').addEventListener('keydown', (e) => {
@@ -722,7 +722,7 @@
       mood = 'shy';
     }
     say(line, mood);
-    setChips(['かくれんぼ しよう', 'ぼくが かくれる', 'すごいね', 'なきごえ きかせて']);
+    setChips(Tsuku.chipsFor(null, ['かくれんぼ しよう', 'ぼくが かくれる']));
   }
   $('backBtn').addEventListener('click', backToTalk);
 
