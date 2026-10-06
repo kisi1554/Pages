@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#ffe9a8">
+<title>カスタと あそぼ</title>
+<style>
+  :root {
+    --cream: #fff8e1;
+    --yellow: #ffe08a;
+    --yellow-d: #f4c552;
+    --brown: #7a4a22;
+    --brown-l: #b87a3d;
+    --pink: #ff9eb0;
+    --sky: #cfefff;
+    --grass: #bfe6a0;
+    --ink: #5a3415;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    color: var(--ink);
+    background: var(--cream);
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  #app {
+    height: 100dvh; display: flex; flex-direction: column;
+    background: linear-gradient(var(--sky) 0 62%, var(--grass) 62% 100%);
+    transition: filter .8s;
+  }
+  #app.night { filter: brightness(.45) saturate(.7); }
+  #app.night .keep-bright { filter: brightness(2.2); }
+
+  /* --- うえの バー --- */
+  header {
+    display: flex; align-items: center; gap: 8px;
+    padding: max(8px, env(safe-area-inset-top)) 12px 6px;
+  }
+  .meters { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .meter {
+    background: rgba(255,255,255,.85); border-radius: 14px; padding: 4px 8px;
+    display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: bold;
+    box-shadow: 0 2px 0 rgba(0,0,0,.08);
+  }
+  .meter .ico { font-size: 20px; }
+  .bar { flex: 1; height: 10px; background: #eee; border-radius: 6px; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 50%; border-radius: 6px; transition: width .4s; }
+  #mHunger i { background: #ff9f43; }
+  #mEnergy i { background: #54a0ff; }
+  #mClean i  { background: #48dbfb; }
+  .iconbtn {
+    width: 46px; height: 46px; border-radius: 50%; border: none;
+    background: rgba(255,255,255,.9); font-size: 22px; cursor: pointer;
+    box-shadow: 0 2px 0 rgba(0,0,0,.1);
+  }
+  #love {
+    background: rgba(255,255,255,.9); border-radius: 20px; padding: 6px 12px;
+    font-weight: bold; font-size: 16px; white-space: nowrap;
+    box-shadow: 0 2px 0 rgba(0,0,0,.1);
+  }
+
+  /* --- ステージ --- */
+  #stage { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+  #bubble {
+    position: absolute; left: 50%; top: 4%; transform: translateX(-50%);
+    max-width: min(86%, 520px); background: #fff; border-radius: 24px;
+    padding: 12px 20px; font-size: clamp(18px, 4.6vw, 26px); font-weight: bold;
+    text-align: center; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere;
+    box-shadow: 0 4px 0 rgba(0,0,0,.08); z-index: 3;
+    transition: opacity .25s; pointer-events: none;
+  }
+  #bubble::after {
+    content: ""; position: absolute; left: 50%; bottom: -14px; transform: translateX(-50%);
+    border: 10px solid transparent; border-top: 14px solid #fff;
+  }
+  #bubble.hide { opacity: 0; }
+  #pet {
+    position: absolute; left: 50%; bottom: 4%;
+    width: min(78vw, 46vh, 420px); aspect-ratio: 1; transform: translateX(-50%);
+    cursor: pointer; touch-action: none; z-index: 2;
+  }
+  #pet svg { width: 100%; height: 100%; overflow: visible; }
+  #petBody { transform-origin: 100px 190px; animation: breathe 2.6s ease-in-out infinite; }
+  @keyframes breathe { 50% { transform: scale(1.025, .975); } }
+  #pet.jump #petBody { animation: jump .55s ease-out; }
+  @keyframes jump {
+    0% { transform: scale(1.08,.9); } 35% { transform: translateY(-38px) scale(.96,1.06); }
+    70% { transform: translateY(0) scale(1.06,.94); } 100% { transform: none; }
+  }
+  #pet.wiggle #petBody { animation: wiggle .6s ease-in-out; }
+  @keyframes wiggle { 25% { transform: rotate(-6deg); } 75% { transform: rotate(6deg); } }
+  #pet.eat #petBody { animation: chew .3s ease-in-out 4; }
+  @keyframes chew { 50% { transform: scale(1.04, .96); } }
+  #eyes { transform-origin: 100px 92px; animation: blink 4.5s infinite; }
+  @keyframes blink { 0%, 95%, 100% { transform: scaleY(1); } 97% { transform: scaleY(.1); } }
+  #tail { transform-origin: 152px 160px; animation: wag 1.4s ease-in-out infinite; }
+  #pet.happy #tail { animation-duration: .3s; }
+  @keyframes wag { 50% { transform: rotate(22deg); } }
+  .sleeping #eyes { animation: none; }
+
+  .fx {
+    position: absolute; pointer-events: none; z-index: 4; font-size: 34px;
+    animation: floatUp 1.3s ease-out forwards;
+  }
+  @keyframes floatUp {
+    from { transform: translate(-50%, 0) scale(.6); opacity: 1; }
+    to   { transform: translate(-50%, -120px) scale(1.2); opacity: 0; }
+  }
+  .bubbleFx {
+    position: absolute; pointer-events: none; z-index: 4; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, rgba(200,240,255,.6) 60%, rgba(150,220,255,.3));
+    border: 2px solid rgba(255,255,255,.9);
+    animation: pop 1.6s ease-out forwards;
+  }
+  @keyframes pop {
+    from { transform: translate(-50%,-50%) scale(.3); opacity: 1; }
+    80% { opacity: .9; }
+    to { transform: translate(-50%,-50%) translateY(-60px) scale(1.1); opacity: 0; }
+  }
+  .zzz {
+    position: absolute; z-index: 4; font-size: 40px; font-weight: bold; color: #fff;
+    pointer-events: none; animation: zzz 2.4s ease-out infinite;
+  }
+  @keyframes zzz {
+    from { transform: translate(0,0) scale(.6); opacity: 0; }
+    30% { opacity: 1; }
+    to { transform: translate(40px,-110px) scale(1.3); opacity: 0; }
+  }
+  .food-fly {
+    position: absolute; z-index: 5; font-size: 56px; pointer-events: none;
+    transition: transform .6s cubic-bezier(.4,1.4,.6,1), opacity .3s .5s;
+  }
+
+  /* --- したの ボタン --- */
+  nav.actions {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    padding: 8px 10px max(10px, env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.75);
+  }
+  .act {
+    border: none; border-radius: 18px; background: #fff; cursor: pointer;
+    padding: 8px 2px; min-height: 76px; font-family: inherit; color: var(--ink);
+    font-size: clamp(13px, 3.4vw, 17px); font-weight: bold;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    box-shadow: 0 4px 0 var(--yellow-d);
+  }
+  .act:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--yellow-d); }
+  .act .e { font-size: 32px; line-height: 1; }
+  .act.on { background: var(--yellow); }
+
+  /* --- パネル --- */
+  .panel {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+    background: #fff; border-radius: 26px 26px 0 0; padding: 14px 14px 18px;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.12);
+    transform: translateY(110%); transition: transform .3s, visibility 0s .3s; visibility: hidden;
+  }
+  .panel.open { transform: none; visibility: visible; transition: transform .3s; }
+  .panel h2 { margin: 0 0 10px; font-size: 20px; text-align: center; }
+  .choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 10px; }
+  .choice {
+    border: 3px solid #f3e3b5; background: var(--cream); border-radius: 18px;
+    padding: 8px 4px; font-family: inherit; font-size: 15px; font-weight: bold; color: var(--ink);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer;
+    min-height: 88px;
+  }
+  .choice .e { font-size: 40px; line-height: 1; }
+  .choice.sel { border-color: var(--brown-l); background: var(--yellow); }
+  .choice.lock { opacity: .45; }
+  .choice small { font-size: 11px; font-weight: normal; }
+  .close { display: block; margin: 12px auto 0; border: none; background: #eee; border-radius: 20px;
+    padding: 10px 28px; font-family: inherit; font-size: 16px; font-weight: bold; color: var(--ink); cursor: pointer; }
+
+  /* --- ゲーム --- */
+  #game {
+    position: absolute; inset: 0; z-index: 8; display: none;
+    background: linear-gradient(#fff3c4, #ffe1a6);
+    touch-action: none; overflow: hidden;
+  }
+  #game.show { display: block; }
+  #gameHud {
+    position: absolute; top: max(10px, env(safe-area-inset-top)); left: 0; right: 0;
+    display: flex; justify-content: center; gap: 14px; font-size: 22px; font-weight: bold; z-index: 2;
+  }
+  #gameHud span { background: #fff; border-radius: 18px; padding: 4px 16px; }
+  #catcher { position: absolute; bottom: 4%; width: min(30vw, 22vh, 170px); aspect-ratio: 1; transform: translateX(-50%); }
+  #catcher svg { width: 100%; height: 100%; }
+  .drop { position: absolute; font-size: clamp(38px, 9vw, 60px); transform: translate(-50%, -50%); }
+  #gameMsg {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; text-align: center; font-size: clamp(22px, 5.5vw, 32px); font-weight: bold; z-index: 3;
+    background: rgba(255,248,225,.85);
+  }
+  #gameMsg.hide { display: none; }
+  .big {
+    border: none; border-radius: 30px; background: var(--brown-l); color: #fff;
+    font-family: inherit; font-size: 24px; font-weight: bold; padding: 14px 36px; cursor: pointer;
+    box-shadow: 0 5px 0 var(--brown);
+  }
+  .big.sub { background: #ccc; color: var(--ink); box-shadow: 0 5px 0 #999; font-size: 18px; }
+
+  @media (orientation: landscape) and (max-height: 560px) {
+    .act { min-height: 58px; } .act .e { font-size: 26px; }
+    .meter { font-size: 11px; } #bubble { top: 2%; padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="keep-bright">
+    <div class="meters">
+      <div class="meter" id="mHunger"><span class="ico">🍮</span><span class="bar"><i></i></span></div>
+      <div class="meter" id="mEnergy"><span class="ico">⚡</span><span class="bar"><i></i></span></div>
+      <div class="meter" id="mClean"><span class="ico">🫧</span><span class="bar"><i></i></span></div>
+    </div>
+    <div id="love">💛 0</div>
+    <button class="iconbtn" id="soundBtn" aria-label="おと">🔊</button>
+  </header>
+
+  <div id="stage">
+    <div id="bubble">わふっ！ ぼく カスタ。いっしょに あそぼ！</div>
+    <div id="pet" aria-label="カスタ">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <radialGradient id="fur" cx="45%" cy="35%" r="70%">
+            <stop offset="0" stop-color="#fff2b8"/><stop offset="1" stop-color="#ffd772"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="100" cy="192" rx="62" ry="7" fill="rgba(0,0,0,.12)"/>
+        <g id="petBody">
+          <!-- しっぽ -->
+          <path id="tail" d="M150 160 q24 -6 22 -30 q-2 -10 -10 -6 q4 16 -16 26 z" fill="url(#fur)" stroke="#8a5a2b" stroke-width="3" stroke-linejoin="round"/>
+          <!-- からだ -->
+          <ellipse cx="100" cy="150" rx="54" ry="40" fill="url(#fur)" stroke="#8a5a2b" stroke-width="3"/>
+          <!-- あし -->
+          <ellipse cx="74" cy="186" rx="16" ry="9" fill="#fff2b8" stroke="#8a5a2b" stroke-width="3"/>
+          <ellipse cx="126" cy="186" rx="16" ry="9" fill="#fff2b8" stroke="#8a5a2b" stroke-width="3"/>
+          <!-- おなかの もよう -->
+          <ellipse cx="100" cy="158" rx="28" ry="22" fill="#fffbe6" opacity=".9"/>
+          <!-- スカーフ -->
+          <path d="M58 120 q42 18 84 0 l-2 12 q-40 16 -80 0 z" fill="#4fb8a8" stroke="#2f7f74" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M92 128 l8 22 l8 -22 z" fill="#4fb8a8" stroke="#2f7f74" stroke-width="2.5" stroke-linejoin="round"/>
+          <circle cx="100" cy="131" r="3" fill="#fff"/>
+          <!-- あたま -->
+          <ellipse cx="100" cy="82" rx="64" ry="50" fill="url(#fur)" stroke="#8a5a2b" stroke-width="3"/>
+          <!-- たれみみ -->
+          <path d="M44 58 q-22 10 -18 42 q4 14 16 8 q8 -18 14 -40 z" fill="#e9b04a" stroke="#8a5a2b" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M156 58 q22 10 18 42 q-4 14 -16 8 q-8 -18 -14 -40 z" fill="#e9b04a" stroke="#8a5a2b" stroke-width="3" stroke-linejoin="round"/>
+          <!-- あたまの はっぱ -->
+          <g id="leaf">
+            <path d="M100 34 q-2 -12 4 -18" fill="none" stroke="#5b8f2e" stroke-width="3" stroke-linecap="round"/>
+            <path d="M103 18 q16 -10 26 2 q-14 10 -26 -2 z" fill="#8fd16a" stroke="#5b8f2e" stroke-width="2.5" stroke-linejoin="round"/>
+          </g>
+          <!-- ほっぺ -->
+          <ellipse cx="62" cy="100" rx="11" ry="7" fill="#ffaabb" opacity=".75"/>
+          <ellipse cx="138" cy="100" rx="11" ry="7" fill="#ffaabb" opacity=".75"/>
+          <!-- め -->
+          <g id="eyes">
+            <g id="eyesOpen">
+              <ellipse cx="78" cy="88" rx="5.5" ry="7" fill="#3b2412"/>
+              <ellipse cx="122" cy="88" rx="5.5" ry="7" fill="#3b2412"/>
+              <circle cx="80" cy="85" r="2" fill="#fff"/>
+              <circle cx="124" cy="85" r="2" fill="#fff"/>
+            </g>
+            <g id="eyesHappy" style="display:none" fill="none" stroke="#3b2412" stroke-width="3.5" stroke-linecap="round">
+              <path d="M70 90 q8 -10 16 0"/><path d="M114 90 q8 -10 16 0"/>
+            </g>
+            <g id="eyesSleep" style="display:none" fill="none" stroke="#3b2412" stroke-width="3.5" stroke-linecap="round">
+              <path d="M70 88 q8 8 16 0"/><path d="M114 88 q8 8 16 0"/>
+            </g>
+          </g>
+          <!-- はな と くち -->
+          <ellipse cx="100" cy="99" rx="6" ry="4" fill="#5a3415"/>
+          <path id="mouth" d="M90 106 q5 6 10 0 q5 6 10 0" fill="none" stroke="#5a3415" stroke-width="3" stroke-linecap="round"/>
+          <!-- おしゃれ -->
+          <g id="hat"></g>
+        </g>
+      </svg>
+    </div>
+
+    <div class="panel" id="foodPanel">
+      <h2>なにを たべる？</h2>
+      <div class="choices" id="foodChoices"></div>
+      <button class="close" data-close>とじる</button>
+    </div>
+    <div class="panel" id="hatPanel">
+      <h2>おしゃれ しよう</h2>
+      <div class="choices" id="hatChoices"></div>
+      <button class="close" data-close>とじる</button>
+    </div>
+  </div>
+
+  <nav class="actions keep-bright">
+    <button class="act" id="bFood"><span class="e">🍮</span>ごはん</button>
+    <button class="act" id="bBath"><span class="e">🛁</span>おふろ</button>
+    <button class="act" id="bPlay"><span class="e">⚽</span>あそぶ</button>
+    <button class="act" id="bSleep"><span class="e">🌙</span>ねんね</button>
+    <button class="act" id="bHat"><span class="e">🎀</span>おしゃれ</button>
+  </nav>
+
+  <div id="game">
+    <div id="gameHud"><span id="gScore">🍮 0</span><span id="gTime">⏱ 30</span></div>
+    <div id="catcher"></div>
+    <div id="gameMsg">
+      <div>おやつキャッチ！</div>
+      <div style="font-size:.7em">ゆびで カスタを うごかして<br>おちてくる おやつを キャッチしてね</div>
+      <button class="big" id="gStart">はじめる</button>
+      <button class="big sub" id="gQuit">もどる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const app = $('#app'), stage = $('#stage'), pet = $('#pet'), bubble = $('#bubble');
+
+  // ---------------- ほぞん ----------------
+  const KEY = 'custa-asobo-v1';
+  const def = { hunger: 70, energy: 80, clean: 80, love: 0, hat: 'none', sound: true, t: Date.now() };
+  let S = { ...def };
+  try { const d = JSON.parse(localStorage.getItem(KEY)); if (d) S = { ...def, ...d }; } catch (e) {}
+  function save() { S.t = Date.now(); try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  // るすの あいだに すこし へる（さいだい 40）
+  {
+    const min = Math.min((Date.now() - S.t) / 60000, 600);
+    S.hunger = Math.max(15, S.hunger - Math.min(40, min * 0.25));
+    S.clean  = Math.max(15, S.clean  - Math.min(40, min * 0.15));
+    S.energy = Math.min(100, S.energy + Math.min(40, min * 0.2));
+  }
+  const clamp = (v) => Math.max(0, Math.min(100, v));
+
+  // ---------------- おと（WebAudio） ----------------
+  let ac = null;
+  function ctx() {
+    if (!S.sound) return null;
+    try { ac = ac || new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) { return null; }
+    return ac;
+  }
+  function tone(f1, f2, dur, type = 'sine', vol = .18, delay = 0) {
+    const a = ctx(); if (!a) return;
+    const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .05);
+  }
+  const sfx = {
+    wan()   { tone(520, 900, .09, 'triangle', .2); tone(900, 420, .16, 'triangle', .2, .09); },
+    happy() { [660, 880, 1100].forEach((f, i) => tone(f, f * 1.05, .12, 'sine', .15, i * .09)); },
+    eat()   { for (let i = 0; i < 4; i++) tone(300, 200, .07, 'square', .06, i * .3); },
+    pop()   { tone(800 + Math.random() * 600, 1600, .06, 'sine', .08); },
+    catch() { tone(700, 1400, .1, 'sine', .14); },
+    sleep() { tone(400, 260, .6, 'sine', .1); tone(300, 200, .7, 'sine', .08, .5); },
+    sad()   { tone(500, 300, .35, 'triangle', .12); },
+    fanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .18, 'triangle', .16, i * .14)); },
+  };
+  const soundBtn = $('#soundBtn');
+  function drawSound() { soundBtn.textContent = S.sound ? '🔊' : '🔇'; }
+  soundBtn.onclick = () => { S.sound = !S.sound; drawSound(); save(); if (S.sound) sfx.wan(); };
+  drawSound();
+
+  // ---------------- ひょうじ ----------------
+  function drawMeters() {
+    $('#mHunger i').style.width = S.hunger + '%';
+    $('#mEnergy i').style.width = S.energy + '%';
+    $('#mClean i').style.width = S.clean + '%';
+    $('#love').textContent = '💛 ' + Math.floor(S.love);
+  }
+  let sayTimer = 0;
+  function say(text, ms = 3200) {
+    bubble.textContent = text; bubble.classList.remove('hide');
+    clearTimeout(sayTimer);
+    if (ms) sayTimer = setTimeout(() => bubble.classList.add('hide'), ms);
+  }
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function anim(name) {
+    pet.classList.remove('jump', 'wiggle', 'eat'); void pet.offsetWidth; pet.classList.add(name);
+    setTimeout(() => pet.classList.remove(name), 1300);
+  }
+  function face(kind) { // open / happy / sleep
+    $('#eyesOpen').style.display  = kind === 'open'  ? '' : 'none';
+    $('#eyesHappy').style.display = kind === 'happy' ? '' : 'none';
+    $('#eyesSleep').style.display = kind === 'sleep' ? '' : 'none';
+  }
+  const MOUTH = {
+    smile: 'M90 106 q5 6 10 0 q5 6 10 0',
+    open:  'M90 105 q10 18 20 0 z',
+    sad:   'M92 110 q8 -6 16 0',
+    chew:  'M93 106 q7 4 14 0',
+  };
+  function mouth(k) { const m = $('#mouth'); m.setAttribute('d', MOUTH[k]); m.setAttribute('fill', k === 'open' ? '#e8627a' : 'none'); }
+  let faceTimer = 0;
+  function happyFace(ms = 1600) {
+    face('happy'); mouth('open'); pet.classList.add('happy');
+    clearTimeout(faceTimer);
+    faceTimer = setTimeout(() => { if (!sleeping) { face('open'); mouth('smile'); pet.classList.remove('happy'); } }, ms);
+  }
+  function fx(ch, x, y) {
+    const r = stage.getBoundingClientRect();
+    const e = document.createElement('div'); e.className = 'fx'; e.textContent = ch;
+    e.style.left = (x - r.left) + 'px'; e.style.top = (y - r.top) + 'px';
+    stage.appendChild(e); setTimeout(() => e.remove(), 1400);
+  }
+  function petPoint(fx_, fy) { // かおの まわりの ばしょ
+    const r = pet.getBoundingClientRect();
+    return [r.left + r.width * fx_, r.top + r.height * fy];
+  }
+  function hearts(n = 3) {
+    for (let i = 0; i < n; i++) setTimeout(() => fx(pick(['💛', '💖', '✨']), ...petPoint(.25 + Math.random() * .5, .2 + Math.random() * .2)), i * 160);
+  }
+  function addLove(n) {
+    const before = Math.floor(S.love);
+    S.love += n;
+    drawMeters(); save();
+    const unlocked = HATS.find(h => h.need > before && h.need <= Math.floor(S.love));
+    if (unlocked) setTimeout(() => { sfx.fanfare(); say(`やったー！「${unlocked.name}」が つけられるように なったよ！`, 4200); }, 900);
+  }
+
+  // ---------------- おしゃれ ----------------
+  const HATS = [
+    { id: 'none',   e: '🌿', name: 'はっぱ',   need: 0,  svg: '' },
+    { id: 'ribbon', e: '🎀', name: 'りぼん',   need: 5,
+      svg: '<g transform="translate(138 42) rotate(20)"><path d="M0 0 l-18 -12 l0 24 z M0 0 l18 -12 l0 24 z" fill="#ff7aa2" stroke="#c94a75" stroke-width="2.5" stroke-linejoin="round"/><circle r="5" fill="#ff9dbb" stroke="#c94a75" stroke-width="2.5"/></g>' },
+    { id: 'cap',    e: '🧢', name: 'ぼうし',   need: 15,
+      svg: '<path d="M54 52 q46 -46 92 0 z" fill="#5aa0ff" stroke="#2e66b8" stroke-width="3" stroke-linejoin="round"/><path d="M140 52 q24 0 30 8 q-16 4 -32 0 z" fill="#5aa0ff" stroke="#2e66b8" stroke-width="3" stroke-linejoin="round"/><circle cx="100" cy="22" r="5" fill="#fff" stroke="#2e66b8" stroke-width="2"/>' },
+    { id: 'flower', e: '🌸', name: 'おはな',   need: 30,
+      svg: '<g transform="translate(62 44)"><g fill="#ffc0d6" stroke="#e07aa0" stroke-width="2"><circle cx="0" cy="-9" r="8"/><circle cx="9" cy="-2" r="8"/><circle cx="5" cy="8" r="8"/><circle cx="-5" cy="8" r="8"/><circle cx="-9" cy="-2" r="8"/></g><circle r="6" fill="#ffe066" stroke="#e0a800" stroke-width="2"/></g>' },
+    { id: 'crown',  e: '👑', name: 'おうかん', need: 50,
+      svg: '<path d="M68 46 l6 -30 l14 18 l12 -24 l12 24 l14 -18 l6 30 z" fill="#ffd23f" stroke="#b8860b" stroke-width="3" stroke-linejoin="round"/><circle cx="100" cy="36" r="5" fill="#ff5c7a"/><circle cx="82" cy="38" r="3.5" fill="#4fb8ff"/><circle cx="118" cy="38" r="3.5" fill="#4fb8ff"/>' },
+    { id: 'glasses', e: '🕶️', name: 'めがね', need: 80,
+      svg: '<g fill="rgba(40,40,60,.85)" stroke="#222" stroke-width="2.5"><rect x="62" y="78" width="30" height="20" rx="8"/><rect x="108" y="78" width="30" height="20" rx="8"/></g><path d="M92 86 h16" stroke="#222" stroke-width="3"/>' },
+  ];
+  function drawHat() {
+    const h = HATS.find(x => x.id === S.hat) || HATS[0];
+    $('#hat').innerHTML = h.svg;
+    $('#leaf').style.display = (h.id === 'cap' || h.id === 'crown') ? 'none' : '';
+  }
+  function buildHats() {
+    const box = $('#hatChoices'); box.innerHTML = '';
+    HATS.forEach(h => {
+      const ok = Math.floor(S.love) >= h.need;
+      const b = document.createElement('button');
+      b.className = 'choice' + (S.hat === h.id ? ' sel' : '') + (ok ? '' : ' lock');
+      b.innerHTML = `<span class="e">${ok ? h.e : '🔒'}</span>${h.name}${ok ? '' : `<small>💛${h.need}で つかえる</small>`}`;
+      b.onclick = () => {
+        if (!ok) { sfx.sad(); say(`💛を ${h.need}こ あつめると つけられるよ`); return; }
+        S.hat = h.id; save(); drawHat(); buildHats();
+        anim('jump'); happyFace(); sfx.happy(); hearts(2);
+        say(pick(['にあう？ えへへ', 'じゃーん！ かわいい？', 'わふっ！ おきにいり！']));
+      };
+      box.appendChild(b);
+    });
+  }
+
+  // ---------------- ごはん ----------------
+  const FOODS = [
+    { e: '🍮', name: 'プリン',   h: 30, say: 'ぷるぷる〜！ だいこうぶつ！', love: 2 },
+    { e: '🍪', name: 'クッキー', h: 18, say: 'さくさく、おいしい！', love: 1 },
+    { e: '🍎', name: 'りんご',   h: 20, say: 'しゃりしゃり あまーい！', love: 1 },
+    { e: '🥛', name: 'ミルク',   h: 12, say: 'ごくごく… ぷはー！', love: 1 },
+    { e: '🍙', name: 'おにぎり', h: 28, say: 'もぐもぐ、げんき でた！', love: 1 },
+    { e: '🦴', name: 'ほね',     h: 15, say: 'かじかじ… たのしい！', love: 1 },
+  ];
+  function buildFoods() {
+    const box = $('#foodChoices'); box.innerHTML = '';
+    FOODS.forEach(f => {
+      const b = document.createElement('button'); b.className = 'choice';
+      b.innerHTML = `<span class="e">${f.e}</span>${f.name}`;
+      b.onclick = () => feed(f, b);
+      box.appendChild(b);
+    });
+  }
+  let busy = false;
+  function feed(f, btn) {
+    if (busy) return;
+    if (S.hunger >= 96) { sfx.sad(); mouth('sad'); setTimeout(() => mouth('smile'), 1200); say('おなか いっぱい… もう たべられないよ〜'); return; }
+    busy = true; closePanels();
+    const r = stage.getBoundingClientRect(), b = btn.getBoundingClientRect();
+    const el = document.createElement('div'); el.className = 'food-fly'; el.textContent = f.e;
+    el.style.left = (b.left - r.left + b.width / 2 - 28) + 'px'; el.style.top = (b.top - r.top) + 'px';
+    stage.appendChild(el);
+    const [mx, my] = petPoint(.5, .5);
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      el.style.transform = `translate(${mx - b.left - b.width / 2}px, ${my - b.top - 20}px) scale(.5)`;
+      el.style.opacity = '0';
+    }));
+    mouth('open');
+    setTimeout(() => {
+      el.remove(); mouth('chew'); anim('eat'); sfx.eat(); say('もぐもぐ…', 0);
+      setTimeout(() => {
+        S.hunger = clamp(S.hunger + f.h); S.clean = clamp(S.clean - 3);
+        happyFace(1800); sfx.happy(); hearts(3); say(f.say); addLove(f.love); busy = false;
+      }, 1300);
+    }, 600);
+  }
+
+  // ---------------- なでる / タップ ----------------
+  let rub = 0, down = false, lastX = 0, lastY = 0, moved = 0;
+  const TAP_LINES = ['わふっ！', 'なになに？', 'えへへ', 'くすぐったいよ〜', 'あそぼ あそぼ！', 'カスタだよ！', 'すき すき〜！', 'わん わん！'];
+  pet.addEventListener('pointerdown', (e) => {
+    down = true; moved = 0; lastX = e.clientX; lastY = e.clientY;
+    try { pet.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  pet.addEventListener('pointermove', (e) => {
+    if (!down) return;
+    const d = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+    lastX = e.clientX; lastY = e.clientY; moved += d;
+    if (sleeping) return;
+    if (bathing) { scrub(e, d); return; }
+    rub += d;
+    if (rub > 140) {
+      rub = 0; fx(pick(['💛', '💖', '🎵']), e.clientX, e.clientY - 20);
+      happyFace(1200);
+      if (Math.random() < .35) { sfx.happy(); say(pick(['きもちいい〜', 'もっと なでて〜', 'ふにゃ〜ん', 'しあわせ〜'])); }
+      addLove(.5);
+    }
+  });
+  pet.addEventListener('pointerup', (e) => {
+    if (!down) return; down = false;
+    if (moved > 18) return;
+    if (sleeping) { wake(); return; }
+    if (bathing) { scrub(e, 40); return; }
+    sfx.wan(); anim(pick(['jump', 'wiggle'])); happyFace();
+    fx(pick(['❗', '🎵', '💛']), e.clientX, e.clientY - 30);
+    say(moodLine() || pick(TAP_LINES));
+    addLove(.2);
+  });
+  pet.addEventListener('pointercancel', () => { down = false; });
+  function moodLine() {
+    if (S.hunger < 30) return 'おなか ぺこぺこ… 🍮 たべたいな';
+    if (S.energy < 25) return 'ふわぁ… ねむたく なってきた…';
+    if (S.clean < 30) return 'からだが むずむず… おふろ はいりたい！';
+    return '';
+  }
+
+  // ---------------- おふろ ----------------
+  let bathing = false, foam = 0;
+  function startBath() {
+    if (bathing) return endBath(true);
+    bathing = true; foam = 0; $('#bBath').classList.add('on');
+    say('ゆびで ごしごし あらってね！', 0); sfx.pop();
+  }
+  function scrub(e, d) {
+    foam += d;
+    if (Math.random() < Math.min(1, d / 25)) {
+      const r = stage.getBoundingClientRect(), s = 18 + Math.random() * 30;
+      const b = document.createElement('div'); b.className = 'bubbleFx';
+      b.style.width = b.style.height = s + 'px';
+      b.style.left = (e.clientX - r.left + (Math.random() - .5) * 50) + 'px';
+      b.style.top = (e.clientY - r.top + (Math.random() - .5) * 50) + 'px';
+      stage.appendChild(b); setTimeout(() => b.remove(), 1700);
+      if (Math.random() < .3) sfx.pop();
+    }
+    S.clean = clamp(S.clean + d / 40); drawMeters();
+    if (foam > 400 && Math.random() < .02) { happyFace(1000); say(pick(['あわあわ〜', 'きもちいい〜', 'ごしごし〜♪']), 0); }
+    if (S.clean >= 100) endBath(false);
+  }
+  function endBath(cancel) {
+    bathing = false; $('#bBath').classList.remove('on');
+    if (cancel && S.clean < 100) { say('またね、おふろ！'); return; }
+    anim('wiggle'); happyFace(2000); sfx.fanfare(); hearts(4);
+    say('ぶるぶるっ！ ぴかぴかに なったよ！ ありがとう！');
+    addLove(3); save();
+  }
+
+  // ---------------- ねんね ----------------
+  let sleeping = false, zzzTimer = 0;
+  function sleep() {
+    if (sleeping) return wake();
+    if (bathing) endBath(true);
+    sleeping = true; app.classList.add('night'); pet.classList.add('sleeping');
+    face('sleep'); mouth('chew'); sfx.sleep(); say('おやすみ… すや すや… (カスタを タップすると おきるよ)', 4000);
+    $('#bSleep').classList.add('on'); $('#bSleep').innerHTML = '<span class="e">☀️</span>おきる';
+    zzzTimer = setInterval(() => {
+      const [x, y] = petPoint(.62, .22), r = stage.getBoundingClientRect();
+      const z = document.createElement('div'); z.className = 'zzz'; z.textContent = 'Z';
+      z.style.left = (x - r.left) + 'px'; z.style.top = (y - r.top) + 'px';
+      stage.appendChild(z); setTimeout(() => z.remove(), 2400);
+      S.energy = clamp(S.energy + 3); drawMeters();
+    }, 1200);
+  }
+  function wake() {
+    sleeping = false; clearInterval(zzzTimer); app.classList.remove('night'); pet.classList.remove('sleeping');
+    $('#bSleep').classList.remove('on'); $('#bSleep').innerHTML = '<span class="e">🌙</span>ねんね';
+    face('open'); mouth('smile'); anim('jump'); sfx.wan();
+    say(S.energy > 80 ? 'ふわぁ〜、よく ねた！ げんき いっぱい！' : 'むにゃ… もう おきるの？');
+    save();
+  }
+
+  // ---------------- パネル ----------------
+  function closePanels() { document.querySelectorAll('.panel').forEach(p => p.classList.remove('open')); }
+  document.querySelectorAll('[data-close]').forEach(b => b.onclick = closePanels);
+  function guard() { if (sleeping) { say('すや すや… (タップして おこしてね)'); return true; } return false; }
+  $('#bFood').onclick = () => { if (guard()) return; if (bathing) endBath(true); buildFoods(); closePanels(); $('#foodPanel').classList.add('open'); };
+  $('#bHat').onclick  = () => { if (guard()) return; buildHats(); closePanels(); $('#hatPanel').classList.add('open'); };
+  $('#bBath').onclick = () => { if (guard()) return; closePanels(); startBath(); };
+  $('#bSleep').onclick = () => { closePanels(); sleep(); };
+  $('#bPlay').onclick = () => {
+    if (guard()) return; closePanels(); if (bathing) endBath(true);
+    if (S.energy < 15) { sfx.sad(); say('つかれちゃった… ねんね したいな 🌙'); return; }
+    openGame();
+  };
+
+  // ---------------- おやつキャッチ ----------------
+  const game = $('#game'), catcher = $('#catcher'), gMsg = $('#gameMsg');
+  catcher.innerHTML = $('#pet svg').outerHTML.replace(/id="/g, 'data-id="').replace(/url\(#fur\)/g, '#ffe08a');
+  let gx = 0.5, drops = [], score = 0, left = 30, running = false, raf = 0, lastT = 0, spawnT = 0;
+  const GOOD = ['🍮', '🍮', '🍪', '🍎', '🍓', '🍩', '🦴'];
+  function openGame() { game.classList.add('show'); gMsg.classList.remove('hide'); gMsg.firstElementChild.textContent = 'おやつキャッチ！'; $('#gStart').textContent = 'はじめる'; placeCatcher(); }
+  function placeCatcher() { catcher.style.left = (gx * 100) + '%'; }
+  game.addEventListener('pointermove', (e) => { if (!running) return; gx = Math.max(.08, Math.min(.92, e.clientX / game.clientWidth)); placeCatcher(); });
+  game.addEventListener('pointerdown', (e) => { if (!running) return; gx = Math.max(.08, Math.min(.92, e.clientX / game.clientWidth)); placeCatcher(); });
+  $('#gStart').onclick = () => {
+    drops.forEach(d => d.el.remove()); drops = []; score = 0; left = 30; running = true;
+    gMsg.classList.add('hide'); $('#gScore').textContent = '🍮 0'; $('#gTime').textContent = '⏱ 30';
+    lastT = performance.now(); spawnT = 0; sfx.wan(); raf = requestAnimationFrame(loop);
+  };
+  $('#gQuit').onclick = () => {
+    game.classList.remove('show'); running = false; cancelAnimationFrame(raf);
+    drops.forEach(d => d.el.remove()); drops = [];
+  };
+  function loop(t) {
+    const dt = Math.min(.05, (t - lastT) / 1000); lastT = t;
+    const W = game.clientWidth, H = game.clientHeight;
+    left -= dt; spawnT -= dt;
+    if (spawnT <= 0) {
+      spawnT = Math.max(.45, .95 - (30 - left) * .015);
+      const el = document.createElement('div'); el.className = 'drop'; el.textContent = pick(GOOD);
+      game.appendChild(el);
+      drops.push({ el, x: .08 + Math.random() * .84, y: -40, v: H * (.28 + Math.random() * .12 + (30 - left) * .006) });
+    }
+    const cr = catcher.getBoundingClientRect(), gr = game.getBoundingClientRect();
+    const cx = cr.left - gr.left + cr.width / 2, cy = cr.top - gr.top + cr.height * .35;
+    drops = drops.filter(d => {
+      d.y += d.v * dt;
+      const px = d.x * W;
+      d.el.style.left = px + 'px'; d.el.style.top = d.y + 'px';
+      if (Math.abs(px - cx) < cr.width * .48 && Math.abs(d.y - cy) < cr.height * .32) {
+        score++; $('#gScore').textContent = '🍮 ' + score; sfx.catch();
+        const s = document.createElement('div'); s.className = 'fx'; s.textContent = '✨';
+        s.style.left = px + 'px'; s.style.top = d.y + 'px'; game.appendChild(s); setTimeout(() => s.remove(), 1300);
+        catcher.animate([{ transform: 'translateX(-50%) scale(1.1,.9)' }, { transform: 'translateX(-50%)' }], { duration: 200 });
+        d.el.remove(); return false;
+      }
+      if (d.y > H + 40) { d.el.remove(); return false; }
+      return true;
+    });
+    $('#gTime').textContent = '⏱ ' + Math.ceil(Math.max(0, left));
+    if (left <= 0) return endGame();
+    raf = requestAnimationFrame(loop);
+  }
+  function endGame() {
+    running = false; drops.forEach(d => d.el.remove()); drops = [];
+    sfx.fanfare();
+    const get = Math.max(1, Math.round(score / 3));
+    gMsg.firstElementChild.innerHTML = `${score}こ キャッチ！<br>💛 ${get} もらったよ`;
+    $('#gStart').textContent = 'もういちど';
+    gMsg.classList.remove('hide');
+    S.energy = clamp(S.energy - 12); S.hunger = clamp(S.hunger - 6 + Math.min(score, 20)); S.clean = clamp(S.clean - 8);
+    addLove(get);
+    setTimeout(() => say(score >= 20 ? 'すごーい！ おやつ めいじん だね！' : 'たのしかった〜！ また あそぼ！', 4000), 300);
+    if (S.energy < 15) setTimeout(() => { $('#gQuit').onclick(); say('いっぱい あそんで ねむく なっちゃった… 🌙'); }, 1800);
+  }
+
+  // ---------------- じかんで すこしずつ へる ----------------
+  setInterval(() => {
+    if (sleeping) return;
+    S.hunger = clamp(S.hunger - .5); S.energy = clamp(S.energy - .25); S.clean = clamp(S.clean - .2);
+    drawMeters(); save();
+    const m = moodLine();
+    if (m && Math.random() < .3 && !running && !bathing) { say(m); mouth('sad'); setTimeout(() => mouth('smile'), 1500); }
+  }, 20000);
+  // ときどき ひとりごと
+  setInterval(() => {
+    if (sleeping || running || bathing || busy || !bubble.classList.contains('hide')) return;
+    if (Math.random() < .5) { say(pick(['なでなで して〜', 'きょうは なに して あそぶ？', 'プリン たべたいな〜', 'ふんふん♪', 'おさんぽ いきたいな'])); anim('wiggle'); }
+  }, 15000);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
+
+  drawMeters(); drawHat();
+  setTimeout(() => { const m = moodLine(); say(m || pick(['わふっ！ ぼく カスタ。いっしょに あそぼ！', 'あっ、きてくれた！ うれしい〜！'])); }, 200);
+})();
+</script>
+</body>
+</html>
