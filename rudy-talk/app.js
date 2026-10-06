@@ -505,12 +505,13 @@
       p.textContent = 'まだ からっぽ。ルディと はなすと、ことばが ここに たまって いくよ。';
       list.appendChild(p);
     }
-    locked.forEach(() => {
-      const d = document.createElement('div');
-      d.className = 'book-item locked';
-      d.textContent = '？？？';
+    /* ことばが おおいので、まだの ことばは かずだけ だす */
+    if (locked.length) {
+      const d = document.createElement('p');
+      d.className = 'book-empty';
+      d.textContent = `🔒 まだ であって いない ことば: あと ${locked.length} こ(いまの むずかしさ)`;
       list.appendChild(d);
-    });
+    }
     $('modal-book').hidden = false;
   }
   function prevAt(rk) {

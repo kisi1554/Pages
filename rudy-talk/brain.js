@@ -125,13 +125,40 @@ const Brain = (function () {
     return word._forms;
   }
 
-  function findWords(n) {
+  /* 文の なかに でてくる ことばを ぜんぶ さがす。みつかった かたち(form)も かえす */
+  function scanWords(n) {
     const hits = [];
     WORDS.forEach((word) => {
-      if (formsOf(word).some((f) => n.indexOf(f) >= 0)) hits.push(word);
+      const form = formsOf(word).find((f) => n.indexOf(f) >= 0);
+      if (form) hits.push({ word, form });
     });
     /* ながい ことばを さきに(「猫の手も借りたい」が「猫」に まけない ように) */
-    return hits.sort((a, b) => b.w.length - a.w.length);
+    return hits.sort((a, b) => b.form.length - a.form.length || b.word.w.length - a.word.w.length);
+  }
+  function findWords(n) {
+    return scanWords(n).map((h) => h.word);
+  }
+
+  /*
+   * 子どもが「つかえた」と みなして いいか。
+   * ことばが 1400 いじょう あるので、ふつうの 文にも たまたま まじる。
+   *   - ルディが まだ おしえて いない ことばは、むずかしめ(lv2〜)で、
+   *     かんじ いりか 4もじ いじょうの かたちで みつかった ときだけ
+   *   - ひらがな 3もじの かたちは、おしえた ことば だけ
+   */
+  function usableHits(n, raw) {
+    /* すきまで くぎった かたまり(「ちょう さむい」の「ちょうさ」を ひろわない ため) */
+    const chunks = String(raw || n).split(/[\s、。,.!！?？]+/).map(norm).filter(Boolean);
+    return scanWords(n).filter(({ word, form }) => {
+      const kanjiWord = hasKanji(word.w);
+      const kanjiForm = hasKanji(form);
+      if (kanjiWord && !kanjiForm && form.length <= 5 && !chunks.some((c) => c.indexOf(form) >= 0)) return false;
+      const met = isMet(word.w);
+      const strong = kanjiForm || form.length >= 4;
+      if (met) return strong || form.length >= 3;
+      if (word.lv < 2) return false;
+      return kanjiWord ? kanjiForm : form.length >= 4;
+    }).map((h) => h.word);
   }
 
   /* れいぶんの なかの その ことばを ひからせる */
@@ -194,7 +221,10 @@ const Brain = (function () {
     { at: 30, name: 'いえねこ', icon: '🏠' },
     { at: 60, name: 'ものしりねこ', icon: '📚' },
     { at: 110, name: 'ボスねこ', icon: '👑' },
-    { at: 180, name: 'ルディきゅう', icon: '🌟' },
+    { at: 180, name: 'はかせねこ', icon: '🎓' },
+    { at: 300, name: 'ルディきゅう', icon: '🌟' },
+    { at: 600, name: 'でんせつの ねこ', icon: '🏆' },
+    { at: 1200, name: 'ことばの かみさま', icon: '👼' },
   ];
   function rank() {
     const s = score();
@@ -361,6 +391,10 @@ const Brain = (function () {
     'むかつく': ['@angry おこってるの? ルディも しっぽを ふまれると ぷんぷん だニャ\n@smug でも おこるときも ことばは えらぶニャ'],
     'かわいい': ['@shy か、かわいい? …ふん、そんなの しってるニャ\n@smug でも『かわいい』だけじゃ つまらない。もっと いいかた あるよ'],
     'ねむい': ['@sleepy ふぁ〜。ねむいの? ルディも いつも ねむいニャ\n@smug 『{k}』を おしゃれに いうと、こう だよ'],
+    'しんぱい': ['@normal しんぱい なの? だいじょうぶ、ルディが ついてるニャ\n@smug でも『しんぱい』にも いろんな いいかたが あるんだよ'],
+    'くやしい': ['@normal くやしいのは、がんばった しょうこ だニャ\n@smug その きもち、もっと かっこよく いってみな'],
+    'がんばる': ['@smug がんばる? ふーん、えらいじゃん\n@normal 『がんばる』を すごそうに いうと、こう だニャ'],
+    'あんしん': ['@happy よかったニャ。ルディも ほっと したよ\n@smug ほっと した ときの ことば、おしえて あげる'],
   };
 
   function startIikae(r, group) {
@@ -578,7 +612,7 @@ const Brain = (function () {
         '@smug ルディだニャ。きいろくて、かしこくて、ちょっと [[生意気]]な ねこ。…生意気は よけい だった',
         '@smug ルディ。この ぴかぴかの きいろい けが [[自慢]] だニャ',
       ] },
-    { id: 'age', test: (n) => /なんさい|何歳|いくつ$|としは/.test(n),
+    { id: 'age', test: (n) => /なんさい|何歳|^いくつ$|いくつなの|としは/.test(n),
       say: [
         '@smug ルディの とし? ないしょ。でも {name}より ずっと ものしり だニャ',
         '@think ねこは にんげんの 4ばいの はやさで としを とるんだって。…だから ないしょ',
@@ -757,14 +791,25 @@ const Brain = (function () {
 
   /* ============================ ことばを しらべる ============================ */
 
-  const ASK_MEANING = /(って|とは|てなに|のいみ|の意味)|なに$|何$|なあに|どういう|いみ|意味|しらない|知らない|わからない|分からない|わかんない/;
+  const STRONG_ASK = /(って|とは)(なに|何|なあに|どういう|どんな|いみ|意味|$)|てなに|のいみ|の意味|どういういみ|どういう意味/;
+  const ASK_MEANING = /(って|とは)(なに|何|なあに|どういう|どんな|いみ|意味|$)|てなに|のいみ|の意味|いみは|意味は|どういう|^(なに|なにそれ|それなに|なあに)$|しらない|知らない|わからない|分からない|わかんない/;
 
   function lookup(raw, n, r) {
     if (!ASK_MEANING.test(n)) return false;
-    const hits = findWords(n);
-    if (hits.length) {
-      explain(r, hits[0]);
-      if (!isKnown(hits[0].w)) r.chips = ['クイズ だして', 'わかった!', 'ほかの ことば おしえて'];
+    const strongAsk = STRONG_ASK.test(n);
+    /* 「〇〇って なに?」の 〇〇 と ぴったり あう ことばを いちばんに */
+    const tm = n.match(/^(.+?)(って|とは|のいみ|の意味|ってなに|てなに)/);
+    const target = tm ? tm[1] : '';
+    let hits = scanWords(n);
+    if (!strongAsk) hits = hits.filter((h) => isMet(h.word.w));
+    let best = null;
+    /* 「ほっとけーき」を「ほっと」と まちがえない ように、ほぼ おなじ ながさの ものだけ */
+    if (target) best = hits.find((h) => formsOf(h.word).indexOf(target) >= 0)
+      || hits.find((h) => target.indexOf(h.form) >= 0 && h.form.length >= target.length - 2);
+    if (!best && hits.length && !target) best = hits[0];
+    if (best) {
+      explain(r, best.word);
+      if (!isKnown(best.word.w)) r.chips = ['クイズ だして', 'わかった!', 'ほかの ことば おしえて'];
       return true;
     }
     /* 「それ どういう いみ?」「いまの なに?」 */
@@ -772,7 +817,7 @@ const Brain = (function () {
       explain(r, W[st.lastWord]);
       return true;
     }
-    const m = raw.match(/^(.{1,12}?)(って|とは|の\s*いみ|の\s*意味)/);
+    const m = strongAsk && raw.match(/^(.{1,12}?)(って|とは|の\s*いみ|の\s*意味)/);
     if (m) {
       say(r, `@think 「${m[1].trim()}」? …そんな ことば、ルディの じしょには ないニャ`);
       say(r, '@smug ルディが しらない ことばは、おうちの ひとに きいてごらん。ルディも あとで おしえて もらうニャ');
@@ -874,7 +919,7 @@ const Brain = (function () {
       return finish(r, true);
     }
     const tease = TOPICS.find((t) => t.id === 'tease');
-    const hitsForUse = findWords(n);
+    const hitsForUse = usableHits(n, raw);
     const teaseHit = tease.test(n) && hitsForUse.some((w) => w.w === '意地悪' || w.w === '生意気');
     if (teaseHit) {
       say(r, pickVariant('tease', tease.say));
@@ -883,8 +928,15 @@ const Brain = (function () {
     }
 
     /* ことばを つかえた! */
-    if (hitsForUse.length && n.length >= 2) {
-      const word = (st.mission && hitsForUse.find((w) => w.w === st.mission.w)) || hitsForUse[0];
+    const praiseable = hitsForUse.filter((w) => {
+      if (st.mission && st.mission.w === w.w) return true;
+      const rc = mem.words[w.w];
+      /* やさしい ことばは、2かいめ からは だまって かぞえる だけ(ほめすぎない) */
+      if (w.lv === 1 && rc && rc.u) { rc.u += 1; return false; }
+      return true;
+    });
+    if (praiseable.length && n.length >= 2) {
+      const word = (st.mission && praiseable.find((w) => w.w === st.mission.w)) || praiseable[0];
       praiseUse(r, word);
       if (Math.random() < 0.5) {
         say(r, pickVariant('ask', ASK));
