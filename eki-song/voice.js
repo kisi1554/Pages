@@ -127,8 +127,8 @@ function buildSong(list, song, opts) {
   rest(barSlots * 2, 'intro');
   addLyric({ kind: 'lyric' }, opts.lineName + ' いくよー', 2);
   list.forEach((st, k) => addLyric({ kind: 'station', st, k }, st.yomi, opts.seed + k * 3));
-  addLyric({ kind: 'lyric' }, 'ぜんぶで ' + numKana(opts.count || list.length) + 'えき', 4);
-  addLyric({ kind: 'lyric' }, 'また のってね', 0);
+  addLyric({ kind: 'lyric' }, 'ぜんぶで ' + numKana(opts.count || list.length) + (opts.unit || 'えき'), 4);
+  addLyric({ kind: 'lyric' }, opts.bye || 'また のってね', 0);
   // しょうせつの きりの いいところまで のばして おわり
   const endPos = Math.ceil(pos / barSlots) * barSlots;
   rest(endPos - pos + barSlots, 'end');

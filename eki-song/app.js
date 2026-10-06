@@ -86,13 +86,15 @@ function renderHome() {
     return `<button class="chip${S.song === id ? ' on' : ''}" type="button" data-song="${id}" aria-pressed="${S.song === id}">
       <span class="e">${s.emoji}</span><span><b>${s.name}</b><small>${s.desc}</small></span></button>`;
   }).join('');
-  $('lineCards').innerHTML = LINE_IDS.map(id => {
+  const card = id => {
     const L = LINES[id], n = S.done[id] || 0;
     return `<button class="lcard" type="button" data-line="${id}" style="--c:${L.color};--d:${L.dark}">
       <span class="mk">${L.mark}</span>
-      <span class="lt"><b>${L.title}</b><small>${L.stations.length}えき${n ? `・🏅 ${n}かい うたった` : ''}</small></span>
+      <span class="lt"><b>${L.title}</b><small>${L.stations.length}${L.unit || 'えき'}${n ? `・🏅 ${n}かい うたった` : ''}</small></span>
       <span class="go">▶</span></button>`;
-  }).join('');
+  };
+  $('lineCards').innerHTML = LINE_IDS.map(card).join('');
+  $('oboeCards').innerHTML = OBOE_IDS.map(card).join('');
 }
 $('songChips').addEventListener('click', e => {
   const b = e.target.closest('[data-song]'); if (!b) return;
@@ -100,7 +102,7 @@ $('songChips').addEventListener('click', e => {
   hop($('homeLena'));
   quickSing(SONGS[S.song].id === 'lofi' ? 'ふわぁ' : 'いぇーい', [74, 79, 83, 86]);
 });
-$('lineCards').addEventListener('click', e => {
+for (const box of ['lineCards', 'oboeCards']) $(box).addEventListener('click', e => {
   const b = e.target.closest('[data-line]'); if (b) openLine(b.dataset.line);
 });
 let helloI = 0;
@@ -147,7 +149,7 @@ function orderedList() {
 function prepare(fromK) {
   Player.stop();
   V.list = orderedList();
-  V.song = buildSong(V.list, SONGS[S.song], { lineName: V.line.name.split('＋')[0], count: V.line.stations.length, seed: LINE_IDS.indexOf(V.line.id) * 2 });
+  V.song = buildSong(V.list, SONGS[S.song], { lineName: V.line.name.split('＋')[0], count: V.line.stations.length, unit: V.line.unit, bye: V.line.oboe ? 'また うたおうね' : '', seed: ALL_IDS.indexOf(V.line.id) * 2 });
   V.fromK = fromK; V.segIdx = -1;
   $('dirBtn').textContent = '⇄ ' + V.line.dirs[S.dir[V.line.id] ? 1 : 0];
   renderRoute();
@@ -173,7 +175,7 @@ function renderAnki() {
   $('hideBtn').hidden = !S.anki;
   $('hideBtn').setAttribute('aria-pressed', String(S.hide));
   $('hideBtn').textContent = S.hide ? '👀 つぎも みせる' : '🙈 つぎを かくす';
-  if (V.line) $('shead').innerHTML = `<span>【えきめい あんき】</span><b>${V.line.title}</b>`;
+  if (V.line) $('shead').innerHTML = `<span>【${V.line.oboe ? 'いっき おぼえ' : 'えきめい あんき'}】</span><b>${V.line.title}</b>`;
 }
 function renderAlist() {
   $('alist').innerHTML = V.list.map((st, k) =>
@@ -280,7 +282,7 @@ function onSeg(seg) {
     showStation(seg.st, seg.k);
     $('yomi').innerHTML = seg.mora.map(m => `<span>${esc(m.text)}</span>`).join('');
     const nx = V.list.slice(seg.k + 1, seg.k + 4).map(s => esc(s.kanji));
-    $('next').innerHTML = nx.length ? 'つぎは ' + nx.join(' → ') : 'しゅうてん！';
+    $('next').innerHTML = nx.length ? 'つぎは ' + nx.join(' → ') : (V.line.oboe ? 'さいご！' : 'しゅうてん！');
     document.querySelectorAll('#route .dot').forEach((d, i) => {
       d.classList.toggle('past', i < seg.k);
       d.classList.toggle('now', i === seg.k);
@@ -306,7 +308,7 @@ function onSeg(seg) {
 
 function showStation(st, k, still) {
   $('lyric').classList.remove('call');
-  const m = st.num.match(/^([A-Z]+)(\d+)$/);
+  const m = st.num.match(/^([A-Z]*)(\d+)$/);
   $('num').hidden = !m;                         // えきナンバーが ない えきも ある
   if (m) {
     $('num').querySelector('small').textContent = m[1];
@@ -314,6 +316,7 @@ function showStation(st, k, still) {
   }
   $('kanji').textContent = st.kanji;
   $('kanji').classList.toggle('long', st.kanji.length >= 7);
+  $('kanji').classList.toggle('one', st.kanji.length === 1);
   $('count').textContent = still ? '' : `${k + 1} / ${V.list.length}`;
 }
 
@@ -328,7 +331,7 @@ function finish() {
   $('sheet').innerHTML = `
     <div class="medal" style="--c:${L.color}">${full ? '🏅' : '🎵'}</div>
     <h3>${full ? 'ぜんぶ うたえたね！' : 'さいごまで うたったよ！'}</h3>
-    <p>${L.title}　${L.stations.length}えき${full ? `<br>🏅 ${S.done[L.id]}かいめ` : '<br>さいしょから うたうと メダルが もらえるよ'}</p>
+    <p>${L.title}　${L.stations.length}${L.unit || 'えき'}${full ? `<br>🏅 ${S.done[L.id]}かいめ` : '<br>さいしょから うたうと メダルが もらえるよ'}</p>
     <div class="sheet-btns">
       <button class="pill" type="button" id="againBtn">🔁 もういちど</button>
       <button class="pill" type="button" id="homeBtn">🏠 ほかの せん</button>
