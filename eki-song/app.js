@@ -289,7 +289,11 @@ function onSeg(seg) {
     });
     markAnki(seg.k);
     const cur = document.querySelector('#route .dot.now');
-    if (cur) cur.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    // scrollIntoView は iPhone で がめん ぜんたいを よこに ずらすので、ろせんずの なかだけ うごかす
+    if (cur) {
+      const r = $('route');
+      r.scrollTo({ left: cur.offsetLeft - r.clientWidth / 2 + cur.offsetWidth / 2, behavior: 'smooth' });
+    }
     $('sign').classList.remove('pop'); void $('sign').offsetWidth; $('sign').classList.add('pop');
   } else if (seg.kind === 'lyric') {
     $('lyric').classList.add('call');
