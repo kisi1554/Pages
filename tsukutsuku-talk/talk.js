@@ -163,7 +163,7 @@ const Tsuku = (function () {
     },
     {
       id: 'seek', // つくぼうが かくれる
-      keys: ['かくれんぼ', 'かくれて', 'あそぼ', 'あそぼう', 'あそんで', 'げむ', 'あそぶ', 'しょうぶ'],
+      keys: ['かくれんぼ', 'かくれて', 'あそぼ', 'あそぼう', 'あそんで', 'げむ', 'やっぱりあそぶ', 'しょうぶ'],
       say: [
         'ふふーん、かくれんぼ？ いいよ。どうせ %Nには みつけられないけどね〜',
         'よーし、かくれるよ！ %N、10 かぞえてね。…ずる しちゃ だめだよ',
@@ -174,7 +174,7 @@ const Tsuku = (function () {
     },
     {
       id: 'sing',
-      keys: ['なきごえ', 'ないて', 'うたって', 'うた', 'こえきかせ', 'つくつくぼし', 'おしんつくつく'],
+      keys: ['なきごえ', 'ないて', 'うたって', 'うた', 'こえきかせ', 'つくつくぼし', 'つくつくぼうし', 'おしんつくつく'],
       say: [
         'しかたないなあ。とくべつだよ。いくよ〜',
         'ぼくの なきごえ、よーく きいてて！',
@@ -238,7 +238,7 @@ const Tsuku = (function () {
     },
     {
       id: 'hello',
-      keys: ['こんにちは', 'おはよ', 'こんばんは', 'やあ', 'はじめまして', 'もしもし', 'つくぼう'],
+      keys: ['こんにちは', 'おはよ', 'こんばんは', 'やあ', 'はじめまして', 'もしもし'],
       say: [
         'あ、%N。きょうも ねぐせ ついてる？ ぷぷっ。…うそうそ、こんにちは！',
         'やっほー %N！ ツクツクボーシ！ きょうは なに して あそぶ？',
@@ -280,13 +280,44 @@ const Tsuku = (function () {
   {
     const fi = TOPICS.findIndex((x) => x.id === 'fact');
     const fact = TOPICS.splice(fi, 1)[0];
-    TOPICS.push(...(V.topics || []));
+    const all = V.topics || [];
+    TOPICS.unshift(...all.filter((x) => x.first));
+    TOPICS.push(...all.filter((x) => !x.first));
     TOPICS.push(
+      { id: 'callName', keys: ['つくぼう'], say: ['なあに %N？ よんだ？', 'はーい、つくぼう だよ。なにか よう？', 'ツクツク！ ここだよ〜。…どこかは ひみつ'], mood: 'smug' },
       { id: 'riddle', keys: ['なぞなぞ', 'くいず', 'もんだい', 'もういっこ'], game: 'riddle' },
       { id: 'janken', keys: ['じゃんけん'], game: 'janken' },
       fact
     );
   }
+
+  // キーワードも norm で そろえる(「しーっ」→「しっ」など)
+  TOPICS.forEach((t) => (t.keys = t.keys.map(norm).filter(Boolean)));
+
+  /* いちばん ながく あった キーワードの わだいを えらぶ(おなじ ながさなら うえの わだい) */
+  // weak の わだい(「きょう」「つくぼう」「セミ」など ひろい ことば)は、ほかに あわない ときだけ
+  function bestTopic(n, skip) {
+    if (!n) return null;
+    const find = (weak) => {
+      let best = null;
+      let len = 0;
+      for (const t of TOPICS) {
+        if ((skip && skip(t)) || !!t.weak !== weak) continue;
+        for (const k of t.keys) {
+          if (k.length > len && n.indexOf(k) >= 0) {
+            best = t;
+            len = k.length;
+          }
+        }
+      }
+      return best;
+    };
+    return find(false) || find(true);
+  }
+  ['today', 'fact', 'callName', 'hello'].forEach((id) => {
+    const t = TOPICS.find((x) => x.id === id);
+    if (t) t.weak = true;
+  });
 
   const DEFAULT_CHIPS = [
     'かくれんぼ しよう',
@@ -309,6 +340,18 @@ const Tsuku = (function () {
     'おもしろい こと いって',
     'ぼくも ともだち？',
     'ゆめは なに？',
+    'しりとり しよう',
+    'いま なんじ？',
+    'たしざん だして',
+    'はやくちことば いって',
+    'ものまね して',
+    'かくれる こつ おしえて',
+    'きょうは なんようび？',
+    'すきな どうぶつは？',
+    'おにごっこ しよう',
+    'どこに すんでるの？',
+    'あいたかった',
+    'なんで なくの？',
   ];
 
   function chipsFor(topic) {
@@ -320,9 +363,9 @@ const Tsuku = (function () {
   let turns = 0;
 
   /* つづきの ある かいわ(なぞなぞ・じゃんけん・しつもんの こたえ) */
-  const state = { riddle: null, janken: false, asked: null };
+  const state = { riddle: null, janken: false, asked: null, shiritori: null, math: null };
   // これらの わだいは つづきの とちゅうでも ゆうせん する
-  const STRONG = ['why', 'tease', 'sorry', 'promise', 'forgive', 'comeback', 'kidsorry', 'hide', 'seek', 'sing', 'bye', 'riddle', 'janken'];
+  const STRONG = ['shiritori', 'math', 'date', 'time', 'noise', 'revenge', 'why', 'tease', 'sorry', 'promise', 'forgive', 'comeback', 'kidsorry', 'hide', 'seek', 'sing', 'bye', 'riddle', 'janken'];
   const GIVEUP = ['わからない', 'わかんない', 'こうさん', 'しらない', 'おしえて', 'ぎぶあっぷ', 'こたえは'];
 
   const R = (text, mood, chips, action) => ({ text, mood: mood || 'smug', chips: chips || chipsFor(null), action: action || null });
@@ -388,20 +431,138 @@ const Tsuku = (function () {
     return R(pickFresh(list).replace(/%Q/g, q), 'happy');
   }
 
+  /* ---------------- しりとり ---------------- */
+  const SMALL = { ぁ: 'あ', ぃ: 'い', ぅ: 'う', ぇ: 'え', ぉ: 'お', ゃ: 'や', ゅ: 'ゆ', ょ: 'よ', っ: 'つ', ゎ: 'わ' };
+  function lastKana(w) {
+    const c = w.replace(/[ー〜]+$/, '').slice(-1);
+    return SMALL[c] || c;
+  }
+  const SL = V.shiritoriLines || {};
+  const WORDS = V.shiritori || [];
+
+  function shiritoriStart() {
+    state.shiritori = { need: 'り', used: ['しりとり'], turns: 0, miss: 0 };
+    return R(pickFresh(SL.start || ['しりとり！「り」から']), 'smug', ['りんご', 'りす', 'やめる']);
+  }
+
+  function shiritoriAnswer(n) {
+    const st = state.shiritori;
+    if (/やめ|おしまい|おわり/.test(n)) {
+      state.shiritori = null;
+      return R(pick(SL.end || ['おしまい']), 'happy');
+    }
+    if (!/^[ぁ-ゖ]+$/.test(n)) {
+      return R('ごめん、むずかしい じ だと わからないよ〜。「' + st.need + '」で はじまる ことばを ひらがなで おしえて', 'sorry', ['やめる']);
+    }
+    if (n[0] !== st.need) return R(pickFresh(SL.wrongStart).replace(/%L/g, st.need), 'smug', ['やめる']);
+    if (st.used.indexOf(n) >= 0) return R(pickFresh(SL.used), 'smug', ['やめる']);
+    if (lastKana(n) === 'ん') {
+      state.shiritori = null;
+      return R(pickFresh(SL.kidN), 'smug', ['もう いっかい しりとり', 'くやしい', 'かくれんぼ しよう']);
+    }
+    st.used.push(n);
+    st.turns++;
+    st.miss = 0;
+    const need = lastKana(n);
+    const cands = WORDS.filter((w) => w[0] === need && st.used.indexOf(w) < 0 && lastKana(w) !== 'ん');
+    if (!cands.length || (st.turns >= 6 && Math.random() < 0.2)) {
+      state.shiritori = null;
+      return R(pickFresh(SL.lose).replace(/%L/g, need), 'shocked', ['もう いっかい しりとり', 'やったー', 'かくれんぼ しよう']);
+    }
+    const w = pick(cands);
+    st.used.push(w);
+    st.need = lastKana(w);
+    return R(pickFresh(SL.ok).replace(/%W/g, w).replace(/%L/g, st.need), 'smug', ['やめる']);
+  }
+
+  /* ---------------- けいさん ---------------- */
+  const KNUM = { ぜろ: 0, れい: 0, いち: 1, に: 2, さん: 3, よん: 4, し: 4, ご: 5, ろく: 6, なな: 7, しち: 7, はち: 8, きゅう: 9, く: 9, じゅう: 10 };
+  const NUM = '(\\d+|' + Object.keys(KNUM).sort((a, b) => b.length - a.length).join('|') + ')';
+  const toNum = (x) => (/^\d+$/.test(x) ? parseInt(x, 10) : KNUM[x]);
+  const MATH_RE = new RegExp(NUM + '(たす|ぷらす|\\+|ひく|まいなす|-|−)' + NUM);
+
+  function mathQuestion(n) {
+    const plus = /たしざん/.test(n || '') ? true : /ひきざん/.test(n || '') ? false : Math.random() < 0.6;
+    let a = 1 + Math.floor(Math.random() * 9);
+    let b = 1 + Math.floor(Math.random() * 9);
+    if (!plus && b > a) [a, b] = [b, a];
+    state.math = plus ? a + b : a - b;
+    const q = plus ? `${a} たす ${b} は？` : `${a} ひく ${b} は？`;
+    return R(pick(['もんだい！ ', 'いくよ〜。', '%Nに とけるかな〜？ ']) + q, 'smug', ['わからない']);
+  }
+
+  function mathAnswer(n) {
+    const ans = state.math;
+    const m = n.match(/\d+/) || (KNUM[n] !== undefined ? [String(KNUM[n])] : null);
+    state.math = null;
+    if (m && parseInt(m[0], 10) === ans) {
+      return R(pick(['せいかい！ %N、けいさん はやいね…くやしい', 'あたり〜！ ちぇっ、かんたん すぎたか', 'せいかい！ ぼくより かしこいかも…いや、そんな ことない！']), 'shocked', ['もう いっもん', 'かくれんぼ しよう']);
+    }
+    return R(pick([`ざんねーん、こたえは ${ans} でした〜。ぷぷっ`, `ちがうよ〜。こたえは ${ans}。ゆびで かぞえて みて`]), 'smug', ['もう いっもん', 'くやしい']);
+  }
+
+  function special(topic, n) {
+    const now = new Date();
+    if (topic.special === 'time') {
+      const h = now.getHours();
+      const m = now.getMinutes();
+      const tail = h < 6 || h >= 20 ? 'もう ねる じかん じゃない？' : h < 12 ? 'あさだね〜。ぼくは まだ ねむい' : h < 17 ? 'ぼくが いちばん なく じかんだよ' : 'ゆうがた〜。そろそろ おうちに かえる じかん かな';
+      return R(`いまは ${h}じ ${m}ふん だよ。${tail}`, 'smug');
+    }
+    if (topic.special === 'date') {
+      const wd = ['にちようび', 'げつようび', 'かようび', 'すいようび', 'もくようび', 'きんようび', 'どようび'][now.getDay()];
+      const tail = now.getDay() === 0 || now.getDay() === 6 ? 'おやすみの ひ だね。いっぱい あそぼ' : '%N、ようちえんは？ …ぼくは まいにち おやすみ〜';
+      return R(`きょうは ${now.getMonth() + 1}がつ ${now.getDate()}にち、${wd} だよ。${tail}`, 'smug');
+    }
+    if (topic.special === 'shiritori') return shiritoriStart();
+    if (topic.special === 'math') {
+      const m = n.match(MATH_RE);
+      if (m) {
+        const a = toNum(m[1]);
+        const b = toNum(m[3]);
+        const minus = /ひく|まいなす|-|−/.test(m[2]);
+        const v = minus ? a - b : a + b;
+        if (v < 0) return R(`${a} ひく ${b} は…マイナス！ ぼく まだ そこまで ならってない〜`, 'shocked');
+        return R(pick([`${v}！ …%N、それくらい ぼくでも わかるよ〜`, `えっとね…${v}！ あってる？ ぼく てんさい かも`, `${v} だよ。あしで かぞえたら 6ぽんじゃ たりなかった〜`]), 'smug', ['たしざん だして', 'すごいね']);
+      }
+      if (/たしざん|ひきざん|けいさん|もういっもん/.test(n)) return mathQuestion(n);
+      return null; // 「たすけて」など けいさんじゃ なかった
+    }
+    return null;
+  }
+
+  // ときどき くちぐせを そえる
+  const join = (a, b) => a + (/[？！?!〜…]$/.test(a) ? ' ' : '。') + b;
+  function tic(text, mood) {
+    if (Math.random() > 0.15) return text;
+    if (mood === 'smug') return join(text, pick(['ぷぷっ', 'ツクツク〜', 'ふふーん']));
+    if (mood === 'happy') return join(text, pick(['ツクツクボーシ！', 'ウイヨース！']));
+    return text;
+  }
+
   /* こどもの ことば → { text, mood, chips, action } */
   function reply(input) {
     const n = norm(input);
     turns++;
-    let topic = null;
-    if (n) {
-      for (const t of TOPICS) {
-        if (t.keys.some((k) => n.indexOf(k) >= 0)) {
-          topic = t;
-          break;
-        }
-      }
-    }
+    let topic = bestTopic(n);
     const strong = topic && STRONG.indexOf(topic.id) >= 0;
+
+    // しりとりの とちゅうは ことばを ほぼ ぜんぶ しりとりと して うける(やめる・いやだ・ばいばい で おしまい)
+    if (state.shiritori) {
+      const st = state.shiritori;
+      const fits = n[0] === st.need || /やめ|おしまい|おわり/.test(n);
+      if (/^(いや|いやだ)$/.test(n) || (topic && topic.id === 'bye')) state.shiritori = null;
+      else if (fits) return shiritoriAnswer(n);
+      else if (topic && topic.id !== 'shiritori') state.shiritori = null; // ちがう はなしに なった
+      else if (++st.miss >= 3) {
+        state.shiritori = null;
+        return R('しりとり、いったん おやすみ しよっか。また やろうね', 'happy');
+      } else return shiritoriAnswer(n);
+    }
+    if (state.math !== null) {
+      if (/\d/.test(n) || KNUM[n] !== undefined || /わからない|わかんない|こうさん/.test(n)) return mathAnswer(n);
+      if (!strong) state.math = null;
+    }
 
     // つづきの とちゅう
     if (state.riddle && !strong) return riddleAnswer(n);
@@ -410,10 +571,20 @@ const Tsuku = (function () {
       if (h >= 0) return jankenPlay(h);
       state.janken = false;
     }
-    if (state.asked && n && !strong) return askAnswer(input, n);
+    // ききかえしの こたえ: ほかの わだいに あわない か、みじかい ことば(「ピーマン」など)
+    if (state.asked && n && !strong && (!topic || (n.length <= 4 && !topic.first))) return askAnswer(input, n);
     state.riddle = null;
     state.janken = false;
     state.asked = null;
+    state.shiritori = null;
+    state.math = null;
+
+    if (topic && topic.special) {
+      const r = special(topic, n);
+      if (r) return r;
+      // とくべつ じゃ なかった → つぎに あう わだいを さがす
+      topic = bestTopic(n, (t) => t.special);
+    }
 
     if (topic && topic.game === 'riddle') return startRiddle();
     if (topic && topic.game === 'janken') {
@@ -424,9 +595,10 @@ const Tsuku = (function () {
       let text = pickFresh(topic.say);
       // ときどき ふつうの へんじに からかいを ひとこと そえる
       if (!topic.action && ['hello', 'today', 'thanks'].indexOf(topic.id) >= 0 && Math.random() < 0.3) {
-        text += '。' + pickFresh(TEASE);
+        text = join(text, pickFresh(TEASE));
       }
       if (topic.ask) state.asked = topic.ask;
+      if (!topic.action) text = tic(text, topic.mood);
       return { text, mood: topic.mood || 'normal', chips: chipsFor(topic), action: topic.action || null };
     }
     // わからない ときは あいづち、ときどき からかう
@@ -435,6 +607,12 @@ const Tsuku = (function () {
   }
 
   return {
+    // テストよう: どの わだいに あたるか
+    matchId(input) {
+      const t = bestTopic(norm(input));
+      return t ? t.id : null;
+    },
+    topics: TOPICS,
     norm,
     pick,
     reply,
