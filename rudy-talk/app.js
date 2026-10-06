@@ -409,7 +409,7 @@
       m.classList.add('glow');
       bump('hop');
     }
-    if (reply.event === 'name') $('in-name').value = Brain.mem().name || '';
+    if (reply.event === 'name') $('in-name').value = Brain.mem().name || Brain.DEFAULT_NAME;
     save();
   }
 
@@ -544,7 +544,7 @@
   function startTalk() {
     Sound.unlock();
     const mem = Brain.mem();
-    mem.name = $('in-name').value.trim().slice(0, 8);
+    mem.name = $('in-name').value.trim().slice(0, 8) || Brain.DEFAULT_NAME;
     save();
     $('screen-start').classList.remove('is-active');
     $('screen-talk').classList.add('is-active');
@@ -570,7 +570,7 @@
     if (saved && typeof saved.sound === 'boolean') sound = saved.sound;
     Brain.init(saved && saved.mem);
     const mem = Brain.mem();
-    $('in-name').value = mem.name || '';
+    $('in-name').value = mem.name || Brain.DEFAULT_NAME;
 
     mountRudy($('start-rudy'));
     mountRudy($('rudy-box'));

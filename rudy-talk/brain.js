@@ -174,7 +174,10 @@ const Brain = (function () {
 
   /* ============================ きおく ============================ */
 
-  let mem = { name: '', level: 2, words: {}, mitome: 0, quizOk: 0 };
+  /* なまえを いれなかった ときの なまえ */
+  const DEFAULT_NAME = 'あお';
+
+  let mem = { name: DEFAULT_NAME, level: 2, words: {}, mitome: 0, quizOk: 0 };
   const st = {
     mode: 'chat', // chat | quiz | iikae
     quiz: null,
@@ -191,7 +194,7 @@ const Brain = (function () {
   };
 
   function init(m) {
-    mem = Object.assign({ name: '', level: 2, words: {}, mitome: 0, quizOk: 0 }, m || {});
+    mem = Object.assign({ name: DEFAULT_NAME, level: 2, words: {}, mitome: 0, quizOk: 0 }, m || {});
     if (!mem.words || typeof mem.words !== 'object') mem.words = {};
   }
 
@@ -239,7 +242,7 @@ const Brain = (function () {
   /* ============================ へんじの くみたて ============================ */
 
   function fill(s) {
-    return String(s).replace(/\{name\}/g, mem.name || 'きみ');
+    return String(s).replace(/\{name\}/g, mem.name || DEFAULT_NAME);
   }
 
   function newReply() {
@@ -1069,6 +1072,7 @@ const Brain = (function () {
     rank,
     RANKS,
     mem: () => mem,
+    DEFAULT_NAME,
     mode: () => st.mode,
     words: WORDS,
     word: (w) => W[w],
