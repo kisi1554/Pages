@@ -10,8 +10,16 @@
 
 const Tsuku = (function () {
   /* カタカナ → ひらがな、きごう・くうはくを けす */
+  const V = typeof TsukuVocab === 'object' ? TsukuVocab : {};
+  // ながい ことばから さきに おきかえる(「大好き」を「好き」より さきに)
+  const KANA = (V.kana || []).slice().sort((a, b) => b[0].length - a[0].length);
+
   function norm(s) {
-    return String(s || '')
+    let t = String(s || '');
+    KANA.forEach(([k, v]) => {
+      if (t.indexOf(k) >= 0) t = t.split(k).join(v);
+    });
+    return t
       .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
       .replace(/[\sー〜~、。！!？?・,.　「」『』（）()]/g, '')
       .toLowerCase();
@@ -213,7 +221,7 @@ const Tsuku = (function () {
     },
     {
       id: 'praise', // ほめられると てれる
-      keys: ['すごい', 'じょうず', 'かっこいい', 'かわいい', 'すき', 'てんさい', 'えらい', 'やるじゃん'],
+      keys: ['すごい', 'じょうず', 'かっこいい', 'かわいい', 'だいすき', 'すきだよ', 'てんさい', 'えらい', 'やるじゃん'],
       say: [
         'え、えへへ…。%Nに ほめられると ちょっと てれる。ツクツク…',
         'と、とうぜんでしょ！ …でも ありがと %N',
@@ -259,6 +267,27 @@ const Tsuku = (function () {
     },
   ];
 
+  /* ---------------------- vocab.js の ことばを たす ---------------------- */
+  TEASE.push(...(V.tease || []));
+  AIZUCHI.push(...(V.aizuchi || []));
+  IDLE.push(...(V.idle || []));
+  FACTS.push(...(V.facts || []));
+  Object.keys(V.extra || {}).forEach((id) => {
+    const t = TOPICS.find((x) => x.id === id);
+    if (t && t.say !== TEASE && t.say !== FACTS) t.say = t.say.concat(V.extra[id]);
+  });
+  // あたらしい わだいは「セミの ひみつ」(ひろく ひっかかる)より まえ、もとの わだいより あと
+  {
+    const fi = TOPICS.findIndex((x) => x.id === 'fact');
+    const fact = TOPICS.splice(fi, 1)[0];
+    TOPICS.push(...(V.topics || []));
+    TOPICS.push(
+      { id: 'riddle', keys: ['なぞなぞ', 'くいず', 'もんだい', 'もういっこ'], game: 'riddle' },
+      { id: 'janken', keys: ['じゃんけん'], game: 'janken' },
+      fact
+    );
+  }
+
   const DEFAULT_CHIPS = [
     'かくれんぼ しよう',
     'ぼくが かくれる',
@@ -270,6 +299,16 @@ const Tsuku = (function () {
     'すごいね',
     'つくぼうの ばーか',
     'こんにちは',
+    'なぞなぞ だして',
+    'じゃんけん しよう',
+    'すきな たべものは？',
+    'こわい ものは ある？',
+    'ともだち いる？',
+    'でんしゃ すき？',
+    'とくいな ことは？',
+    'おもしろい こと いって',
+    'ぼくも ともだち？',
+    'ゆめは なに？',
   ];
 
   function chipsFor(topic) {
@@ -279,6 +318,75 @@ const Tsuku = (function () {
   }
 
   let turns = 0;
+
+  /* つづきの ある かいわ(なぞなぞ・じゃんけん・しつもんの こたえ) */
+  const state = { riddle: null, janken: false, asked: null };
+  // これらの わだいは つづきの とちゅうでも ゆうせん する
+  const STRONG = ['why', 'tease', 'sorry', 'promise', 'forgive', 'comeback', 'kidsorry', 'hide', 'seek', 'sing', 'bye', 'riddle', 'janken'];
+  const GIVEUP = ['わからない', 'わかんない', 'こうさん', 'しらない', 'おしえて', 'ぎぶあっぷ', 'こたえは'];
+
+  const R = (text, mood, chips, action) => ({ text, mood: mood || 'smug', chips: chips || chipsFor(null), action: action || null });
+
+  function startRiddle() {
+    const list = V.riddles || [];
+    let r = pick(list);
+    if (state.lastRiddle && list.length > 1) while (r === state.lastRiddle) r = pick(list);
+    state.riddle = { r, miss: 0 };
+    state.lastRiddle = r;
+    return R('なぞなぞ いくよ〜。' + r.q, 'smug', ['わからない', 'ヒント ちょうだい']);
+  }
+
+  function riddleAnswer(n) {
+    const { r } = state.riddle;
+    const hit = r.a.some((k) => (k.length <= 1 ? n === k : n.indexOf(k) >= 0));
+    if (hit) {
+      state.riddle = null;
+      return R(pickFresh(V.riddleRight), 'shocked', ['もう いっこ だして', 'かくれんぼ しよう', 'すごいでしょ']);
+    }
+    if (/ひんと/.test(n)) {
+      state.riddle.miss = 1;
+      return R('しかたないなあ。ヒントは… ' + r.hint, 'shy', ['わからない']);
+    }
+    if (GIVEUP.some((k) => n.indexOf(k) >= 0) || state.riddle.miss >= 1) {
+      state.riddle = null;
+      return R(pickFresh(V.riddleGiveUp).replace('%A', r.ans), 'smug', ['もう いっこ だして', 'くやしい', 'かくれんぼ しよう']);
+    }
+    state.riddle.miss++;
+    return R(pickFresh(V.riddleWrong).replace('%H', r.hint), 'smug', ['わからない']);
+  }
+
+  function jankenHand(n) {
+    if (/ちょき|はさみ/.test(n)) return 1;
+    if (/ぱ|かみ/.test(n)) return 2;
+    if (/ぐ|いし/.test(n)) return 0;
+    return -1;
+  }
+  const HANDS = ['グー', 'チョキ', 'パー'];
+  const JCHIPS = ['✊ グー', '✌️ チョキ', '✋ パー'];
+
+  function jankenPlay(kid) {
+    const me = Math.floor(Math.random() * 3);
+    const head = 'ぽん！ ぼくは ' + HANDS[me] + '。';
+    if (me === kid) return R(head + pickFresh(V.jankenDraw), 'shocked', JCHIPS);
+    state.janken = false;
+    const iWin = (me + 1) % 3 === kid; // グーは チョキに かつ…
+    // me が kid に かつ: (グー0,チョキ1) (チョキ1,パー2) (パー2,グー0)
+    return iWin
+      ? R(head + pickFresh(V.jankenWin), 'smug', ['もう いっかい じゃんけん', 'くやしい', 'かくれんぼ しよう'])
+      : R(head + pickFresh(V.jankenLose), 'shocked', ['もう いっかい じゃんけん', 'やったー', 'かくれんぼ しよう']);
+  }
+
+  function askAnswer(raw, n) {
+    const id = state.asked;
+    state.asked = null;
+    const q = String(raw).trim().replace(/[。、！!？?]+$/, '').slice(0, 14);
+    if (/ひみつ|ないしょ/.test(n)) return R(pick(['えー、ないしょ なの？ %N の けち〜', 'ひみつかあ。…あとで こっそり おしえてね']), 'smug');
+    if (/^(ない|ないよ|いない|なし)$/.test(n) || /くない|じゃない/.test(n)) {
+      return R(pick(['ほんとに〜？ %N、つよがり いってない？ ぷぷっ', 'ふーん、ないんだ。%Nって ふしぎ〜']), 'smug');
+    }
+    const list = (V.asks || {})[id] || ['「%Q」かあ。ふーん、おぼえとくね'];
+    return R(pickFresh(list).replace(/%Q/g, q), 'happy');
+  }
 
   /* こどもの ことば → { text, mood, chips, action } */
   function reply(input) {
@@ -293,17 +401,37 @@ const Tsuku = (function () {
         }
       }
     }
+    const strong = topic && STRONG.indexOf(topic.id) >= 0;
+
+    // つづきの とちゅう
+    if (state.riddle && !strong) return riddleAnswer(n);
+    if (state.janken && !strong) {
+      const h = jankenHand(n);
+      if (h >= 0) return jankenPlay(h);
+      state.janken = false;
+    }
+    if (state.asked && n && !strong) return askAnswer(input, n);
+    state.riddle = null;
+    state.janken = false;
+    state.asked = null;
+
+    if (topic && topic.game === 'riddle') return startRiddle();
+    if (topic && topic.game === 'janken') {
+      state.janken = true;
+      return R(pickFresh(V.jankenStart), 'smug', JCHIPS);
+    }
     if (topic) {
       let text = pickFresh(topic.say);
       // ときどき ふつうの へんじに からかいを ひとこと そえる
       if (!topic.action && ['hello', 'today', 'thanks'].indexOf(topic.id) >= 0 && Math.random() < 0.3) {
         text += '。' + pickFresh(TEASE);
       }
+      if (topic.ask) state.asked = topic.ask;
       return { text, mood: topic.mood || 'normal', chips: chipsFor(topic), action: topic.action || null };
     }
     // わからない ときは あいづち、ときどき からかう
     const text = Math.random() < 0.35 ? pickFresh(TEASE) : pickFresh(AIZUCHI);
-    return { text, mood: 'smug', chips: chipsFor(null), action: null };
+    return R(text, 'smug');
   }
 
   return {
