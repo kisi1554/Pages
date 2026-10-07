@@ -842,7 +842,19 @@ const Brain = (function () {
   }
 
   /* えらんだ むずかしさの ことばを おおめに(やさしい ことばばかりに ならない ように) */
+  /* しょうがっこう 1ねんせいで ならう かんじ(80じ) */
+  const KANJI_G1 = '一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六';
+  function isG1(word) {
+    const ks = Array.from(word.w).filter((c) => /[\u4e00-\u9fff]/.test(c));
+    return ks.length > 0 && ks.every((c) => KANJI_G1.indexOf(c) >= 0);
+  }
+
   function levelPool(list) {
+    /* 「やさしい」では 1ねんせいの かんじの ことばを おおめに */
+    if (mem.level === 1) {
+      const g1 = list.filter(isG1);
+      if (g1.length && Math.random() < 0.6) return g1;
+    }
     const exact = list.filter((x) => x.lv === mem.level);
     return exact.length && Math.random() < 0.7 ? exact : list;
   }
@@ -1092,6 +1104,7 @@ const Brain = (function () {
     mem: () => mem,
     DEFAULT_NAME,
     fixName,
+    isG1,
     mode: () => st.mode,
     words: WORDS,
     word: (w) => W[w],
