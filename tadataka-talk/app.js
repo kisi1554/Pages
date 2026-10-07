@@ -81,7 +81,7 @@ const regionOf = (c) => REGIONS.find((r) => r.id === PREFS[c].r);
 const capWord = (c) => ({ 都: 'とちょう', 府: 'ふちょう', 道: 'どうちょう' }[PREFS[c].n.slice(-1)] || 'けんちょう') + 'しょざいち';
 
 // みじかい ことば(2もじ いか)は、ほかの ことばの いちぶに まちがえないよう まえと うしろを しらべる
-const AFTER = '(?:けん|ふ|と|し|の|って|は|に|で|へ|を|から|まで|が|も|や|と|じゃ|だ|です|$|[^ぁ-ん])';
+const AFTER = '(?:けん|ふ|と|の|って|は|に|で|へ|を|から|まで|が|も|や|と|じゃ|だ|です|$|[^ぁ-ん])';
 function strictRe(word) {
   return new RegExp('(?:^|[^ぁ-ん])(' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')' + AFTER);
 }
@@ -134,6 +134,11 @@ function findAll(text, list) {
   return out.sort((x, y) => x.at - y.at);
 }
 
+// ID は「けんコード×100+ばんごう」
+const ID = (c, i) => c * 100 + i;
+const idPref = (id) => Math.floor(id / 100);
+const idIdx = (id) => id % 100;
+
 // ばしょ(名所)
 const SPOT_ALIASES = [];
 const SPOT_EXTRA = {
@@ -143,18 +148,20 @@ const SPOT_EXTRA = {
   'うずしお': [36, 0], 'すなむし': [46, 2], 'もあい': [45, 3], 'ろけっと': [46, 3],
   'きょうりゅう': [18, 0], 'がっしょうづくり': [21, 0], 'げんばくどーむ': [34, 1],
 };
-CODES.forEach((c) => {
-  PREFS[c].spot.forEach((s, i) => {
-    const names = new Set();
-    [kanjiOf(s[0]), toHira(kanaOf(s[0]))].forEach((full) => {
-      const f = compact(full);
-      names.add(f);
-      f.split('の').forEach((seg) => { if (seg.length >= 3 && seg !== f) names.add(seg); });
-    });
-    names.forEach((w) => { if (w.length >= 2) addAlias(w, c * 10 + i, SPOT_ALIASES); });
+// なまえから さがす ことばを つくる(かんじ・かな、「の」で きった ところも)
+function nameKeys(markup, min) {
+  const names = new Set();
+  [kanjiOf(markup), toHira(kanaOf(markup))].forEach((full) => {
+    const f = compact(full).replace(/[「」()（）]/g, '');
+    names.add(f);
+    f.split('の').forEach((seg) => { if (seg.length >= 3 && seg !== f) names.add(seg); });
   });
+  return [...names].filter((w) => w.length >= (min || 2));
+}
+CODES.forEach((c) => {
+  PREFS[c].spot.forEach((s, i) => nameKeys(s[0]).forEach((w) => addAlias(w, ID(c, i), SPOT_ALIASES)));
 });
-Object.keys(SPOT_EXTRA).forEach((w) => addAlias(w, SPOT_EXTRA[w][0] * 10 + SPOT_EXTRA[w][1], SPOT_ALIASES));
+Object.keys(SPOT_EXTRA).forEach((w) => addAlias(w, ID(SPOT_EXTRA[w][0], SPOT_EXTRA[w][1]), SPOT_ALIASES));
 
 // めいさん
 const FOOD_ALIASES = [];
@@ -165,8 +172,29 @@ function foodTerms(name) {
   return [...terms];
 }
 CODES.forEach((c) => {
-  PREFS[c].food.forEach((f, i) => {
-    foodTerms(f[1]).forEach((t) => addAlias(t, c * 10 + i, FOOD_ALIASES));
+  PREFS[c].food.forEach((f, i) => foodTerms(f[1]).forEach((t) => addAlias(t, ID(c, i), FOOD_ALIASES)));
+});
+
+// まち・ひと・まつり・てつどう・しぜん の なまえ
+const KIND_ALIASES = { city: [], hito: [], matsuri: [], rail: [], shizen: [], chimei: [] };
+const CITY_NG = ['あき', 'かみ', 'あや', 'ふじ', 'つる', 'こが', 'さの', 'ひた', 'いな', 'みね', 'くれ', 'むつ', 'つ', 'おおの'];
+CODES.forEach((c) => {
+  (PREFS[c].city || []).forEach((s, i) => {
+    const kana = toHira(kanaOf(s[0]));
+    const base = kana.replace(/(し|まち|ちょう|むら|く)$/, '');
+    [kanjiOf(s[0]), kanjiOf(s[0]).replace(/[市町村区]$/, ''), kana, base].forEach((w) => {
+      if (w.length >= 2 && !CITY_NG.includes(w)) addAlias(w, ID(c, i), KIND_ALIASES.city);
+    });
+  });
+  ['hito', 'matsuri', 'rail', 'shizen'].forEach((k) => {
+    (PREFS[c][k] || []).forEach((s, i) => nameKeys(s[0], k === 'shizen' ? 3 : 4).forEach((w) => addAlias(w, ID(c, i), KIND_ALIASES[k])));
+  });
+  // ちめいは かんじ(2もじいじょう)と よみ(3もじいじょう)
+  (PREFS[c].chimei || []).forEach((s, i) => {
+    const kj = kanjiOf(s[0]);
+    const kn = toHira(kanaOf(s[0]));
+    if (kj.length >= 2) addAlias(kj, ID(c, i), KIND_ALIASES.chimei);
+    if (kn.length >= 3) addAlias(kn, ID(c, i), KIND_ALIASES.chimei);
   });
 });
 
@@ -176,11 +204,21 @@ const INTENTS = [
   ['quiz', ['くいず', 'もんだい', '問題']],
   ['map', ['ちず', '地図', 'まっぷ']],
   ['nb', ['となり', '隣', 'りんせつ']],
-  ['cap', ['けんちょう', 'しょざいち', '県庁', '所在地', 'ふちょう', 'とちょう', '府庁', '都庁']],
-  ['food', ['めいさん', '名産', 'たべもの', '食べ', 'おいしい', '美味しい', 'ぐるめ', 'とくさん', '特産', 'めいぶつ', '名物', 'つくって', 'とれる', 'さんち']],
+  ['cap', ['けんちょう', 'しょざいち', '県庁', '所在地', 'ふちょう', 'とちょう', 'どうちょう', '府庁', '都庁']],
+  ['stats', ['ひとがおおい', 'ひとがすくない', 'ひとはなんにん', 'じんこう', '人口', 'ひとのかず', 'なんにん', '何人', 'めんせき', '面積', 'ひろさ', '広さ', 'おおきさ', 'ひろい', 'せまい']],
+  ['rail', ['でんしゃ', '電車', 'えき', '駅', 'てつどう', '鉄道', 'しんかんせん', '新幹線', 'れっしゃ', '列車', 'とっきゅう', '特急', 'ろせん', '路線', 'sl']],
+  ['matsuri', ['まつり', '祭', 'ぎょうじ', '行事', 'おどり']],
+  ['chimei', ['なんどく', '難読', 'よめるかな', 'よめない', 'よみかた', 'ちめい', '地名']],
+  ['hogen', ['ほうげん', '方言', 'ことば', '言葉', 'なまり']],
+  ['sym', ['けんのはな', 'けんのき', 'けんのとり', '県の花', '県の木', '県の鳥', 'のはな', 'のとり', 'しんぼる', 'ふのはな', 'とのはな']],
+  ['hito', ['じんぶつ', '人物', 'ゆうめいじん', '有名人', 'いじん', '偉人', 'ぶしょう', '武将', 'ゆかり', 'ひと', '人']],
+  ['rekishi', ['れきし', '歴史', 'むかし', '昔', 'じだい', '時代']],
+  ['city', ['まち', '町', 'とし', '都市', 'しちょうそん', '市町村']],
+  ['food', ['めいさん', '名産', 'たべもの', '食べ', 'おいしい', '美味しい', 'ぐるめ', 'とくさん', '特産', 'めいぶつ', '名物', 'つくって', 'とれる', 'さんち', 'こうげい', '工芸', 'おみやげ']],
   ['spot', ['ゆうめい', '有名', 'ばしょ', '場所', 'かんこう', '観光', 'みどころ', '見所', 'いきたい', '行きたい', 'おでかけ', 'あそび', 'ところ', '所']],
-  ['geo', ['ちり', '地理', 'ちけい', '地形', 'やま', '山', 'かわ', '川', 'うみ', '海', 'きこう', '気候', 'てんき', '天気', 'ゆき', '雪', 'みずうみ', '湖', 'はんとう', '半島']],
-  ['mame', ['まめちしき', '豆知識', 'ひみつ', '秘密', 'もっと', 'ほかに', '他に', 'へぇ', 'すごい']],
+  ['shizen', ['やま', '山', 'かわ', '川', 'みずうみ', '湖', 'しま', '島', 'みさき', '岬', 'たき', '滝']],
+  ['geo', ['ちり', '地理', 'ちけい', '地形', 'うみ', '海', 'きこう', '気候', 'てんき', '天気', 'ゆき', '雪', 'はんとう', '半島', 'へいや', '平野', 'ぼんち', '盆地']],
+  ['mame', ['まめちしき', '豆知識', 'ひみつ', '秘密', 'もっと', 'ほかに', '他に', 'へぇ', 'すごい', 'つづき']],
 ];
 function intentOf(t) {
   for (const [id, keys] of INTENTS) if (keys.some((k) => t.includes(k))) return id;
@@ -195,16 +233,29 @@ const LINES = {
   aizuchi: ['ふむふむ。', 'ほほう!', 'なるほどのう。', 'よい しつもん じゃ!', 'うむうむ。'],
   ok: ['せいかい! よう しっとるのう!', 'あたり! たいしたもんじゃ!', 'おみごと! ちりはかせの でしに しよう!', 'せいかい じゃ! はなまる!'],
   ng: ['おしい! こたえは {a} じゃ。', 'ざんねん、{a} じゃった。つぎは いけるぞ!', 'ふふ、むずかしかったのう。{a} じゃ。'],
-  next: ['なにを ききたい?', 'ほかにも きいてみるか?', 'もっと しりたいことは あるかの?'],
+  next: ['なにを ききたい?', 'ほかにも きいてみるか?', 'もっと しりたいことは あるかの?', '「もっと」と いえば つづきを はなすぞ。'],
 };
 const fill = (s, o) => s.replace(/\{(\w)\}/g, (_, k) => o[k]);
 
 /* ============================ こたえを つくる ============================ */
 
-const state = { cur: null, quiz: null, last: null };
+const state = { cur: null, quiz: null, last: null, lastCat: null, seen: {} };
 
-const PREF_CHIPS = ['ゆうめいな ばしょ', 'めいさん', 'ちり', 'となりの けん', 'まめちしき', 'クイズ'];
-const HOME_CHIPS = ['おすすめの けん', 'クイズ', '日本一を おしえて', 'ちずを ひらく', 'りんごは どこ?', 'ただたかって だれ?'];
+const PREF_TOPICS = ['よめるかな?', 'ゆうめいな ばしょ', 'めいさん', 'ちり', 'やまと かわ', 'まち', 'まつり', 'でんしゃ', 'ゆかりの ひと', 'ほうげん', 'れきし', 'けんの はな', 'ひろさと じんこう', 'となりの けん', 'まめちしき'];
+const HOME_TOPICS = ['なんどく ちめい', 'おすすめの けん', '日本一を おしえて', 'せかいいさん', 'ちずきごう', 'しんかんせん', '日本三景', 'たかい やま ランキング', 'りんごは どこ?', 'ちずの みかた', 'ただたかって だれ?', 'さかもとりょうま', 'かいりゅう'];
+// さいごは かならず「クイズ」
+const prefChips = (extra = []) => extra.concat(shuffle(PREF_TOPICS).slice(0, 5 - extra.length), ['クイズ']);
+const homeChips = () => ['クイズ', 'ちずを ひらく'].concat(shuffle(HOME_TOPICS).slice(0, 4));
+
+// まだ はなしていない ものから じゅんばんに n こ えらぶ(「もっと」で つづきが でる)
+function rotate(key, arr, n) {
+  const seen = state.seen[key] || (state.seen[key] = []);
+  let left = arr.map((_, i) => i).filter((i) => !seen.includes(i));
+  if (!left.length) { seen.length = 0; left = arr.map((_, i) => i); }
+  const out = shuffle(left).slice(0, n);
+  seen.push(...out);
+  return out.map((i) => arr[i]);
+}
 
 function visit(c) {
   if (!save.visited.includes(c)) {
@@ -217,14 +268,48 @@ function visit(c) {
 function overview(c) {
   const p = PREFS[c];
   const s = shuffle(p.spot).slice(0, 2);
+  const extra = pick([
+    p.city && p.city.length ? `おもな まちは ${p.city.slice(0, 3).map((x) => x[0]).join('・')}。` : '',
+    p.matsuri && p.matsuri.length ? `「${p.matsuri[0][0]}」という おまつりも ある。` : '',
+    p.sym ? `けんの はなは ${p.sym[0]}、けんの とりは ${p.sym[2]}。` : '',
+  ].filter(Boolean)) || '';
   return [
     fill(pick(LINES.open), { n: prefName(c) }),
     `${regionOf(c).n}の なかまで、${capWord(c)}は ${capName(c)}。`,
     pick(p.geo),
     `ゆうめいな ばしょは ${s[0][0]}や ${s[1][0]}。`,
-    `めいさんは ${p.food.slice(0, 3).map((f) => f[0] + f[1]).join('、')}。`,
+    `めいさんは ${shuffle(p.food).slice(0, 3).map((f) => f[0] + f[1]).join('、')}。`,
+    extra,
     pick(LINES.next),
-  ].join('\n');
+  ].filter(Boolean).join('\n');
+}
+
+function rankOf(c, col, desc) {
+  const sorted = CODES.slice().sort((a, b) => (desc ? STATS[b][col] - STATS[a][col] : STATS[a][col] - STATS[b][col]));
+  return sorted.indexOf(c) + 1;
+}
+
+const CAT_HEAD = {
+  spot: ['ゆうめいな ばしょを しょうかい しよう!', '📍'],
+  food: ['めいさんは これじゃ!', ''],
+  geo: ['ちりを おしえよう。', '🧭'],
+  shizen: ['やま・かわ・みずうみ じゃ。', '⛰️'],
+  city: ['おもな まちを しょうかい しよう。', '🏙️'],
+  matsuri: ['まつりと ぎょうじ じゃ。', '🏮'],
+  rail: ['でんしゃと えきの はなし じゃ!', '🚃'],
+  hito: ['ゆかりの ひとを しょうかい しよう。', '👤'],
+  hogen: ['ほうげんを おしえよう。', '🗣️'],
+  rekishi: ['れきしを ふりかえろう。', '📜'],
+  chimei: ['よみかたが むずかしい ちめい じゃ。よめるかな?', '🔤'],
+};
+const CAT_N = { spot: 5, food: 5, geo: 4, shizen: 4, city: 5, matsuri: 4, rail: 4, hito: 4, hogen: 5, rekishi: 8, chimei: 3 };
+
+function catLine(cat, x) {
+  if (cat === 'food') return `${x[0]}${x[1]}… ${x[2]}`;
+  if (cat === 'geo' || cat === 'rekishi') return CAT_HEAD[cat][1] + x;
+  if (cat === 'hogen') return `🗣️「${x[0]}」… ${x[1]}`;
+  if (cat === 'chimei') return `🔤${kanjiOf(x[0])} … 「${kanaOf(x[0])}」と よむ。${x[1]}`;
+  return `${CAT_HEAD[cat][1]}${x[0]}… ${x[1]}`;
 }
 
 function aboutPref(c, intent) {
@@ -233,19 +318,26 @@ function aboutPref(c, intent) {
   visit(c);
   const name = prefName(c);
   let say;
-  let chips = PREF_CHIPS;
+  let chips = prefChips();
   let face = 'happy';
+  state.lastCat = null;
+  if (CAT_HEAD[intent]) {
+    const list = p[intent] || [];
+    if (!list.length) {
+      say = `${name}の その はなしは まだ しらべちゅう じゃ。ほかの ことを きいとくれ。`;
+    } else {
+      const items = intent === 'rekishi' ? list : rotate(`${c}:${intent}`, list, CAT_N[intent]);
+      say = `${name}の ${CAT_HEAD[intent][0]}\n` + items.map((x) => catLine(intent, x)).join('\n');
+      if (list.length > CAT_N[intent] && intent !== 'rekishi') {
+        say += '\n(「もっと」で つづきを はなすぞ)';
+        chips = prefChips(['もっと']);
+      }
+      state.lastCat = intent;
+    }
+    face = intent === 'geo' || intent === 'rekishi' ? 'think' : intent === 'hogen' ? 'wow' : 'happy';
+    return { say, chips, face, cur: c };
+  }
   switch (intent) {
-    case 'spot':
-      say = `${name}の ゆうめいな ばしょを しょうかい しよう!\n` + p.spot.map((s) => `📍${s[0]}… ${s[1]}`).join('\n');
-      break;
-    case 'food':
-      say = `${name}の めいさんは これじゃ!\n` + p.food.map((f) => `${f[0]}${f[1]}… ${f[2]}`).join('\n');
-      break;
-    case 'geo':
-      say = `${name}の ちりを おしえよう。\n` + p.geo.map((g) => `🧭${g}`).join('\n');
-      face = 'think';
-      break;
     case 'cap':
       say = `${name}の ${capWord(c)}は ${capName(c)} じゃ。`;
       if (kanaOf(p.cap[1]).replace(/(し|く)$/, '') !== p.k.replace(/(けん|ふ|と)$/, '')) {
@@ -263,10 +355,24 @@ function aboutPref(c, intent) {
       }
       face = 'think';
       break;
-    case 'mame':
-      say = `${name}の まめちしき じゃ。\n💡` + pick(p.mame.concat(p.geo.slice(-1)));
-      face = 'wow';
+    case 'stats': {
+      const [area, pop] = STATS[c];
+      say = `${name}の ひろさは やく ${area.toLocaleString()} へいほうキロメートル。ひろい じゅんで ${rankOf(c, 0, true)}ばんめ。\n` +
+        `ひとは やく ${pop}まんにん。おおい じゅんで ${rankOf(c, 1, true)}ばんめ じゃ。`;
+      face = 'think';
       break;
+    }
+    case 'sym':
+      say = p.sym ? `${name}の シンボル じゃ。\n🌸けんの はな… ${p.sym[0]}\n🌳けんの き… ${p.sym[1]}\n🐦けんの とり… ${p.sym[2]}` : `${name}の シンボルは しらべちゅう じゃ。`;
+      break;
+    case 'mame': {
+      const all = p.mame.concat(p.geo.slice(-1));
+      say = `${name}の まめちしき じゃ。\n💡` + rotate(`${c}:mame`, all, 1)[0];
+      face = 'wow';
+      chips = prefChips(['もっと']);
+      state.lastCat = 'mame';
+      break;
+    }
     default:
       say = overview(c);
   }
@@ -274,13 +380,13 @@ function aboutPref(c, intent) {
 }
 
 function aboutSpot(codes) {
-  const items = [...new Set(codes)].map((id) => ({ c: Math.floor(id / 10), s: PREFS[Math.floor(id / 10)].spot[id % 10] }));
+  const items = [...new Set(codes)].map((id) => ({ c: idPref(id), s: PREFS[idPref(id)].spot[idIdx(id)] }));
   // おなじ なまえ(ふじさん・しまなみかいどう)は まとめる
   const byName = {};
   items.forEach((it) => { (byName[kanaOf(it.s[0])] = byName[kanaOf(it.s[0])] || []).push(it); });
   const lines = [pick(LINES.aizuchi)];
-  Object.values(byName).forEach((list) => {
-    const prefs = list.map((it) => prefName(it.c)).join('と ');
+  Object.values(byName).slice(0, 4).forEach((list) => {
+    const prefs = [...new Set(list.map((it) => it.c))].map(prefName).join('と ');
     lines.push(`📍${list[0].s[0]}は ${prefs}に ある。${list[0].s[1]}`);
   });
   const c = items[0].c;
@@ -289,21 +395,40 @@ function aboutSpot(codes) {
   return { say: lines.join('\n'), face: 'wow', chips: [PREFS[c].k + 'の こと', 'ゆうめいな ばしょ', 'めいさん', 'クイズ'], cur: c };
 }
 
+// まち・ひと・まつり・てつどう・しぜん
+const KIND_WORD = { chimei: ['🔤', 'の ちめい'], city: ['🏙️', 'の まち'], hito: ['👤', 'に ゆかりの ある ひと'], matsuri: ['🏮', 'の まつり'], rail: ['🚃', 'の てつどう'], shizen: ['⛰️', 'に ある'] };
+function aboutKind(kind, ids) {
+  const items = [...new Set(ids)].map((id) => ({ c: idPref(id), x: PREFS[idPref(id)][kind][idIdx(id)] }));
+  const byName = {};
+  items.forEach((it) => { (byName[kanaOf(it.x[0])] = byName[kanaOf(it.x[0])] || []).push(it); });
+  const lines = [pick(LINES.aizuchi)];
+  Object.values(byName).slice(0, 3).forEach((list) => {
+    const prefs = [...new Set(list.map((it) => it.c))];
+    const [e, w] = KIND_WORD[kind];
+    lines.push(kind === 'chimei' ? `${e}${kanjiOf(list[0].x[0])}は「${kanaOf(list[0].x[0])}」と よむ。${prefs.map(prefName).join('・')}${w}。` : `${e}${list[0].x[0]}は ${prefs.map(prefName).join('・')}${w}。`);
+    list.slice(0, 2).forEach((it) => { if (it.x[1]) lines.push(`… ${it.x[1]}`); });
+  });
+  const c = items[0].c;
+  state.cur = c;
+  items.forEach((it) => visit(it.c));
+  return { say: lines.join('\n'), face: kind === 'hito' ? 'happy' : 'wow', chips: prefChips([PREFS[c].k + 'の こと']), cur: c };
+}
+
 function aboutFood(hits) {
   const terms = {};
   hits.forEach((h) => { (terms[h.a.w] = terms[h.a.w] || new Set()).add(h.a.code); });
   // いちばん ながい ことばで さがす
   const word = Object.keys(terms).sort((a, b) => b.length - a.length)[0];
   const ids = [...terms[word]];
-  // 日本一 を さきに
-  ids.sort((a, b) => /日本一/.test(PREFS[Math.floor(b / 10)].food[b % 10][2]) - /日本一/.test(PREFS[Math.floor(a / 10)].food[a % 10][2]));
+  const top = (id) => /日本一/.test(PREFS[idPref(id)].food[idIdx(id)][2]);
+  ids.sort((a, b) => top(b) - top(a));
   const lines = [pick(LINES.aizuchi)];
   const seen = new Set();
   ids.forEach((id) => {
-    const c = Math.floor(id / 10);
-    if (seen.has(c)) return;
+    const c = idPref(id);
+    if (seen.has(c) || seen.size >= 6) return;
     seen.add(c);
-    const f = PREFS[c].food[id % 10];
+    const f = PREFS[c].food[idIdx(id)];
     lines.push(`${f[0]}${prefName(c)}の ${f[1]}… ${f[2]}`);
   });
   const codes = [...seen];
@@ -333,9 +458,87 @@ function record(t) {
   return {
     say: (hit ? '' : 'では とっておきの 日本一を ひとつ。\n') + '🏆' + r.a,
     face: 'wow',
-    chips: r.p.map((c) => PREFS[c].k).concat(['ほかの 日本一', 'クイズ']),
+    chips: r.p.slice(0, 3).map((c) => PREFS[c].k).concat(['ほかの 日本一', 'ランキング', 'クイズ']),
     cur: r.p[0],
   };
+}
+
+/* ---------- にっぽん ぜんたいの はなし ---------- */
+
+function ranking(t) {
+  let cat = null;
+  if (has(t, ['やま', '山'])) cat = 'yama';
+  else if (has(t, ['かわ', '川'])) cat = 'kawa';
+  else if (has(t, ['みずうみ', '湖'])) cat = 'mizuumi';
+  else if (has(t, ['しま', '島'])) cat = 'shima';
+  if (cat) {
+    const r = RANKING[cat];
+    return { say: `🏆${r.t} ランキング じゃ!\n` + r.items.map((x, i) => `${i + 1}い ${x}`).join('\n'), face: 'wow', chips: ['たかい やま ランキング', 'ながい かわ ランキング', 'おおきい みずうみ ランキング', 'おおきい しま ランキング', 'ひろい けん ランキング', 'クイズ'] };
+  }
+  const people = has(t, ['ひと', '人', 'じんこう']);
+  const small = has(t, ['せまい', 'ちいさい', 'すくない', '少ない', '狭い']);
+  const col = people ? 1 : 0;
+  const sorted = CODES.slice().sort((a, b) => (small ? STATS[a][col] - STATS[b][col] : STATS[b][col] - STATS[a][col])).slice(0, 10);
+  const title = people ? (small ? 'ひとが すくない けん' : 'ひとが おおい けん') : (small ? 'せまい けん' : 'ひろい けん');
+  return {
+    say: `🏆${title} ランキング じゃ!\n` + sorted.map((c, i) => `${i + 1}い ${prefName(c)}(${people ? `やく ${STATS[c][1]}まんにん` : `${STATS[c][0].toLocaleString()}へいほうキロ`})`).join('\n'),
+    face: 'wow',
+    chips: ['ひとが おおい けん ランキング', 'せまい けん ランキング', 'ひとが すくない けん ランキング', 'たかい やま ランキング', 'クイズ'],
+  };
+}
+
+function nippon(t) {
+  if (has(t, ['せかいいさん', '世界遺産'])) {
+    const items = rotate('isan', SEKAI_ISAN, 6);
+    return {
+      say: `日本の せかいいさんは ${SEKAI_ISAN.length}こ ある(2025ねん)。いくつか しょうかい しよう。\n` +
+        items.map((x) => `🌏${x[0]}(${x[2].slice(0, 3).map(prefName).join('・')}${x[2].length > 3 ? 'など' : ''})… ${x[1]}`).join('\n'),
+      face: 'wow', chips: ['もっと せかいいさん', 'クイズ', '日本三景', 'ちずきごう'],
+    };
+  }
+  if (has(t, ['ちずきごう', '地図記号', 'きごう'])) {
+    const named = CHIZU_KIGO.filter((k) => compact(k[0]).split(/[(・)]/).some((w) => w.length >= 2 && t.includes(w)));
+    const items = named.length ? named.slice(0, 3) : rotate('kigo', CHIZU_KIGO, 5);
+    return {
+      say: (named.length ? '' : 'ちずきごうを おしえよう。\n') + items.map((k) => `🗺️${k[0]}… かたちは ${k[1]}。${k[2]}`).join('\n'),
+      face: 'think', chips: ['もっと ちずきごう', 'ちずの みかた', 'クイズ', 'せかいいさん'],
+    };
+  }
+  if (has(t, ['しんかんせん', '新幹線'])) {
+    const named = SHINKANSEN.filter((s) => t.includes(toHira(kanaOf(s[0])).replace('しんかんせん', '')) || has(t, s[2].match(/「[^」]+」/g).map((x) => x.slice(1, -1))));
+    const items = named.length ? named : SHINKANSEN;
+    return {
+      say: named.length ? items.map((s) => `🚄${s[0]}… ${s[1]}。${s[2]}`).join('\n')
+        : `日本の しんかんせんは ${SHINKANSEN.length}ろせん!\n` + items.map((s) => `🚄${s[0]}(${s[1]})`).join('\n') + '\nきに なる しんかんせんの なまえを いってごらん。',
+      face: 'wow', chips: ['とうかいどうしんかんせん', 'とうほくしんかんせん', 'こまち', 'クイズ'],
+    };
+  }
+  if (has(t, ['さんだい', '三大', 'さんけい', '三景', 'さんめい', '三名', 'さんれい', '三霊', 'さんこ'])) {
+    const named = SANDAI.filter((s) => {
+      const k = toHira(kanaOf(s[0])).replace(/^にほん|^とうほく/, '');
+      return t.includes(k) || t.includes(kanjiOf(s[0]).replace(/^日本|^東北/, ''));
+    });
+    const items = named.length ? named.slice(0, 2) : rotate('sandai', SANDAI, 4);
+    return {
+      say: items.map((s) => `🥇${s[0]}… ${s[1].join('、')}`).join('\n'),
+      face: 'wow', chips: ['ほかの 三大', '日本三景', '日本三名園', 'クイズ'],
+    };
+  }
+  if (has(t, ['なんどく', '難読', 'よめるかな', 'よめない', 'ちめい', '地名'])) {
+    const all = [];
+    CODES.forEach((c) => (PREFS[c].chimei || []).forEach((x) => all.push([c, x])));
+    const items = rotate('chimei-all', all, 4);
+    return {
+      say: 'よみかたが むずかしい ちめいを しょうかい しよう。よめるかな?\n' + items.map(([c, x]) => `🔤${kanjiOf(x[0])} … 「${kanaOf(x[0])}」(${prefName(c)})`).join('\n'),
+      face: 'wow', chips: ['もっと なんどく ちめい', 'クイズ', 'せかいいさん', 'ちずきごう'],
+    };
+  }
+  const topic = CHIRI_TOPICS.find((x) => has(t, x.keys));
+  if (topic) {
+    const items = topic.items.length > 6 ? rotate(topic.t, topic.items, 6) : topic.items;
+    return { say: `${topic.t}\n` + items.map((x) => `・${x}`).join('\n'), face: 'think', chips: homeChips() };
+  }
+  return null;
 }
 
 /* ============================ クイズ ============================ */
@@ -353,44 +556,83 @@ const RECORD_Q = [
   ['日本の いちばん にしの しま [与那国島|よなぐにじま]が あるのは?', 47],
   ['日本で いちばん たかい ダム [黒部|くろべ]ダムが あるのは?', 16],
   ['もりの わりあいが 日本一の けんは?', 39],
+  ['日本で いちばん ひろい しつげん [釧路湿原|くしろしつげん]が あるのは?', 1],
+  ['いちばん ひろい し [高山市|たかやまし]が あるのは?', 21],
+  ['JRで いちばん たかい えき [野辺山|のべやま]えきが あるのは?', 20],
+  ['日本一 ふかい わん [駿河湾|するがわん]が あるのは?', 22],
 ];
 
 function others(answer, n, ok) {
   return shuffle(CODES.filter((c) => c !== answer && (!ok || ok(c)))).slice(0, n);
 }
 
+// ほかの けんにも おなじ なまえが ある ものは こたえが ふたつに なるので ださない
+function uniquePool(kind) {
+  const count = {};
+  CODES.forEach((c) => (PREFS[c][kind] || []).forEach((x) => {
+    const k = compact(toHira(kanaOf(x[0])));
+    (count[k] = count[k] || new Set()).add(c);
+  }));
+  const pool = [];
+  CODES.forEach((c) => (PREFS[c][kind] || []).forEach((x) => {
+    if (count[compact(toHira(kanaOf(x[0])))].size === 1) pool.push([c, x]);
+  }));
+  return pool;
+}
+const QUIZ_POOLS = {};
+function poolOf(kind) { return QUIZ_POOLS[kind] || (QUIZ_POOLS[kind] = uniquePool(kind)); }
+
+const KIND_Q = {
+  spot: (x) => `📍${x[0]}が あるのは どこ?`,
+  city: (x) => `🏙️「${x[0]}」は どこの けん?`,
+  matsuri: (x) => `🏮「${x[0]}」が ある けんは?`,
+  rail: (x) => `🚃「${x[0]}」が はしる(ある) けんは?`,
+  hito: (x) => `👤「${x[0]}」に ゆかりの ある けんは?`,
+  shizen: (x) => `⛰️「${x[0]}」が ある けんは?`,
+  hogen: (x) => `🗣️「${x[0]}」(いみ: ${x[1]}) は どこの ほうげん?`,
+};
+
 function makeQuiz() {
-  const type = pick(['food', 'food', 'spot', 'spot', 'cap', 'nb', 'shape', 'shape', 'record']);
+  const type = pick(['food', 'food', 'spot', 'spot', 'cap', 'nb', 'shape', 'shape', 'record', 'city', 'matsuri', 'rail', 'hito', 'shizen', 'hogen', 'sym', 'kigo', 'isan', 'shinkansen', 'sandai', 'chimei', 'chimei']);
   let q;
   let a;
   let opts;
   let explain;
   let mini = null;
   if (type === 'food') {
-    // ほかの けんにも ある めいさん(りんご・かき など)は こたえが ふたつに なるので ださない
     const clash = (c, mine) => PREFS[c].food.some((g) => foodTerms(g[1]).some((t) => mine.some((m) => t.includes(m) || m.includes(t))));
-    const pool = [];
-    CODES.forEach((c) => PREFS[c].food.forEach((f) => {
-      const mine = foodTerms(f[1]);
-      if (!CODES.some((o) => o !== c && clash(o, mine))) pool.push([c, f]);
-    }));
+    const pool = QUIZ_POOLS.food || (QUIZ_POOLS.food = (() => {
+      const out = [];
+      CODES.forEach((c) => PREFS[c].food.forEach((f) => {
+        const mine = foodTerms(f[1]);
+        if (!CODES.some((o) => o !== c && clash(o, mine))) out.push([c, f]);
+      }));
+      return out;
+    })());
     const [pc, f] = pick(pool);
     a = pc;
     q = `${f[0]}${f[1]}が めいさんなのは どこ?`;
     opts = others(a, 2, (c) => PREFS[c].r !== PREFS[a].r);
     explain = `${prefName(a)}の ${f[1]}… ${f[2]}`;
-  } else if (type === 'spot') {
-    a = pick(CODES);
-    const s = pick(PREFS[a].spot);
-    const k = kanaOf(s[0]);
-    q = `📍${s[0]}が あるのは どこ?`;
-    opts = others(a, 2, (c) => PREFS[c].r !== PREFS[a].r && !PREFS[c].spot.some((x) => kanaOf(x[0]) === k));
-    explain = `${s[0]}… ${s[1]}`;
+  } else if (KIND_Q[type]) {
+    const [pc, x] = pick(poolOf(type));
+    a = pc;
+    q = KIND_Q[type](x);
+    opts = others(a, 2, (c) => PREFS[c].r !== PREFS[a].r);
+    explain = `${x[0]}は ${prefName(a)}。${x[1] && type !== 'hogen' ? x[1] : ''}`;
+  } else if (type === 'sym') {
+    const birds = {};
+    CODES.forEach((c) => { if (PREFS[c].sym) (birds[PREFS[c].sym[2]] = birds[PREFS[c].sym[2]] || []).push(c); });
+    const uniq = Object.keys(birds).filter((b) => birds[b].length === 1);
+    const bird = pick(uniq);
+    a = birds[bird][0];
+    q = `🐦けんの とりが「${bird}」なのは どこ?`;
+    opts = others(a, 2, (c) => PREFS[c].r !== PREFS[a].r);
+    explain = `${prefName(a)}の けんの はなは ${PREFS[a].sym[0]}、とりは ${bird}。`;
   } else if (type === 'cap') {
     a = pick(CODES.filter((c) => PREFS[c].cap[1].replace(/(し|く)$/, '') !== PREFS[c].k.replace(/(けん|ふ|と)$/, '')));
     q = `${prefName(a)}の ${capWord(a)}は どこ?`;
-    const o = others(a, 2);
-    return finishQuiz({ q, a, opts: o, label: capName, explain: `${prefName(a)}の ${capWord(a)}は ${capName(a)}。`, mini });
+    return finishQuiz({ q, a, opts: others(a, 2), label: capName, explain: `${prefName(a)}の ${capWord(a)}は ${capName(a)}。`, mini });
   } else if (type === 'nb') {
     const base = pick(CODES.filter((c) => PREFS[c].nb.length));
     a = pick(PREFS[base].nb);
@@ -403,6 +645,34 @@ function makeQuiz() {
     opts = others(a, 2, (c) => PREFS[c].r === PREFS[a].r).concat(others(a, 2)).filter((c, i, arr) => arr.indexOf(c) === i).slice(0, 2);
     mini = a;
     explain = `${prefName(a)}は ${regionOf(a).n}。${PREFS[a].geo[0]}`;
+  } else if (type === 'isan') {
+    const s = pick(SEKAI_ISAN.filter((x) => x[2].length <= 2));
+    a = s[2][0];
+    q = `🌏せかいいさん「${s[0]}」が ある けんは?`;
+    opts = others(a, 2, (c) => !s[2].includes(c));
+    explain = `${s[0]}は ${s[2].map(prefName).join('・')}。${s[1]}`;
+  } else if (type === 'kigo') {
+    const ans = pick(CHIZU_KIGO);
+    const wrong = shuffle(CHIZU_KIGO.filter((k) => k !== ans)).slice(0, 2);
+    const label = (k) => k[0];
+    return finishQuiz({ q: `🗺️ちずきごうで ${ans[1]} の しるしは なに?`, a: ans, opts: wrong, label, explain: `${ans[0]}… ${ans[2]}`, kind: 'other' });
+  } else if (type === 'chimei') {
+    const all = [];
+    CODES.forEach((c) => (PREFS[c].chimei || []).forEach((x) => all.push([c, x])));
+    const [pc, x] = pick(all);
+    const ans = kanaOf(x[0]);
+    const wrong = shuffle([...new Set(all.map((y) => kanaOf(y[1][0])))].filter((k) => k !== ans)).slice(0, 2);
+    return finishQuiz({ q: `🔤「${kanjiOf(x[0])}」は なんて よむ?`, a: ans, opts: wrong, label: (k) => k, explain: `${kanjiOf(x[0])}は「${ans}」。${prefName(pc)}の ${x[1]}`, kind: 'other' });
+  } else if (type === 'shinkansen') {
+    const ans = pick(SHINKANSEN);
+    const wrong = shuffle(SHINKANSEN.filter((k) => k !== ans)).slice(0, 2);
+    return finishQuiz({ q: `🚄「${ans[1]}」を はしる しんかんせんは?`, a: ans, opts: wrong, label: (k) => k[0], explain: `${ans[0]}… ${ans[2]}`, kind: 'other' });
+  } else if (type === 'sandai') {
+    const s = pick(SANDAI);
+    const hidden = pick(s[1]);
+    const shown = s[1].filter((x) => x !== hidden);
+    const wrong = shuffle(SANDAI.filter((x) => x !== s).map((x) => pick(x[1]))).slice(0, 2);
+    return finishQuiz({ q: `🥇${s[0]}は ${shown.join('・')}と あと ひとつは?`, a: hidden, opts: wrong, label: (k) => k, explain: `${s[0]}… ${s[1].join('、')}`, kind: 'other' });
   } else {
     const r = pick(RECORD_Q);
     q = '🏆' + r[0];
@@ -416,30 +686,31 @@ function makeQuiz() {
 function finishQuiz(z) {
   const options = shuffle([z.a].concat(z.opts));
   const n = state.quiz ? state.quiz.n + 1 : 1;
-  state.quiz = { a: z.a, options, label: z.label, explain: z.explain, n, score: state.quiz ? state.quiz.score : 0, done: false };
+  state.quiz = { a: z.a, options, label: z.label, explain: z.explain, n, score: state.quiz ? state.quiz.score : 0, done: false, kind: z.kind || 'pref' };
   return {
     say: `だい${n}もん!\n${z.q}`,
     face: 'think',
-    options: options.map((c) => ({ c, html: ruby(z.label(c)) })),
+    options: options.map((c, i) => ({ c: i, html: ruby(z.label(c)) })),
     mini: z.mini,
   };
 }
 
-function judge(c) {
+// i: えらんだ ボタンの ばんごう
+function judge(i) {
   const z = state.quiz;
   z.done = true;
+  const c = z.options[i];
   const ok = c === z.a;
   if (ok) z.score++;
-  visit(z.a);
-  state.cur = z.a;
+  const isPref = z.kind === 'pref';
+  if (isPref) { visit(z.a); state.cur = z.a; }
   const head = ok ? pick(LINES.ok) : fill(pick(LINES.ng), { a: z.label(z.a) });
   sfx(ok ? 'ok' : 'ng');
   return {
     say: `${head}\n${z.explain}\n(${z.n}もんちゅう ${z.score}もん せいかい)`,
     face: ok ? 'happy' : 'think',
-    chips: ['つぎの もんだい', PREFS[z.a].k + 'の こと', 'クイズ おしまい'],
-    judged: { pick: c, answer: z.a },
-    cur: z.a,
+    chips: isPref ? ['つぎの もんだい', PREFS[z.a].k + 'の こと', 'クイズ おしまい'] : ['つぎの もんだい', 'クイズ おしまい'],
+    cur: isPref ? z.a : null,
   };
 }
 
@@ -454,51 +725,74 @@ function reply(raw) {
   const z = state.quiz;
   if (z && !z.done) {
     if (has(t, ['わからない', 'わかんない', 'ぱす', 'ひんと'])) {
-      const r = regionOf(z.a);
-      return { say: `ヒント じゃ。こたえは ${r.n}に あるぞ。`, face: 'think', options: z.options.map((c) => ({ c, html: ruby(z.label(c)) })) };
+      const hint = z.kind === 'pref' ? `こたえは ${regionOf(z.a).n}に あるぞ。` : `こたえは「${kanaOf(z.label(z.a)).slice(0, 1)}」から はじまるぞ。`;
+      return { say: `ヒント じゃ。${hint}`, face: 'think', options: z.options.map((c, i) => ({ c: i, html: ruby(z.label(c)) })) };
     }
-    const hits = findAll(spaced, PREF_ALIASES).map((h) => h.a.code).filter((c) => z.options.includes(c));
-    if (hits.length) return judge(hits[0]);
-    const capHit = z.options.find((c) => t.includes(toHira(PREFS[c].cap[1])) || t.includes(PREFS[c].cap[0]));
-    if (capHit) return judge(capHit);
+    if (z.kind === 'pref') {
+      const hits = findAll(spaced, PREF_ALIASES).map((h) => z.options.indexOf(h.a.code)).filter((i) => i >= 0);
+      if (hits.length) return judge(hits[0]);
+      const capHit = z.options.findIndex((c) => t.includes(toHira(PREFS[c].cap[1])) || t.includes(PREFS[c].cap[0]));
+      if (capHit >= 0) return judge(capHit);
+    } else {
+      // 「がっこう(しょう・ちゅうがっこう)」のような なまえは、きれめごとに くらべる
+      const hit = z.options.findIndex((c) => norm(kanaOf(z.label(c))).split(' ').concat(compact(norm(kanaOf(z.label(c)))))
+        .some((k) => k.length >= 2 && (t.includes(k) || (t.length >= 3 && k.includes(t)))));
+      if (hit >= 0) return judge(hit);
+    }
   }
   if (has(t, ['おしまい', 'やめる', 'おわり'])) {
     const s = z ? `${z.n}もんちゅう ${z.score}もん せいかい じゃった。よう がんばった!` : 'うむ。';
     state.quiz = null;
-    return { say: s + '\nまた いつでも きいとくれ。', face: 'happy', chips: HOME_CHIPS };
+    return { say: s + '\nまた いつでも きいとくれ。', face: 'happy', chips: homeChips() };
   }
   if (has(t, ['つぎのもんだい', 'くいず', 'もんだい', '問題'])) return makeQuiz();
 
   if (has(t, ['もういちど', 'もういっかい', 'もう一回'])) return state.last;
-  if (has(t, ['だれ', 'なまえ', '名前', 'じこしょうかい'])) {
+  if (has(t, ['ただたか']) || has(t, ['だれ', 'なまえ', '名前', 'じこしょうかい']) && !findAll(spaced, KIND_ALIASES.hito).length) {
     return {
-      say: 'わしは ちりはかせの ただたか じゃ。\nにっぽんじゅうを あるいて ちずを つくって きた。\nなまえは、むかし ほんとうに 日本を あるきまわって ちずを つくった [伊能忠敬|いのうただたか]さんから もらったんじゃ。',
-      face: 'happy', chips: HOME_CHIPS,
+      say: 'わしは ちりはかせの ただたか じゃ。\nにっぽんじゅうを あるいて ちずを つくって きた。47の けんと にっぽんの ことを 6000いじょう しっとるぞ。\nなまえは、むかし ほんとうに 日本を あるきまわって ちずを つくった [伊能忠敬|いのうただたか]さんから もらったんじゃ。',
+      face: 'happy', chips: homeChips(),
     };
   }
   if (has(t, ['こんにちは', 'おはよう', 'こんばんは', 'やあ', 'はじめまして', 'はろー'])) {
-    return { say: 'うむ、こんにちは! きょうは どこの はなしを しようかの?', face: 'happy', chips: HOME_CHIPS };
+    return { say: 'うむ、こんにちは! きょうは どこの はなしを しようかの?', face: 'happy', chips: homeChips() };
   }
   if (has(t, ['ありがとう', 'さんきゅー'])) {
-    return { say: 'どういたしまして! しりたい きもちが いちばんの たからもの じゃ。', face: 'happy', chips: HOME_CHIPS };
+    return { say: 'どういたしまして! しりたい きもちが いちばんの たからもの じゃ。', face: 'happy', chips: homeChips() };
   }
   if (has(t, ['ばいばい', 'さようなら', 'またね'])) {
-    return { say: 'またの! つぎは どこの ちずを ひらこうかのう。', face: 'happy', chips: HOME_CHIPS };
-  }
-  if (has(t, ['ちず', '地図', 'まっぷ']) && !findAll(spaced, PREF_ALIASES).length) {
-    openMap();
-    return { say: 'ちずを ひろげたぞ! しりたい けんを タップしてごらん。', face: 'happy', chips: HOME_CHIPS };
+    return { say: 'またの! つぎは どこの ちずを ひらこうかのう。', face: 'happy', chips: homeChips() };
   }
 
-  // 日本一
-  if (has(t, ['いちばん', '一番', '日本一', 'にっぽんいち', 'にほんいち']) && !findAll(spaced, PREF_ALIASES).length) return record(t);
-
-  // ばしょ(名所)
-  const spotHits = findAll(spaced, SPOT_ALIASES);
   const prefHits = findAll(spaced, PREF_ALIASES);
-  // 「〇〇けんの △△」のように けんの なまえの ほうが ながい ときは けんを ゆうせん
-  if (spotHits.length && !(prefHits.length && prefHits[0].len > spotHits[0].len)) {
-    return aboutSpot(spotHits.map((h) => h.a.code));
+  if (has(t, ['ちずをひら', 'ちずをみせ', 'ちずみせ', 'まっぷ']) && !prefHits.length) {
+    openMap();
+    return { say: 'ちずを ひろげたぞ! しりたい けんを タップしてごらん。', face: 'happy', chips: homeChips() };
+  }
+
+  // 「もっと」… さっきの はなしの つづき
+  if (has(t, ['もっと', 'つづき', 'ほかに', 'ほかの']) && !prefHits.length) {
+    if (has(t, ['せかいいさん', 'ちずきごう', 'さんだい', '三大', 'しんかんせん', 'なんどく', 'ちめい'])) return nippon(t.replace('ほかの', ''));
+    if (has(t, ['にっぽんいち', '日本一'])) return record('');
+    if (state.cur && state.lastCat && [null, 'mame'].includes(intentOf(t))) return aboutPref(state.cur, state.lastCat);
+  }
+
+  // ランキング・日本一
+  if (has(t, ['らんきんぐ', 'べすと', 'じゅんい', '順位', 'ばんめ', 'じゅんばん'])) return ranking(t);
+  if (has(t, ['いちばん', '一番', '日本一', 'にっぽんいち', 'にほんいち']) && !prefHits.length) return record(t);
+
+  // なまえで さがす: ばしょ・まち・ひと・まつり・てつどう・しぜん(けんの なまえより ながい ときは こちら)
+  const named = [['spot', findAll(spaced, SPOT_ALIASES)]].concat(Object.keys(KIND_ALIASES).map((k) => [k, findAll(spaced, KIND_ALIASES[k])]))
+    .filter(([, hits]) => hits.length)
+    .sort((x, y) => Math.max(...y[1].map((h) => h.len)) - Math.max(...x[1].map((h) => h.len)));
+  const prefLen = prefHits.length ? Math.max(...prefHits.map((h) => h.len)) : 0;
+  if (named.length) {
+    const [kind, hits] = named[0];
+    const best = Math.max(...hits.map((h) => h.len));
+    if (best > prefLen || (best === prefLen && kind !== 'city')) {
+      const ids = hits.filter((h) => h.len === best).map((h) => h.a.code);
+      return kind === 'spot' ? aboutSpot(ids) : aboutKind(kind, ids);
+    }
   }
 
   // けんの なまえを とりのぞいてから ききたいことを さがす(やまがた の やま を ひろわない)
@@ -514,6 +808,9 @@ function reply(raw) {
   const foodHits = findAll(spaced, FOOD_ALIASES);
   if (foodHits.length) return aboutFood(foodHits);
 
+  const n = nippon(t);
+  if (n) return n;
+
   const region = REGIONS.find((r) => r.keys.some((k) => t.includes(k)));
   if (region) return aboutRegion(region);
 
@@ -521,7 +818,6 @@ function reply(raw) {
     const c = pick(CODES.filter((x) => !save.visited.includes(x)).concat(CODES).slice(0, 47));
     return aboutPref(c, null);
   }
-  if (has(t, ['ほかのにっぽんいち', 'ほかの日本一'])) return record('');
   if (/(の)?こと$/.test(t) && state.cur) return aboutPref(state.cur, null);
 
   if (intent && state.cur) return aboutPref(state.cur, intent);
@@ -530,9 +826,9 @@ function reply(raw) {
   }
 
   return {
-    say: 'ふむ…? わしは ちりの ことなら なんでも しっとるぞ。\n「ほっかいどう」「ふじさん」「りんごは どこ?」のように きいてごらん。',
+    say: 'ふむ…? わしは ちりの ことなら なんでも しっとるぞ。\n「ほっかいどう」「ふじさん」「りんごは どこ?」「せかいいさん」のように きいてごらん。',
     face: 'think',
-    chips: HOME_CHIPS,
+    chips: homeChips(),
   };
 }
 
@@ -637,7 +933,7 @@ function renderChips(r) {
     });
     return;
   }
-  (r.chips || HOME_CHIPS).forEach((label) => {
+  (r.chips || homeChips()).forEach((label) => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip';
@@ -734,7 +1030,7 @@ function resetIdle() {
     const c = pick(CODES);
     state.cur = c;
     show({
-      say: `そうそう、${prefName(c)}の はなしを しっとるか?\n💡${pick(PREFS[c].mame)}`,
+      say: `そうそう、${prefName(c)}の はなしを しっとるか?\n💡${pick(PREFS[c].mame.concat(PREFS[c].rekishi || []))}`,
       face: 'wow',
       chips: [PREFS[c].k + 'の こと', 'クイズ', 'おすすめの けん'],
       cur: c,
@@ -779,7 +1075,7 @@ function init() {
       ? 'やあ! わしは ちりはかせの ただたか じゃ。\nにっぽんじゅうを あるいて ちずを つくって きた。\n47の [都道府県|とどうふけん]の ゆうめいな ばしょ・めいさん・ちりなら なんでも きいとくれ!'
       : `おかえり! これまでに ${save.visited.length}の [都道府県|とどうふけん]を いっしょに たんけん したのう。\nきょうは どこへ いこうか?`,
     face: 'happy',
-    chips: HOME_CHIPS,
+    chips: homeChips(),
   };
   // さいしょの よみあげは ブラウザが とめるので、ふきだしだけ
   state.last = r;
