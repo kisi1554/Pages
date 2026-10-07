@@ -96,7 +96,14 @@
       src.connect(bp);
       bp.connect(trem);
       trem.connect(g);
-      g.connect(out);
+      if (o.pan && ctx.createStereoPanner) {
+        const pn = ctx.createStereoPanner();
+        pn.pan.value = Math.max(-1, Math.min(1, o.pan));
+        g.connect(pn);
+        pn.connect(out);
+      } else {
+        g.connect(out);
+      }
       src.start(t);
       src.stop(t + dur + 0.05);
     }
@@ -166,6 +173,48 @@
       pop() {
         if (!ok()) return;
         tone(ctx.currentTime + 0.01, 0.1, 880, { to: 1320, gain: 0.15 });
+      },
+      /* なかまの なきごえ(みじかく) */
+      semi(id) {
+        if (!ok()) return;
+        let at = ctx.currentTime + 0.05;
+        if (id === 'minmin') {
+          buzz(at, 0.5, { hz: 2500, hzTo: 2950, q: 3.2, trem: 24, depth: 0.55, gain: 0.3, attack: 0.15 });
+          at += 0.5;
+          for (let i = 0; i < 3; i++) buzz(at + i * 0.36, 0.3, { hz: 3050, hzTo: 2450, q: 3.4, trem: 30, depth: 0.75, gain: 0.32 });
+        } else if (id === 'abura') {
+          buzz(at, 1.4, { hz: 3900, q: 1.1, trem: 40, depth: 0.85, gain: 0.22, attack: 0.3, release: 0.4 });
+        } else if (id === 'higurashi') {
+          for (let i = 0; i < 10; i++) tone(at + i * 0.12, 0.09, i % 2 ? 980 : 1180, { wave: 'sawtooth', gain: 0.16 });
+        } else if (id === 'kuma') {
+          for (let i = 0; i < 6; i++) buzz(at + i * 0.22, 0.17, { hz: 4300, q: 1.4, trem: 78, depth: 1, gain: 0.26 });
+        } else {
+          this.song(true);
+        }
+      },
+      /* おとで さがす: pan = -1(ひだり)〜1(みぎ)、vol = 0〜1 */
+      chirp(pan, vol) {
+        if (!ok()) return;
+        const at = ctx.currentTime + 0.03;
+        const v = Math.max(0.05, vol || 0.5);
+        for (let i = 0; i < 2; i++) {
+          buzz(at + i * 0.34, 0.09, { hz: 4100, q: 2.2, gain: 0.34 * v, pan });
+          buzz(at + i * 0.34 + 0.13, 0.09, { hz: 4100, q: 2.2, gain: 0.34 * v, pan });
+        }
+      },
+      tick() {
+        if (!ok()) return;
+        tone(ctx.currentTime + 0.01, 0.06, 1500, { wave: 'square', gain: 0.08 });
+      },
+      sparkle() {
+        if (!ok()) return;
+        const t = ctx.currentTime + 0.02;
+        [1319, 1568, 2093].forEach((hz, i) => tone(t + i * 0.06, 0.15, hz, { gain: 0.14 }));
+      },
+      step() {
+        if (!ok()) return;
+        const t = ctx.currentTime + 0.01;
+        [0, 0.16, 0.32].forEach((d) => tone(t + d, 0.07, 180, { to: 120, wave: 'sine', gain: 0.25 }));
       },
       win() {
         if (!ok()) return;
@@ -368,7 +417,7 @@
       setChips(Tsuku.chipsFor(null, ['すごいね', 'もう いっかい ないて']));
       return;
     }
-    if (r.action === 'seek' || r.action === 'hide') {
+    if (r.action === 'seek' || r.action === 'hide' || (r.action && r.action.indexOf('hg:') === 0)) {
       setChips([]);
       say(r.text, r.mood, () => startGame(r.action));
       return;
@@ -465,266 +514,53 @@
     if (e.key === 'Enter') begin();
   });
 
-  /* ---------------------------- かくれんぼ ---------------------------- */
-  // かくれる ばしょ(x, y, w は シーンに たいする %)
-  const SPOTS = [
-    { id: 'leaf1', x: 14, y: 6, w: 20, kind: 'leaves', name: 'うえの はっぱ' },
-    { id: 'leaf2', x: 34, y: 1, w: 22, kind: 'leaves', name: 'てっぺんの はっぱ' },
-    { id: 'leaf3', x: 52, y: 10, w: 18, kind: 'leaves', name: 'みぎの はっぱ' },
-    { id: 'leaf4', x: 22, y: 24, w: 18, kind: 'leaves', name: 'したの はっぱ' },
-    { id: 'hole', x: 36, y: 50, w: 9, kind: 'hole', name: 'きの あな' },
-    { id: 'bush1', x: 58, y: 56, w: 19, kind: 'bush', name: 'くさむら' },
-    { id: 'bush2', x: 76, y: 60, w: 17, kind: 'bush', name: 'おおきな しげみ' },
-    { id: 'flower', x: 84, y: 26, w: 13, kind: 'flower', name: 'ひまわり' },
-    { id: 'grass1', x: 2, y: 74, w: 16, kind: 'grass', name: 'ひだりの くさ' },
-    { id: 'grass2', x: 44, y: 78, w: 15, kind: 'grass', name: 'まんなかの くさ' },
-    { id: 'rock', x: 82, y: 80, w: 14, kind: 'rock', name: 'いし' },
-    { id: 'kinoko', x: 20, y: 76, w: 10, kind: 'kinoko', name: 'きのこ' },
-  ];
-
-  const ART = {
-    leaves: `<svg viewBox="0 0 100 70"><g fill="#3e9b4f" stroke="#2c7a3b" stroke-width="2"><circle cx="30" cy="40" r="24"/><circle cx="55" cy="28" r="26"/><circle cx="75" cy="44" r="20"/><circle cx="50" cy="50" r="18"/></g><g fill="#5cb85c"><circle cx="48" cy="20" r="8"/><circle cx="26" cy="34" r="6"/></g></svg>`,
-    hole: `<svg viewBox="0 0 60 70"><ellipse cx="30" cy="36" rx="22" ry="28" fill="#4a2f1c" stroke="#6b4a2f" stroke-width="5"/></svg>`,
-    bush: `<svg viewBox="0 0 100 70"><g fill="#4caf50" stroke="#2e7d32" stroke-width="2"><circle cx="24" cy="46" r="22"/><circle cx="50" cy="34" r="26"/><circle cx="78" cy="46" r="21"/></g><rect x="4" y="52" width="92" height="18" rx="9" fill="#43a047"/></svg>`,
-    flower: `<svg viewBox="0 0 60 130"><path d="M30 50 V130" stroke="#3e8e41" stroke-width="6"/><path d="M30 90 q-20 -6 -24 -20 q18 0 24 14Z M30 104 q20 -6 24 -20 q-18 0 -24 14Z" fill="#4caf50"/><g fill="#ffcc1a" stroke="#e0a800" stroke-width="1.5">${[0, 45, 90, 135, 180, 225, 270, 315].map((a) => `<ellipse cx="30" cy="16" rx="7" ry="14" transform="rotate(${a} 30 30)"/>`).join('')}</g><circle cx="30" cy="30" r="12" fill="#7b4a1e"/></svg>`,
-    grass: `<svg viewBox="0 0 100 60"><g fill="#66bb6a" stroke="#388e3c" stroke-width="1.5"><path d="M5 60 L20 8 L28 60Z"/><path d="M20 60 L42 0 L48 60Z"/><path d="M40 60 L60 10 L66 60Z"/><path d="M58 60 L82 4 L84 60Z"/><path d="M76 60 L96 18 L98 60Z"/></g></svg>`,
-    rock: `<svg viewBox="0 0 100 60"><path d="M6 58 Q4 28 30 16 Q56 2 80 18 Q98 32 94 58Z" fill="#9e9e9e" stroke="#757575" stroke-width="3"/><path d="M30 26 Q44 18 56 22" stroke="#bdbdbd" stroke-width="4" fill="none" stroke-linecap="round"/></svg>`,
-    kinoko: `<svg viewBox="0 0 60 60"><rect x="22" y="30" width="16" height="28" rx="6" fill="#fff3e0" stroke="#d7b98e" stroke-width="2"/><path d="M4 34 Q6 4 30 4 Q54 4 56 34Z" fill="#e53935" stroke="#b71c1c" stroke-width="2"/><g fill="#fff"><circle cx="20" cy="18" r="4"/><circle cx="38" cy="14" r="5"/><circle cx="46" cy="26" r="3"/></g></svg>`,
-  };
-
-  const SCENE_BG = `<svg class="scene-bg" viewBox="0 0 400 300" preserveAspectRatio="none" aria-hidden="true">
-    <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9fd8ff"/><stop offset="1" stop-color="#e6f6ff"/></linearGradient></defs>
-    <rect width="400" height="300" fill="url(#sky)"/>
-    <circle cx="350" cy="40" r="22" fill="#ffd54f"/>
-    <path d="M0 210 Q100 190 200 205 T400 200 V300 H0Z" fill="#9ccc65"/>
-    <path d="M0 240 Q120 225 230 238 T400 236 V300 H0Z" fill="#8bc34a"/>
-    <g fill="#3a8a48"><ellipse cx="150" cy="62" rx="110" ry="52"/><ellipse cx="110" cy="96" rx="60" ry="32"/><ellipse cx="220" cy="80" rx="56" ry="34"/></g>
-    <path d="M136 230 Q140 170 146 110 L170 110 Q176 170 184 230Z" fill="#8d6e63" stroke="#6d4c41" stroke-width="3"/>
-    <path d="M150 140 Q156 150 152 162 M166 176 Q172 186 168 198" stroke="#6d4c41" stroke-width="3" fill="none"/>
-    <path d="M150 116 Q120 100 96 104 M168 114 Q200 96 222 104" stroke="#795548" stroke-width="10" fill="none" stroke-linecap="round"/>
-  </svg>`;
-
-  let game = null; // { mode, target, tries, done, hintUsed }
-
-  function gameSay(text, done) {
-    const t = fill(text);
-    $('gameMsg').textContent = t;
-    speak(t, done);
-  }
-
-  function buildScene(onTap) {
-    const scene = $('scene');
-    scene.innerHTML = SCENE_BG;
-    SPOTS.forEach((s, i) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'spot spot-' + s.kind;
-      b.style.left = s.x + '%';
-      b.style.top = s.y + '%';
-      b.style.width = s.w + '%';
-      b.setAttribute('aria-label', s.name);
-      b.dataset.i = i;
-      b.innerHTML = ART[s.kind] + '<span class="mark"></span>';
-      b.addEventListener('click', () => onTap(i, b));
-      scene.appendChild(b);
-    });
-  }
-  const spotEl = (i) => $('scene').querySelector(`.spot[data-i="${i}"]`);
-
-  function shake(el) {
-    el.classList.remove('shake');
-    void el.offsetWidth;
-    el.classList.add('shake');
-  }
-
-  function setBar(buttons) {
-    const bar = $('gameBar');
-    bar.innerHTML = '';
-    buttons.forEach(([label, fn, cls]) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'btn ' + (cls || 'btn-sub');
-      b.textContent = label;
-      b.addEventListener('click', fn);
-      bar.appendChild(b);
-    });
-  }
-
-  function startGame(mode) {
+  /* ---------------------------- かくれんぼ(hide.js) ---------------------------- */
+  // action: 'seek' → メニュー / 'hide' → じぶんが かくれる / 'hg:あそびかた:ばしょ' → すぐ はじめる
+  function startGame(action) {
     stopSpeak();
-    show('gameScreen');
-    if (mode === 'hide') startHide();
-    else startSeek();
-  }
-
-  /* --- seek: つくぼうが かくれる → こどもが さがす --- */
-  function startSeek() {
-    game = { mode: 'seek', target: Math.floor(Math.random() * SPOTS.length), tries: 0, done: false, hintUsed: false, busy: true };
-    buildScene(seekTap);
-    $('scene').classList.add('counting');
-    setBar([]);
-    gameSay('%N、めを つぶって 10 かぞえてね。いーち、にーい、さーん…', () => {
-      if (!game || game.mode !== 'seek') return;
-      $('scene').classList.remove('counting');
-      game.busy = false;
-      Snd.song(true);
-      gameSay('もういいよー！ ぼくを さがしてみて。どうせ みつからないけどね〜');
-      setBar([['🔊 なきごえ ヒント', seekHint], ['やめる', backToTalk]]);
-    });
-  }
-
-  function seekTap(i, el) {
-    if (!game || game.mode !== 'seek' || game.done || game.busy) return;
-    if (el.classList.contains('checked')) {
-      gameSay('そこは さっき みたでしょ〜。%N、わすれんぼ だね');
-      return;
+    const last = (save.hg && save.hg.last) || { stage: 'park', diff: 'normal' };
+    if (action === 'hide') return HideGame.start('hide', last.stage, last.diff);
+    if (action && action.indexOf('hg:') === 0) {
+      const [, mode, stage] = action.split(':');
+      return HideGame.start(mode || 'seek', stage || last.stage, last.diff);
     }
-    game.tries++;
-    Snd.rustle();
-    shake(el);
-    if (i === game.target) {
-      game.done = true;
-      el.classList.add('found');
-      el.querySelector('.mark').innerHTML = miniSVG();
-      Snd.found();
-      save.seekWins++;
-      const best = !save.best || game.tries < save.best;
-      if (best) save.best = game.tries;
-      persist();
-      const lines = game.tries <= 2
-        ? ['うそっ！ もう みつかった！？ %N、ずる したでしょ〜。…まあ いいや、やるじゃん', 'えっ、はやすぎ！ %N、ぼくの こと みてたでしょ！ くやしい ツクツク〜']
-        : ['ちぇっ、みつかっちゃった。%N、%Tかいめで みつけたね。なかなか やるじゃん', 'あーあ、みつかった。%N、ちょっとは うまく なったんじゃない？ %Tかいめだよ'];
-      gameSay(Tsuku.pick(lines).replace('%T', game.tries) + (best && save.seekWins > 1 ? '。きろく こうしん！' : ''));
-      setBar([['もう いっかい', startSeek, 'btn-main'], ['こんどは ぼくが かくれる', startHide], ['おしゃべりに もどる', backToTalk]]);
-      return;
-    }
-    el.classList.add('checked');
-    Snd.miss();
-    const t = SPOTS[game.target];
-    const s = SPOTS[i];
-    const d = Math.hypot(t.x + t.w / 2 - (s.x + s.w / 2), t.y - s.y);
-    const near = d < 30;
-    el.querySelector('.mark').textContent = near ? '🔥' : '❄️';
-    const tease = near
-      ? ['ざんねーん！ …でも ちょっと ちかいかも。ドキドキ', 'ぶぶー！ …あ、あぶなかった。ちかいよ〜', 'はずれ〜。でも あったかい ところ だよ。ふふ']
-      : ['ぜーんぜん ちがうよ〜！ ぷぷっ', 'はずれ！ %N、そっちは とおいよ〜。さむい さむい', 'そんな とこに ぼくが いる わけ ないじゃん〜'];
-    gameSay(Tsuku.pick(tease));
-    if (game.tries === 5 && !game.hintUsed) {
-      setTimeout(() => {
-        if (game && !game.done) gameSay('しかたないなあ、%N。なきごえの ヒント ボタンを おして いいよ');
-      }, 2600);
-    }
+    HideGame.menu();
   }
 
-  function seekHint() {
-    if (!game || game.done || game.mode !== 'seek') return;
-    game.hintUsed = true;
-    Snd.song(true);
-    const el = spotEl(game.target);
-    shake(el);
-    el.classList.add('hint');
-    setTimeout(() => el && el.classList.remove('hint'), 1800);
-    gameSay('ツクツク… あっ、ないちゃった！ ゆれた ところ、みてた？');
-  }
-
-  /* --- hide: こどもが かくれる → つくぼうが さがす --- */
-  function startHide() {
-    game = { mode: 'hide', target: -1, done: false, busy: false };
-    buildScene(hideTap);
-    setBar([['やめる', backToTalk]]);
-    gameSay('%Nが かくれる ばん！ かくれたい ところを タップしてね。ぼくは めを つぶってるよ');
-  }
-
-  function hideTap(i, el) {
-    if (!game || game.mode !== 'hide' || game.busy || game.target >= 0) return;
-    game.target = i;
-    game.busy = true;
-    Snd.pop();
-    el.classList.add('kid');
-    el.querySelector('.mark').textContent = '🧒';
-    setBar([]);
-    // みつけるか どうか、なんかいめで みつけるかを さいしょに きめる
-    const others = SPOTS.map((_, k) => k).filter((k) => k !== i).sort(() => Math.random() - 0.5);
-    const willFind = Math.random() < 0.5;
-    const plan = willFind ? others.slice(0, Math.floor(Math.random() * 3)).concat([i]) : others.slice(0, 3);
-    gameSay('いーち、にーい、さーん… じゅう！ もういいかい？ …さがすよ〜！', () => searchStep(plan, 0, willFind));
-  }
-
-  function searchStep(plan, k, willFind) {
-    if (!game || game.mode !== 'hide') return;
-    if (k >= plan.length) {
-      // みつけられなかった
-      game.done = true;
-      save.hideWins++;
-      persist();
-      const el = spotEl(game.target);
-      el.classList.add('found');
-      Snd.win();
-      gameSay(Tsuku.pick([
-        'まいった〜！ %N どこ？ …えっ、%Sに いたの！？ %N、かくれるの うまいじゃん…くやしい ツクツク',
-        'こうさん！ でてきて〜。…%Sかあ！ ぜんぜん わからなかった。%N、ちょっと すごいかも',
-      ]).replace('%S', SPOTS[game.target].name));
-      setBar([['もう いっかい かくれる', startHide, 'btn-main'], ['つくぼうを さがす', startSeek], ['おしゃべりに もどる', backToTalk]]);
-      return;
-    }
-    const i = plan[k];
-    const el = spotEl(i);
-    moveFinder(el);
-    Snd.rustle();
-    shake(el);
-    setTimeout(() => {
-      if (!game || game.mode !== 'hide') return;
-      if (i === game.target) {
-        game.done = true;
-        save.tsukuWins++;
-        persist();
-        el.classList.add('found');
-        Snd.found();
-        gameSay(Tsuku.pick([
-          'みーつけた！ %N、あたまが でてたよ〜。ぼくの かち！ ツクツクボーシ！',
-          'みーつけた！ %Sなんて すぐ わかるよ〜。%N、まだまだ だね',
-          'はい、みつけた〜！ %N の おしりが みえてたもん。ぷぷっ',
-        ]).replace('%S', SPOTS[i].name));
-        setBar([['リベンジ！ もう いっかい', startHide, 'btn-main'], ['つくぼうを さがす', startSeek], ['おしゃべりに もどる', backToTalk]]);
-        return;
-      }
-      el.classList.add('checked');
-      gameSay(Tsuku.pick(['%Sかな〜？ …いない。ちぇっ', '%Sに いるでしょ！ …あれ、いない', 'ここだ！ %S！ …ちがった〜']).replace('%S', SPOTS[i].name), () =>
-        setTimeout(() => searchStep(plan, k + 1, willFind), 300)
-      );
-    }, 900);
-  }
-
-  function moveFinder(target) {
-    let f = $('scene').querySelector('.finder');
-    if (!f) {
-      f = document.createElement('div');
-      f.className = 'finder';
-      f.innerHTML = miniSVG();
-      $('scene').appendChild(f);
-    }
-    f.style.left = parseFloat(target.style.left) + parseFloat(target.style.width) / 2 + '%';
-    f.style.top = target.style.top;
-  }
-
-  function backToTalk() {
+  function backToTalk(info) {
     stopSpeak();
-    const wasDone = game && game.done;
-    const mode = game && game.mode;
-    game = null;
+    HideGame.stop();
     show('talkScreen');
-    let line = '%N、また あそぼうね。…つぎも ぼくが かつけど',
+    const L = HideData.lines;
+    const p = (a) => a[Math.floor(Math.random() * a.length)];
+    let line = p(L.after);
+    let mood = 'happy';
+    if (!info || !info.done) {
+      line = p(L.quit);
       mood = 'smug';
-    if (!wasDone) {
-      line = 'あれ？ もう やめちゃうの？ %N、あきらめるの はやいよ〜';
-    } else if (mode === 'seek') {
-      line = `${save.seekWins}かいも ぼくを みつけるなんて…%N、なかなか やるね`;
-      mood = 'shy';
+    } else if (Math.random() < 0.4) {
+      line = p(L.loveHide);
     }
     say(line, mood);
-    setChips(Tsuku.chipsFor(null, ['かくれんぼ しよう', 'ぼくが かくれる']));
+    setChips(Tsuku.chipsFor(null, ['かくれんぼ しよう', 'よるの かくれんぼ', 'なかま さがし']));
   }
-  $('backBtn').addEventListener('click', backToTalk);
+
+  HideGame.init({
+    save,
+    persist,
+    fill,
+    speak,
+    stopSpeak,
+    Snd,
+    show,
+    onExit: backToTalk,
+  });
+
+  // ◀ もどる: あそんでる とき → メニュー、メニュー → おしゃべり
+  $('backBtn').addEventListener('click', () => {
+    if (HideGame.playing) HideGame.menu();
+    else backToTalk({ done: true });
+  });
 
   /* ---------------------------- せってい ---------------------------- */
   $('tgVoice').checked = save.voice;
@@ -749,7 +585,7 @@
   $('nameChange').addEventListener('click', () => {
     $('soundPanel').hidden = true;
     stopSpeak();
-    game = null;
+    HideGame.stop();
     $('nameInput').value = save.name;
     show('startScreen');
   });
