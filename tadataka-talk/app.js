@@ -14,7 +14,7 @@
 /* ============================ ほぞん ============================ */
 
 const STORE_KEY = 'tadataka-talk-v1';
-const save = { visited: [], voice: true, sound: true };
+const save = { visited: [], voice: true, sound: true, mode: 'mono' };
 
 function loadSave() {
   try {
@@ -172,7 +172,8 @@ function foodTerms(name) {
   return [...terms];
 }
 CODES.forEach((c) => {
-  PREFS[c].food.forEach((f, i) => foodTerms(f[1]).forEach((t) => addAlias(t, ID(c, i), FOOD_ALIASES)));
+  // 「こうちの おさけ」の「こうち」のような けんの なまえは つかわない
+  PREFS[c].food.forEach((f, i) => foodTerms(f[1]).filter((t) => !PREF_ALIASES.some((a) => a.w === t)).forEach((t) => addAlias(t, ID(c, i), FOOD_ALIASES)));
 });
 
 // まち・ひと・まつり・てつどう・しぜん の なまえ
@@ -245,7 +246,9 @@ const PREF_TOPICS = ['よめるかな?', 'ゆうめいな ばしょ', 'めいさ
 const HOME_TOPICS = ['なんどく ちめい', 'おすすめの けん', '日本一を おしえて', 'せかいいさん', 'ちずきごう', 'しんかんせん', '日本三景', 'たかい やま ランキング', 'りんごは どこ?', 'ちずの みかた', 'ただたかって だれ?', 'さかもとりょうま', 'かいりゅう'];
 // さいごは かならず「クイズ」
 const prefChips = (extra = []) => extra.concat(shuffle(PREF_TOPICS).slice(0, 5 - extra.length), ['クイズ']);
-const homeChips = () => ['クイズ', 'ちずを ひらく'].concat(shuffle(HOME_TOPICS).slice(0, 4));
+const homeChips = () => (save.mode === 'juken'
+  ? ['クイズ'].concat(shuffle(JUKEN_HOME).slice(0, 5))
+  : ['クイズ', 'ちずを ひらく'].concat(shuffle(HOME_TOPICS).slice(0, 3), ['中学受験モード']));
 
 // まだ はなしていない ものから じゅんばんに n こ えらぶ(「もっと」で つづきが でる)
 function rotate(key, arr, n) {
@@ -501,6 +504,7 @@ function nippon(t) {
     const items = named.length ? named.slice(0, 3) : rotate('kigo', CHIZU_KIGO, 5);
     return {
       say: (named.length ? '' : 'ちずきごうを おしえよう。\n') + items.map((k) => `🗺️${k[0]}… かたちは ${k[1]}。${k[2]}`).join('\n'),
+      kigo: items,
       face: 'think', chips: ['もっと ちずきごう', 'ちずの みかた', 'クイズ', 'せかいいさん'],
     };
   }
@@ -539,6 +543,210 @@ function nippon(t) {
     return { say: `${topic.t}\n` + items.map((x) => `・${x}`).join('\n'), face: 'think', chips: homeChips() };
   }
   return null;
+}
+
+/* ============================ モード(ものしり / 中学受験) ============================ */
+
+const MODES = {
+  mono: { name: 'ものしりモード', icon: '🧭', short: 'ものしり' },
+  juken: { name: '中学受験モード', icon: '🎓', short: 'じゅけん' },
+};
+const isJuken = () => save.mode === 'juken';
+
+function modeIntro() {
+  return isJuken()
+    ? {
+      say: '🎓[中学受験|ちゅうがくじゅけん]モード じゃ!\n[入試|にゅうし]に でる [用語|ようご]を [中心|ちゅうしん]に はなすぞ。\n「[促成栽培|そくせいさいばい]」「[中京工業地帯|ちゅうきょうこうぎょうちたい]」のような [用語|ようご]や、[県|けん]の なまえを いってごらん。クイズも [入試|にゅうし]むけに なる。',
+      face: 'wow', chips: homeChips(),
+    }
+    : {
+      say: '🧭ものしりモード じゃ!\nけんの ゆうめいな ばしょ・めいさん・まめちしきを たっぷり はなすぞ。',
+      face: 'happy', chips: homeChips(),
+    };
+}
+
+function setMode(m) {
+  save.mode = MODES[m] ? m : 'mono';
+  writeSave();
+  state.quiz = null;
+  state.lastCat = null;
+  state.jukenCat = null;
+  if (typeof updateModeBtn === 'function') updateModeBtn();
+  return modeIntro();
+}
+
+/* ---------- 受験の ようご ---------- */
+
+const TERM_ALIASES = [];
+JUKEN_TERMS.forEach((x, i) => {
+  const names = new Set();
+  [kanjiOf(x.t), toHira(kanaOf(x.t))].forEach((full) => {
+    const f = compact(full);
+    names.add(f.replace(/\([^)]*\)/g, ''));
+    (f.match(/\(([^)]+)\)/g) || []).forEach((m) => names.add(m.slice(1, -1)));
+  });
+  names.forEach((w) => { if (w.length >= 2) addAlias(w, i, TERM_ALIASES); });
+});
+
+const JUKEN_CAT_KEYS = {
+  chikei: ['ちけい', '地形'],
+  kiko: ['きこう', '気候'],
+  nogyo: ['のうぎょう', '農業', 'さいばい', '栽培'],
+  gyogyo: ['ぎょぎょう', '漁業', 'すいさん', '水産'],
+  kogyo: ['こうぎょう', '工業'],
+  kogai: ['こうがい', '公害', 'かんきょう', '環境'],
+  jinko: ['じんこう', '人口', 'くらし'],
+  kotsu: ['こうつう', '交通', 'えねるぎー', 'はつでん', '発電'],
+  ryodo: ['りょうど', '領土', 'ちけいず', '地形図', 'しゅくしゃく'],
+};
+const JUKEN_HOME = ['促成栽培', '扇状地', 'リアス海岸', '中京工業地帯', '四大公害病', '気候区分', '生産量ランキング', 'やませ', '近郊農業', '排他的経済水域', '地図記号', '工業の用語', '農業の用語', '地形の用語', '水産業の用語'];
+
+const firstSentence = (s) => s.split('。')[0] + '。';
+// 「四大公害病の ひとつ。」のように みじかすぎる ときは 2ぶんめまで
+const defLabel = (y) => {
+  const s = y.d.split('。').filter(Boolean);
+  return (kanaOf(s[0]).length < 16 && s[1] ? `${s[0]}。${s[1]}` : s[0]) + '。';
+};
+function termLine(x) {
+  return `📘${x.t}… ${x.d}` + (x.ex ? `\n　[例|れい]: ${x.ex}` : '');
+}
+
+function explainTerm(i) {
+  const x = JUKEN_TERMS[i];
+  state.jukenCat = x.c;
+  state.lastCat = null;
+  x.p.forEach(visit);
+  if (x.p.length) state.cur = x.p[0];
+  const rel = x.p.length ? `\n[関係|かんけい]する [都道府県|とどうふけん]: ${x.p.map(prefName).join('・')}` : '';
+  const same = shuffle(JUKEN_TERMS.filter((y) => y.c === x.c && y !== x)).slice(0, 3).map((y) => kanjiOf(y.t).replace(/\(.*\)/, ''));
+  return { say: termLine(x) + rel, face: 'think', chips: same.concat(['もっと', 'クイズ']), cur: x.p[0] || null };
+}
+
+function jukenCategory(cat) {
+  const list = JUKEN_TERMS.filter((x) => x.c === cat);
+  const items = rotate('jk:' + cat, list, 3);
+  state.jukenCat = cat;
+  state.lastCat = null;
+  return {
+    say: `${JUKEN_CATS[cat]}で [入試|にゅうし]に でる [用語|ようご] じゃ。\n` + items.map(termLine).join('\n') + '\n(「もっと」で つづき)',
+    face: 'think',
+    chips: ['もっと'].concat(shuffle(Object.keys(JUKEN_CATS).filter((k) => k !== cat)).slice(0, 3).map((k) => kanjiOf(JUKEN_CATS[k]).split('・')[0] + 'の用語'), ['クイズ']),
+  };
+}
+
+const rankLine = (r) => `🏅${r[0]}… ` + r[1].map((c, i) => `${i + 1}[位|い] ${prefName(c)}`).join('、');
+function rankNamed(t) {
+  return JUNKEN_RANK_KEYS.filter(([, keys]) => keys.some((k) => t.includes(k))).map(([r]) => r);
+}
+const JUNKEN_RANK_KEYS = JUKEN_RANK.map((r) => {
+  const kana = compact(toHira(kanaOf(r[0]))).replace(/\(.*$/, '');
+  const kanji = kanjiOf(r[0]).replace(/\(.*$/, '');
+  return [r, [kana, kanji].filter((k) => k.length >= 2 || /[一-龥]/.test(k))];
+});
+function jukenRank(t) {
+  const named = rankNamed(t);
+  const items = named.length ? named : rotate('rank', JUKEN_RANK, 6);
+  return {
+    say: (named.length ? '' : '[生産量|せいさんりょう]などの [上位|じょうい]の [都道府県|とどうふけん] じゃ。[入試|にゅうし]に よく でるぞ。\n') +
+      items.map(rankLine).join('\n') + '\n(2[位|い]より [下|した]は [年|とし]によって かわる ことも ある)',
+    face: 'wow',
+    chips: ['もっと 生産量', 'クイズ', '工業の用語', '農業の用語'],
+  };
+}
+
+function jukenClimate() {
+  return {
+    say: '[日本|にほん]の 6つの [気候区分|きこうくぶん] じゃ。[雨温図|うおんず]と いっしょに おぼえよう。\n' +
+      Object.values(CLIMATE6).map((x) => `🌦️${x.t}([例|れい]: ${x.city})… ${x.d}`).join('\n'),
+    face: 'think', chips: ['雨温図', 'やませ', '季節風', 'クイズ'],
+  };
+}
+
+function jukenPref(c) {
+  state.cur = c;
+  visit(c);
+  state.lastCat = null;
+  state.jukenCat = null;
+  const cl = CLIMATE6[CLIMATE_OF[c]];
+  const ranks = JUKEN_RANK.filter((r) => r[1].includes(c)).map((r) => `${r[0]} ${r[1].indexOf(c) + 1}[位|い]`);
+  const zones = JUKEN_TERMS.filter((x) => x.c === 'kogyo' && /工業地[帯域]/.test(kanjiOf(x.t)) && x.p.includes(c));
+  const terms = JUKEN_TERMS.filter((x) => x.p.includes(c) && !zones.includes(x));
+  const lines = [
+    `【${prefName(c)}】${regionOf(c).n}。${capWord(c)}は ${capName(c)}。`,
+    `🌦️[気候|きこう]: ${cl.t}。${cl.d}`,
+    ranks.length ? `🏅[生産|せいさん]など: ${ranks.join('、')}` : '',
+    zones.length ? `🏭[工業|こうぎょう]: ${zones.map((z) => z.t).join('・')}` : '',
+    terms.length ? `📝[関係|かんけい]する [用語|ようご]: ${terms.slice(0, 6).map((x) => x.t).join('・')}` : `🧭${pick(PREFS[c].geo)}`,
+  ].filter(Boolean);
+  return {
+    say: lines.join('\n'),
+    face: 'think',
+    chips: terms.slice(0, 3).map((x) => kanjiOf(x.t).replace(/\(.*\)/, '')).concat([PREFS[c].k + 'の めいさん', 'クイズ']),
+    cur: c,
+  };
+}
+
+function jukenReply(t, spaced, prefHits) {
+  if (!isJuken()) return null;
+  const prefLen = prefHits.length ? Math.max(...prefHits.map((h) => h.len)) : 0;
+  if (!prefHits.length && (has(t, ['せいさんりょう', '生産量', 'しゅうかくりょう', '収穫量', 'しいくすう', '飼育数']) ||
+    (rankNamed(t).length && has(t, ['いちい', '1い', '一位', 'どこ', 'おおい', '多い', 'じょうい', '上位'])))) return jukenRank(t);
+  const th = findAll(spaced, TERM_ALIASES).sort((a, b) => b.len - a.len);
+  if (th.length && th[0].len >= prefLen) return explainTerm(th[0].a.code);
+  if (has(t, ['きこうくぶん', '気候区分', '6つのきこう'])) return jukenClimate();
+  if (!prefHits.length) {
+    const cat = Object.keys(JUKEN_CAT_KEYS).find((k) => has(t, JUKEN_CAT_KEYS[k]));
+    if (cat) return jukenCategory(cat);
+  }
+  if (prefHits.length) {
+    let rest = t;
+    prefHits.forEach((h) => { rest = rest.split(h.a.w).join(' '); });
+    if (!intentOf(rest)) return jukenPref(prefHits[0].a.code);
+  }
+  return null;
+}
+
+/* ---------- 受験の クイズ ---------- */
+
+function makeJukenQuiz(jt) {
+  if (jt === 'term') {
+    const pool = JUKEN_TERMS.filter((x) => !kanjiOf(x.d).includes(kanjiOf(x.t).replace(/\(.*\)/, '')));
+    const x = pick(pool);
+    const same = JUKEN_TERMS.filter((y) => y.c === x.c && y !== x);
+    const wrong = shuffle(same.length >= 2 ? same : JUKEN_TERMS.filter((y) => y !== x)).slice(0, 2);
+    return finishQuiz({ q: `📘「${firstSentence(x.d)}」\nこれを なんと いう?`, a: x, opts: wrong, label: (y) => y.t, explain: termLine(x), kind: 'other' });
+  }
+  if (jt === 'def') {
+    const x = pick(JUKEN_TERMS);
+    const same = JUKEN_TERMS.filter((y) => y.c === x.c && y !== x);
+    const wrong = [];
+    shuffle(same).concat(shuffle(JUKEN_TERMS)).forEach((y) => {
+      if (wrong.length < 2 && y !== x && ![x].concat(wrong).some((z) => defLabel(z) === defLabel(y))) wrong.push(y);
+    });
+    return finishQuiz({ q: `📘「${x.t}」の [説明|せつめい]として [正|ただ]しいのは?`, a: x, opts: wrong, label: defLabel, explain: termLine(x), kind: 'other' });
+  }
+  if (jt === 'rank') {
+    const r = pick(JUKEN_RANK);
+    const a = r[1][0];
+    return finishQuiz({ q: `🏅「${r[0]}」が [日本一|にっぽんいち]の [都道府県|とどうふけん]は?`, a, opts: others(a, 2, (c) => !r[1].includes(c)), label: prefName, explain: rankLine(r) });
+  }
+  if (jt === 'zone') {
+    const x = pick(JUKEN_TERMS.filter((y) => /工業地[帯域]/.test(kanjiOf(y.t)) && y.p.length));
+    const a = x.p[0];
+    return finishQuiz({ q: `🏭${x.t}の [中心|ちゅうしん]と なる [都道府県|とどうふけん]は?`, a, opts: others(a, 2, (c) => !x.p.includes(c)), label: prefName, explain: termLine(x) });
+  }
+  if (jt === 'climate') {
+    const keys = Object.keys(CLIMATE6);
+    const k = pick(keys);
+    const wrong = shuffle(keys.filter((y) => y !== k)).slice(0, 2);
+    const byCity = Math.random() < 0.5;
+    const q = byCity ? `🌦️${CLIMATE6[k].city}は どの [気候|きこう]?` : `🌦️「${CLIMATE6[k].d}」\nこれは どの [気候|きこう]?`;
+    return finishQuiz({ q, a: k, opts: wrong, label: (y) => CLIMATE6[y].t, explain: `${CLIMATE6[k].t}([例|れい]: ${CLIMATE6[k].city})… ${CLIMATE6[k].d}`, kind: 'other' });
+  }
+  // 四大公害病: どこで おきた?
+  const x = pick(JUKEN_TERMS.filter((y) => y.c === 'kogai' && /病|ぜんそく/.test(kanjiOf(y.t))));
+  const a = x.p[0];
+  return finishQuiz({ q: `⚠️${x.t}が おきた [都道府県|とどうふけん]は?`, a, opts: others(a, 2, (c) => !x.p.includes(c)), label: prefName, explain: termLine(x) });
 }
 
 /* ============================ クイズ ============================ */
@@ -592,8 +800,17 @@ const KIND_Q = {
   hogen: (x) => `🗣️「${x[0]}」(いみ: ${x[1]}) は どこの ほうげん?`,
 };
 
+const JUKEN_QUIZ = ['term', 'term', 'def', 'rank', 'rank', 'zone', 'climate', 'kogai'];
 function makeQuiz() {
-  const type = pick(['food', 'food', 'spot', 'spot', 'cap', 'nb', 'shape', 'shape', 'record', 'city', 'matsuri', 'rail', 'hito', 'shizen', 'hogen', 'sym', 'kigo', 'isan', 'shinkansen', 'sandai', 'chimei', 'chimei']);
+  if (isJuken()) {
+    const jt = pick(JUKEN_QUIZ.concat(['kigo', 'cap', 'shape', 'isan']));
+    if (JUKEN_QUIZ.includes(jt)) return makeJukenQuiz(jt);
+    return makeQuiz2(jt);
+  }
+  return makeQuiz2(pick(['food', 'food', 'spot', 'spot', 'cap', 'nb', 'shape', 'shape', 'record', 'city', 'matsuri', 'rail', 'hito', 'shizen', 'hogen', 'sym', 'kigo', 'isan', 'shinkansen', 'sandai', 'chimei', 'chimei']));
+}
+
+function makeQuiz2(type) {
   let q;
   let a;
   let opts;
@@ -655,7 +872,7 @@ function makeQuiz() {
     const ans = pick(CHIZU_KIGO);
     const wrong = shuffle(CHIZU_KIGO.filter((k) => k !== ans)).slice(0, 2);
     const label = (k) => k[0];
-    return finishQuiz({ q: `🗺️ちずきごうで ${ans[1]} の しるしは なに?`, a: ans, opts: wrong, label, explain: `${ans[0]}… ${ans[2]}`, kind: 'other' });
+    return finishQuiz({ q: '🗺️この ちずきごうは なにを あらわして いる?', a: ans, opts: wrong, label, explain: `${ans[0]}… かたちは ${ans[1]}。${ans[2]}`, kind: 'other', kigoBig: ans[3] });
   } else if (type === 'chimei') {
     const all = [];
     CODES.forEach((c) => (PREFS[c].chimei || []).forEach((x) => all.push([c, x])));
@@ -686,12 +903,13 @@ function makeQuiz() {
 function finishQuiz(z) {
   const options = shuffle([z.a].concat(z.opts));
   const n = state.quiz ? state.quiz.n + 1 : 1;
-  state.quiz = { a: z.a, options, label: z.label, explain: z.explain, n, score: state.quiz ? state.quiz.score : 0, done: false, kind: z.kind || 'pref' };
+  state.quiz = { a: z.a, options, label: z.label, explain: z.explain, n, score: state.quiz ? state.quiz.score : 0, done: false, kind: z.kind || 'pref', kigoBig: z.kigoBig };
   return {
     say: `だい${n}もん!\n${z.q}`,
     face: 'think',
     options: options.map((c, i) => ({ c: i, html: ruby(z.label(c)) })),
     mini: z.mini,
+    kigoBig: z.kigoBig,
   };
 }
 
@@ -726,7 +944,7 @@ function reply(raw) {
   if (z && !z.done) {
     if (has(t, ['わからない', 'わかんない', 'ぱす', 'ひんと'])) {
       const hint = z.kind === 'pref' ? `こたえは ${regionOf(z.a).n}に あるぞ。` : `こたえは「${kanaOf(z.label(z.a)).slice(0, 1)}」から はじまるぞ。`;
-      return { say: `ヒント じゃ。${hint}`, face: 'think', options: z.options.map((c, i) => ({ c: i, html: ruby(z.label(c)) })) };
+      return { say: `ヒント じゃ。${hint}`, face: 'think', options: z.options.map((c, i) => ({ c: i, html: ruby(z.label(c)) })), kigoBig: z.kigoBig };
     }
     if (z.kind === 'pref') {
       const hits = findAll(spaced, PREF_ALIASES).map((h) => z.options.indexOf(h.a.code)).filter((i) => i >= 0);
@@ -748,6 +966,8 @@ function reply(raw) {
   if (has(t, ['つぎのもんだい', 'くいず', 'もんだい', '問題'])) return makeQuiz();
 
   if (has(t, ['もういちど', 'もういっかい', 'もう一回'])) return state.last;
+  if (has(t, ['じゅけんもーど', 'ちゅうがくじゅけん', '中学受験', '受験もーど', '受験モード'])) return setMode('juken');
+  if (has(t, ['ものしりもーど', 'ふつうもーど', 'ものしりモード'])) return setMode('mono');
   if (has(t, ['ただたか']) || has(t, ['だれ', 'なまえ', '名前', 'じこしょうかい']) && !findAll(spaced, KIND_ALIASES.hito).length) {
     return {
       say: 'わしは ちりはかせの ただたか じゃ。\nにっぽんじゅうを あるいて ちずを つくって きた。47の けんと にっぽんの ことを 6000いじょう しっとるぞ。\nなまえは、むかし ほんとうに 日本を あるきまわって ちずを つくった [伊能忠敬|いのうただたか]さんから もらったんじゃ。',
@@ -772,10 +992,16 @@ function reply(raw) {
 
   // 「もっと」… さっきの はなしの つづき
   if (has(t, ['もっと', 'つづき', 'ほかに', 'ほかの']) && !prefHits.length) {
+    if (isJuken() && has(t, ['せいさんりょう', '生産量'])) return jukenRank('');
+    if (isJuken() && state.jukenCat && !state.lastCat && [null, 'mame'].includes(intentOf(t))) return jukenCategory(state.jukenCat);
     if (has(t, ['せかいいさん', 'ちずきごう', 'さんだい', '三大', 'しんかんせん', 'なんどく', 'ちめい'])) return nippon(t.replace('ほかの', ''));
     if (has(t, ['にっぽんいち', '日本一'])) return record('');
     if (state.cur && state.lastCat && [null, 'mame'].includes(intentOf(t))) return aboutPref(state.cur, state.lastCat);
   }
+
+  // 受験モードでは 入試の ようごを さきに
+  const jr = jukenReply(t, spaced, prefHits);
+  if (jr) return jr;
 
   // ランキング・日本一
   if (has(t, ['らんきんぐ', 'べすと', 'じゅんい', '順位', 'ばんめ', 'じゅんばん'])) return ranking(t);
@@ -947,10 +1173,13 @@ function show(r) {
   if (!r) return;
   state.last = r;
   let html = ruby(r.say);
+  let extra = '';
+  if (r.kigoBig) extra += `<div class="kigo-big">${kigoSvg(r.kigoBig, 110)}</div>`;
+  if (r.kigo) extra += '<div class="kigo-grid">' + r.kigo.map((k) => `<figure>${kigoSvg(k[3], 52)}<figcaption>${esc(k[0])}</figcaption></figure>`).join('') + '</div>';
   if (r.mini) html += miniMap(r.mini);
-  $('bubble').innerHTML = html;
+  $('bubble').innerHTML = html + extra;
   $('bubble').scrollTop = 0;
-  addLog('t', ruby(r.say));
+  addLog('t', ruby(r.say) + extra);
   setFace(r.face);
   renderChips(r);
   speak(r.say);
@@ -995,6 +1224,13 @@ function paintMap() {
 function markCurrent() { paintMap(); }
 function openMap() { paintMap(); $('mapModal').hidden = false; sfx('map'); }
 function closeMap() { $('mapModal').hidden = true; }
+function updateModeBtn() {
+  const m = MODES[save.mode] || MODES.mono;
+  $('btnMode').innerHTML = `${m.icon}<small>${m.short}</small>`;
+  document.body.classList.toggle('juken', isJuken());
+  document.querySelectorAll('[data-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === save.mode)));
+}
+function openModeMenu() { updateModeBtn(); $('modeModal').hidden = false; }
 function updateStamp() { $('stampCount').textContent = `${save.visited.length}/47`; }
 
 /* ---------- こえで はなす ---------- */
@@ -1027,6 +1263,12 @@ function resetIdle() {
   idleTimer = setTimeout(() => {
     if (state.quiz && !state.quiz.done) return;
     if (!$('mapModal').hidden) return;
+    if (isJuken()) {
+      const x = pick(JUKEN_TERMS);
+      show({ say: `[入試|にゅうし]に でる [用語|ようご]を ひとつ。\n${termLine(x)}`, face: 'wow', chips: ['クイズ', 'もっと'].concat(shuffle(JUKEN_HOME).slice(0, 3)) });
+      state.jukenCat = x.c;
+      return;
+    }
     const c = pick(CODES);
     state.cur = c;
     show({
@@ -1057,6 +1299,15 @@ function init() {
   $('btnVoice').addEventListener('click', () => toggle($('btnVoice'), 'voice'));
   $('btnSound').addEventListener('click', () => toggle($('btnSound'), 'sound'));
   $('btnMap').addEventListener('click', openMap);
+  $('btnMode').addEventListener('click', openModeMenu);
+  document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
+    $('modeModal').hidden = true;
+    sfx('pop');
+    show(setMode(b.dataset.mode));
+    resetIdle();
+  }));
+  $('modeModal').addEventListener('click', (e) => { if (e.target === $('modeModal')) $('modeModal').hidden = true; });
+  updateModeBtn();
   $('btnMapClose').addEventListener('click', closeMap);
   $('mapModal').addEventListener('click', (e) => { if (e.target === $('mapModal')) closeMap(); });
   $('form').addEventListener('submit', (e) => {
@@ -1070,7 +1321,7 @@ function init() {
   setupMic();
 
   const first = save.visited.length === 0;
-  const r = {
+  const r = isJuken() ? modeIntro() : {
     say: first
       ? 'やあ! わしは ちりはかせの ただたか じゃ。\nにっぽんじゅうを あるいて ちずを つくって きた。\n47の [都道府県|とどうふけん]の ゆうめいな ばしょ・めいさん・ちりなら なんでも きいとくれ!'
       : `おかえり! これまでに ${save.visited.length}の [都道府県|とどうふけん]を いっしょに たんけん したのう。\nきょうは どこへ いこうか?`,

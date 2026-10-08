@@ -1206,11 +1206,15 @@ function splitPair(s) {
 
 function addKnowledge(code, o) {
   const p = PREFS[code];
-  (o.spot || []).forEach((s) => p.spot.push(splitPair(s)));
+  // おなじ なまえが もう ある ときは たさない
+  const key = (s) => s.replace(/\[([^|\]]+)\|([^\]]+)\]/g, '$2').replace(/\s/g, '')
+    .replace(/[\u30a1-\u30f6]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) - 0x60));
+  const hasName = (list, n) => list.some((x) => key(x) === key(n));
+  (o.spot || []).forEach((s) => { const x = splitPair(s); if (!hasName(p.spot.map((y) => y[0]), x[0])) p.spot.push(x); });
   (o.food || []).forEach((s) => {
     const sp = s.indexOf(' ');
     const [name, note] = splitPair(s.slice(sp + 1));
-    p.food.push([s.slice(0, sp), name, note]);
+    if (!hasName(p.food.map((y) => y[1]), name)) p.food.push([s.slice(0, sp), name, note]);
   });
   p.geo.push(...(o.geo || []));
   p.mame.push(...(o.mame || []));
