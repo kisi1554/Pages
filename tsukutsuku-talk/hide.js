@@ -323,7 +323,7 @@ const HideGame = (function () {
     award('st_' + G.stage.id);
     if (H.stages.every((s) => h.stages[s.id])) award('allStages');
     if (H.modes.every((m) => h.modes[m.id])) award('allModes');
-    const modeBadge = { friends: 'friends', nukegara: 'nukegara', sound: 'sound', moving: 'moving', night: 'night', mimic: 'mimic' }[G.mode.id];
+    const modeBadge = { friends: 'friends', nukegara: 'nukegara', sound: 'sound', moving: 'moving', night: 'night', mimic: 'mimic', shuffle: 'shuffle', memory: 'memory', wordhint: 'wordhint', order: 'order', decoy: 'decoy', peek: 'peek', question: 'question', treasure: 'treasure', escape: 'escape' }[G.mode.id];
     if (modeBadge) award(modeBadge);
     const day = new Date().toDateString();
     if (h.days.indexOf(day) < 0) h.days.push(day);
@@ -372,6 +372,16 @@ const HideGame = (function () {
       night: startNight,
       mimic: startMimic,
       match: startMatch,
+      shuffle: startShuffle,
+      memory: startMemory,
+      whack: startWhack,
+      wordhint: startWordHint,
+      order: startOrder,
+      decoy: startDecoy,
+      peek: startPeek,
+      question: startQuestion,
+      treasure: startTreasure,
+      escape: startEscape,
     }[mode.id];
     run();
   }
@@ -470,6 +480,11 @@ const HideGame = (function () {
       el.querySelector('.mark').textContent = '✖';
       soundCue(i);
       return;
+    }
+    if (G.noHotCold) {
+      el.querySelector('.mark').textContent = '✖';
+      if (G.mode.id === 'wordhint') return wordHint();
+      return msg(line('missFar'));
     }
     if (G.goal && G.tries >= G.goal && G.onLimit) {
       const f = G.onLimit;
@@ -937,6 +952,497 @@ const HideGame = (function () {
     } else {
       msg('つぎは ' + X.fill('%N') + 'が かくれる ばん！', () => startHide((tsukuWon) => end(!tsukuWon)));
     }
+  }
+
+
+  /* ================= ここから あそびかた 11〜20 ================= */
+  const per = (o) => o[G.diff.id];
+  // かった とき の しめ
+  function win(text, opt) {
+    const o = opt || {};
+    G.done = true;
+    X.Snd.win();
+    recordWin(o.kind || 'find', { tries: G.tries, xp: o.xp || 3 });
+    sayAll(text);
+    setBar(againBtns());
+  }
+  // まけた とき の しめ
+  function lose(text) {
+    G.done = true;
+    X.Snd.miss();
+    msg(text);
+    setBar([['リベンジ！', () => start(G.mode.id, G.stage.id, G.diff.id), 'btn-main']].concat(againBtns().slice(1)));
+  }
+  const posWords = (s) => {
+    const c = center(s);
+    return { top: c.y < 40, bottom: c.y > 62, left: c.x < 35, right: c.x > 65, mid: c.x >= 35 && c.x <= 65 };
+  };
+
+  /* ---------- 11. シャッフル ---------- */
+  function startShuffle() {
+    buildScene(shuffleTap);
+    const n = per({ easy: 3, normal: 4, hard: 5 });
+    G.cups = shuffle(G.spots.map((_, i) => i)).slice(0, n);
+    G.spots.forEach((_, i) => G.cups.indexOf(i) < 0 && spotEl(i).classList.add('off'));
+    G.target = pick(G.cups);
+    G.busy = true;
+    setBar([quitBtn]);
+    markSpot(G.target, semiSVG());
+    msg(line('shuffleStart'), () => {
+      if (!G) return;
+      markSpot(G.target, '');
+      X.Snd.pop();
+      const sc = $('scene');
+      sc.classList.add('shuffling');
+      let k = per({ easy: 3, normal: 5, hard: 8 });
+      const gap = per({ easy: 950, normal: 750, hard: 560 });
+      sc.style.setProperty('--sw', gap * 0.8 + 'ms');
+      const step = () => {
+        if (!G) return;
+        if (k-- <= 0) {
+          sc.classList.remove('shuffling');
+          G.busy = false;
+          return msg(line('shuffleAsk'));
+        }
+        const [a, b] = shuffle(G.cups).slice(0, 2);
+        const ea = spotEl(a);
+        const eb = spotEl(b);
+        const pa = [ea.style.left, ea.style.top];
+        ea.style.left = eb.style.left;
+        ea.style.top = eb.style.top;
+        eb.style.left = pa[0];
+        eb.style.top = pa[1];
+        X.Snd.rustle();
+        later(gap, step);
+      };
+      later(500, step);
+    });
+  }
+  function shuffleTap(i, el) {
+    if (!G || G.done || G.busy || G.cups.indexOf(i) < 0) return;
+    G.tries++;
+    if (i === G.target) {
+      el.classList.add('found');
+      markSpot(i, semiSVG());
+      X.Snd.found();
+      return win(line(G.tries === 1 ? 'shuffleWin' : 'foundNormal', { '%T': String(G.tries), '%S': G.spots[i].n }), { xp: G.tries === 1 ? 4 : 2 });
+    }
+    el.classList.add('checked');
+    el.querySelector('.mark').textContent = '✖';
+    X.Snd.miss();
+    if (G.tries >= G.cups.length - 1) {
+      markSpot(G.target, semiSVG());
+      spotEl(G.target).classList.add('found');
+      return lose(line('shuffleLose', { '%S': G.spots[G.target].n }));
+    }
+    msg(line('missFar'));
+  }
+
+  /* ---------- 12. おぼえて さがす ---------- */
+  function startMemory() {
+    buildScene(memoryTap);
+    const n = per({ easy: 2, normal: 3, hard: 4 });
+    G.mem = shuffle(G.spots.map((_, i) => i)).slice(0, n).map((spot, k) => ({ spot, f: H.friends[k], found: false }));
+    G.miss = 0;
+    G.missMax = n + per({ easy: 4, normal: 2, hard: 1 });
+    G.busy = true;
+    setBar([quitBtn]);
+    G.mem.forEach((m) => markSpot(m.spot, semiSVG(m.f.color)));
+    msg(line('memoryStart', { '%C': String(n) }), () => {
+      later(per({ easy: 2500, normal: 1600, hard: 1000 }), () => {
+        if (!G) return;
+        G.mem.forEach((m) => markSpot(m.spot, ''));
+        X.Snd.pop();
+        G.busy = false;
+        status(`みつけた 0 / ${n} ・ まちがえて いいのは ${G.missMax}かい`);
+        msg(line('memoryGo'));
+      });
+    });
+  }
+  function memoryTap(i, el) {
+    if (!G || G.done || G.busy || G.checked[i]) return;
+    G.checked[i] = 1;
+    G.tries++;
+    const m = G.mem.find((x) => x.spot === i);
+    const n = G.mem.length;
+    if (m) {
+      m.found = true;
+      el.classList.add('found');
+      markSpot(i, semiSVG(m.f.color));
+      X.Snd.semi(m.f.song);
+      const got = G.mem.filter((x) => x.found).length;
+      status(`みつけた ${got} / ${n} ・ のこり ミス ${G.missMax - G.miss}`);
+      if (got === n) return win(line('memoryWin'), { xp: 2 + n });
+      return msg(`${m.f.name}「${m.f.say}」`);
+    }
+    G.miss++;
+    el.classList.add('checked');
+    el.querySelector('.mark').textContent = '✖';
+    X.Snd.miss();
+    status(`みつけた ${G.mem.filter((x) => x.found).length} / ${n} ・ のこり ミス ${G.missMax - G.miss}`);
+    if (G.miss >= G.missMax) {
+      G.mem.forEach((x) => !x.found && markSpot(x.spot, semiSVG(x.f.color)));
+      return lose(line('memoryLose'));
+    }
+    msg(line('memoryMiss'));
+  }
+
+  /* ---------- 13. ひょっこり たたき ---------- */
+  function startWhack() {
+    buildScene(whackTap);
+    G.count = 0;
+    G.left = per({ easy: 40, normal: 30, hard: 25 });
+    G.up = -1;
+    setBar([quitBtn]);
+    status(`のこり ${G.left}びょう ・ 0かい`);
+    msg(line('whackStart'), () => {
+      if (!G) return;
+      whackClock();
+      whackPop();
+    });
+  }
+  function whackClock() {
+    if (!G || G.done) return;
+    status(`のこり ${G.left}びょう ・ ${G.count}かい`);
+    if (G.left <= 0) {
+      const h = hg();
+      const best = G.count > (h.whackBest || 0);
+      if (best) h.whackBest = G.count;
+      if (G.count >= 8) award('whack');
+      if (G.count === 0) return lose(line('whackEnd', { '%C': '0' }));
+      return win(joinT(line('whackEnd', { '%C': String(G.count) }), best ? line('record') : 'また やろうね'), { xp: Math.min(6, 1 + Math.floor(G.count / 2)) });
+    }
+    G.left--;
+    later(1000, whackClock);
+  }
+  function whackPop() {
+    if (!G || G.done) return;
+    if (G.up >= 0) markSpot(G.up, '');
+    let i = G.up;
+    while (i === G.up) i = Math.floor(Math.random() * G.spots.length);
+    G.up = i;
+    markSpot(i, semiSVG());
+    spotEl(i).classList.add('popup');
+    const stay = per({ easy: 1300, normal: 950, hard: 700 });
+    later(stay, () => {
+      if (!G || G.done) return;
+      if (G.up === i) {
+        markSpot(i, '');
+        spotEl(i).classList.remove('popup');
+        G.up = -1;
+      }
+      later(per({ easy: 350, normal: 250, hard: 150 }), whackPop);
+    });
+  }
+  function whackTap(i, el) {
+    if (!G || G.done || G.left === undefined) return;
+    if (i === G.up) {
+      G.count++;
+      G.up = -1;
+      markSpot(i, '⭐');
+      el.classList.remove('popup');
+      X.Snd.sparkle();
+      status(`のこり ${G.left}びょう ・ ${G.count}かい`);
+      later(300, () => G && markSpot(i, ''));
+    } else {
+      X.Snd.miss();
+      shake(el);
+    }
+  }
+
+  /* ---------- 14. ことば ヒント ---------- */
+  function startWordHint() {
+    G.wh = 0;
+    startSeek(null, () => {
+      setBar([['💬 もう ひとつ ヒント', wordHint], quitBtn]);
+      wordHint();
+    });
+    G.noHotCold = true;
+  }
+  function wordHint() {
+    if (!G || G.done) return;
+    const t = G.spots[G.target];
+    const name = t.n.replace(/^(ひだりの|みぎの|うえの|したの|まんなかの|てっぺんの|おおきな|あかい) /, '');
+    const k = G.wh++;
+    const p = posWords(t);
+    const hints = [
+      `ぼくが かくれてるのは「${name[0]}」から はじまる ところ だよ`,
+      `その なまえは ${name.replace(/[ ー]/g, '').length}もじ だよ`,
+      `ばしょは ${p.top ? 'うえの ほう' : p.bottom ? 'したの ほう' : 'まんなかの たかさ'}、${p.left ? 'ひだりがわ' : p.right ? 'みぎがわ' : 'まんなかへん'}`,
+      `さいごの もじは「${name.replace(/[ ー]/g, '').slice(-1)}」だよ`,
+      `こたえ いっちゃう？ …「${t.n}」！`,
+    ];
+    msg(hints[Math.min(k, hints.length - 1)]);
+  }
+
+  /* ---------- 15. じゅんばん さがし ---------- */
+  function startOrder() {
+    buildScene(orderTap);
+    const n = per({ easy: 3, normal: 4, hard: 5 });
+    G.ord = shuffle(G.spots.map((_, i) => i)).slice(0, n).map((spot, k) => ({ spot, f: H.friends[k], found: false }));
+    G.next = 0;
+    countThen(() => {
+      msg(line('orderStart', { '%O': G.ord.map((o) => o.f.name).join('、') }));
+      status(`つぎは ${G.ord[0].f.name}`);
+      setBar([['📣 じゅんばんを きく', () => msg('じゅんばんは ' + G.ord.map((o) => o.f.name).join(' → ') + ' だよ')], quitBtn]);
+    });
+  }
+  function orderTap(i, el) {
+    if (!G || G.done || G.busy) return;
+    const o = G.ord.find((x) => x.spot === i);
+    G.tries++;
+    X.Snd.rustle();
+    shake(el);
+    if (o && o === G.ord[G.next]) {
+      o.found = true;
+      el.classList.add('found');
+      markSpot(i, semiSVG(o.f.color));
+      X.Snd.semi(o.f.song);
+      G.next++;
+      if (G.next >= G.ord.length) {
+        status('ぜんいん みつけた！');
+        return win(line('orderWin'), { xp: 2 + G.ord.length });
+      }
+      status(`つぎは ${G.ord[G.next].f.name}`);
+      return msg(`${o.f.name}、みーつけた！ つぎは ${G.ord[G.next].f.name} だよ`);
+    }
+    if (o && !o.found) {
+      el.querySelector('.mark').textContent = '❗';
+      return msg(`${o.f.name}「ぼくは まだ あと だよ〜！」 さきに ${G.ord[G.next].f.name}を さがしてね`);
+    }
+    if (o) return;
+    el.classList.add('checked');
+    el.querySelector('.mark').textContent = '✖';
+    X.Snd.miss();
+    msg(line('missFar'));
+  }
+
+  /* ---------- 16. みがわり さくせん ---------- */
+  function startDecoy() {
+    buildScene(decoyTap);
+    G.kidAt = -1;
+    G.decoyAt = -1;
+    setBar([quitBtn]);
+    msg(line('decoyStart'));
+  }
+  function decoyTap(i, el) {
+    if (!G || G.busy || G.done) return;
+    if (G.kidAt < 0) {
+      G.kidAt = i;
+      el.classList.add('kid');
+      el.querySelector('.mark').textContent = '🧒';
+      X.Snd.pop();
+      return msg(line('decoyPlace'));
+    }
+    if (G.decoyAt < 0 && i !== G.kidAt) {
+      G.decoyAt = i;
+      el.querySelector('.mark').textContent = '🧸';
+      X.Snd.pop();
+      G.busy = true;
+      const p = per({ easy: 0.3, normal: 0.45, hard: 0.6 });
+      const others = shuffle(G.spots.map((_, k) => k).filter((k) => k !== G.kidAt && k !== G.decoyAt));
+      let plan = others.slice(0, 2 + Math.floor(Math.random() * 2));
+      if (Math.random() < 0.75) plan.splice(Math.floor(Math.random() * (plan.length + 1)), 0, G.decoyAt);
+      if (Math.random() < p) plan.push(G.kidAt);
+      msg(line('hideCount'), () => decoyStep(plan, 0));
+    }
+  }
+  function decoyStep(plan, k) {
+    if (!G) return;
+    if (k >= plan.length) return win(line('decoyWin'), { kind: 'hide', xp: 4 });
+    const i = plan[k];
+    const el = spotEl(i);
+    moveFinder(el);
+    X.Snd.rustle();
+    shake(el);
+    later(900, () => {
+      if (!G) return;
+      if (i === G.kidAt) {
+        X.save.tsukuWins = (X.save.tsukuWins || 0) + 1;
+        el.classList.add('found');
+        return lose(line('tsukuFound', { '%S': G.spots[i].n }));
+      }
+      if (i === G.decoyAt) {
+        X.Snd.miss();
+        return msg(line('decoyFooled'), () => later(300, () => decoyStep(plan, k + 1)));
+      }
+      el.classList.add('checked');
+      msg(line('searching', { '%S': G.spots[i].n }), () => later(300, () => decoyStep(plan, k + 1)));
+    });
+  }
+
+  /* ---------- 17. ちらっと みえた ---------- */
+  function startPeek() {
+    G.noHotCold = true;
+    startSeek(null, () => {
+      msg(line('peekStart'));
+      peekLoop();
+    });
+  }
+  function peekLoop() {
+    if (!G || G.done) return;
+    later(per({ easy: 2600, normal: 3600, hard: 5000 }), () => {
+      if (!G || G.done) return;
+      const el = spotEl(G.target);
+      const mk = el.querySelector('.mark');
+      mk.innerHTML = semiSVG();
+      el.classList.add('peeking');
+      X.Snd.chirp(0, 0.25);
+      later(per({ easy: 900, normal: 600, hard: 380 }), () => {
+        if (!G || G.done) return;
+        mk.innerHTML = '';
+        el.classList.remove('peeking');
+        peekLoop();
+      });
+    });
+  }
+
+  /* ---------- 18. はい・いいえ さがし ---------- */
+  function startQuestion() {
+    G.noHotCold = true;
+    G.qLeft = per({ easy: 6, normal: 4, hard: 3 });
+    startSeek(null, () => {
+      msg(line('questionStart', { '%C': String(G.qLeft) }));
+      questionBar();
+    });
+  }
+  function questionBar() {
+    const qs = [
+      ['⬆️ うえの ほう？', (p) => p.top, 'top'],
+      ['⬇️ したの ほう？', (p) => p.bottom, 'bottom'],
+      ['⬅️ ひだりがわ？', (p) => p.left, 'left'],
+      ['➡️ みぎがわ？', (p) => p.right, 'right'],
+      ['⏺️ まんなかへん？', (p) => p.mid, 'mid'],
+    ];
+    setBar(qs.map(([label, fn]) => [label + ` (${G.qLeft})`, () => ask(label, fn), 'btn-sub btn-q']).concat([quitBtn]));
+  }
+  function ask(label, fn) {
+    if (!G || G.done || G.busy) return;
+    if (G.qLeft <= 0) return msg('もう しつもんは おしまい！ タップで さがしてね');
+    G.qLeft--;
+    const yes = fn(posWords(G.spots[G.target]));
+    msg(`「${label.replace(/^\S+ /, '')}」… ${yes ? 'はい！' : 'いいえ！'}`);
+    X.Snd[yes ? 'sparkle' : 'miss']();
+    // やさしい・ふつう は ちがう ところを うすく する
+    if (G.diff.id !== 'hard') {
+      G.spots.forEach((s, i) => {
+        if (fn(posWords(s)) !== yes) spotEl(i).classList.add('ruled');
+      });
+    }
+    questionBar();
+  }
+
+  /* ---------- 19. たからの ちず ---------- */
+  function startTreasure() {
+    buildScene(treasureTap);
+    G.target = Math.floor(Math.random() * G.spots.length);
+    const fakes = per({ easy: 0, normal: 1, hard: 2 });
+    G.fakes = shuffle(G.spots.map((_, i) => i).filter((i) => i !== G.target)).slice(0, fakes);
+    const map = document.createElement('div');
+    map.className = 'treasure-map';
+    map.innerHTML =
+      G.spots.map((s, i) => {
+        const c = center(s);
+        const isX = i === G.target || G.fakes.indexOf(i) >= 0;
+        return `<span class="${isX ? 'tx' : 'td'}" style="left:${c.x}%;top:${c.y}%">${isX ? '❌' : '•'}</span>`;
+      }).join('') + '<span class="tm-title">たからの ちず</span>';
+    $('scene').appendChild(map);
+    setBar([['🗺️ ちずを かくす／だす', () => map.classList.toggle('hidden')], quitBtn]);
+    msg(line(fakes ? 'treasureStartFake' : 'treasureStart', { '%C': String(fakes + 1) }));
+  }
+  function treasureTap(i, el) {
+    if (!G || G.done || G.checked[i]) return;
+    G.checked[i] = 1;
+    G.tries++;
+    X.Snd.rustle();
+    shake(el);
+    if (i === G.target) {
+      el.classList.add('found');
+      markSpot(i, '💎');
+      X.Snd.sparkle();
+      later(500, () => G && markSpot(i, semiSVG()));
+      return win(line('treasureWin'), { xp: G.tries === 1 ? 4 : 3 });
+    }
+    el.classList.add('checked');
+    el.querySelector('.mark').textContent = G.fakes.indexOf(i) >= 0 ? '🪨' : '✖';
+    X.Snd.miss();
+    msg(G.fakes.indexOf(i) >= 0 ? line('treasureFake') : line('missFar'));
+  }
+
+  /* ---------- 20. にげて かくれんぼ ---------- */
+  function startEscape() {
+    buildScene(escapeTap);
+    G.kidAt = -1;
+    G.turn = 0;
+    G.turns = per({ easy: 5, normal: 7, hard: 8 });
+    setBar([quitBtn]);
+    msg(line('escapeStart', { '%C': String(G.turns) }));
+  }
+  const nearSpots = (from, r) => G.spots.map((_, k) => k).filter((k) => k !== from && dist(G.spots[k], G.spots[from]) < r);
+  function escapeTap(i, el) {
+    if (!G || G.done || G.busy) return;
+    if (G.kidAt < 0) {
+      G.kidAt = i;
+      el.classList.add('kid');
+      el.querySelector('.mark').textContent = '🧒';
+      // つくぼうは いちばん とおい ところから
+      G.oni = G.spots.map((_, k) => k).sort((a, b) => dist(G.spots[b], G.spots[i]) - dist(G.spots[a], G.spots[i]))[0];
+      moveFinder(spotEl(G.oni));
+      X.Snd.pop();
+      return msg(line('hideCount'), () => escapeOni());
+    }
+    // うごける のは ちかくの ばしょ だけ
+    if (!el.classList.contains('canmove')) return msg('そこは とおすぎて いけないよ。ひかってる ところに うごいてね');
+    const old = spotEl(G.kidAt);
+    old.classList.remove('kid');
+    old.querySelector('.mark').textContent = '';
+    G.kidAt = i;
+    el.classList.add('kid');
+    el.querySelector('.mark').textContent = '🧒';
+    X.Snd.step();
+    escapeOni();
+  }
+  function stayPut() {
+    if (!G || G.done || G.busy) return;
+    escapeOni();
+  }
+  function escapeOni() {
+    if (!G || G.done) return;
+    G.busy = true;
+    $('scene').querySelectorAll('.canmove').forEach((e) => e.classList.remove('canmove'));
+    setBar([quitBtn]);
+    const steps = G.diff.id === 'hard' && G.turn % 2 === 1 ? 2 : 1;
+    let k = 0;
+    const go = () => {
+      if (!G) return;
+      // ちかくの ばしょへ。たいてい こどもに ちかづく(ときどき まよう)
+      // つくぼうの ほはばは こどもより みじかい(こどもは 45、つくぼうは むずかしさで 26〜34)
+      const cand = nearSpots(G.oni, per({ easy: 26, normal: 30, hard: 34 }));
+      const list = cand.length ? cand : G.spots.map((_, x) => x).filter((x) => x !== G.oni);
+      list.sort((a, b) => dist(G.spots[a], G.spots[G.kidAt]) - dist(G.spots[b], G.spots[G.kidAt]));
+      G.oni = Math.random() < per({ easy: 0.45, normal: 0.3, hard: 0.15 }) ? pick(list) : list[0];
+      const el = spotEl(G.oni);
+      moveFinder(el);
+      X.Snd.step();
+      later(800, () => {
+        if (!G) return;
+        if (G.oni === G.kidAt) {
+          el.classList.add('found');
+          X.save.tsukuWins = (X.save.tsukuWins || 0) + 1;
+          return lose(line('escapeCaught'));
+        }
+        if (++k < steps) return go();
+        G.turn++;
+        status(`${G.turn} / ${G.turns}ターン`);
+        if (G.turn >= G.turns) return win(line('escapeWin'), { kind: 'hide', xp: 4 });
+        G.busy = false;
+        nearSpots(G.kidAt, 45).forEach((x) => x !== G.oni && spotEl(x).classList.add('canmove'));
+        const d = dist(G.spots[G.oni], G.spots[G.kidAt]);
+        msg(d < 30 ? line('escapeNear') : line('escapeFar'));
+        setBar([['🤫 じっと する', stayPut], quitBtn]);
+      });
+    };
+    go();
   }
 
   /* ---------------------------- そと から ---------------------------- */
