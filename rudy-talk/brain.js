@@ -848,12 +848,22 @@ const Brain = (function () {
     const ks = Array.from(word.w).filter((c) => /[\u4e00-\u9fff]/.test(c));
     return ks.length > 0 && ks.every((c) => KANJI_G1.indexOf(c) >= 0);
   }
+  const KANJI_G2 = '引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話';
+  /* 1・2ねんせいの かんじだけで かけて、2ねんせいの かんじが 1つ いじょう ある ことば */
+  function isG2(word) {
+    const ks = Array.from(word.w).filter((c) => /[\u4e00-\u9fff]/.test(c));
+    return ks.some((c) => KANJI_G2.indexOf(c) >= 0) &&
+      ks.every((c) => KANJI_G1.indexOf(c) >= 0 || KANJI_G2.indexOf(c) >= 0);
+  }
 
   function levelPool(list) {
-    /* 「やさしい」では 1ねんせいの かんじの ことばを おおめに */
+    /* 「やさしい」では 1・2ねんせいの かんじの ことばを おおめに */
     if (mem.level === 1) {
+      const r = Math.random();
       const g1 = list.filter(isG1);
-      if (g1.length && Math.random() < 0.6) return g1;
+      if (g1.length && r < 0.4) return g1;
+      const g2 = list.filter(isG2);
+      if (g2.length && r < 0.7) return g2;
     }
     const exact = list.filter((x) => x.lv === mem.level);
     return exact.length && Math.random() < 0.7 ? exact : list;
@@ -1105,6 +1115,7 @@ const Brain = (function () {
     DEFAULT_NAME,
     fixName,
     isG1,
+    isG2,
     mode: () => st.mode,
     words: WORDS,
     word: (w) => W[w],
