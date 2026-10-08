@@ -449,6 +449,21 @@ Object.assign(LINES, {
       '論/ろん',
     ].map((s, i) => [...s.split('/'), nn(i)]),
   },
+  todofuken: {
+    id: 'todofuken', name: 'とどうふけん', color: '#e85d3a', dark: '#9c3519', mark: '県', unit: 'とどうふけん', oboe: true,
+    title: '47<ruby>都道府県<rt>とどうふけん</rt></ruby>',
+    desc: '47', dirs: ['きたから', 'みなみから'],
+    stations: [
+      '北海道/ほっかいどう', '青森県/あおもりけん', '岩手県/いわてけん', '宮城県/みやぎけん', '秋田県/あきたけん', '山形県/やまがたけん',
+      '福島県/ふくしまけん', '茨城県/いばらきけん', '栃木県/とちぎけん', '群馬県/ぐんまけん', '埼玉県/さいたまけん', '千葉県/ちばけん',
+      '東京都/とうきょうと', '神奈川県/かながわけん', '新潟県/にいがたけん', '富山県/とやまけん', '石川県/いしかわけん', '福井県/ふくいけん',
+      '山梨県/やまなしけん', '長野県/ながのけん', '岐阜県/ぎふけん', '静岡県/しずおかけん', '愛知県/あいちけん', '三重県/みえけん',
+      '滋賀県/しがけん', '京都府/きょうとふ', '大阪府/おおさかふ', '兵庫県/ひょうごけん', '奈良県/ならけん', '和歌山県/わかやまけん',
+      '鳥取県/とっとりけん', '島根県/しまねけん', '岡山県/おかやまけん', '広島県/ひろしまけん', '山口県/やまぐちけん', '徳島県/とくしまけん',
+      '香川県/かがわけん', '愛媛県/えひめけん', '高知県/こうちけん', '福岡県/ふくおかけん', '佐賀県/さがけん', '長崎県/ながさきけん',
+      '熊本県/くまもとけん', '大分県/おおいたけん', '宮崎県/みやざきけん', '鹿児島県/かごしまけん', '沖縄県/おきなわけん',
+    ].map((s, i) => [...s.split('/'), nn(i)]),
+  },
   tokyo23: {
     id: 'tokyo23', name: 'とうきょう にじゅうさんく', color: '#7b4fc4', dark: '#4d2b86', mark: '区', unit: 'く', oboe: true,
     title: '<ruby>東京<rt>とうきょう</rt></ruby> 23<ruby>区<rt>く</rt></ruby>',
@@ -606,7 +621,7 @@ Object.assign(LINES, {
   },
 });
 const SHIN_IDS = ['tokaido_s', 'sanyo_s', 'kyushu_s', 'nishikyushu_s', 'tohoku_s', 'hokkaido_s', 'yamagata_s', 'akita_s', 'joetsu_s', 'hokuriku_s', 'jyudan_s'];
-const OBOE_IDS = ['kanji1', 'kanji2', 'kanji3', 'kanji4', 'kanji5', 'kanji6', 'tokyo23', 'yokohama18'];
+const OBOE_IDS = ['kanji1', 'kanji2', 'kanji3', 'kanji4', 'kanji5', 'kanji6', 'todofuken', 'tokyo23', 'yokohama18'];
 const ALL_IDS = LINE_IDS.concat(OBOE_IDS, SHIN_IDS);
 
 for (const id of ALL_IDS) {
