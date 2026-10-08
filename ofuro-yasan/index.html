@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0b78be">
-<title>ブルーライン おふろやさん</title>
+<title>でんしゃで おふろやさん</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>♨️</text></svg>">
 <style>
   :root {
@@ -44,7 +44,7 @@
     box-shadow: 0 2px 8px rgba(0,0,0,.12);
   }
   .top__row { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; gap: 10px; }
-  .top h1 { font-size: 1.3rem; margin: 0; flex: 1; line-height: 1.3; }
+  .top h1 { font-size: clamp(1.05rem, 4.8vw, 1.35rem); margin: 0; flex: 1; line-height: 1.3; white-space: nowrap; }
   .top h1 rt { color: #d8ecfb; }
   .home {
     color: #fff; text-decoration: none; font-size: 1.5rem;
@@ -65,12 +65,24 @@
   }
   .stamps__label { font-weight: 700; }
   .stamps__count { font-size: 1.3rem; font-weight: 800; color: var(--yu); }
-  .stamps__row { display: flex; gap: 4px; flex-wrap: wrap; }
-  .stamps__dot {
-    width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
-    border: 2px dashed var(--line); font-size: 1rem;
+  .stamps__bar {
+    flex: 1 1 160px; height: 18px; border-radius: 999px; background: var(--bg);
+    border: 2px solid var(--line); overflow: hidden;
   }
-  .stamps__dot.on { border: 2px solid var(--yu); background: var(--yu-soft); }
+  .stamps__bar span { display: block; height: 100%; width: 0; background: var(--yu); border-radius: 999px; transition: width .4s; }
+  .stamps__lines { font-size: .9rem; color: var(--sub); width: 100%; }
+
+  /* ── ろせんの きりかえ ── */
+  .lines { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+  .linetab {
+    border: 3px solid var(--line); background: var(--card); border-radius: 16px;
+    min-height: 64px; padding: 6px 10px; font-weight: 800; font-size: 1rem; line-height: 1.35;
+    display: flex; align-items: center; gap: 8px; text-align: left;
+  }
+  .linetab .dot { width: 18px; height: 18px; border-radius: 50%; flex: none; background: var(--lc); }
+  .linetab[aria-pressed="true"] { border-color: var(--lc); background: var(--lc); color: #fff; }
+  .linetab[aria-pressed="true"] .dot { background: #fff; }
+  .linetab[aria-pressed="true"] rt { color: rgba(255,255,255,.85); }
 
   /* ── レイアウト ── */
   .layout {
@@ -101,12 +113,12 @@
   .route ol { list-style: none; margin: 0; padding: 0; position: relative; }
   .route ol::before {
     content: ""; position: absolute; left: 25px; top: 10px; bottom: 10px; width: 8px;
-    border-radius: 4px; background: var(--blue);
+    border-radius: 4px; background: var(--lc, var(--blue));
   }
   .stn { position: relative; display: flex; align-items: center; min-height: 30px; padding-left: 52px; }
   .stn::before {
     content: ""; position: absolute; left: 20px; top: 50%; transform: translateY(-50%);
-    width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid var(--blue);
+    width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 4px solid var(--lc, var(--blue));
   }
   .stn__name { font-size: .92rem; color: var(--sub); }
   .stn.has { margin: 6px 0; }
@@ -126,6 +138,10 @@
     border-radius: 999px; padding: 2px 10px; white-space: nowrap;
   }
   .stn.dim .stn__btn { opacity: .45; }
+  .sep {
+    position: relative; margin: 10px 0 6px 44px; font-size: .85rem; font-weight: 800; color: var(--sub);
+    background: var(--bg); border-radius: 999px; padding: 2px 12px; display: inline-block;
+  }
 
   /* ── おふろの パネル ── */
   .panel { display: flex; flex-direction: column; gap: 14px; }
@@ -160,6 +176,11 @@
   .today.open { background: var(--ok-soft); color: var(--ok); }
   .today.rest { background: var(--rest-soft); color: var(--rest); }
   .today.later { background: var(--blue-soft); color: var(--blue); }
+  .adult {
+    display: inline-block; font-weight: 800; border-radius: 999px; padding: 4px 14px; font-size: 1rem;
+    background: #f1e6ff; color: #6b3fa0; margin-left: 4px;
+  }
+  .bath.only-adult { background: #faf8fd; }
   .facts { display: grid; grid-template-columns: 2.2em 1fr; gap: 6px 6px; font-size: 1.05rem; }
   .facts .i { font-size: 1.3rem; text-align: center; }
   .feat { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -217,7 +238,7 @@
 <header class="top">
   <div class="top__row">
     <a class="home" href="../" aria-label="あそびメニューへ もどる">🏠</a>
-    <h1>♨️ ブルーライン おふろやさん</h1>
+    <h1>♨️ でんしゃで おふろやさん</h1>
     <button type="button" class="sound" id="sound" aria-label="おと オン">🔊</button>
   </div>
 </header>
@@ -226,18 +247,20 @@
   <div class="stamps__box">
     <span class="stamps__label"><ruby>行<rt>い</rt></ruby>った おふろ</span>
     <span class="stamps__count" id="stampCount">0</span>
-    <div class="stamps__row" id="stampRow"></div>
+    <div class="stamps__bar" aria-hidden="true"><span id="stampBar"></span></div>
   </div>
 </section>
 
 <main class="layout">
   <section aria-label="ろせんず">
+    <div class="lines" id="lines" role="group" aria-label="ろせんを えらぶ"></div>
     <div class="filter" role="group" aria-label="しぼりこみ">
-      <button type="button" class="chip" id="fAll" aria-pressed="true">ぜんぶ</button>
-      <button type="button" class="chip" id="fToday" aria-pressed="false"><ruby>今日<rt>きょう</rt></ruby> やってる</button>
-      <button type="button" class="chip" id="fBaby" aria-pressed="false">👶 あかちゃんも</button>
+      <button type="button" class="chip" data-f="all" aria-pressed="true">ぜんぶ</button>
+      <button type="button" class="chip" data-f="kids" aria-pressed="false">👦 こども OK</button>
+      <button type="button" class="chip" data-f="today" aria-pressed="false"><ruby>今日<rt>きょう</rt></ruby> やってる</button>
+      <button type="button" class="chip" data-f="baby" aria-pressed="false">👶 あかちゃんも</button>
     </div>
-    <div class="route">
+    <div class="route" id="routeBox">
       <p class="route__title">♨️ の えきを おしてね</p>
       <ol id="route"></ol>
     </div>
@@ -252,305 +275,22 @@
   <details>
     <summary>おうちの かたへ</summary>
     <ul>
-      <li>横浜市営地下鉄ブルーラインの駅から行ける、子どもも入れる銭湯・スーパー銭湯です（2026年10月時点の公式情報をもとに作成）。</li>
-      <li>銭湯の料金は神奈川県の統一料金：大人570円／中人（6〜11歳）250円／小人（未就学児）130円。</li>
-      <li>「今日やってる」は曜日・日付の定休日から自動判定しています。祝日・臨時休業・不定休は反映していないので、お出かけ前に各お店で確認してください。</li>
+      <li>横浜市営地下鉄ブルーライン、JR京浜東北・根岸線（大宮〜大船）の駅から行ける銭湯・スーパー銭湯です。各都県の浴場組合や施設の公式情報をもとに作成しました（2026年10月時点）。</li>
+      <li>銭湯の料金（統制額）：東京都 大人600円／中人200円／小人100円、埼玉県 大人550円／中人200円／小人100円、神奈川県 大人570円／中人250円／小人130円。お店によって上限より安いことがあります。</li>
+      <li>「今日やってる」は曜日・日付の定休日と営業時間から自動判定しています。祝日・臨時休業・不定休は反映していないので、お出かけ前に各お店で確認してください。</li>
+      <li>「こどもは はいれないよ」の施設（スカイスパYOKOHAMA、SPA EAS）は大人向けです。</li>
       <li>異性の浴室に入れる年齢には条例やお店ごとの決まりがあります。</li>
       <li>「行ったよ」の記録はこの端末の中（localStorage）だけに保存されます。</li>
     </ul>
-    参考：<a href="https://k-o-i.jp/search_area/yokohama/" target="_blank" rel="noopener">神奈川の銭湯情報</a> ／
-    <a href="https://www.miurayu.com/fee/" target="_blank" rel="noopener">みうら湯</a> ／
-    <a href="https://www.sportsoasis.co.jp/coco/fee/" target="_blank" rel="noopener">ゆったりCOco</a> ／
-    <a href="https://www.yukemurinosato.com/susukino/" target="_blank" rel="noopener">すすき野 湯けむりの里</a>
+    参考：<a href="https://www.1010.or.jp/map/" target="_blank" rel="noopener">東京銭湯マップ</a> ／
+    <a href="https://www.saiyoku.jp/" target="_blank" rel="noopener">埼玉のお風呂屋さん</a> ／
+    <a href="https://kawasaki1010.com/map.html" target="_blank" rel="noopener">川崎浴場組合</a> ／
+    <a href="https://k-o-i.jp/search_area/yokohama/" target="_blank" rel="noopener">神奈川の銭湯情報</a> ／
+    各施設の公式サイト
   </details>
 </footer>
 
-<script>
-(() => {
-  'use strict';
-
-  // {漢字|よみ} を <ruby> にする
-  const rb = s => s.replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
-
-  const STATIONS = [
-    ['湘南台','しょうなんだい'],['下飯田','しもいいだ'],['立場','たてば'],['中田','なかだ'],['踊場','おどりば'],
-    ['戸塚','とつか'],['舞岡','まいおか'],['下永谷','しもながや'],['上永谷','かみながや'],['港南中央','こうなんちゅうおう'],
-    ['上大岡','かみおおおか'],['弘明寺','ぐみょうじ'],['蒔田','まいた'],['吉野町','よしのちょう'],['阪東橋','ばんどうばし'],
-    ['伊勢佐木長者町','いせざきちょうじゃまち'],['関内','かんない'],['桜木町','さくらぎちょう'],['高島町','たかしまちょう'],['横浜','よこはま'],
-    ['三ツ沢下町','みつざわしもちょう'],['三ツ沢上町','みつざわかみちょう'],['片倉町','かたくらちょう'],['岸根公園','きしねこうえん'],['新横浜','しんよこはま'],
-    ['北新横浜','きたしんよこはま'],['新羽','にっぱ'],['仲町台','なかまちだい'],['センター南',''],['センター北',''],
-    ['中川','なかがわ'],['あざみ野','']
-  ];
-
-  const F = {
-    roten: '🌳 そとの おふろ', onsen: '♨️ おんせん', sauna: '🔥 サウナ', denki: '⚡ でんきぶろ',
-    ne: '🛌 ねころぶ おふろ', utase: '🚿 うたせゆ', awa: '🫧 あわぶろ', kuro: '⚫ くろい おゆ',
-    kazoku: '👨‍👩‍👧 かぞくぶろ', car: '🚗 ちゅうしゃじょう', tile: '🖼️ タイルの え', many: '🎉 おふろ いっぱい',
-    tanso: '🫧 たんさんせん', nikai: '🏢 2かいだて'
-  };
-
-  const SENTO_PRICE = 'こども 250えん（6〜11さい）／ ちいさい こ 130えん';
-  // dow: 0=にちようび … 6=どようび
-  const BATHS = [
-    { id:'kuzunoyu', st:'踊場', icon:'🌳', name:'{葛|くず}の{湯|ゆ}', kind:'せんとう', walk:'🚶 あるいて 10ぷん',
-      open:[10*60, 24*60], rest:{dow:[4]}, restText:'もくようび',
-      feat:['onsen','roten','utase','sauna','car'], price:SENTO_PRICE, baby:true,
-      say:'あさ 10じから あいてるよ。おやすみする へやも あるよ。',
-      parent:'湯あそびひろば 葛の湯／泉区中田南5-1-16／祝日の木曜は営業', q:'葛の湯 横浜市泉区 銭湯' },
-    { id:'nakajimakan', st:'弘明寺', icon:'🏮', name:'{中島館|なかじまかん}', kind:'せんとう', walk:'🚶 あるいて 3ぷん',
-      open:[12*60, 23*60], rest:{dow:[5]}, restText:'きんようび',
-      feat:['onsen','roten','ne','denki','car'], price:SENTO_PRICE, baby:true,
-      say:'えきから すぐ！ そとの おふろが あるよ。',
-      parent:'南区中島町4-75／弘明寺商店街の近く', q:'中島館 弘明寺 銭湯' },
-    { id:'miurayu', st:'弘明寺', icon:'⚫', name:'みうら{湯|ゆ}', kind:'スーパーせんとう', walk:'🚶 あるいて 12ふん',
-      open:[10*60, 23*60], openWeekend:[10*60, 24*60], rest:{}, restText:'おやすみ なし',
-      feat:['kuro','onsen','roten','sauna'], price:'こども 350えん（どにち 450えん）／ 3さいまで ただ', baby:true,
-      say:'まっくろな おゆの おんせん！ ふしぎだね。',
-      parent:'黒湯天然温泉みうら湯 弘明寺店／南区中里1-25-1（京急弘明寺から徒歩約8分）／大人 平日980円・土日祝1,080円', q:'黒湯天然温泉 みうら湯 弘明寺' },
-    { id:'bentenyu', st:'伊勢佐木長者町', icon:'🫧', name:'{辨天湯|べんてんゆ}', kind:'せんとう', walk:'🚶 あるいて 3ぷん',
-      open:[15*60, 23*60+30], rest:{date:[10,11,20,30]}, restText:'10・11・20・30にち',
-      feat:['awa'], price:SENTO_PRICE, baby:true,
-      say:'おおどおり こうえんで あそんだ あとに いけるよ。',
-      parent:'中区弥生町1-9（大通り公園沿い）', q:'辨天湯 横浜市中区弥生町 銭湯' },
-    { id:'riseikan', st:'伊勢佐木長者町', also:'阪東橋', icon:'♨️', name:'{利世館|りせいかん}', kind:'せんとう', walk:'🚶 あるいて 8ぷん',
-      open:[14*60, 23*60+15], rest:{date:[7,8,17,18,27,28]}, restText:'7・8・17・18・27・28にち',
-      feat:['onsen','sauna','awa'], price:SENTO_PRICE, baby:true,
-      say:'いせざきモールの ちかくの おんせんの せんとう。',
-      parent:'中区伊勢佐木町5-127／阪東橋からも徒歩8分', q:'利世館 横浜 伊勢佐木町 銭湯' },
-    { id:'okinayu', st:'伊勢佐木長者町', icon:'🖼️', name:'{翁湯|おきなゆ}', kind:'せんとう', walk:'🚶 あるいて 6ぷん',
-      open:[13*60, 21*60], rest:{dow:[0]}, restText:'にちようび',
-      feat:['tile'], price:SENTO_PRICE, baby:true,
-      say:'かべに むかしの たびの えが あるよ。よる 9じで しまるから はやめにね。',
-      parent:'中区寿町4-14 寿町健康福祉交流センター2F／番台式', q:'翁湯 横浜 寿町 銭湯' },
-    { id:'nakamura', st:'伊勢佐木長者町', icon:'🚗', name:'{中村浴場|なかむらよくじょう}', kind:'せんとう', walk:'🚶 あるいて 12ふん',
-      open:[15*60+30, 23*60], rest:{date:[8,18,28]}, restText:'8・18・28にち',
-      feat:['sauna','awa','car'], price:SENTO_PRICE, baby:true,
-      say:'かぞくで くるのを まってるよ、って いってる おふろやさん。',
-      parent:'南区中村町2-117-7', q:'中村浴場 横浜市南区 銭湯' },
-    { id:'kinenyu', st:'高島町', icon:'🎉', name:'{記念湯|きねんゆ}', kind:'せんとう', walk:'🚶 あるいて 8ぷん',
-      open:[15*60, 23*60+30], rest:{dow:[1]}, restText:'げつようび',
-      feat:['many','roten','ne','utase','denki','sauna'], price:SENTO_PRICE, baby:true,
-      say:'おふろの しゅるいが いっぱい！ ぜんぶ はいれるかな？',
-      parent:'遊湯 記念湯／西区戸部本町45-4（京急戸部駅から徒歩1分）／祝日の月曜も休み', q:'記念湯 戸部 銭湯' },
-    { id:'tanmachi', st:'三ツ沢下町', icon:'🏢', name:'{反町浴場|たんまちよくじょう}', kind:'せんとう', walk:'🚶 あるいて 15ふん',
-      open:[15*60, 23*60+30], rest:{dow:[3]}, restText:'すいようび',
-      feat:['nikai','ne','denki','sauna'], price:SENTO_PRICE, baby:true,
-      say:'1かいと 2かいに おふろが ある おおきな せんとう。',
-      parent:'SPA反町／神奈川区上反町1-5-2（東急反町駅から徒歩2分）／滞在2時間目安・シャンプー類は券売機で購入', q:'反町浴場 SPA反町' },
-    { id:'shinmatsu', st:'岸根公園', icon:'🌲', name:'{親松|しんまつ}の{湯|ゆ}', kind:'せんとう', walk:'🚶 あるいて 16ぷん',
-      open:[14*60+30, 23*60], rest:{dow:[3]}, restText:'すいようび（ほかにも おやすみ あり）',
-      feat:['sauna','car'], price:SENTO_PRICE, baby:true,
-      say:'きしねこうえんで あそんだ あとに いけるよ。むかしから ある おふろやさん。',
-      parent:'神奈川区六角橋2-15-5（東急白楽駅から徒歩9分）／水曜のほか不定休あり', q:'親松の湯 六角橋 銭湯' },
-    { id:'coco', st:'センター北', icon:'🛍️', name:'ゆったりCOco', kind:'スーパーせんとう', walk:'🚶 あるいて 5ふん',
-      open:[10*60, 23*60], rest:{firstWed:true}, restText:'まいつき さいしょの すいようび',
-      feat:['onsen','roten','tanso','kazoku','car'], price:'こども 680えん（3さい〜しょうがくせい）', baby:false,
-      say:'おかいものの ついでに いけるよ。3さいに なったら はいれるよ。',
-      parent:'港北天然温泉ゆったりCOco／都筑区中川中央2-7-1 港北みなも3F／大人 平日1,200円・土日祝1,500円／3歳未満・オムツの子は大浴場不可（貸切家族風呂は可）／18歳未満は23時まで', q:'港北天然温泉 ゆったりCOco' },
-    { id:'yukemuri', st:'あざみ野', icon:'🚌', name:'{湯|ゆ}けむりの{里|さと}', kind:'スーパーせんとう', walk:'🚌 むりょうの バスで いくよ',
-      open:[7*60, 22*60], rest:{}, restText:'おみせに きいてね',
-      feat:['onsen','many','tanso','roten'], price:'こども 500えん（どにち 600えん）', baby:true,
-      say:'あさ 7じから あいてる！ えきから ただの バスに のっていこう。',
-      parent:'天然温泉 すすき野 湯けむりの里／青葉区すすき野3-2-7／あざみ野駅西口から無料シャトル（30分おき）／大人 平日850円・土日祝980円／0歳から入浴可との紹介あり（要確認）', q:'すすき野 湯けむりの里' }
-  ];
-
-  // ── ほぞん ──
-  const KEY = 'ofuro-yasan:v1';
-  let save = { went: [], sound: true };
-  try {
-    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
-    if (s && Array.isArray(s.went)) save = { went: s.went, sound: s.sound !== false };
-  } catch (e) { /* つかえなくても あそべる */ }
-  const store = () => { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} };
-
-  // ── おと（WebAudio） ──
-  let ac = null;
-  const ctx = () => {
-    if (!save.sound) return null;
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      if (ac.state === 'suspended') ac.resume();
-      return ac;
-    } catch (e) { return null; }
-  };
-  const tone = (f1, f2, t0, dur, type = 'sine', vol = .18) => {
-    const a = ctx(); if (!a) return;
-    const o = a.createOscillator(), g = a.createGain();
-    const t = a.currentTime + t0;
-    o.type = type;
-    o.frequency.setValueAtTime(f1, t);
-    o.frequency.exponentialRampToValueAtTime(f2, t + dur);
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(vol, t + .02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g).connect(a.destination);
-    o.start(t); o.stop(t + dur + .05);
-  };
-  const sfx = {
-    poko: () => { tone(300, 900, 0, .12); tone(400, 1100, .09, .1, 'sine', .12); },
-    back: () => tone(700, 300, 0, .14, 'triangle', .14),
-    stamp: () => { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, i * .09, .18, 'triangle', .16)); },
-    undo: () => tone(400, 250, 0, .18, 'triangle', .12)
-  };
-
-  // ── きょう やってる？ ──
-  const isRestDay = (b, d) => {
-    const r = b.rest;
-    if (r.dow && r.dow.includes(d.getDay())) return true;
-    if (r.date && r.date.includes(d.getDate())) return true;
-    if (r.firstWed && d.getDay() === 3 && d.getDate() <= 7) return true;
-    return false;
-  };
-  const hhmm = m => {
-    const h = Math.floor(m / 60), mm = m % 60;
-    const when = h < 12 ? 'あさ ' + h : h === 12 ? 'ひる 12' : h < 17 ? 'ひる ' + (h - 12) : 'よる ' + (h - 12);
-    return when + 'じ' + (mm === 30 ? 'はん' : mm ? ' ' + mm + 'ふん' : '');
-  };
-  const hoursOf = (b, d) => {
-    const we = d.getDay() === 0 || d.getDay() === 6;
-    return (we && b.openWeekend) || b.open;
-  };
-  const status = (b, now = new Date()) => {
-    if (isRestDay(b, now)) return { cls: 'rest', text: '💤 きょうは おやすみ', open: false };
-    const [o, c] = hoursOf(b, now);
-    const m = now.getHours() * 60 + now.getMinutes();
-    if (m < o) return { cls: 'later', text: '⏰ きょうは ' + hhmm(o) + 'から', open: true };
-    if (m >= c) return { cls: 'rest', text: '🌙 きょうは もう おしまい', open: true };
-    return { cls: 'open', text: '😊 いま あいてるよ！', open: true };
-  };
-
-  // ── ひょうじ ──
-  const $ = id => document.getElementById(id);
-  const route = $('route'), panel = $('panel');
-  let current = null, filter = 'all';
-
-  const bathsAt = st => BATHS.filter(b => b.st === st || b.also === st);
-  const passes = b => filter === 'all' || (filter === 'today' && status(b).open) || (filter === 'baby' && b.baby);
-  const stnName = ([k, r]) => r ? `<ruby>${k}<rt>${r}</rt></ruby>` : k;
-
-  function drawRoute() {
-    route.innerHTML = '';
-    STATIONS.forEach(s => {
-      const li = document.createElement('li');
-      const list = bathsAt(s[0]);
-      li.className = 'stn' + (list.length ? ' has' : '');
-      if (list.length) {
-        const n = list.filter(passes).length;
-        if (!n) li.classList.add('dim');
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'stn__btn';
-        btn.setAttribute('aria-current', String(current === s[0]));
-        btn.innerHTML = `<span class="yu" aria-hidden="true">♨️</span><span>${stnName(s)}</span><span class="num">${list.length}けん</span>`;
-        btn.addEventListener('click', () => open(s[0]));
-        li.appendChild(btn);
-      } else {
-        li.innerHTML = `<span class="stn__name">${stnName(s)}</span>`;
-      }
-      route.appendChild(li);
-    });
-  }
-
-  function bathCard(b) {
-    const st = status(b);
-    const went = save.went.includes(b.id);
-    const [o, c] = hoursOf(b, new Date());
-    const el = document.createElement('article');
-    el.className = 'bath' + (went ? ' went' : '');
-    el.innerHTML = `
-      <div class="bath__top">
-        <div class="bath__icon" aria-hidden="true">${b.icon}</div>
-        <div>
-          <h3 class="bath__name">${rb(b.name)}</h3>
-          <div class="bath__kind">${b.kind}</div>
-        </div>
-      </div>
-      <div><span class="today ${st.cls}">${st.text}</span></div>
-      <div class="facts">
-        <span class="i" aria-hidden="true">🚉</span><span>${b.walk}${b.also ? '（' + stnName(STATIONS.find(s => s[0] === b.also)) + 'からも いけるよ）' : ''}</span>
-        <span class="i" aria-hidden="true">🕒</span><span>${hhmm(o)} 〜 ${hhmm(c)}</span>
-        <span class="i" aria-hidden="true">💤</span><span>おやすみ：${b.restText}</span>
-        <span class="i" aria-hidden="true">🪙</span><span>${b.price}</span>
-      </div>
-      <div class="feat">${b.feat.map(f => `<span>${F[f]}</span>`).join('')}</div>
-      <div class="say">💬 ${b.say}</div>
-      <div class="bath__btns">
-        <button type="button" class="went-btn" aria-pressed="${went}">${went ? '✅ いったよ！' : '♨️ いったよ'}</button>
-        <a class="gsearch" href="https://www.google.com/search?q=${encodeURIComponent(b.q)}" target="_blank" rel="noopener">🔍 おうちの ひとと しらべる</a>
-      </div>
-      <div class="parent">おうちの かたへ：${b.parent}</div>`;
-    const btn = el.querySelector('.went-btn');
-    btn.addEventListener('click', () => {
-      const i = save.went.indexOf(b.id);
-      if (i < 0) { save.went.push(b.id); sfx.stamp(); } else { save.went.splice(i, 1); sfx.undo(); }
-      store();
-      const on = save.went.includes(b.id);
-      btn.setAttribute('aria-pressed', String(on));
-      btn.textContent = on ? '✅ いったよ！' : '♨️ いったよ';
-      el.classList.toggle('went', on);
-      btn.classList.remove('pop'); void btn.offsetWidth; if (on) btn.classList.add('pop');
-      drawStamps();
-    });
-    return el;
-  }
-
-  function open(st) {
-    current = st;
-    sfx.poko();
-    const s = STATIONS.find(x => x[0] === st);
-    panel.innerHTML = '';
-    const head = document.createElement('div');
-    head.className = 'panel__head';
-    head.innerHTML = `<h2>♨️ ${stnName(s)}</h2><button type="button" class="back">◀ もどる</button>`;
-    head.querySelector('.back').addEventListener('click', close);
-    panel.appendChild(head);
-    const list = bathsAt(st);
-    const shown = list.filter(passes);
-    (shown.length ? shown : list).forEach(b => panel.appendChild(bathCard(b)));
-    document.body.classList.add('show');
-    panel.scrollTop = 0;
-    drawRoute();
-  }
-
-  function close() {
-    sfx.back();
-    document.body.classList.remove('show');
-    current = null;
-    panel.innerHTML = '<div class="hello"><span class="big">♨️</span>えきを えらぶと<br>おふろやさんが でてくるよ</div>';
-    drawRoute();
-  }
-
-  function drawStamps() {
-    $('stampCount').textContent = save.went.length + ' / ' + BATHS.length;
-    $('stampRow').innerHTML = BATHS.map(b =>
-      `<span class="stamps__dot${save.went.includes(b.id) ? ' on' : ''}" title="${b.name.replace(/\{([^|}]+)\|[^}]+\}/g, '$1')}">${save.went.includes(b.id) ? '♨️' : ''}</span>`).join('');
-  }
-
-  function drawSound() {
-    const s = $('sound');
-    s.textContent = save.sound ? '🔊' : '🔇';
-    s.setAttribute('aria-label', save.sound ? 'おと オン' : 'おと オフ');
-  }
-
-  $('sound').addEventListener('click', () => {
-    save.sound = !save.sound; store(); drawSound();
-    if (save.sound) sfx.poko();
-  });
-
-  const chips = { all: $('fAll'), today: $('fToday'), baby: $('fBaby') };
-  Object.entries(chips).forEach(([k, el]) => el.addEventListener('click', () => {
-    filter = k; sfx.poko();
-    Object.entries(chips).forEach(([k2, e2]) => e2.setAttribute('aria-pressed', String(k2 === k)));
-    drawRoute();
-    if (current) open(current);
-  }));
-
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && current) close(); });
-
-  drawSound();
-  drawStamps();
-  drawRoute();
-})();
-</script>
+<script src="data.js?v=23034b1"></script>
+<script src="app.js?v=23034b1"></script>
 </body>
 </html>
