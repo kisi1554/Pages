@@ -1211,7 +1211,7 @@ function postMessages(parts, done) {
       const m = postQueue.shift();
       addLog('t', m.html, m.first);
       step();
-    }, Math.min(500 + len * 28, 2000));
+    }, Math.min(900 + len * 60, 4000));
   };
   step();
 }
