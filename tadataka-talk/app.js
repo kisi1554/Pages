@@ -1125,12 +1125,95 @@ function setFace(face) {
   requestAnimationFrame(() => ch.classList.add('bounce'));
 }
 
-function addLog(who, html) {
-  const d = document.createElement('div');
-  d.className = 'msg ' + who;
-  d.innerHTML = `<span class="who">${who === 't' ? 'ただたか' : 'きみ'}</span>${html}`;
-  $('log').appendChild(d);
-  $('log').scrollTop = $('log').scrollHeight;
+/* ---------- LINEの ような おしゃべり ---------- */
+
+let AVATAR = '';
+const LOG_MAX = 160;
+
+function scrollLog() {
+  const log = $('log');
+  log.scrollTop = log.scrollHeight;
+}
+function trimLog() {
+  const log = $('log');
+  while (log.children.length > LOG_MAX) log.removeChild(log.firstChild);
+}
+// who: 't' = ただたか / 'k' = きみ。first: ただたかの ひとかたまりの さいしょ(かおと なまえを つける)
+function addLog(who, html, first = true) {
+  if (who === 'k' && postQueue.length) flushPosts();
+  const row = document.createElement('div');
+  row.className = `row ${who}${first ? ' first' : ''}`;
+  row.innerHTML = who === 't'
+    ? `<div class="avatar">${first ? AVATAR : ''}</div><div class="msg t">${first ? '<span class="who">ただたか</span>' : ''}${html}</div>`
+    : `<div class="msg k">${html}</div>`;
+  $('log').appendChild(row);
+  trimLog();
+  scrollLog();
+}
+
+function showTyping() {
+  if ($('typing')) return;
+  const row = document.createElement('div');
+  row.className = 'row t';
+  row.id = 'typing';
+  row.innerHTML = '<div class="avatar"></div><div class="msg t dots" aria-label="ただたかが かいて いるよ"><i></i><i></i><i></i></div>';
+  $('log').appendChild(row);
+  scrollLog();
+}
+function hideTyping() {
+  const t = $('typing');
+  if (t) t.remove();
+}
+
+// こたえを みじかい メッセージに わける(「… せつめい」「　れい:」は まえの ぎょうに つなげる)
+function splitSay(r) {
+  const parts = [];
+  String(r.say).split('\n').forEach((line) => {
+    if (!line.trim()) return;
+    if (parts.length && /^(…|　)/.test(line)) parts[parts.length - 1] += '\n' + line;
+    else parts.push(line);
+  });
+  const html = parts.map(ruby);
+  if (r.mini) html.push(miniMap(r.mini));
+  if (r.kigoBig) html.push(`<div class="kigo-big">${kigoSvg(r.kigoBig, 110)}</div>`);
+  if (r.kigo) html.push('<div class="kigo-grid">' + r.kigo.map((k) => `<figure>${kigoSvg(k[3], 52)}<figcaption>${esc(k[0])}</figcaption></figure>`).join('') + '</div>');
+  return html;
+}
+
+let postTimer = null;
+let postQueue = [];
+let postDone = null;
+// とちゅうで つぎの はなしが きたら、のこりを すぐ ぜんぶ だす
+function flushPosts() {
+  clearTimeout(postTimer);
+  postTimer = null;
+  hideTyping();
+  postQueue.forEach((m) => addLog('t', m.html, m.first));
+  postQueue = [];
+  if (postDone) { const d = postDone; postDone = null; d(); }
+}
+function postMessages(parts, done) {
+  flushPosts();
+  postQueue = parts.map((html, i) => ({ html, first: i === 0 }));
+  postDone = done;
+  const step = () => {
+    if (!postQueue.length) {
+      hideTyping();
+      const d = postDone;
+      postDone = null;
+      if (d) d();
+      return;
+    }
+    showTyping();
+    const len = postQueue[0].html.replace(/<rt>.*?<\/rt>|<[^>]+>/g, '').length;
+    postTimer = setTimeout(() => {
+      hideTyping();
+      const m = postQueue.shift();
+      addLog('t', m.html, m.first);
+      step();
+    }, Math.min(500 + len * 28, 2000));
+  };
+  step();
 }
 
 function miniMap(target) {
@@ -1172,23 +1255,18 @@ function renderChips(r) {
 function show(r) {
   if (!r) return;
   state.last = r;
-  let html = ruby(r.say);
-  let extra = '';
-  if (r.kigoBig) extra += `<div class="kigo-big">${kigoSvg(r.kigoBig, 110)}</div>`;
-  if (r.kigo) extra += '<div class="kigo-grid">' + r.kigo.map((k) => `<figure>${kigoSvg(k[3], 52)}<figcaption>${esc(k[0])}</figcaption></figure>`).join('') + '</div>';
-  if (r.mini) html += miniMap(r.mini);
-  $('bubble').innerHTML = html + extra;
-  $('bubble').scrollTop = 0;
-  addLog('t', ruby(r.say) + extra);
   setFace(r.face);
-  renderChips(r);
-  speak(r.say);
+  $('chips').innerHTML = '';
+  if (!r.silent) speak(r.say);
+  // メッセージを じゅんばんに だして から ボタンを だす
+  postMessages(splitSay(r), () => { renderChips(r); scrollLog(); });
   if (r.cur) markCurrent(r.cur);
 }
 
 function send(text) {
   const s = String(text).trim();
   if (!s) return;
+  flushPosts();
   sfx('pop');
   addLog('k', esc(s));
   show(reply(s));
@@ -1328,12 +1406,12 @@ function init() {
     face: 'happy',
     chips: homeChips(),
   };
-  // さいしょの よみあげは ブラウザが とめるので、ふきだしだけ
-  state.last = r;
-  $('bubble').innerHTML = ruby(r.say);
-  addLog('t', ruby(r.say));
-  setFace('happy');
-  renderChips(r);
+  // さいしょの よみあげは ブラウザが とめるので、もじだけ
+  // ボタンの かずで おしゃべりの ばしょの たかさが かわっても、いちばん あたらしい メッセージを みせる
+  if (window.ResizeObserver) new ResizeObserver(scrollLog).observe($('log'));
+  AVATAR = $('chara').outerHTML.replace(' id="chara"', '').replace('class="chara"', 'class="chara ava"');
+  r.silent = true;
+  show(r);
   resetIdle();
 }
 
