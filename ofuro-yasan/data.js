@@ -42,6 +42,18 @@ const LINES = [
       '{磯子|いそご}', '{新杉田|しんすぎた}', '{洋光台|ようこうだい}', '{港南台|こうなんだい}', '{本郷台|ほんごうだい}',
       '{大船|おおふな}'
     ]
+  },
+  {
+    id: 'toyoko', name: 'とうよこせん', sub: 'とうきゅう', color: '#da0442',
+    stations: [
+      { sep: 'とうきょうと' },
+      '{渋谷|しぶや}', '{代官山|だいかんやま}', '{中目黒|なかめぐろ}', '{祐天寺|ゆうてんじ}', '{学芸大学|がくげいだいがく}',
+      '{都立大学|とりつだいがく}', '{自由|じゆう}が{丘|おか}', '{田園調布|でんえんちょうふ}', '{多摩川|たまがわ}',
+      { sep: 'かながわけん' },
+      '{新丸子|しんまるこ}', '{武蔵小杉|むさしこすぎ}', '{元住吉|もとすみよし}', '{日吉|ひよし}', '{綱島|つなしま}',
+      '{大倉山|おおくらやま}', '{菊名|きくな}', '{妙蓮寺|みょうれんじ}', '{白楽|はくらく}', '{東白楽|ひがしはくらく}',
+      '{反町|たんまち}', '{横浜|よこはま}'
+    ]
   }
 ];
 
@@ -89,12 +101,12 @@ const BATHS = [
     feat:['many','roten','ne','utase','denki','sauna'], price:SEN.kanagawa, baby:true,
     say:'おふろの しゅるいが いっぱい！ ぜんぶ はいれるかな？',
     parent:'遊湯 記念湯／西区戸部本町45-4（京急戸部駅から徒歩1分）／祝日の月曜も休み', q:'記念湯 戸部 銭湯' },
-  { id:'tanmachi', at:{'三ツ沢下町':'🚶 あるいて 15ふん', '横浜':'🚶 きたぐちから あるいて 15ふん'}, icon:'🏢', name:'{反町浴場|たんまちよくじょう}', kind:'せんとう',
+  { id:'tanmachi', at:{'三ツ沢下町':'🚶 あるいて 15ふん', '横浜':'🚶 きたぐちから あるいて 15ふん', '反町':'🚶 あるいて 2ふん'}, icon:'🏢', name:'{反町浴場|たんまちよくじょう}', kind:'せんとう',
     open:[H(15), H(23,30)], rest:{dow:[3]}, restText:'すいようび',
     feat:['nikai','ne','denki','sauna'], price:SEN.kanagawa, baby:true,
     say:'1かいと 2かいに おふろが ある おおきな せんとう。',
     parent:'SPA反町／神奈川区上反町1-5-2（東急反町駅から徒歩2分）／滞在2時間目安・シャンプー類は券売機で購入', q:'反町浴場 SPA反町' },
-  { id:'shinmatsu', at:{'岸根公園':'🚶 あるいて 16ぷん'}, icon:'🌲', name:'{親松|しんまつ}の{湯|ゆ}', kind:'せんとう',
+  { id:'shinmatsu', at:{'岸根公園':'🚶 あるいて 16ぷん', '白楽':'🚶 あるいて 9ふん'}, icon:'🌲', name:'{親松|しんまつ}の{湯|ゆ}', kind:'せんとう',
     open:[H(14,30), H(23)], rest:{dow:[3]}, restText:'すいようび（ほかにも おやすみ あり）',
     feat:['sauna','car'], price:SEN.kanagawa, baby:true,
     say:'きしねこうえんで あそんだ あとに いけるよ。むかしから ある おふろやさん。',
@@ -255,7 +267,7 @@ const BATHS = [
     feat:['onsen','car'], price:SEN.kanagawa, baby:true,
     say:'あきたけんの めずらしい いしの おふろが あるよ。',
     parent:'神奈川区七島町151（京急子安駅から徒歩4分）／北投石の湯／駐車場50台／不定休', q:'鷲の湯 子安 銭湯' },
-  { id:'tokunoyu', at:{'東神奈川':'🚶 あるいて 10ぷん'}, icon:'🌳', name:'{徳|とく}の{湯|ゆ}', kind:'せんとう',
+  { id:'tokunoyu', at:{'東神奈川':'🚶 あるいて 10ぷん', '東白楽':'🚶 えきの すぐ まえ'}, icon:'🌳', name:'{徳|とく}の{湯|ゆ}', kind:'せんとう',
     open:[H(11), H(23)], openDow:{0:[H(9), H(23)]}, rest:{dow:[4]}, restText:'もくようび',
     feat:['roten'], price:SEN.kanagawa, baby:true,
     say:'そとの おふろが ある せんとう。ひるまから あいてるよ。',
@@ -314,7 +326,59 @@ const BATHS = [
     open:[H(13), H(23)], openDow:{0:[H(10,30), H(23)], 6:[H(10,30), H(23)]}, rest:{dow:[3], nth:[{dow:4, n:3}]}, restText:'すいようび・3しゅうめの もくようび',
     feat:['tanso','ne','denki','sauna'], price:SEN.kanagawa, baby:true,
     say:'しゅわしゅわの おふろが にんき。かまくらの おでかけの あとに。',
-    parent:'鎌倉市大船1-13-7（大船仲通り商店街付近）／土日は10:30から', q:'ひばり湯 大船 銭湯' }
+    parent:'鎌倉市大船1-13-7（大船仲通り商店街付近）／土日は10:30から', q:'ひばり湯 大船 銭湯' },
+
+  /* ───────── とうよこせん ───────── */
+  { id:'sakaeyu-shibuya', at:{'渋谷':'🚶 あるいて 8ぷん'}, icon:'🪵', name:'さかえ{湯|ゆ}', kind:'せんとう',
+    open:[H(15,30), H(25)], rest:{dow:[5]}, restText:'きんようび',
+    feat:['bandai','maki'], price:SEN.tokyo, baby:true,
+    say:'しぶやの ちかくで まきを もやして わかす あつめの おゆ。',
+    parent:'渋谷区／番台式／シャンプー・ボディソープあり（手ぶらOK）／金曜休み（銭湯の日・しょうぶ湯・ゆず湯は営業）', q:'さかえ湯 渋谷 銭湯' },
+  { id:'kairyoyu', at:{'渋谷':'🚶 あるいて 12ふん'}, icon:'🎨', name:'{改良湯|かいりょうゆ}', kind:'せんとう',
+    open:[H(12), H(23,30)], rest:{dow:[6]}, restText:'どようび',
+    feat:['tanso','penki','sauna'], price:SEN.tokyo, baby:true,
+    say:'おおきな しゅわしゅわ おふろと、かべの げんだいアートの え。',
+    parent:'渋谷区（恵比寿駅からも徒歩12分）／炭酸泉・軟水・ぬる湯', q:'改良湯 渋谷 銭湯' },
+  { id:'komeisen', at:{'中目黒':'🚶 あるいて 3ぷん'}, icon:'🏙️', name:'{光明泉|こうめいせん}', kind:'せんとう',
+    open:[H(15), H(25)], rest:{}, restText:'ときどき（おみせに きいてね）',
+    feat:['roten','tanso','sauna','penki'], price:SEN.tokyo, baby:true,
+    say:'おくじょうに そとの おふろが ある！ しゅわしゅわ おふろも あるよ。',
+    parent:'目黒区／屋上露天風呂は男女週替わり／不定休', q:'光明泉 中目黒 銭湯' },
+  { id:'chiyonoyu', at:{'学芸大学':'🚶 あるいて 2ふん'}, icon:'💎', name:'{千代|ちよ}の{湯|ゆ}', kind:'せんとう',
+    open:[H(15,30), H(24)], rest:{dow:[1]}, restText:'げつようび',
+    feat:['tanso','penki','retro'], price:SEN.tokyo, baby:true,
+    say:'「みずの ほうせき」って よばれる やわらかい おゆ。ふじさんの えも あるよ。',
+    parent:'目黒区／軟水風呂・炭酸泉／ペンキ絵', q:'千代の湯 学芸大学 銭湯' },
+  { id:'asahiyu-toritsu', at:{'都立大学':'🚶 あるいて 1ぷん'}, icon:'🌅', name:'{旭湯|あさひゆ}', kind:'せんとう',
+    open:[H(15,30), H(23)], rest:{dow:[1]}, restText:'げつようび',
+    feat:['sauna'], price:SEN.tokyo, baby:true,
+    say:'えきから 1ぷん！ てんじょうが たかくて ひろい おふろ。',
+    parent:'目黒区／ミストサウナ無料', q:'旭湯 都立大学 銭湯' },
+  { id:'midoriyu-jiyugaoka', at:{'自由が丘':'🚶 あるいて 7ふん'}, icon:'🗻', name:'みどり{湯|ゆ}', kind:'せんとう',
+    open:[H(13), H(22)], rest:{dow:[4]}, restText:'もくようび',
+    feat:['penki','sauna'], price:SEN.tokyo, baby:true,
+    say:'しろと くろの かっこいい ふじさんの え が おでむかえ。',
+    parent:'目黒区', q:'みどり湯 自由が丘 銭湯' },
+  { id:'imaiyu', at:{'武蔵小杉':'🚶 あるいて 10ぷん', '元住吉':'🚶 あるいて 10ぷん'}, icon:'🥛', name:'{今井湯|いまいゆ}', kind:'せんとう',
+    open:[H(15), H(24)], openDow:{0:[H(7), H(24)], 6:[H(7), H(24)]}, rest:{nth:[{dow:3, n:1}, {dow:3, n:3}, {dow:3, n:5}]}, restText:'1・3・5しゅうめの すいようび',
+    feat:['tanso','silk','sauna','asa'], price:SEN.kanagawa, baby:true,
+    say:'あさ 7じからも やってるよ。シルクの おふろは ぬるめで きもちいい。',
+    parent:'川崎市中原区今井南町34-25／平日は朝7〜10時と15〜24時、土日祝は7〜24時／オール軟水', q:'今井湯 川崎 中原区 銭湯' },
+  { id:'asahiyu-hiyoshi', at:{'日吉':'🚶 あるいて 7ふん'}, icon:'🌿', name:'{旭湯|あさひゆ}', kind:'せんとう',
+    open:[H(14,30), H(23)], rest:{dow:[4]}, restText:'もくようび',
+    feat:['roten','yaku','sauna','car'], price:SEN.kanagawa, baby:true,
+    say:'そとの おふろが ひがわりの くすりの おふろに なるよ。',
+    parent:'港北区日吉2-15-31／駐車場4台', q:'旭湯 日吉 銭湯' },
+  { id:'yukemurinosho', at:{'綱島':'🚌 むりょうの バスで 6ぷん'}, icon:'🏞️', name:'{湯|ゆ}けむりの{庄|しょう}', kind:'スーパーせんとう',
+    open:[H(9), H(24)], rest:{}, restText:'おみせに きいてね',
+    feat:['onsen','roten','many'], price:'しょうがくせい 1,180えん（どにち 1,320えん）', baby:false,
+    say:'しょうがくせいに なったら はいれる おおきな おんせん。',
+    parent:'綱島源泉 湯けむりの庄／港北区樽町3-7-61／綱島駅から無料シャトル約6分（徒歩18分）／小学生以上のみ入館可／大人 平日1,540円・土日祝1,700円', q:'綱島源泉 湯けむりの庄' },
+  { id:'taiheikan', at:{'大倉山':'🚶 ひがしぐちから あるいて 9ふん'}, icon:'⚫', name:'{太平館|たいへいかん}', kind:'せんとう',
+    open:[H(15,30), H(22)], rest:{dow:[1,5]}, restText:'げつようび・きんようび',
+    feat:['kuro','onsen','bandai','retro'], price:SEN.kanagawa, baby:true,
+    say:'くろい おゆの おんせん！ ばんだいの ある レトロな おふろやさん。',
+    parent:'港北区大曽根1-25-2／天然ラジウム温泉（黒湯）／番台式', q:'太平館 大倉山 銭湯' }
 ];
 
 const FEATURES = {

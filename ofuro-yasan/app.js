@@ -104,7 +104,7 @@
       btn.style.setProperty('--lc', l.color);
       btn.setAttribute('aria-pressed', String(l.id === save.line));
       const n = new Set(l.stations.filter(s => typeof s === 'string').flatMap(s => bathsAt(plain(s)).map(b => b.id))).size;
-      btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${l.name}<br><small>♨️ ${n}けん</small></span>`;
+      btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${l.name}</span><small style="margin-left:auto;white-space:nowrap">♨️ ${n}けん</small>`;
       btn.addEventListener('click', () => {
         if (save.line === l.id) return;
         save.line = l.id; store(); sfx.train();
