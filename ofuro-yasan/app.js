@@ -62,7 +62,7 @@
   const hhmm = m => {
     const h = Math.floor(m / 60), mm = m % 60;
     const when = h < 12 ? 'あさ ' + h : h === 12 ? 'ひる 12' : h < 17 ? 'ひる ' + (h - 12)
-      : h <= 24 ? 'よる ' + (h - 12) : 'よなか ' + (h - 24);
+      : h <= 24 ? 'よる ' + (h - 12) : (h - 24 < 5 ? 'よなか ' : 'つぎの ひの あさ ') + (h - 24);
     return when + 'じ' + (mm === 30 ? 'はん' : mm ? ' ' + mm + 'ふん' : '');
   };
   const allDay = b => b.open[0] === 0 && b.open[1] === 1440;
@@ -88,7 +88,10 @@
   let current = null, filter = 'all';
 
   const line = () => LINES.find(l => l.id === save.line);
-  const bathsAt = st => BATHS.filter(b => b.at[st]).sort((a, b) => !!a.adult - !!b.adult);
+  // at の キーは 'えきめい' か 'ろせんID:えきめい'（おなじ なまえの えきでも ろせんで あるく じかんが ちがう とき）
+  const walkOf = (b, st, lid = save.line) => b.at[lid + ':' + st] || b.at[st];
+  const bathsAt = (st, lid) => BATHS.filter(b => walkOf(b, st, lid)).sort((a, b) => !!a.adult - !!b.adult);
+  const stKey = k => k.replace(/^[a-z]+:/, '');
   const LABEL = {};
   LINES.forEach(l => l.stations.forEach(s => { if (typeof s === 'string') LABEL[plain(s)] = s; }));
   const passes = b => filter === 'all' || (filter === 'kids' && !b.adult) ||
@@ -103,8 +106,8 @@
       btn.className = 'linetab';
       btn.style.setProperty('--lc', l.color);
       btn.setAttribute('aria-pressed', String(l.id === save.line));
-      const n = new Set(l.stations.filter(s => typeof s === 'string').flatMap(s => bathsAt(plain(s)).map(b => b.id))).size;
-      btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${l.name}</span><small style="margin-left:auto;white-space:nowrap">♨️ ${n}けん</small>`;
+      const n = new Set(l.stations.filter(s => typeof s === 'string').flatMap(s => bathsAt(plain(s), l.id).map(b => b.id))).size;
+      btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${l.name}<br><small>♨️ ${n}けん</small></span>`;
       btn.addEventListener('click', () => {
         if (save.line === l.id) return;
         save.line = l.id; store(); sfx.train();
@@ -150,7 +153,7 @@
     const sts = status(b, now);
     const went = save.went.includes(b.id);
     const [o, c] = hoursOf(b, now);
-    const others = Object.keys(b.at).filter(k => k !== st);
+    const others = [...new Set(Object.keys(b.at).map(stKey))].filter(k => k !== st);
     const el = document.createElement('article');
     el.className = 'bath' + (went ? ' went' : '') + (b.adult ? ' only-adult' : '');
     el.innerHTML = `
@@ -163,7 +166,7 @@
       </div>
       <div><span class="today ${sts.cls}">${sts.text}</span>${b.adult ? `<span class="adult">🙅 こどもは はいれないよ（${b.adult}）</span>` : ''}</div>
       <div class="facts">
-        <span class="i" aria-hidden="true">🚉</span><span>${b.at[st]}${others.length ? '（' + others.map(k => rb(LABEL[k] || k)).join('・') + 'からも いけるよ）' : ''}</span>
+        <span class="i" aria-hidden="true">🚉</span><span>${walkOf(b, st)}${others.length ? '（' + others.map(k => rb(LABEL[k] || k)).join('・') + 'からも いけるよ）' : ''}</span>
         <span class="i" aria-hidden="true">🕒</span><span>${allDay(b) ? '24じかん' : hhmm(o) + ' 〜 ' + hhmm(c)}</span>
         <span class="i" aria-hidden="true">💤</span><span>おやすみ：${b.restText}</span>
         <span class="i" aria-hidden="true">🪙</span><span>${b.price}</span>
