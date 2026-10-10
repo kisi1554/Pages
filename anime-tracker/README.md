@@ -29,6 +29,7 @@
 | `cours.js` | 組み込みクール一覧 `BUILTIN_COURS` |
 | `audio.js` | 効果音 `Sound` |
 | `app.js` | 本体（保存・表示・操作） |
+| `guide-2026-fall.html` | 2026年秋アニメ ガイド（ストーリー・主要キャスト・配信サービス。ABEMA／Netflix／Prime Video／dアニメストアのバッジ付き）。単体で完結 |
 
 ## メモ
 
