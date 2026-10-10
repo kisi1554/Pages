@@ -85,6 +85,8 @@ export function validateRoute(raw) {
       maxSpeed, startBearing: isNum(meta.startBearing) ? meta.startBearing : 0,
       trackSpacing: isNum(meta.trackSpacing) ? meta.trackSpacing : 3.8,
       vehicle: meta.vehicle || "5050",
+      // 電気の取り方: overhead（架線）/ third-rail（第三軌条。架線と架線柱を描かず、線路わきに給電用のレールを描く）
+      power: meta.power === "third-rail" ? "third-rail" : "overhead",
     },
     stations, curves, transition, structures, speedLimits, rivers, dense, atc,
     timetable: {

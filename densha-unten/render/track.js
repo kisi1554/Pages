@@ -150,6 +150,7 @@ export function buildTrackChunk(R, ctx, ci) {
   const geo = k => (G[k] || (G[k] = new GeoBuilder()));
 
   const railHalf = (route.meta.gauge || 1067) / 2000 + 0.0325; // 軌間（東横線 1067mm、京急 1435mm）
+  const thirdRail = route.meta.power === "third-rail";            // 第三軌条（架線なし）
   // 道床・レール・架線（構造物の種類によらない）
   for (const side of [-1, 1]) {
     const c = s => side * al.halfSpacing(s);
@@ -162,8 +163,14 @@ export function buildTrackChunk(R, ctx, ci) {
       extrude(geo("rail"), al, origin, sList, s => [[x(s) - 0.035, 0], [x(s) + 0.035, 0]]);
       extrude(geo("railSide"), al, origin, sList, s => [[x(s) + 0.035, 0], [x(s) + 0.035, -0.17]]);
     }
-    // トロリ線（細い三角柱）
-    extrude(geo("wire"), al, origin, sList, s => [[c(s) - 0.025, 5.1], [c(s), 5.14], [c(s) + 0.025, 5.1], [c(s) - 0.025, 5.1]]);
+    if (thirdRail) {
+      // 第三軌条: 走行レールの外側に、カバーのついた給電用のレール
+      const x = s => c(s) + side * (railHalf + 0.75);
+      extrude(geo("railSide"), al, origin, sList, s => [[x(s) - 0.06, -0.17], [x(s) - 0.06, 0.12], [x(s) + 0.06, 0.12], [x(s) + 0.06, -0.17]]);
+    } else {
+      // トロリ線（細い三角柱）
+      extrude(geo("wire"), al, origin, sList, s => [[c(s) - 0.025, 5.1], [c(s), 5.14], [c(s) + 0.025, 5.1], [c(s) - 0.025, 5.1]]);
+    }
   }
 
   // 構造物・地面: 様式が同じ部分ごとに押し出す
@@ -234,7 +241,7 @@ export function buildTrackChunk(R, ctx, ci) {
         for (const f of terrainSegs) extrude(geo("terrain"), al, origin, pc.list, f, { uScale: 8, vScale: 8 });
       }
     }
-    if (run.style !== "tunnel") {
+    if (run.style !== "tunnel" && !thirdRail) {
       extrude(geo("wire"), al, origin, L, s => {
         const o = al.halfSpacing(s);
         return [[-o - 0.02, 6.1], [-o, 6.13], [-o + 0.02, 6.1], [-o - 0.02, 6.1]];
@@ -296,7 +303,7 @@ export function fillChunkProps(ctx, ci) {
   for (let s = Math.ceil(a / 50) * 50; s < b; s += 50) {
     const st = styleAt(al, s);
     const o = al.halfSpacing(s);
-    if (st === "tunnel") continue;
+    if (st === "tunnel" || route.meta.power === "third-rail") continue; // 架線柱
     const w = st === "elev" || st === "emb" ? outerHalfWidth(route, al, s, 3.0) - 0.45 : o + 2.7;
     const bear = al.bearing(s);
     for (const sd of [-1, 1]) Renderer.addInstance(inst.mast, al.point(s, sd * w, -0.5), bear, 0, 0.28, 7.9, 0.28);

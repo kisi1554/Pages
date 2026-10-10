@@ -84,3 +84,14 @@ test("相鉄線・京急線: 駅の数と距離、京急は標準軌・18m車6�
   const v = validateVehicle(readJSON("data/vehicles/keikyu-1000.json"));
   assert.equal(v.cars * v.carLength, v.length);
 });
+
+test("ブルーライン: 横浜→あざみ野 13駅・17.9km、最高80km/h", () => {
+  const b = validateRoute(readJSON("data/routes/blueline.json"));
+  assert.equal(b.stations.length, 13);
+  assert.equal(b.stations[0].name, "横浜");
+  assert.equal(b.stations.at(-1).name, "あざみ野");
+  assert.equal(b.stations.at(-1).stop, 17900);
+  assert.equal(b.stations.find(s => s.name === "新横浜").stop, 7000);
+  assert.equal(b.meta.maxSpeed, 80);
+  assert.match(announcement(b, "next", 5).text, /新幹線/);
+});
