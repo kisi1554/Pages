@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>でんしゃ うんてんし</title>
+<meta name="description" content="うんてんせきから みた けしきで、でんしゃを うんてんする シミュレーター。とうよこせん しぶや→よこはま。">
+<meta name="theme-color" content="#14181d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚆</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="style.css?v=2809230">
+</head>
+<body>
+<div id="app" class="app">
+
+  <!-- 前面展望 -->
+  <section class="view" id="view">
+    <canvas id="gl"></canvas>
+    <div class="frame" aria-hidden="true"><i class="visor"></i><i class="pillar l"></i><i class="pillar r"></i></div>
+
+    <header class="hud" id="hud">
+      <div class="hud-time"><span class="led" id="hudTime">--:--:--</span></div>
+      <div class="hud-next">
+        <small><ruby>次<rt>つぎ</rt></ruby>は</small>
+        <b id="hudNext">-</b>
+      </div>
+      <div class="hud-sched">
+        <small><ruby>定刻<rt>ていこく</rt></ruby></small>
+        <span class="led" id="hudSched">--:--:--</span>
+      </div>
+      <div class="hud-delay" id="hudDelayBox">
+        <small id="hudDelayLabel"><ruby>遅<rt>おく</rt></ruby>れ</small>
+        <span class="led" id="hudDelay">±0:00</span>
+      </div>
+      <div class="hud-btns">
+        <button class="icon-btn" id="soundBtn" aria-label="おと オン/オフ">🔊</button>
+        <button class="icon-btn" id="pauseBtn" aria-label="いちじ ていし">⏸</button>
+      </div>
+    </header>
+
+    <div class="assist" id="assist">
+      <div><small>のこり</small><span class="led" id="asDist">----</span><small>m</small></div>
+      <div><span class="led big" id="asSpeed">0</span><small>km/h</small></div>
+    </div>
+    <div class="msg" id="msg" hidden></div>
+    <div class="loading" id="loading" hidden>じゅんびちゅう…</div>
+  </section>
+
+  <!-- 運転台 -->
+  <section class="cab" id="cab">
+    <div class="gauge">
+      <canvas id="speedo" width="400" height="400" aria-label="そくどけい"></canvas>
+    </div>
+
+    <div class="panel">
+      <div class="notch-led" id="notchLed">
+        <span class="notch-text led" id="notchText">B7</span>
+        <div class="notch-bar" id="notchBar"></div>
+      </div>
+      <div class="lamps">
+        <div class="lamp" id="lampDoor"><i></i><span><ruby>知<rt>し</rt></ruby>らせ<ruby>灯<rt>とう</rt></ruby></span></div>
+        <div class="lamp" id="lampAtcB"><i></i><span>ATC<ruby>常用<rt>じょうよう</rt></ruby></span></div>
+        <div class="lamp sig" id="lampSig"><span class="led" id="sigVal">--</span><span>ATC<ruby>信号<rt>しんごう</rt></ruby></span></div>
+      </div>
+      <div class="bars">
+        <div class="bar"><span>BC<ruby>圧<rt>あつ</rt></ruby></span><div class="track"><i id="barBC"></i></div><span class="led" id="bcVal">0</span></div>
+        <div class="bar acc"><span><ruby>加速度<rt>かそくど</rt></ruby></span><div class="track"><i id="barAcc"></i><b></b></div><span class="led" id="accVal">0.0</span></div>
+      </div>
+    </div>
+
+    <div class="staff" id="staff">
+      <div class="staff-head">
+        <span id="staffTitle">スタフ</span>
+      </div>
+      <div class="staff-scroll" id="staffScroll">
+        <table><thead><tr><th><ruby>駅<rt>えき</rt></ruby></th><th><ruby>着<rt>ちゃく</rt></ruby></th><th><ruby>発<rt>はつ</rt></ruby></th></tr></thead><tbody id="staffBody"></tbody></table>
+      </div>
+    </div>
+
+    <div class="lever" id="lever" role="slider" aria-label="マスコン" aria-valuemin="-8" aria-valuemax="5" tabindex="0">
+      <div class="lever-track" id="leverTrack"></div>
+      <div class="lever-knob" id="leverKnob"><span id="leverKnobText">B7</span></div>
+    </div>
+  </section>
+
+  <!-- 開始画面 -->
+  <div class="screen" id="startScreen">
+    <div class="sheet">
+      <a class="back" href="../">← メニュー</a>
+      <h1>🚆 でんしゃ <ruby>運転士<rt>うんてんし</rt></ruby></h1>
+      <p class="lead"><ruby>運転席<rt>うんてんせき</rt></ruby>から <ruby>見<rt>み</rt></ruby>た けしきで、ほんものに ちかい でんしゃを <ruby>運転<rt>うんてん</rt></ruby>しよう。</p>
+      <h2><ruby>路線<rt>ろせん</rt></ruby>を えらぶ</h2>
+      <div class="routes" id="routeList"><p class="muted">よみこみちゅう…</p></div>
+      <h2>せってい</h2>
+      <div class="opts">
+        <label class="opt"><input type="checkbox" id="optAssist" checked><span><ruby>運転<rt>うんてん</rt></ruby>しえん（のこりの きょりと そくどの すうじ）</span></label>
+        <label class="opt"><input type="checkbox" id="optSound" checked><span>おと</span></label>
+      </div>
+      <details class="howto">
+        <summary>あそびかた</summary>
+        <ul>
+          <li>みぎの レバーを <b>した</b>に ひくと <b>ちから（P）</b>、<b>うえ</b>に おすと <b>ブレーキ（B）</b>。パソコンは <kbd>↓</kbd> <kbd>↑</kbd> キー。</li>
+          <li>ドアが しまって「<ruby>知<rt>し</rt></ruby>らせ<ruby>灯<rt>とう</rt></ruby>」が つくまで、でんしゃは うごかないよ。</li>
+          <li>ホームの きいろい「8」の かんばんに あたまを あわせて とめよう。</li>
+          <li>そくどけいの まわりの みどりの ▲ が ATC<ruby>信号<rt>しんごう</rt></ruby>。こえると じどうで ブレーキが かかる。</li>
+          <li>さかみちで ブレーキを ゆるめると、うしろに さがって しまうよ。</li>
+        </ul>
+      </details>
+      <button class="big-btn" id="startBtn" disabled>しゅっぱつ！</button>
+    </div>
+  </div>
+
+  <!-- 一時停止 -->
+  <div class="screen" id="pauseScreen" hidden>
+    <div class="sheet small">
+      <h1>いちじ ていし</h1>
+      <button class="big-btn" id="resumeBtn">つづける</button>
+      <button class="sub-btn" id="quitBtn">はじめの がめんへ</button>
+    </div>
+  </div>
+
+  <!-- 結果画面 -->
+  <div class="screen" id="resultScreen" hidden>
+    <div class="sheet">
+      <h1>おつかれさまでした！</h1>
+      <p class="lead" id="resultLead"></p>
+      <div class="result-wrap">
+        <table class="result"><thead><tr><th><ruby>駅<rt>えき</rt></ruby></th><th><ruby>定刻<rt>ていこく</rt></ruby></th><th>ついた じこく</th><th>とめた いち</th></tr></thead><tbody id="resultBody"></tbody></table>
+      </div>
+      <button class="big-btn" id="againBtn">もういちど</button>
+      <a class="sub-btn" href="../">メニューへ もどる</a>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="main.js?v=2809230"></script>
+</body>
+</html>
