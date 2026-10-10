@@ -277,11 +277,15 @@ function totalTitleCount(cours){
 }
 
 /* クールをまたいだ行の一覧。既定順は「クール順(新しい順) → クール内の掲載順」。 */
+/* 話題作（クール定義の hot に名前がある作品） */
+function isHot(cour, title){ return Array.isArray(cour.hot) && cour.hot.includes(title); }
+function hotCount(cours){ return cours.reduce((n, c) => n + c.titles.filter(t => isHot(c, t)).length, 0); }
+
 function buildRows(cours){
   const rows = [];
   for(const cour of cours){
     cour.titles.forEach((title, i) => {
-      rows.push({ cour, title, i, rec: recordOf(cour.id, title) });
+      rows.push({ cour, title, i, hot: isHot(cour, title), rec: recordOf(cour.id, title) });
     });
   }
   return rows;
@@ -293,10 +297,12 @@ function visibleRows(){
   let rows = buildRows(activeCours());
 
   if(active) rows = rows.filter(r => r.rec.status === active);
+  if(store.ui.hot) rows = rows.filter(r => r.hot);
   if(q)      rows = rows.filter(r => r.title.toLowerCase().includes(q));
 
   const sort = store.ui.sort || "default";
-  if(sort === "title")       rows.sort((a,b) => a.title.localeCompare(b.title, "ja"));
+  if(sort === "hot")         rows.sort((a,b) => (b.hot - a.hot) || (a.i - b.i));
+  else if(sort === "title")       rows.sort((a,b) => a.title.localeCompare(b.title, "ja"));
   else if(sort === "rating") rows.sort((a,b) => (b.rec.rating - a.rec.rating) || (a.i - b.i));
   else if(sort === "status") rows.sort((a,b) =>
     (STATUS_KEYS.indexOf(a.rec.status) - STATUS_KEYS.indexOf(b.rec.status)) || (a.i - b.i));
@@ -322,7 +328,16 @@ function renderCourSelect(){
     if(cur && c.id === cur.id) o.selected = true;
     $("courSelect").appendChild(o);
   }
-  $("courNote").textContent = isAllMode() ? "すべてのクールをまとめて表示しています。" : (cur.note || "");
+  const note = $("courNote");
+  note.textContent = isAllMode() ? "すべてのクールをまとめて表示しています。" : (cur.note || "");
+  if(!isAllMode()){
+    for(const [href, label] of [[cur.source, "一覧の出典"], [cur.hotSource, "話題作の出典"]]){
+      if(typeof href !== "string" || !/^https?:\/\//.test(href)) continue;
+      const a = document.createElement("a");
+      a.href = href; a.target = "_blank"; a.rel = "noopener"; a.textContent = label;
+      note.append(" ", a);
+    }
+  }
 }
 
 function renderStats(){
@@ -350,6 +365,19 @@ function renderStats(){
 
   for(const s of STATUSES) mk("st-" + s.key, s.label, counts[s.key], s.key);
 
+  const nHot = hotCount(cours);
+  if(nHot){
+    const h = document.createElement("button");
+    h.className = "chip hot";
+    h.setAttribute("aria-pressed", String(!!store.ui.hot));
+    h.title = "話題作だけを表示";
+    h.innerHTML = `<span>🔥 話題</span><span class="n">${nHot}</span>`;
+    h.onclick = () => { store.ui.hot = !store.ui.hot; Sound.tap(); save(); render(); };
+    box.appendChild(h);
+  }else if(store.ui.hot){
+    store.ui.hot = false;
+  }
+
   const pct = n => total ? (n / total * 100) : 0;
   const done = counts.completed, now = counts.watching;
   $("progress").innerHTML =
@@ -370,11 +398,12 @@ function setMemoButton(btn, rec, title){
   btn.setAttribute("aria-label", title + " の" + btn.title);
 }
 
-function renderRow({ cour, title, i, rec }, cross){
+function renderRow({ cour, title, i, hot, rec }, cross){
   const item = document.createElement("div");
   item.className = "item";
   if(rec.status === "completed") item.classList.add("done");
   if(rec.status === "dropped")   item.classList.add("dropped");
+  if(hot) item.classList.add("hot");
 
   const line = document.createElement("div");
   line.className = "line";
@@ -385,6 +414,12 @@ function renderRow({ cour, title, i, rec }, cross){
 
   const name = document.createElement("div");
   name.className = "title";
+  if(hot){
+    const badge = document.createElement("span");
+    badge.className = "hot-tag";
+    badge.textContent = "🔥話題";
+    name.appendChild(badge);
+  }
   if(cross){
     const tag = document.createElement("span");
     tag.className = "cour-tag";
@@ -393,7 +428,7 @@ function renderRow({ cour, title, i, rec }, cross){
     name.appendChild(document.createTextNode(title));
     name.title = `${cour.label} ｜ ${title}`;
   }else{
-    name.textContent = title;
+    name.appendChild(document.createTextNode(title));
     name.title = title;
   }
 
@@ -588,6 +623,8 @@ function validateCour(c){
     source: typeof c.source === "string" ? c.source : "",
     note: typeof c.note === "string" ? c.note : "",
     titles: [...new Set(titles)],
+    hot: Array.isArray(c.hot) ? c.hot.map(t => String(t).trim()).filter(t => titles.includes(t)) : [],
+    hotSource: typeof c.hotSource === "string" ? c.hotSource : "",
   };
 }
 
