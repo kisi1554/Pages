@@ -662,6 +662,13 @@ $("btnRemoveCour").onclick = () => {
 
 /* ====================== 起動 ====================== */
 
+/* ガイド（guide-2026-fall.html）など別タブで保存データが変わったら読み直す */
+window.addEventListener("storage", e => {
+  if(e.key !== STORAGE_KEY) return;
+  store = loadStore(); render(true); scheduleAutoSave();
+});
+window.addEventListener("pageshow", e => { if(e.persisted){ store = loadStore(); render(true); } });
+
 renderSoundButton();
 $("q").value    = store.ui.q || "";
 $("sort").value = store.ui.sort || "default";
