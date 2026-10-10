@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ふじさんが みえる おふろやさん</title>
+<meta name="description" content="ほんものの ふじさんが みえる おふろやさんを、こどもむけに ランキングで しょうかいします。">
+<meta name="theme-color" content="#3a7bd5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗻</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --sky1: #bfe3ff; --sky2: #fff6e6;
+    --ink: #1d2b3a; --soft: #50657a;
+    --card: #ffffff; --line: #d4e4f3;
+    --blue: #3a7bd5; --red: #e8553e;
+    --gold: #e0a800; --silver: #9aa7b4; --bronze: #c07a3c;
+  }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    padding: 16px 16px calc(40px + env(safe-area-inset-bottom));
+    background: linear-gradient(180deg, var(--sky1) 0%, var(--sky2) 60%) fixed;
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    line-height: 1.7;
+    -webkit-text-size-adjust: 100%;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; }
+  rt { font-size: .5em; color: var(--soft); font-weight: 400; }
+
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+  .home, .sound {
+    min-height: 48px; padding: 8px 16px; border-radius: 99px;
+    border: 3px solid var(--line); background: var(--card); color: var(--ink);
+    font: inherit; font-size: 16px; font-weight: 700; text-decoration: none; cursor: pointer;
+  }
+
+  header { text-align: center; margin: 8px 0 16px; }
+  .hero { width: min(320px, 80vw); height: auto; display: block; margin: 0 auto; }
+  h1 { margin: 6px 0 0; font-size: clamp(26px, 7.5vw, 40px); letter-spacing: .05em; line-height: 1.4; }
+  .lead { margin: 6px 0 0; font-size: clamp(15px, 4.2vw, 18px); color: var(--soft); }
+
+  .box {
+    background: var(--card); border: 3px solid var(--line); border-radius: 20px;
+    padding: 14px 18px; margin: 16px 0; font-size: clamp(15px, 4.2vw, 18px);
+  }
+  .box h2 { margin: 0 0 6px; font-size: clamp(18px, 5vw, 22px); }
+  .box p { margin: 4px 0; }
+
+  /* ちず */
+  .map { width: 100%; height: auto; display: block; }
+  .pin { cursor: pointer; }
+  .pin circle { stroke: #fff; stroke-width: 3; }
+  .pin text { font-weight: 700; fill: #fff; font-size: 18px; pointer-events: none; }
+  .pin:focus { outline: none; }
+  .pin:focus circle, .pin:hover circle { stroke: var(--ink); }
+  .maplabel { font-size: 14px; fill: var(--ink); font-weight: 700; pointer-events: none; }
+
+  /* ランキング */
+  .list { display: grid; gap: 16px; grid-template-columns: 1fr; padding: 0; margin: 0; list-style: none; }
+  @media (min-width: 700px) { .list { grid-template-columns: 1fr 1fr; } }
+  .item {
+    background: var(--card); border: 3px solid var(--line); border-radius: 22px;
+    box-shadow: 0 6px 0 rgba(58,123,213,.15); overflow: hidden;
+    scroll-margin-top: 16px;
+  }
+  .item.flash { animation: flash 1.2s ease; }
+  @keyframes flash { 0%,100% { border-color: var(--line); } 30% { border-color: var(--red); } }
+  .head {
+    width: 100%; display: flex; align-items: center; gap: 14px; padding: 16px;
+    background: none; border: 0; text-align: left; font: inherit; color: inherit; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .medal {
+    flex: none; width: 60px; height: 60px; border-radius: 50%;
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 26px;
+    background: var(--blue);
+  }
+  .r1 .medal { background: var(--gold); } .r2 .medal { background: var(--silver); } .r3 .medal { background: var(--bronze); }
+  .name { display: block; font-size: clamp(19px, 5.4vw, 22px); font-weight: 700; line-height: 1.6; }
+  .where { display: block; font-size: 14px; color: var(--soft); }
+  .stars { display: block; font-size: 18px; letter-spacing: 2px; color: var(--gold); }
+  .stars small { color: var(--soft); font-size: 13px; letter-spacing: 0; }
+  .more { flex: none; margin-left: auto; font-size: 22px; color: var(--soft); transition: transform .2s; }
+  .head[aria-expanded="true"] .more { transform: rotate(180deg); }
+  .body { padding: 0 18px 16px; font-size: clamp(15px, 4.2vw, 18px); }
+  .body[hidden] { display: none; }
+  .body p { margin: 6px 0; }
+  .point { background: #eaf4fd; border-radius: 14px; padding: 8px 12px; font-weight: 700; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+  .btn {
+    flex: 1 1 140px; min-height: 52px; border-radius: 16px; border: 3px solid var(--line);
+    background: #fff; font: inherit; font-size: 17px; font-weight: 700; color: var(--ink); cursor: pointer;
+  }
+  .btn[aria-pressed="true"].want { background: #fff3c4; border-color: var(--gold); }
+  .btn[aria-pressed="true"].went { background: #ffe9e3; border-color: var(--red); }
+  .badge { display: inline-block; margin-left: 6px; font-size: 18px; }
+
+  .count { text-align: center; font-weight: 700; font-size: clamp(16px, 4.5vw, 20px); margin: 8px 0 14px; }
+
+  details.parent { font-size: 14px; color: var(--soft); }
+  details.parent summary { cursor: pointer; min-height: 44px; font-weight: 700; color: var(--ink); font-size: 16px; }
+  details.parent table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+  details.parent th, details.parent td { border: 1px solid var(--line); padding: 6px; text-align: left; vertical-align: top; }
+  .tablewrap { overflow-x: auto; }
+  details.parent a { color: var(--blue); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <a class="home" href="../">← メニュー</a>
+    <button class="sound" id="sound" type="button" aria-pressed="true">🔊 おと オン</button>
+  </div>
+
+  <header>
+    <svg class="hero" viewBox="0 0 320 150" aria-hidden="true">
+      <circle cx="262" cy="34" r="20" fill="#ffd34d"/>
+      <path d="M10 140 L130 30 Q160 10 190 30 L310 140 Z" fill="#4f7fc4"/>
+      <path d="M130 30 Q160 10 190 30 L210 48 L196 44 L184 54 L170 42 L156 54 L142 44 L118 52 Z" fill="#fff"/>
+      <rect x="0" y="118" width="320" height="32" rx="10" fill="#8fd3f4"/>
+      <path d="M40 126 q10 -12 20 0 M70 132 q10 -12 20 0 M230 128 q10 -12 20 0 M262 134 q10 -12 20 0" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <text x="150" y="146" font-size="26">♨️</text>
+    </svg>
+    <h1>ふじさんが みえる<br>おふろやさん</h1>
+    <p class="lead">ほんものの <ruby>富士山<rt>ふじさん</rt></ruby>を ながめながら はいれる おふろ ランキング！</p>
+  </header>
+
+  <section class="box">
+    <h2>💡 しってた？</h2>
+    <p>まちの せんとうの かべに ある ふじさんは、ペンキで かいた <b>え</b> なんだ。</p>
+    <p><b>ほんもの</b>が みえるのは、ふじさんの ちかくに ある おんせんだよ。</p>
+  </section>
+
+  <section class="box">
+    <h2>🗺️ ふじさんの まわりの どこに あるかな？</h2>
+    <p>ばんごうを おすと、その おふろの せつめいに とぶよ。</p>
+    <svg class="map" viewBox="0 0 400 300" role="group" aria-label="ふじさんの まわりの ちず">
+      <rect width="400" height="300" rx="18" fill="#e8f6e3"/>
+      <ellipse cx="300" cy="90" rx="34" ry="16" fill="#9fd6f2"/>
+      <text class="maplabel" x="276" y="70">やまなかこ</text>
+      <path d="M0 270 Q120 240 220 262 T400 250 L400 300 L0 300 Z" fill="#9fd6f2"/>
+      <text class="maplabel" x="120" y="290">うみ（するがわん）</text>
+      <path d="M140 200 L190 110 Q200 98 210 110 L260 200 Z" fill="#4f7fc4"/>
+      <path d="M190 110 Q200 98 210 110 L220 128 L208 124 L200 132 L192 124 L180 128 Z" fill="#fff"/>
+      <text class="maplabel" x="178" y="222">ふじさん</text>
+      <text class="maplabel" x="16" y="28">やまなしけん ↑</text>
+      <text class="maplabel" x="16" y="250">しずおかけん ↓</text>
+      <g id="pins"></g>
+    </svg>
+  </section>
+
+  <p class="count" id="count"></p>
+
+  <ol class="list" id="list"></ol>
+
+  <section class="box">
+    <h2>☀️ ふじさんが よく みえる とき</h2>
+    <p>あきから ふゆの、<b>あさ</b>が いちばん よく みえるよ。</p>
+    <p>くもりや あめの ひは かくれて みえないことも あるから、おでかけの まえに おてんきを みてね。</p>
+  </section>
+
+  <section class="box">
+    <details class="parent">
+      <summary>👪 おうちの かたへ（りょうきん・じかん・しゅってん）</summary>
+      <p>2026年10月10日時点の Web 公開情報をもとにしています。順位は「富士山の眺め（2倍）・料金・子連れのしやすさ」で付けた独自の採点です。料金・営業時間は変わることがあるので、お出かけ前に公式サイトでご確認ください。</p>
+      <div class="tablewrap">
+      <table>
+        <tr><th>施設</th><th>料金</th><th>営業時間</th></tr>
+        <tr><td>山中湖温泉 紅富士の湯</td><td>大人900円／中高700円／小学生350円／未就学無料</td><td>11:00〜19:00（土日祝〜20:00）通年営業</td></tr>
+        <tr><td>富士眺望の湯 ゆらり</td><td>平日 大人1,400円・小人750円／土日祝 大人1,700円・小人800円（タオル付）</td><td>10:00〜21:00（土日祝〜22:00）</td></tr>
+        <tr><td>富士山天母の湯</td><td>大人 1時間410円・3時間730円・1日1,040円／子ども（3歳〜中学生）1時間200円・3時間360円・1日520円</td><td>10:00〜20:00、月曜休（祝日は翌日）</td></tr>
+        <tr><td>御胎内温泉健康センター</td><td>要確認</td><td>要確認</td></tr>
+        <tr><td>湯〜トピアかんなみ</td><td>要確認</td><td>要確認</td></tr>
+        <tr><td>天然温泉 気楽坊</td><td>要確認</td><td>JR岩波駅から無料送迎バスあり</td></tr>
+      </table>
+      </div>
+      <p>出典：
+        <a href="https://rurubu.jp/andmore/article/4810" target="_blank" rel="noopener">るるぶ&amp;more</a>・
+        <a href="https://www.benifuji.co.jp/" target="_blank" rel="noopener">紅富士の湯 公式</a>・
+        <a href="https://www.mapple.net/region/a0305030000_g05050000_s-situation=family/spot/" target="_blank" rel="noopener">まっぷる</a>・
+        <a href="https://www.nap-camp.com/mag/791" target="_blank" rel="noopener">なっぷ</a>・
+        <a href="https://rurubu.jp/andmore/spot/80022218" target="_blank" rel="noopener">るるぶ（天母の湯）</a>・
+        <a href="https://www.at-s.com/spot/article/137863" target="_blank" rel="noopener">あなたの静岡新聞</a>・
+        <a href="https://www.supersento.com/chubu/shizuoka/1_fuzisan.html" target="_blank" rel="noopener">スーパー銭湯全国検索</a>
+      </p>
+    </details>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // view: ふじさんの みえかた（★の かず）
+  var SPOTS = [
+    { id: "benifuji", x: 300, y: 112,
+      name: "<ruby>山中湖<rt>やまなかこ</rt></ruby><ruby>温泉<rt>おんせん</rt></ruby> <ruby>紅富士<rt>べにふじ</rt></ruby>の<ruby>湯<rt>ゆ</rt></ruby>",
+      where: "やまなしけん やまなかこむら", view: 5,
+      point: "ぜんぶの おふろから ふじさんが みえる！",
+      text: ["いしの おふろと、きの おふろが そとに あるよ。", "しょうがくせいは 350えん、ちいさい こは ただ！"] },
+    { id: "yurari", x: 110, y: 66,
+      name: "<ruby>富士<rt>ふじ</rt></ruby><ruby>眺望<rt>ちょうぼう</rt></ruby>の<ruby>湯<rt>ゆ</rt></ruby> ゆらり",
+      where: "やまなしけん なるさわむら", view: 5,
+      point: "ふじさんが めのまえ！ おおきく みえる！",
+      text: ["そとの おふろ 2つと、なかの「たかみぶろ」から みえるよ。", "タオルが ついてくるよ。おねだんは すこし たかめ。"] },
+    { id: "anmo", x: 120, y: 200,
+      name: "<ruby>富士山<rt>ふじさん</rt></ruby><ruby>天母<rt>あんも</rt></ruby>の<ruby>湯<rt>ゆ</rt></ruby>",
+      where: "しずおかけん ふじのみやし", view: 3,
+      point: "たかい ところの おふろ。うみも みえる！",
+      text: ["みはらしの いい そとの おふろが じまんだよ。", "1じかんで はいると、こどもは 200えん。いちばん やすい！", "げつようびは おやすみ。"] },
+    { id: "gotainai", x: 290, y: 180,
+      name: "<ruby>御胎内<rt>ごたいない</rt></ruby><ruby>温泉<rt>おんせん</rt></ruby><ruby>健康<rt>けんこう</rt></ruby>センター",
+      where: "しずおかけん ごてんばし", view: 4,
+      point: "なかの おふろからも、そとの おふろからも みえる！",
+      text: ["おねだんは おうちの ひとに しらべて もらおう。"] },
+    { id: "kannami", x: 350, y: 238,
+      name: "<ruby>湯<rt>ゆ</rt></ruby>〜トピアかんなみ",
+      where: "しずおかけん かんなみちょう", view: 3,
+      point: "はれた ひは、おおきな そとの おふろから みえる！",
+      text: ["ふじさんから すこし はなれているよ。", "くもりの ひは みえないかも。"] },
+    { id: "kirakubo", x: 330, y: 160,
+      name: "<ruby>天然<rt>てんねん</rt></ruby><ruby>温泉<rt>おんせん</rt></ruby> <ruby>気楽坊<rt>きらくぼう</rt></ruby>",
+      where: "しずおかけん ごてんばし", view: 3,
+      point: "みどりの なかの そとの おふろから みえる！",
+      text: ["えき（いわなみえき）から、ただで のれる バスが あるよ。"] }
+  ];
+
+  var KEY = "fuji-ofuro-v1";
+  var save = { sound: true, want: {}, went: {} };
+  try {
+    var s = JSON.parse(localStorage.getItem(KEY) || "null");
+    if (s) { save.sound = s.sound !== false; save.want = s.want || {}; save.went = s.went || {}; }
+  } catch (e) {}
+  function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+  // おと（WebAudio の ごうせいおん）
+  var ac = null;
+  function tone(freqs) {
+    if (!save.sound) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+      var t = ac.currentTime;
+      freqs.forEach(function (f, i) {
+        var o = ac.createOscillator(), g = ac.createGain();
+        o.type = "sine"; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + i * 0.09);
+        g.gain.exponentialRampToValueAtTime(0.18, t + i * 0.09 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.09 + 0.35);
+        o.connect(g).connect(ac.destination);
+        o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.4);
+      });
+    } catch (e) {}
+  }
+  var POP = [660], CHIME = [523, 659, 784, 1047];
+
+  var soundBtn = document.getElementById("sound");
+  function drawSound() {
+    soundBtn.textContent = save.sound ? "🔊 おと オン" : "🔇 おと オフ";
+    soundBtn.setAttribute("aria-pressed", save.sound ? "true" : "false");
+  }
+  soundBtn.addEventListener("click", function () {
+    save.sound = !save.sound; store(); drawSound(); tone(POP);
+  });
+  drawSound();
+
+  var list = document.getElementById("list");
+  var pins = document.getElementById("pins");
+  var count = document.getElementById("count");
+  var SVGNS = "http://www.w3.org/2000/svg";
+
+  function stars(n) { return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
+
+  SPOTS.forEach(function (sp, i) {
+    var rank = i + 1;
+    var li = document.createElement("li");
+    li.className = "item" + (rank <= 3 ? " r" + rank : "");
+    li.id = sp.id;
+    li.innerHTML =
+      '<button class="head" type="button" aria-expanded="false" aria-controls="b-' + sp.id + '">' +
+        '<span class="medal">' + rank + '</span>' +
+        '<span><span class="name">' + sp.name + '<span class="badge" data-badge></span></span>' +
+        '<span class="where">📍 ' + sp.where + '</span>' +
+        '<span class="stars"><small>みえかた</small> ' + stars(sp.view) + '</span></span>' +
+        '<span class="more" aria-hidden="true">▼</span>' +
+      '</button>' +
+      '<div class="body" id="b-' + sp.id + '" hidden>' +
+        '<p class="point">🗻 ' + sp.point + '</p>' +
+        sp.text.map(function (t) { return "<p>" + t + "</p>"; }).join("") +
+        '<div class="btns">' +
+          '<button class="btn want" type="button" data-act="want">⭐ いきたい！</button>' +
+          '<button class="btn went" type="button" data-act="went">♨️ いったよ</button>' +
+        '</div>' +
+      '</div>';
+    list.appendChild(li);
+
+    var head = li.querySelector(".head");
+    var body = li.querySelector(".body");
+    head.addEventListener("click", function () {
+      var open = head.getAttribute("aria-expanded") !== "true";
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+      body.hidden = !open;
+      tone(POP);
+    });
+    li.querySelectorAll(".btn").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var act = b.getAttribute("data-act");
+        save[act][sp.id] = !save[act][sp.id];
+        store(); draw(li, sp);
+        tone(save[act][sp.id] ? CHIME : POP);
+      });
+    });
+    draw(li, sp);
+
+    // ちずの ピン
+    var g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("class", "pin");
+    g.setAttribute("tabindex", "0");
+    g.setAttribute("role", "button");
+    g.setAttribute("aria-label", rank + "ばん");
+    var c = document.createElementNS(SVGNS, "circle");
+    c.setAttribute("cx", sp.x); c.setAttribute("cy", sp.y); c.setAttribute("r", 17);
+    c.setAttribute("fill", rank === 1 ? "#e0a800" : rank === 2 ? "#9aa7b4" : rank === 3 ? "#c07a3c" : "#e8553e");
+    var t = document.createElementNS(SVGNS, "text");
+    t.setAttribute("x", sp.x); t.setAttribute("y", sp.y + 6); t.setAttribute("text-anchor", "middle");
+    t.textContent = rank;
+    g.appendChild(c); g.appendChild(t);
+    function jump() {
+      head.setAttribute("aria-expanded", "true"); body.hidden = false;
+      li.scrollIntoView({ behavior: "smooth", block: "start" });
+      li.classList.remove("flash"); void li.offsetWidth; li.classList.add("flash");
+      tone(POP);
+    }
+    g.addEventListener("click", jump);
+    g.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); jump(); }
+    });
+    pins.appendChild(g);
+  });
+
+  function draw(li, sp) {
+    var want = !!save.want[sp.id], went = !!save.went[sp.id];
+    li.querySelector('[data-act="want"]').setAttribute("aria-pressed", want ? "true" : "false");
+    li.querySelector('[data-act="went"]').setAttribute("aria-pressed", went ? "true" : "false");
+    li.querySelector("[data-badge]").textContent = (want ? "⭐" : "") + (went ? "♨️" : "");
+    var n = SPOTS.filter(function (s) { return save.went[s.id]; }).length;
+    count.textContent = "♨️ いった おふろ： " + n + " / " + SPOTS.length;
+  }
+})();
+</script>
+</body>
+</html>
