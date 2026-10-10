@@ -85,7 +85,7 @@
   // ── ひょうじ ──
   const $ = id => document.getElementById(id);
   const route = $('route'), panel = $('panel');
-  let current = null, filter = 'all';
+  let current = null, filter = 'all', kind = 'all';
 
   const line = () => LINES.find(l => l.id === save.line);
   // at の キーは 'えきめい' か 'ろせんID:えきめい'（おなじ なまえの えきでも ろせんで あるく じかんが ちがう とき）
@@ -94,8 +94,13 @@
   const stKey = k => k.replace(/^[a-z]+:/, '');
   const LABEL = {};
   LINES.forEach(l => l.stations.forEach(s => { if (typeof s === 'string') LABEL[plain(s)] = s; }));
-  const passes = b => filter === 'all' || (filter === 'kids' && !b.adult) ||
-    (filter === 'today' && status(b).open) || (filter === 'baby' && b.baby && !b.adult);
+  // しゅるい：せんとう／スーパーせんとう（スパ・おんせん しせつも こちら）
+  const isSento = b => b.kind === 'せんとう';
+  const kindOK = b => kind === 'all' || (kind === 'sento') === isSento(b);
+  const passes = b => kindOK(b) && (filter === 'all' || (filter === 'kids' && !b.adult) ||
+    (filter === 'today' && status(b).open) || (filter === 'baby' && b.baby && !b.adult));
+  const shownAt = (st, lid) => bathsAt(st, lid).filter(passes);
+  const countLine = l => new Set(l.stations.filter(s => typeof s === 'string').flatMap(s => shownAt(plain(s), l.id).map(b => b.id))).size;
 
   function drawLines() {
     const box = $('lines');
@@ -106,7 +111,7 @@
       btn.className = 'linetab';
       btn.style.setProperty('--lc', l.color);
       btn.setAttribute('aria-pressed', String(l.id === save.line));
-      const n = new Set(l.stations.filter(s => typeof s === 'string').flatMap(s => bathsAt(plain(s), l.id).map(b => b.id))).size;
+      const n = countLine(l);
       btn.innerHTML = `<span class="dot" aria-hidden="true"></span><span>${l.name}<br><small>♨️ ${n}けん</small></span>`;
       btn.addEventListener('click', () => {
         if (save.line === l.id) return;
@@ -122,6 +127,8 @@
 
   function drawRoute() {
     route.innerHTML = '';
+    const total = countLine(line());
+    $('routeTitle').innerHTML = `♨️ の えきを おしてね <b class="hits">${total}けん</b>`;
     line().stations.forEach(s => {
       const li = document.createElement('li');
       if (typeof s !== 'string') {
@@ -133,12 +140,13 @@
       const list = bathsAt(key);
       li.className = 'stn' + (list.length ? ' has' : '');
       if (list.length) {
-        if (!list.some(passes)) li.classList.add('dim');
+        const n = list.filter(passes).length;
+        if (!n) li.classList.add('dim');
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'stn__btn';
         btn.setAttribute('aria-current', String(current === key));
-        btn.innerHTML = `<span class="yu" aria-hidden="true">♨️</span><span>${rb(s)}</span><span class="num">${list.length}けん</span>`;
+        btn.innerHTML = `<span class="yu" aria-hidden="true">♨️</span><span>${rb(s)}</span><span class="num">${n}けん</span>`;
         btn.addEventListener('click', () => open(key, s));
         li.appendChild(btn);
       } else {
@@ -204,7 +212,13 @@
     panel.appendChild(head);
     const list = bathsAt(key);
     const shown = list.filter(passes);
-    (shown.length ? shown : list).forEach(b => panel.appendChild(bathCard(b, key)));
+    shown.forEach(b => panel.appendChild(bathCard(b, key)));
+    if (!shown.length) {
+      const none = document.createElement('div');
+      none.className = 'hello';
+      none.innerHTML = '<span class="big">🔍</span>この えきには えらんだ じょうけんの<br>おふろやさんが ないよ';
+      panel.appendChild(none);
+    }
     document.body.classList.add('show');
     panel.scrollTop = 0;
     drawRoute();
@@ -236,14 +250,23 @@
     if (save.sound) sfx.poko();
   });
 
-  document.querySelectorAll('.chip[data-f]').forEach(el => el.addEventListener('click', () => {
-    filter = el.dataset.f; sfx.poko();
-    document.querySelectorAll('.chip[data-f]').forEach(e2 => e2.setAttribute('aria-pressed', String(e2 === el)));
+  const refilter = () => {
+    drawLines();
     drawRoute();
     if (current) {
       const s = line().stations.find(x => typeof x === 'string' && plain(x) === current);
       if (s) open(current, s); else close(true);
     }
+  };
+  document.querySelectorAll('.chip[data-f]').forEach(el => el.addEventListener('click', () => {
+    filter = el.dataset.f; sfx.poko();
+    document.querySelectorAll('.chip[data-f]').forEach(e2 => e2.setAttribute('aria-pressed', String(e2 === el)));
+    refilter();
+  }));
+  document.querySelectorAll('.chip[data-k]').forEach(el => el.addEventListener('click', () => {
+    kind = el.dataset.k; sfx.poko();
+    document.querySelectorAll('.chip[data-k]').forEach(e2 => e2.setAttribute('aria-pressed', String(e2 === el)));
+    refilter();
   }));
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && current) close(); });
