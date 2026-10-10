@@ -328,6 +328,13 @@ function renderCourSelect(){
     if(cur && c.id === cur.id) o.selected = true;
     $("courSelect").appendChild(o);
   }
+  const guide = !isAllMode() && typeof cur.guide === "string" && /^[\w.-]+\.html$/.test(cur.guide) ? cur.guide : "";
+  $("guideLink").hidden = !guide;
+  if(guide){
+    const a = $("guideLink").firstElementChild;
+    a.href = guide;
+    a.textContent = `📖 ${cur.label.replace(" ", "")}アニメ ガイド（ストーリー・キャスト・配信）`;
+  }
   const note = $("courNote");
   note.textContent = isAllMode() ? "すべてのクールをまとめて表示しています。" : (cur.note || "");
   if(!isAllMode()){
@@ -625,6 +632,7 @@ function validateCour(c){
     titles: [...new Set(titles)],
     hot: Array.isArray(c.hot) ? c.hot.map(t => String(t).trim()).filter(t => titles.includes(t)) : [],
     hotSource: typeof c.hotSource === "string" ? c.hotSource : "",
+    guide: typeof c.guide === "string" ? c.guide : "",
   };
 }
 
