@@ -51,6 +51,7 @@ python3 tools/anime-guide/build.py 2026-fall      # 1クールだけ
 
 - 作品名と 🔥話題 は `cours.js` の `titles` / `hot` が正。ガイドを足すときは `cours.js` に `guide` を書き、
   `tools/anime-guide/seasons.json` に出典（アニメイトタイムズのクールまとめ・放送日順まとめ・話題作の出典）を足す。
+- 配信サービスのボタン: dアニメストアは作品ページ（▶）に直接リンク。作品IDは dアニメストアの検索API から作品名の一致で自動で引き、合わないものは `tools/anime-guide/danime.json` に {作品名: workId}（無いなら ""）を書く。ABEMA・Netflix・Prime Video は作品ページを外から調べられないので、各サービスの検索結果（🔍、「第3期」などを外した作品名）にリンクする。
 - ジャンルは `tools/anime-guide/genres.json`（作品ごとに [メイン, サブ]）。まとめページにジャンル欄がないので、ストーリーから人が決める。未設定の作品があると build.py が知らせる。
 - 取得したページは `tools/anime-guide/.cache/` にためる（git には入れない）。最新にしたいときは消してから実行。
 - アニメイトタイムズの春・夏・秋・冬のまとめページ（例: 春は `tag id=5228`）は毎年使い回されるので、
