@@ -97,6 +97,11 @@
   .btn[aria-pressed="true"].want { background: #fff3c4; border-color: var(--gold); }
   .btn[aria-pressed="true"].went { background: #ffe9e3; border-color: var(--red); }
   .badge { display: inline-block; margin-left: 6px; font-size: 18px; }
+  .closed-box { margin: 24px 0 16px; padding: 14px 16px; border: 3px dashed #e8a49c; border-radius: 22px; background: #fff8f6; }
+  .closed-box[hidden] { display: none; }
+  .closed-box h2 { margin: 0 0 4px; font-size: clamp(18px, 5vw, 22px); }
+  .closed-box > p { margin: 0 0 12px; font-size: clamp(15px, 4.2vw, 17px); }
+  .item.is-closed .medal { background: #9aa0a6; font-size: 22px; }
   .closed-tag { display: inline-block; margin: 2px 0; padding: 2px 10px; border-radius: 99px; background: #fde3e0; color: #b3261e; font-weight: 700; font-size: 14px; }
   .closed-note { background: #fde3e0; color: #7a1d16; border-radius: 14px; padding: 8px 12px; font-weight: 700; }
   .item.is-closed .head { background: repeating-linear-gradient(135deg, #fff 0 14px, #fff6f4 14px 28px); }
@@ -186,6 +191,12 @@
 
   <ol class="list" id="list"></ol>
 
+  <section class="closed-box" id="closedBox" hidden>
+    <h2>🚧 いまはお<ruby>休<rt>やす</rt></ruby>み<ruby>中<rt>ちゅう</rt></ruby>のお<ruby>風呂<rt>ふろ</rt></ruby></h2>
+    <p><ruby>工事<rt>こうじ</rt></ruby>などでお<ruby>休<rt>やす</rt></ruby>みしているので、ランキングからはずしているよ。<ruby>開<rt>あ</rt></ruby>いたらまた<ruby>入<rt>い</rt></ruby>れるね。</p>
+    <ul class="list" id="closedList"></ul>
+  </section>
+
   <section class="box">
     <h2>☀️ <ruby>富士山<rt>ふじさん</rt></ruby>がよく<ruby>見<rt>み</rt></ruby>える<ruby>時<rt>とき</rt></ruby></h2>
     <p><ruby>秋<rt>あき</rt></ruby>から<ruby>冬<rt>ふゆ</rt></ruby>の、<b><ruby>朝<rt>あさ</rt></ruby></b>がいちばんよく<ruby>見<rt>み</rt></ruby>えるよ。</p>
@@ -195,7 +206,7 @@
   <section class="box">
     <details class="parent">
       <summary>👪 おうちの<ruby>方<rt>かた</rt></ruby>へ（<ruby>料金<rt>りょうきん</rt></ruby>・<ruby>時間<rt>じかん</rt></ruby>・<ruby>車<rt>くるま</rt></ruby>・<ruby>出典<rt>しゅってん</rt></ruby>）</summary>
-      <p>2026年10月10日時点の Web 公開情報をもとにしています。順位は「富士山の眺め（2倍）・料金・子連れのしやすさ」で付けた独自の採点です。料金・営業時間は変わることがあるので、お出かけ前に公式サイトでご確認ください。横浜駅からのルートと所要時間は目安です。「近くの遊びスポット」は各施設周辺の子連れ向けスポットで、料金・休業日は各施設でご確認ください。バス（とくに周遊バス「ふじっ湖号」や送迎バス）は季節・曜日で運行が変わるため、各カードの「地図で行き方」（Google マップの経路検索）で当日の乗換を確かめてください。</p>
+      <p>2026年10月10日時点の Web 公開情報をもとにしています。順位は「富士山の眺め（2倍）・料金・子連れのしやすさ」で付けた独自の採点です（休館中の施設はランキング外）。料金・営業時間は変わることがあるので、お出かけ前に公式サイトでご確認ください。横浜駅からのルートと所要時間は目安です。「近くの遊びスポット」は各施設周辺の子連れ向けスポットで、料金・休業日は各施設でご確認ください。バス（とくに周遊バス「ふじっ湖号」や送迎バス）は季節・曜日で運行が変わるため、各カードの「地図で行き方」（Google マップの経路検索）で当日の乗換を確かめてください。</p>
       <div class="tablewrap">
       <table>
         <tr><th>施設</th><th>料金</th><th>営業時間</th><th>車（横浜から）</th></tr>
@@ -362,14 +373,20 @@
 
   function stars(n) { return "★★★★★".slice(0, n) + "☆☆☆☆☆".slice(0, 5 - n); }
 
-  SPOTS.forEach(function (sp, i) {
-    var rank = i + 1;
+  // お休み中の お風呂は ランキングから はずして、下の「お休み中」に まとめる
+  // （closed を 消せば、データの 順番どおりの 順位に もどる）
+  var closedBox = document.getElementById("closedBox");
+  var closedList = document.getElementById("closedList");
+  var openRank = 0;
+  SPOTS.forEach(function (sp) {
+    var rank = sp.closed ? 0 : ++openRank;
+    var label = rank ? String(rank) : "休";
     var li = document.createElement("li");
-    li.className = "item" + (rank <= 3 ? " r" + rank : "") + (sp.closed ? " is-closed" : "");
+    li.className = "item" + (rank && rank <= 3 ? " r" + rank : "") + (sp.closed ? " is-closed" : "");
     li.id = sp.id;
     li.innerHTML =
       '<button class="head" type="button" aria-expanded="false" aria-controls="b-' + sp.id + '">' +
-        '<span class="medal">' + rank + '</span>' +
+        '<span class="medal">' + label + '</span>' +
         '<span><span class="name">' + sp.name + '<span class="badge" data-badge></span></span>' +
         (sp.closed ? '<span class="closed-tag">🚧 '+'お<ruby>休<rt>やす</rt></ruby>み<ruby>中<rt>ちゅう</rt></ruby>'+'</span>' : '') +
         '<span class="where">📍 ' + sp.where + '</span>' +
@@ -400,7 +417,8 @@
           '<button class="btn went" type="button" data-act="went">♨️ <ruby>行<rt>い</rt></ruby>ったよ</button>' +
         '</div>' +
       '</div>';
-    list.appendChild(li);
+    if (sp.closed) { closedList.appendChild(li); closedBox.hidden = false; }
+    else list.appendChild(li);
 
     var head = li.querySelector(".head");
     var body = li.querySelector(".body");
@@ -425,13 +443,13 @@
     g.setAttribute("class", "pin");
     g.setAttribute("tabindex", "0");
     g.setAttribute("role", "button");
-    g.setAttribute("aria-label", rank + "位");
+    g.setAttribute("aria-label", rank ? rank + "位" : "お休み中");
     var c = document.createElementNS(SVGNS, "circle");
     c.setAttribute("cx", sp.x); c.setAttribute("cy", sp.y); c.setAttribute("r", 17);
-    c.setAttribute("fill", rank === 1 ? "#e0a800" : rank === 2 ? "#9aa7b4" : rank === 3 ? "#c07a3c" : "#e8553e");
+    c.setAttribute("fill", !rank ? "#9aa0a6" : rank === 1 ? "#e0a800" : rank === 2 ? "#9aa7b4" : rank === 3 ? "#c07a3c" : "#e8553e");
     var t = document.createElementNS(SVGNS, "text");
     t.setAttribute("x", sp.x); t.setAttribute("y", sp.y + 6); t.setAttribute("text-anchor", "middle");
-    t.textContent = rank;
+    t.textContent = label;
     g.appendChild(c); g.appendChild(t);
     function jump() {
       head.setAttribute("aria-expanded", "true"); body.hidden = false;
