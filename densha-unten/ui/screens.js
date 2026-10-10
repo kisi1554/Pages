@@ -6,7 +6,7 @@ import { ruby } from "./staff.js";
 const KEY = "densha-unten:settings";
 
 export function loadSettings() {
-  const def = { assist: true, sound: true, route: null, mode: "real" };
+  const def = { assist: true, sound: true, announce: true, route: null, mode: "real" };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(KEY) || "{}")); }
   catch (e) { return def; }
 }
@@ -35,6 +35,7 @@ export function showStart(routes, settings, onStart) {
   document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = r.value === settings.mode; });
   $("optAssist").checked = settings.assist;
   $("optSound").checked = settings.sound;
+  $("optAnnounce").checked = settings.announce;
   const btn = $("startBtn");
   btn.disabled = false;
   btn.onclick = () => {
@@ -42,6 +43,7 @@ export function showStart(routes, settings, onStart) {
     settings.mode = m ? m.value : "real";
     settings.assist = $("optAssist").checked;
     settings.sound = $("optSound").checked;
+    settings.announce = $("optAnnounce").checked;
     settings.route = routes[sel].route.meta.id;
     saveSettings(settings);
     $("startScreen").hidden = true;

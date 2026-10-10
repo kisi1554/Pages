@@ -21,7 +21,7 @@ export class Scene {
     const mats = createTrackMaterials(R);
     this.ctx = {
       route, al, mats,
-      stationMats: createStationMaterials(R),
+      stationMats: createStationMaterials(R, veh.cars),
       cityGeo: createCityGeometry(), cityMats: createCityMaterials(),
       grid: buildRouteGrid(al),
       unit, center,

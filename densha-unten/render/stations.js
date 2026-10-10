@@ -60,16 +60,17 @@ export function hangSignCanvas(route, i) {
 }
 
 /** 停止位置目標「8」 */
-export function stopMarkCanvas() {
+export function stopMarkCanvas(cars = 8) {
   const c = canvas(128, 128), g = c.getContext("2d");
   g.fillStyle = "#111"; g.fillRect(0, 0, 128, 128);
   g.fillStyle = "#ffd400"; g.fillRect(8, 8, 112, 112);
   g.fillStyle = "#111"; g.textAlign = "center"; g.textBaseline = "middle";
-  g.font = `900 96px ${FONT}`; g.fillText("8", 64, 70);
+  const t = String(cars);
+  g.font = `900 ${t.length > 1 ? 72 : 96}px ${FONT}`; g.fillText(t, 64, 70);
   return c;
 }
 
-export function createStationMaterials(R) {
+export function createStationMaterials(R, cars = 8) {
   return {
     top: material("#d3d0c8"),
     face: material("#9c9890"),
@@ -78,7 +79,7 @@ export function createStationMaterials(R) {
     roofUnder: material("#cfcac0"),
     fence: material("#7e858c"),
     post: material("#9aa0a6"),
-    stop: material([1, 1, 1], { map: R.texture(stopMarkCanvas(), { repeat: false }), unlit: false }),
+    stop: material([1, 1, 1], { map: R.texture(stopMarkCanvas(cars), { repeat: false }), unlit: false }),
     light: material("#000000", { unlit: true, emissive: hex("#f4f7ff") }),
   };
 }

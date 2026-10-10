@@ -15,12 +15,15 @@ import { Staff } from "./ui/staff.js";
 import { Hud } from "./ui/hud.js";
 import { showStart, showResult, loadSettings, saveSettings } from "./ui/screens.js";
 import { Sound } from "./audio/sound.js";
+import { Voice } from "./audio/voice.js";
+import { announcement, soonDistance, NEXT_AFTER } from "./core/announce.js";
 
 const params = new URLSearchParams(location.search);
 const DEBUG = { autopilot: params.has("autopilot"), speed: Math.max(1, Math.min(20, +params.get("speed") || 1)) };
 const $ = id => document.getElementById(id);
 const settings = loadSettings();
 const sound = new Sound();
+const voice = new Voice();
 
 class Game {
   constructor(route, veh, opts) {
@@ -44,6 +47,8 @@ class Game {
     this.staff = new Staff(route, this.rows, this.free);
     this.hud = new Hud(opts.assist, this.free);
     this.fps = { frames: 0, t0: performance.now(), value: 0 };
+    // 車内アナウンス: 始発で行き先、発車したら「次は」、駅の手前で「まもなく」、終点で「ご乗車ありがとう」
+    this.ann = { startAt: route.timetable.startTime + 3, next: null, soon: new Set() };
     document.documentElement.style.setProperty("--accent", route.meta.lineColor);
   }
 
@@ -102,6 +107,27 @@ class Game {
       else if (e === "doorClose") sound.doorChime(false);
       else if (e === "buzzer") sound.buzzer();
       else if (e === "finish") this.finish();
+      else if (e === "depart" || e === "pass") {
+        if (sc.idx < this.rows.length) this.ann.next = { idx: sc.idx, at: train.s + (e === "depart" ? NEXT_AFTER : 30) };
+      }
+      if (e === "doorOpen" && sc.idx === this.rows.length - 1) voice.say(announcement(route, "arrive", sc.idx));
+    }
+    this.announce(t);
+  }
+
+  announce(t) {
+    const { route, train, sc, ann } = this;
+    if (ann.startAt != null && t >= ann.startAt) { voice.say(announcement(route, "start", 0)); ann.startAt = null; }
+    if (ann.next && train.s >= ann.next.at) {
+      if (ann.next.idx === sc.idx && sc.state === S.RUN) voice.say(announcement(route, "next", sc.idx));
+      ann.next = null;
+    }
+    if (sc.state === S.RUN && sc.idx > 0 && !ann.soon.has(sc.idx)) {
+      const d = route.stations[sc.idx].stop - train.s;
+      if (d < soonDistance(route, sc.idx) && d > 15) {
+        ann.soon.add(sc.idx);
+        if (!ann.next) voice.say(announcement(route, "soon", sc.idx));
+      }
     }
   }
 
@@ -165,7 +191,7 @@ class Game {
     if (this.finished) return;
     this.paused = p;
     $("pauseScreen").hidden = !p;
-    if (p) sound.suspend(); else { sound.resume(); this.last = performance.now(); }
+    if (p) { sound.suspend(); voice.pause(); } else { sound.resume(); voice.resume(); this.last = performance.now(); }
   }
 }
 
@@ -175,6 +201,9 @@ async function startGame(entry, opts) {
   sound.setEnabled(opts.sound);
   sound.init();
   sound.resume();
+  voice.on = opts.announce !== false;
+  voice.enabled = opts.sound;
+  voice.unlock();
   updateSoundBtn();
   $("loading").hidden = false;
   try {
@@ -198,6 +227,8 @@ $("soundBtn").addEventListener("click", () => {
   settings.sound = !settings.sound;
   saveSettings(settings);
   sound.setEnabled(settings.sound);
+  voice.enabled = settings.sound;
+  if (!settings.sound) voice.stop();
   updateSoundBtn();
 });
 $("pauseBtn").addEventListener("click", () => game && game.setPaused(true));

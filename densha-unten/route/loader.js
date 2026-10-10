@@ -28,6 +28,13 @@ export function validateRoute(raw) {
       dwell: isNum(st.dwell) ? st.dwell : 20,
       platform: st.platform === "island" ? "island" : "side",
       length: isNum(st.length) ? st.length : 200,
+      // ドアが開く側（下り＝左の線路を走るので、ふつうは 相対式=左、島式=右）
+      doors: st.doors === "left" || st.doors === "right" ? st.doors : (st.platform === "island" ? "right" : "left"),
+      // 乗りかえ: [["路線名", "かな"], ...]（車内アナウンスで使う）
+      transfers: (Array.isArray(st.transfers) ? st.transfers : []).map((t, j) => {
+        if (!Array.isArray(t) || typeof t[0] !== "string") fail(`stations[${i}].transfers[${j}] は ["路線名", "かな"] の形です`);
+        return { name: t[0], kana: t[1] || t[0] };
+      }),
     };
   });
   if (stations.length < 2) fail("駅は2つ以上必要です");
