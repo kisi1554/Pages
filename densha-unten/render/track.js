@@ -7,7 +7,6 @@ const STEP = 4;                    // 押し出しの刻み (m)
 const SIDE_PLATFORM_W = 5;         // 相対式ホームの幅
 export const PLATFORM_H = 1.1;     // ホームの高さ（レール面から）
 const TUNNEL_H = 5.9;
-const RAIL_HALF = 1.067 / 2 + 0.0325;
 
 // ---- 断面を押し出す汎用関数 -------------------------------------------
 // profileFn(s) → [[x, y, abs], ...]  x=右, y=上（abs が真なら y は絶対高さ、偽ならレール面から）
@@ -150,6 +149,7 @@ export function buildTrackChunk(R, ctx, ci) {
   const G = {};
   const geo = k => (G[k] || (G[k] = new GeoBuilder()));
 
+  const railHalf = (route.meta.gauge || 1067) / 2000 + 0.0325; // 軌間（東横線 1067mm、京急 1435mm）
   // 道床・レール・架線（構造物の種類によらない）
   for (const side of [-1, 1]) {
     const c = s => side * al.halfSpacing(s);
@@ -157,7 +157,7 @@ export function buildTrackChunk(R, ctx, ci) {
     extrude(geo("ballast"), al, origin, sList, s => [[c(s) - 2.0, -0.55], [c(s) - 1.5, -0.17]], { uScale: 1 });
     extrude(geo("ballast"), al, origin, sList, s => [[c(s) + 1.5, -0.17], [c(s) + 2.0, -0.55]], { uScale: 1 });
     for (const rs of [-1, 1]) {
-      const x = s => c(s) + rs * RAIL_HALF;
+      const x = s => c(s) + rs * railHalf;
       extrude(geo("railSide"), al, origin, sList, s => [[x(s) - 0.035, -0.17], [x(s) - 0.035, 0]]);
       extrude(geo("rail"), al, origin, sList, s => [[x(s) - 0.035, 0], [x(s) + 0.035, 0]]);
       extrude(geo("railSide"), al, origin, sList, s => [[x(s) + 0.035, 0], [x(s) + 0.035, -0.17]]);

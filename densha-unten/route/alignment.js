@@ -36,9 +36,13 @@ function structureIndex(structures, s) {
 export function buildProfile(structures, sMin, sMax, maxGrade = MAX_GRADE) {
   const n = Math.ceil((sMax - sMin) / H_STEP) + 1;
   const target = new Float64Array(n);
+  // 構造物の外は地表(0)。ただし線の両端より外は、端の構造物の高さをのばす（端で線路が曲がらないように）
+  const lo = structures.reduce((m, st) => (m && m.start <= st.start ? m : st), null);
+  const hi = structures.reduce((m, st) => (m && m.end >= st.end ? m : st), null);
   for (let i = 0; i < n; i++) {
-    const k = structureIndex(structures, sMin + i * H_STEP);
-    target[i] = k >= 0 ? structures[k].height : 0;
+    const s = sMin + i * H_STEP;
+    const k = structureIndex(structures, s);
+    target[i] = k >= 0 ? structures[k].height : lo && s < lo.start ? lo.height : hi && s >= hi.end ? hi.height : 0;
   }
   const g = maxGrade / 1000 * H_STEP;
   const f = new Float64Array(n), b = new Float64Array(n);

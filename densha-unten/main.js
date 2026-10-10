@@ -2,6 +2,7 @@
 //   ?autopilot … 自動で運転する（動作確認用）   ?speed=4 … 時間を速める（動作確認用）
 
 import { loadRouteList, loadVehicle } from "./route/loader.js";
+import { routeFor } from "./route/reverse.js";
 import { buildAlignment } from "./route/alignment.js";
 import { createTrainState, advance, bcPressure } from "./core/physics.js";
 import { computeSignal, updateAtcBrake, trackEnd, speedLimitAt } from "./core/atc.js";
@@ -210,7 +211,7 @@ async function startGame(entry, opts) {
     if (document.fonts && document.fonts.ready) await Promise.race([document.fonts.ready, new Promise(r => setTimeout(r, 2500))]);
     const veh = await loadVehicle(entry.route.meta.vehicle);
     await new Promise(r => setTimeout(r, 30)); // 「じゅんびちゅう」を先に出す
-    game = new Game(entry.route, veh, opts);
+    game = new Game(routeFor(entry.route, opts.direction), veh, opts);
     window.__game = game;
     game.start();
   } catch (e) {

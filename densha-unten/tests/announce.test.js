@@ -52,3 +52,35 @@ test("検証: 乗りかえの書き方がちがうとエラー", () => {
   raw.stations[0].transfers = ["山手線"];
   assert.throws(() => validateRoute(raw), /transfers/);
 });
+
+import { reverseRoute } from "../route/reverse.js";
+
+test("全路線 × 両方向: 検証・ホームの長さ・ダイヤ・勾配", () => {
+  for (const f of readJSON("data/routes/index.json").routes) {
+    const down = validateRoute(readJSON("data/routes/" + f));
+    const veh = validateVehicle(readJSON(`data/vehicles/${down.meta.vehicle}.json`));
+    for (const r of [down, reverseRoute(down)]) {
+      const name = `${f} ${r.meta.service}`;
+      for (const st of r.stations) assert.ok(st.length >= veh.length, `${name}: ${st.name} のホームが短い`);
+      const al = buildAlignment(r);
+      for (let s = r.sMin + 2; s < r.sMax - 2; s += 5) assert.ok(Math.abs(al.grade(s)) <= 35 + 1e-6, `${name}: 勾配 s=${s}`);
+      const rows = buildTimetable(r, computeRunTimes(r, al, veh));
+      const min = (rows.at(-1).arr - rows[0].dep) / 60;
+      assert.ok(min > 25 && min < 55, `${name}: ${min}分`);
+      assert.ok(announcement(r, "next", 1).text.startsWith("次は、" + r.stations[1].name));
+    }
+  }
+});
+
+test("相鉄線・京急線: 駅の数と距離、京急は標準軌・18m車6両", () => {
+  const so = validateRoute(readJSON("data/routes/sotetsu.json"));
+  assert.equal(so.stations.length, 18);
+  assert.equal(so.stations.at(-1).name, "海老名");
+  assert.equal(so.stations.at(-1).stop, 24600);
+  const kk = validateRoute(readJSON("data/routes/keikyu.json"));
+  assert.equal(kk.stations.length, 25);
+  assert.equal(kk.stations.at(-1).stop, 22200);
+  assert.equal(kk.meta.gauge, 1435);
+  const v = validateVehicle(readJSON("data/vehicles/keikyu-1000.json"));
+  assert.equal(v.cars * v.carLength, v.length);
+});

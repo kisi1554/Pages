@@ -57,12 +57,13 @@ export function placeTrains(set, al, veh, trains, camS, camPos) {
       const p = al.point(sc, lat, 0);
       const bear = al.bearing(sc) + (tr.dir < 0 ? Math.PI : 0);
       const pitch = Math.atan(al.grade(sc) / 1000) * tr.dir;
-      Renderer.addInstance(set.body, p, bear, pitch, 1, 1, 1);
-      Renderer.addInstance(set.glass, p, bear, pitch, 1, 1, 1);
+      const k = (veh.carLength - 0.5) / CAR_L; // 車体の長さ（20m車・18m車）
+      Renderer.addInstance(set.body, p, bear, pitch, 1, 1, k);
+      Renderer.addInstance(set.glass, p, bear, pitch, 1, 1, k);
       // 先頭車の前照灯 / 最後尾の尾灯
       const end = tr.lights === "head" ? (c === 0 ? -1 : 0) : (c === veh.cars - 1 ? 1 : 0);
       if (end) {
-        const se = sc + (tr.dir * -end) * (CAR_L / 2 + 0.05);
+        const se = sc + (tr.dir * -end) * ((veh.carLength - 0.5) / 2 + 0.05);
         for (const x of [-0.95, 0.95]) {
           const q = al.point(se, lat + x * (tr.dir < 0 ? -1 : 1), FLOOR + 0.95);
           Renderer.addInstance(tr.lights === "head" ? set.head : set.tail, q, bear, 0, 0.42, 0.3, 0.08);

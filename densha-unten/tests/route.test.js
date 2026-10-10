@@ -74,3 +74,35 @@ test("島式ホームの駅では線路の間隔が広がる", () => {
   assert.ok(Math.abs(al.halfSpacing(4000) - 1.9) < 1e-9);
   assert.ok(al.halfSpacing(7000) > 4.5);
 });
+
+import { reverseRoute } from "../route/reverse.js";
+import { computeSignal } from "../core/atc.js";
+
+test("逆方向: 駅・区間が逆順になり、線形は元の線をさかのぼる", () => {
+  const r = toyoko(), u = reverseRoute(r);
+  assert.equal(u.stations[0].name, "横浜");
+  assert.equal(u.stations.at(-1).name, "渋谷");
+  assert.equal(u.stations[0].stop, 0);
+  assert.equal(u.stations.at(-1).stop, 24200);
+  assert.equal(u.stations.find(s => s.name === "菊名").stop, 24200 - 18800);
+  assert.match(u.meta.service, /横浜 → 渋谷/);
+  for (const k of ["curves", "structures", "speedLimits"]) {
+    for (let i = 1; i < u[k].length; i++) assert.ok(u[k][i].start >= u[k][i - 1].start, k);
+  }
+  // 同じ地点の高さ・曲がりは同じ（曲がる向きは逆）
+  const a = buildAlignment(r), b = buildAlignment(u);
+  for (const s of [500, 3000, 9500, 15000, 23000]) {
+    assert.ok(Math.abs(a.height(s) - b.height(24200 - s)) < 0.3, `高さ s=${s}`);
+    assert.ok(Math.abs(a.curvature(s) + b.curvature(24200 - s)) < 1e-9, `曲率 s=${s}`);
+  }
+  // 逆向きに走った線は、元の線と同じ場所を通る（起点=元の終点）
+  const ox = a.x(24200), oz = a.z(24200);
+  for (const s of [1000, 8000, 20000]) {
+    const d = Math.hypot((b.x(s) + ox) - a.x(24200 - s), (b.z(s) + oz) - a.z(24200 - s));
+    assert.ok(d < 0.5, `位置のずれ ${d.toFixed(2)}m s=${s}`);
+  }
+  // ドアの側: 相対式は左、島式は右。ATC も計算できる
+  assert.equal(u.stations.find(s => s.name === "代官山").doors, "left");
+  assert.equal(u.stations.find(s => s.name === "菊名").doors, "right");
+  assert.equal(computeSignal(u, 100), 45);
+});

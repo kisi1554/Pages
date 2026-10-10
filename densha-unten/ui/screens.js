@@ -6,7 +6,7 @@ import { ruby } from "./staff.js";
 const KEY = "densha-unten:settings";
 
 export function loadSettings() {
-  const def = { assist: true, sound: true, announce: true, route: null, mode: "real" };
+  const def = { assist: true, sound: true, announce: true, route: null, mode: "real", direction: "down" };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(KEY) || "{}")); }
   catch (e) { return def; }
 }
@@ -25,12 +25,23 @@ export function showStart(routes, settings, onStart) {
     const m = r.route.meta, st = r.route.stations;
     return `<button class="route-card${i === sel ? " sel" : ""}" data-i="${i}">
       <span class="mark" style="background:${m.lineColor}">${m.symbol}</span>
-      <span><b>${ruby(m.name, m.kana)}</b><small>${ruby(r.route.timetable.type, r.route.timetable.typeKana || "")}　${st[0].name} → ${st[st.length - 1].name}（${st.length}えき・${(st[st.length - 1].stop / 1000).toFixed(1)}km）</small></span>
+      <span><b>${ruby(m.name, m.kana)}</b><small>${ruby(r.route.timetable.type, r.route.timetable.typeKana || "")}　${st[0].name} ⇄ ${st[st.length - 1].name}（${st.length}えき・${((st[st.length - 1].stop - st[0].stop) / 1000).toFixed(1)}km）</small></span>
     </button>`;
   }).join("");
+  // むき: 下り（JSON の順）と上り（逆向き）
+  let dir = settings.direction === "up" ? "up" : "down";
+  const dirList = $("dirList");
+  const drawDirs = () => {
+    const st = routes[sel].route.stations, a = st[0], b = st[st.length - 1];
+    dirList.innerHTML = [["down", a, b], ["up", b, a]].map(([d, x, y]) =>
+      `<button class="dir-btn${d === dir ? " sel" : ""}" data-d="${d}">${ruby(x.name, x.kana)} → ${ruby(y.name, y.kana)}</button>`).join("");
+    dirList.querySelectorAll(".dir-btn").forEach(btn => btn.addEventListener("click", () => { dir = btn.dataset.d; drawDirs(); }));
+  };
+  drawDirs();
   list.querySelectorAll(".route-card").forEach(b => b.addEventListener("click", () => {
     sel = +b.dataset.i;
     list.querySelectorAll(".route-card").forEach(x => x.classList.toggle("sel", x === b));
+    drawDirs();
   }));
   document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = r.value === settings.mode; });
   $("optAssist").checked = settings.assist;
@@ -45,6 +56,7 @@ export function showStart(routes, settings, onStart) {
     settings.sound = $("optSound").checked;
     settings.announce = $("optAnnounce").checked;
     settings.route = routes[sel].route.meta.id;
+    settings.direction = dir;
     saveSettings(settings);
     $("startScreen").hidden = true;
     onStart(routes[sel], settings);
