@@ -5,12 +5,18 @@ import { formatTime } from "../core/clock.js";
 export const ruby = (kanji, kana) => `<ruby>${kanji}<rt>${kana}</rt></ruby>`;
 
 export class Staff {
-  constructor(route, rows) {
+  /** free: じゆう モードでは時刻のかわりに起点からの距離を出す */
+  constructor(route, rows, free = false) {
     this.body = document.getElementById("staffBody");
     this.scroll = document.getElementById("staffScroll");
     document.getElementById("staffTitle").innerHTML =
       `スタフ　${route.meta.name}　${route.timetable.type}　${route.meta.service.replace(/^\S+\s*/, "")}`;
-    this.body.innerHTML = rows.map(r => `<tr>
+    if (free) {
+      document.querySelector(".staff thead tr").innerHTML = `<th><ruby>駅<rt>えき</rt></ruby></th><th>きょり</th><th></th>`;
+      document.getElementById("staffTitle").innerHTML = `じゆう うんてん　${route.meta.name}`;
+      this.body.innerHTML = rows.map(r => `<tr><td>${ruby(r.station.name, r.station.kana)}</td>
+        <td class="t">${(r.station.stop / 1000).toFixed(1)}km</td><td></td></tr>`).join("");
+    } else this.body.innerHTML = rows.map(r => `<tr>
       <td>${ruby(r.station.name, r.station.kana)}</td>
       <td class="t">${r.arr == null ? "" : formatTime(r.arr)}</td>
       <td class="t">${r.dep == null ? "<small>しゅうてん</small>" : formatTime(r.dep)}</td></tr>`).join("");

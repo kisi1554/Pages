@@ -4,11 +4,14 @@ import { formatTime, formatDelay } from "../core/clock.js";
 import { ruby } from "./staff.js";
 
 export class Hud {
-  constructor(assist) {
+  constructor(assist, free = false) {
     const $ = id => document.getElementById(id);
     this.el = { time: $("hudTime"), next: $("hudNext"), sched: $("hudSched"), delay: $("hudDelay"), delayBox: $("hudDelayBox"),
       delayLabel: $("hudDelayLabel"), assist: $("assist"), dist: $("asDist"), speed: $("asSpeed"), msg: $("msg") };
     this.el.assist.hidden = !assist;
+    // じゆう モードは時刻表がないので、定刻と遅れは出さない
+    this.el.sched.parentElement.hidden = free;
+    this.el.delayBox.hidden = free;
     this.last = {};
   }
 

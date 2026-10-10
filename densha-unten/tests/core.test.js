@@ -183,3 +183,23 @@ test("ドア: 発車10秒前に閉め、知らせ灯とブザー、2m進んで�
   assert.equal(sc.state, S.RUN);
   assert.ok(sc.records[0].dep >= rows[0].dep);
 });
+
+test("じゆう モード: 時刻表に関係なく、ドアは開いて15秒で閉まる", () => {
+  const start = rows[0].dep - 30;
+  const sc = new StationController(rows, start, { free: true });
+  let t = start, closeAt = null;
+  for (; t < start + 10; t += 0.1) for (const e of sc.update(t, 0.1, { s: 0, v: 0, braking: true })) if (e === "doorClose") closeAt = t;
+  assert.ok(closeAt != null && closeAt < start + 6, `closeAt=${closeAt - start}`);
+  assert.equal(sc.delay(t + 999), 0);
+  // 発車して次の駅に止まる → 15秒でドアが閉まる（発車時刻を待たない）
+  while (sc.state !== S.READY) { sc.update(t, 0.1, { s: 0, v: 0, braking: true }); t += 0.1; }
+  sc.update(t, 0.1, { s: 3, v: 10, braking: false });
+  const s1 = rows[1].station.stop;
+  let opened = null, closed = null;
+  for (let i = 0; i < 400; i++, t += 0.1) for (const e of sc.update(t, 0.1, { s: s1, v: 0, braking: true })) {
+    if (e === "doorOpen") opened = t;
+    if (e === "doorClose") closed = t;
+  }
+  assert.ok(opened != null && closed != null);
+  assert.ok(Math.abs(closed - opened - 15) < 0.15, `${closed - opened}`);
+});

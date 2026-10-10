@@ -26,27 +26,29 @@ class Game {
   constructor(route, veh, opts) {
     this.route = route; this.veh = veh; this.opts = opts;
     this.al = buildAlignment(route);
+    this.free = opts.mode === "free"; // じゆう モード: ATC・先行列車・時刻表なし。速度も自由
     this.rows = buildTimetable(route, computeRunTimes(route, this.al, veh));
-    this.leader = simulateLeader(route, this.al, veh, this.rows);
+    this.leader = this.free ? null : simulateLeader(route, this.al, veh, this.rows);
     this.clock = new GameClock(route.timetable.startTime);
     this.train = createTrainState(route.stations[0].stop);
     this.train.notch = -7; this.train.brake = veh.brakeNotches[6];
-    this.sc = new StationController(this.rows, route.timetable.startTime);
-    this.signal = computeSignal(route, this.train.s, this.leaderTail());
+    this.sc = new StationController(this.rows, route.timetable.startTime, { free: this.free });
+    this.signal = this.free ? null : computeSignal(route, this.train.s, this.leaderTail());
     this.atcOn = false;
     this.paused = false; this.finished = false;
     this.scene = new Scene($("gl"), route, this.al, veh);
-    this.cab = new CabUI(route.atc.steps);
+    this.cab = new CabUI(this.free ? null : route.atc.steps, this.free ? 140 : 120);
     this.lever = new Lever((n, steps) => { this.train.notch = n; this.cab.setNotch(n); sound.click(steps); });
     this.lever.set(-7, true);
     this.cab.setNotch(-7);
-    this.staff = new Staff(route, this.rows);
-    this.hud = new Hud(opts.assist);
+    this.staff = new Staff(route, this.rows, this.free);
+    this.hud = new Hud(opts.assist, this.free);
     this.fps = { frames: 0, t0: performance.now(), value: 0 };
     document.documentElement.style.setProperty("--accent", route.meta.lineColor);
   }
 
   leaderTail() {
+    if (!this.leader) return null;
     const p = leaderPositionAt(this.leader, this.clock.t);
     return p == null ? null : p - this.veh.length;
   }
@@ -75,10 +77,12 @@ class Game {
   _tick(dt) {
     const { route, al, veh, train, sc } = this;
     const t = this.clock.tick(dt);
-    const sig = computeSignal(route, train.s, this.leaderTail());
-    if (sig < this.signal) sound.atcBell();
-    this.signal = sig;
-    this.atcOn = updateAtcBrake(this.atcOn, train.v, sig);
+    if (!this.free) {
+      const sig = computeSignal(route, train.s, this.leaderTail());
+      if (sig < this.signal) sound.atcBell();
+      this.signal = sig;
+      this.atcOn = updateAtcBrake(this.atcOn, train.v, sig);
+    }
     if (DEBUG.autopilot) this.autopilot();
     const prevBrake = train.brake, prevV = train.v;
     const env = st => {
@@ -109,7 +113,7 @@ class Game {
     else {
       const d = sc.target.station.stop - train.s, vm = train.v / 3.6;
       const need = d > 0.3 ? vm * vm / (2 * d) : 9;
-      const lim = Math.min(this.signal, speedLimitAt(route, train.s));
+      const lim = Math.min(this.signal ?? Infinity, speedLimitAt(route, train.s));
       if (need > 0.5 || (d < 0.3 && train.v > 0)) n = -Math.min(7, Math.ceil(need * 3.6 / 0.5) + 1);
       else if (d <= 0.3) n = -4;
       else if (train.v > lim - 2) n = train.v > lim ? -3 : 0;
@@ -123,7 +127,7 @@ class Game {
     if (this.finished) return;
     this.finished = true;
     this.lever.enabled = false;
-    setTimeout(() => showResult(this.sc.records, () => location.reload()), 300);
+    setTimeout(() => showResult(this.sc.records, () => location.reload(), this.free), 300);
   }
 
   draw(dt) {
@@ -131,7 +135,7 @@ class Game {
     const t = this.clock.t;
     this.scene.prepare(train.s, 1);
     const others = [];
-    const lp = leaderPositionAt(this.leader, t);
+    const lp = this.leader ? leaderPositionAt(this.leader, t) : null;
     if (lp != null) others.push({ head: lp, dir: 1, track: "down", lights: "tail" });
     for (const s of oncomingPositions(route, t, train.s - 400, train.s + 2300)) others.push({ head: s, dir: -1, track: "up", lights: "head" });
     this.scene.render(train, others, t, dt);

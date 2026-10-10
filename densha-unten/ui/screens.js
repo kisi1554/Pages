@@ -6,8 +6,9 @@ import { ruby } from "./staff.js";
 const KEY = "densha-unten:settings";
 
 export function loadSettings() {
-  try { return Object.assign({ assist: true, sound: true, route: null }, JSON.parse(localStorage.getItem(KEY) || "{}")); }
-  catch (e) { return { assist: true, sound: true, route: null }; }
+  const def = { assist: true, sound: true, route: null, mode: "real" };
+  try { return Object.assign(def, JSON.parse(localStorage.getItem(KEY) || "{}")); }
+  catch (e) { return def; }
 }
 export function saveSettings(s) {
   try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) { /* 保存できなくても続ける */ }
@@ -31,11 +32,14 @@ export function showStart(routes, settings, onStart) {
     sel = +b.dataset.i;
     list.querySelectorAll(".route-card").forEach(x => x.classList.toggle("sel", x === b));
   }));
+  document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = r.value === settings.mode; });
   $("optAssist").checked = settings.assist;
   $("optSound").checked = settings.sound;
   const btn = $("startBtn");
   btn.disabled = false;
   btn.onclick = () => {
+    const m = document.querySelector('input[name="mode"]:checked');
+    settings.mode = m ? m.value : "real";
     settings.assist = $("optAssist").checked;
     settings.sound = $("optSound").checked;
     settings.route = routes[sel].route.meta.id;
@@ -45,7 +49,7 @@ export function showStart(routes, settings, onStart) {
   };
 }
 
-export function showResult(records, onAgain) {
+export function showResult(records, onAgain, free = false) {
   const $ = id => document.getElementById(id);
   const rows = records.slice(1).map(r => {
     let pos = "-", cls = "";
@@ -57,13 +61,16 @@ export function showResult(records, onAgain) {
     }
     const late = r.arr != null && r.schedArr != null ? Math.round(r.arr - r.schedArr) : null;
     const lateTxt = late == null || late === 0 ? "" : `<small>${Math.abs(late)}びょう ${late > 0 ? "おくれ" : "はやい"}</small>`;
-    return `<tr><td>${ruby(r.station.name, r.station.kana)}</td><td class="t">${formatTime(r.schedArr)}</td>
-      <td class="t">${r.arr == null ? "-" : formatTime(r.arr)}${lateTxt}</td><td class="${cls}">${pos}</td></tr>`;
+    return `<tr><td>${ruby(r.station.name, r.station.kana)}</td><td class="t">${free ? "-" : formatTime(r.schedArr)}</td>
+      <td class="t">${r.arr == null ? "-" : formatTime(r.arr)}${free ? "" : lateTxt}</td><td class="${cls}">${pos}</td></tr>`;
   });
   $("resultBody").innerHTML = rows.join("");
   const ok = records.slice(1).filter(r => r.status === "ok").length;
   const last = records[records.length - 1];
-  $("resultLead").innerHTML = `${records[0].station.name} → ${last.station.name}。${records.length - 1}えきの うち ${ok}えきで ±3m いないに とめたよ。`;
+  const stopped = records.slice(1).filter(r => r.status !== "pass" && r.status != null).length;
+  $("resultLead").innerHTML = free
+    ? `じゆう うんてん ${records[0].station.name} → ${last.station.name}。${stopped}えきに とまって、${ok}えきで ±3m いないに とめたよ。`
+    : `${records[0].station.name} → ${last.station.name}。${records.length - 1}えきの うち ${ok}えきで ±3m いないに とめたよ。`;
   $("resultScreen").hidden = false;
   $("againBtn").onclick = () => { $("resultScreen").hidden = true; onAgain(); };
 }

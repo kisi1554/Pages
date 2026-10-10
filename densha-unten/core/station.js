@@ -23,8 +23,9 @@ export class StationController {
   /**
    * rows: buildTimetable の結果。startTime: ゲーム開始時刻（始発駅でドアが開いた状態）
    */
-  constructor(rows, startTime) {
+  constructor(rows, startTime, { free = false } = {}) {
     this.rows = rows;
+    this.free = free; // じゆう モード: 時刻表に しばられず、ドアは開いて15秒で閉める
     this.idx = 0;
     this.state = S.OPEN;
     this.timer = 0;
@@ -32,7 +33,7 @@ export class StationController {
     this.judged = false;
     this.message = "";
     this.stopS = rows[0].station.stop;
-    this.openedAt = startTime - MIN_OPEN;
+    this.openedAt = startTime - (free ? MIN_OPEN - 5 : MIN_OPEN);
     this.finishAt = null;
     this.records = rows.map(r => ({ station: r.station, schedArr: r.arr, schedDep: r.dep, arr: null, dep: null, error: null, status: null }));
     this.records[0].status = "ok";
@@ -44,6 +45,7 @@ export class StationController {
 
   /** いまの遅れ（秒）。止まっている駅は着時刻、走っているときは直前の発車時刻で比べる */
   delay(t) {
+    if (this.free) return 0;
     const r = this.records[this.idx];
     if (this.state === S.RUN && this.idx > 0) {
       const p = this.records[this.idx - 1];
@@ -68,11 +70,13 @@ export class StationController {
         const d = st.stop - train.s; // 正なら手前
         if (Math.abs(train.v) < 0.05) this.still += dt;
         else { this.still = 0; this.judged = false; if (this.message && d < JUDGE.SHORT) this.message = ""; }
+        if (this.clearMsgAt != null && train.s > this.clearMsgAt) { this.message = ""; this.clearMsgAt = null; }
         if (train.s > st.stop + JUDGE.OVER_MAX) {
           // 停車駅を通過（10mを超えて行き過ぎ）
           const rec = this.records[this.idx];
           rec.status = "pass"; rec.error = train.s - st.stop;
-          this.message = `${st.name}を つうか してしまった`;
+          this.message = this.free ? `${st.name}を つうか` : `${st.name}を つうか してしまった`;
+          this.clearMsgAt = train.s + 300; // 300m 進んだら消す
           ev.push("pass");
           if (last) { this.state = S.DONE; ev.push("finish"); }
           else this.idx++;
@@ -110,7 +114,7 @@ export class StationController {
           break;
         }
         const dep = this.target.dep;
-        const closeAt = Math.max(this.openedAt + MIN_OPEN, dep - CLOSE_BEFORE);
+        const closeAt = this.free ? this.openedAt + MIN_OPEN : Math.max(this.openedAt + MIN_OPEN, dep - CLOSE_BEFORE);
         if (t >= closeAt) { this.state = S.CLOSING; this.timer = 0; this.message = ""; ev.push("doorClose"); }
         break;
       }

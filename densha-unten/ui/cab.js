@@ -2,13 +2,14 @@
 
 import { notchLabel, EB } from "../core/physics.js";
 
-const VMAX = 120;
-const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25; // 0km/h → 左下、120 → 右下（時計回り 270°）
-const ang = v => A0 + (A1 - A0) * Math.min(1, Math.max(0, v / VMAX));
+const A0 = Math.PI * 0.75, A1 = Math.PI * 2.25; // 0km/h → 左下、最高 → 右下（時計回り 270°）
 
 export class CabUI {
-  constructor(steps) {
-    this.steps = steps;
+  /** steps: ATC信号の段階（null なら ATC なし）、vmax: 速度計の最大目盛り */
+  constructor(steps, vmax = 120) {
+    this.steps = steps || [];
+    this.vmax = vmax;
+    this.ang = v => A0 + (A1 - A0) * Math.min(1, Math.max(0, v / vmax));
     this.cv = document.getElementById("speedo");
     this.g = this.cv.getContext("2d");
     this.base = this._drawBase();
@@ -23,7 +24,7 @@ export class CabUI {
   _drawBase() {
     const c = document.createElement("canvas"); c.width = 400; c.height = 400;
     const g = c.getContext("2d");
-    const cx = 200, cy = 200;
+    const cx = 200, cy = 200, VMAX = this.vmax, ang = this.ang;
     g.fillStyle = "#0a0c0e"; g.beginPath(); g.arc(cx, cy, 196, 0, Math.PI * 2); g.fill();
     g.strokeStyle = "#59636d"; g.lineWidth = 4; g.stroke();
     const face = g.createRadialGradient(cx, cy - 40, 20, cx, cy, 170);
@@ -51,7 +52,7 @@ export class CabUI {
     g.drawImage(this.base, 0, 0);
     // ATC信号のランプ（▲）を外周に並べる。今の信号を緑で、0のときは赤で点灯
     for (const st of this.steps) {
-      const a = ang(st);
+      const a = this.ang(st);
       const on = st === signal;
       const col = on ? (st === 0 ? "#ff3b3b" : "#4dff8a") : "#2b3239";
       g.save();
@@ -63,7 +64,7 @@ export class CabUI {
       g.restore();
     }
     // 針
-    const a = ang(Math.abs(v));
+    const a = this.ang(Math.abs(v));
     g.save();
     g.translate(cx, cy); g.rotate(a);
     g.fillStyle = "#ff8a1f"; g.shadowColor = "rgba(255,138,31,0.6)"; g.shadowBlur = 8;
@@ -94,7 +95,7 @@ export class CabUI {
     this.last.lamps = key;
     this.$("lampDoor").classList.toggle("on", doorsClosed);
     this.$("lampAtcB").classList.toggle("on", atcBrake);
-    this.$("sigVal").textContent = String(signal).padStart(3, " ");
+    this.$("sigVal").textContent = signal == null ? "OFF" : String(signal).padStart(3, " ");
     this.$("lampSig").classList.toggle("zero", signal === 0);
   }
 
