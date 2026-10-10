@@ -62,6 +62,7 @@
   const route = $('route'), panel = $('panel');
   let current = null, filter = 'all';
 
+  const KIND = { pub: '🏛️ こうりつ', nat: '🏛️ こくりつ' };
   const line = () => LINES.find(l => l.id === save.line);
   const schoolsAt = st => SCHOOLS.filter(s => s.at[st]);
   const LABEL = {};
@@ -131,7 +132,7 @@
         <div class="bath__icon" aria-hidden="true">${s.icon}</div>
         <div>
           <h3 class="bath__name">${rb(s.name)}</h3>
-          <div class="bath__kind">${s.boys ? '👦 おとこのこの がっこう' : '👦👧 おとこのこも おんなのこも'}</div>
+          <div class="bath__kind">${s.boys ? '👦 おとこのこの がっこう' : '👦👧 おとこのこも おんなのこも'}${KIND[s.kind] ? '・' + KIND[s.kind] : ''}</div>
         </div>
       </div>
       <div class="facts">
