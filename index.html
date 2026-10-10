@@ -137,8 +137,132 @@
     color: var(--ink-soft);
   }
 
+  /* さがす（もじ ＋ こえ） */
+  .search {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 0 -8px 20px;
+    padding: 10px 8px 12px;
+    background: linear-gradient(var(--bg-top) 75%, rgba(234, 244, 253, 0));
+  }
+
+  .search-row { display: flex; gap: 10px; align-items: center; }
+
+  .search-box {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .search-box .icon {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 22px;
+    pointer-events: none;
+  }
+
+  .search input {
+    width: 100%;
+    height: 60px;
+    padding: 0 54px 0 52px;
+    border: 3px solid var(--line);
+    border-radius: 99px;
+    background: var(--card);
+    color: var(--ink);
+    font: inherit;
+    font-size: 19px;
+    box-shadow: 0 4px 0 var(--shadow);
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .search input::placeholder { color: #8a9bb0; }
+  .search input:focus { outline: none; border-color: #1a6fb5; }
+  .search input::-webkit-search-cancel-button { display: none; }
+
+  .search .clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 44px;
+    height: 44px;
+    border: none;
+    border-radius: 50%;
+    background: #e3ecf5;
+    color: var(--ink-soft);
+    font-size: 20px;
+    cursor: pointer;
+  }
+
+  .search .clear[hidden] { display: none; }
+
+  .mic {
+    flex: none;
+    width: 60px;
+    height: 60px;
+    border: 3px solid #e5504a;
+    border-radius: 50%;
+    background: #fff;
+    font-size: 28px;
+    line-height: 1;
+    box-shadow: 0 4px 0 rgba(229, 80, 74, .25);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mic[hidden] { display: none; }
+  .mic:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(229, 80, 74, .25); }
+
+  .mic.listening {
+    background: #e5504a;
+    animation: pulse 1.1s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(229, 80, 74, .55); }
+    50%      { box-shadow: 0 0 0 12px rgba(229, 80, 74, 0); }
+  }
+
+  .search-msg {
+    min-height: 1.6em;
+    margin: 8px 6px 0;
+    font-size: 15px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .card[hidden] { display: none; }
+
+  .empty {
+    padding: 28px 16px;
+    text-align: center;
+    font-size: 18px;
+    line-height: 1.8;
+  }
+
+  .empty[hidden] { display: none; }
+
+  .empty button {
+    margin-top: 12px;
+    min-height: 52px;
+    padding: 0 26px;
+    border: 3px solid #1a6fb5;
+    border-radius: 99px;
+    background: #fff;
+    color: #1a6fb5;
+    font: inherit;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .card { transition: none; }
+    .mic.listening { animation: none; }
   }
 </style>
 </head>
@@ -151,9 +275,22 @@
     <p class="sub">あそびたい アプリを えらんでね</p>
   </header>
 
+  <div class="search" role="search">
+    <div class="search-row">
+      <div class="search-box">
+        <span class="icon" aria-hidden="true">🔍</span>
+        <input id="q" type="search" placeholder="なまえや ことばで さがそう"
+               aria-label="アプリを さがす" autocomplete="off" enterkeyhint="search">
+        <button class="clear" id="clear" type="button" aria-label="けす" hidden>✕</button>
+      </div>
+      <button class="mic" id="mic" type="button" aria-label="こえで さがす" hidden>🎤</button>
+    </div>
+    <p class="search-msg" id="msg" aria-live="polite"></p>
+  </div>
+
   <nav class="menu">
 
-    <a class="card" href="eki-stamp-rally/" style="--accent:#e2761b; --tint:#fdf0dd;">
+    <a class="card" href="eki-stamp-rally/" data-keywords="えき スタンプ かんじ でんしゃ" style="--accent:#e2761b; --tint:#fdf0dd;">
       <span class="emoji" aria-hidden="true">📔</span>
       <span>
         <span class="name">えきスタンプラリー</span>
@@ -161,7 +298,7 @@
       </span>
     </a>
 
-    <a class="card" href="kanji-station/" style="--accent:#0f9d6b; --tint:#e3f6ee;">
+    <a class="card" href="kanji-station/" data-keywords="かんじ えき よみかた でんしゃ" style="--accent:#0f9d6b; --tint:#e3f6ee;">
       <span class="emoji" aria-hidden="true">🚉</span>
       <span>
         <span class="name">かんじすたんしょん</span>
@@ -169,7 +306,7 @@
       </span>
     </a>
 
-    <a class="card" href="densha-talk/" style="--accent:#1a6fb5; --tint:#e7f1fb;">
+    <a class="card" href="densha-talk/" data-keywords="でんしゃ おしゃべり おはなし こえ" style="--accent:#1a6fb5; --tint:#e7f1fb;">
       <span class="emoji" aria-hidden="true">🚃</span>
       <span>
         <span class="name">でんしゃトーク</span>
@@ -177,7 +314,7 @@
       </span>
     </a>
 
-    <a class="card" href="rudy-talk/" style="--accent:#f08a00; --tint:#fff4c7;">
+    <a class="card" href="rudy-talk/" data-keywords="ねこ おしゃべり ことば どうぶつ" style="--accent:#f08a00; --tint:#fff4c7;">
       <span class="emoji" aria-hidden="true">🐱</span>
       <span>
         <span class="name">ルディと おしゃべり</span>
@@ -185,7 +322,7 @@
       </span>
     </a>
 
-    <a class="card" href="densha-talk-ehon/" style="--accent:#6a5acd; --tint:#eeecfb;">
+    <a class="card" href="densha-talk-ehon/" data-keywords="えほん ほし よむ でんしゃ おはなし" style="--accent:#6a5acd; --tint:#eeecfb;">
       <span class="emoji" aria-hidden="true">📖</span>
       <span>
         <span class="name">ほしぞらのたんけん</span>
@@ -193,7 +330,7 @@
       </span>
     </a>
 
-    <a class="card" href="densha-talk-hanaseru-ehon/" style="--accent:#e5504a; --tint:#fdeceb;">
+    <a class="card" href="densha-talk-hanaseru-ehon/" data-keywords="えほん こえ おはなし でんしゃ" style="--accent:#e5504a; --tint:#fdeceb;">
       <span class="emoji" aria-hidden="true">🎤</span>
       <span>
         <span class="name">はなせる えほん</span>
@@ -201,7 +338,7 @@
       </span>
     </a>
 
-    <a class="card" href="blueline-tashizan/" style="--accent:#0b78be; --tint:#e4f1fa;">
+    <a class="card" href="blueline-tashizan/" data-keywords="たしざん けいさん さんすう えき でんしゃ ぶるーらいん" style="--accent:#0b78be; --tint:#e4f1fa;">
       <span class="emoji" aria-hidden="true">➕</span>
       <span>
         <span class="name">ブルーライン たしざん</span>
@@ -209,7 +346,7 @@
       </span>
     </a>
 
-    <a class="card" href="semi-tanken/" style="--accent:#2f7d32; --tint:#e6f4e2;">
+    <a class="card" href="semi-tanken/" data-keywords="せみ むし なきごえ いきもの" style="--accent:#2f7d32; --tint:#e6f4e2;">
       <span class="emoji" aria-hidden="true">🪳</span>
       <span>
         <span class="name">セミたんけん</span>
@@ -217,7 +354,7 @@
       </span>
     </a>
 
-    <a class="card" href="tsukutsuku-talk/" style="--accent:#3f8f4f; --tint:#e7f5e3;">
+    <a class="card" href="tsukutsuku-talk/" data-keywords="せみ むし つくつくぼうし かくれんぼ おしゃべり" style="--accent:#3f8f4f; --tint:#e7f5e3;">
       <span class="emoji" aria-hidden="true">🦗</span>
       <span>
         <span class="name">つくぼうと おしゃべり</span>
@@ -225,7 +362,7 @@
       </span>
     </a>
 
-    <a class="card" href="nippon-sugoroku/" style="--accent:#1a6fb5; --tint:#e6f2fb;">
+    <a class="card" href="nippon-sugoroku/" data-keywords="すごろく にほん にっぽん たび おかね ちず" style="--accent:#1a6fb5; --tint:#e6f2fb;">
       <span class="emoji" aria-hidden="true">🗾</span>
       <span>
         <span class="name"><ruby>日本<rt>にほん</rt></ruby><ruby>一周<rt>いっしゅう</rt></ruby>すごろく</span>
@@ -233,7 +370,7 @@
       </span>
     </a>
 
-    <a class="card" href="minarai-shasho/" style="--accent:#2f7ec4; --tint:#e7f2fb;">
+    <a class="card" href="minarai-shasho/" data-keywords="しゃしょう ろぼっと でんしゃ ぽぽ" style="--accent:#2f7ec4; --tint:#e7f2fb;">
       <span class="emoji" aria-hidden="true">🚋</span>
       <span>
         <span class="name">みならい しゃしょう ポポ</span>
@@ -241,7 +378,7 @@
       </span>
     </a>
 
-    <a class="card" href="shirotto-quiz/" style="--accent:#2c6fa8; --tint:#e7f2fb;">
+    <a class="card" href="shirotto-quiz/" data-keywords="とどうふけん けん ちず くいず にほん" style="--accent:#2c6fa8; --tint:#e7f2fb;">
       <span class="emoji" aria-hidden="true">🗾</span>
       <span>
         <span class="name">しろっとクイズ</span>
@@ -249,7 +386,7 @@
       </span>
     </a>
 
-    <a class="card" href="guruguru-earth/" style="--accent:#f0a020; --tint:#fdf1dc;">
+    <a class="card" href="guruguru-earth/" data-keywords="ちきゅう たいよう ひる よる うちゅう りか" style="--accent:#f0a020; --tint:#fdf1dc;">
       <span class="emoji" aria-hidden="true">🌍</span>
       <span>
         <span class="name">ぐるぐるアース</span>
@@ -257,7 +394,7 @@
       </span>
     </a>
 
-    <a class="card" href="densha-battle/" style="--accent:#e5171f; --tint:#fde6e7;">
+    <a class="card" href="densha-battle/" data-keywords="でんしゃ ばとる くいず やさい ゆうしゃ" style="--accent:#e5171f; --tint:#fde6e7;">
       <span class="emoji" aria-hidden="true">🚃</span>
       <span>
         <span class="name">でんしゃバトル</span>
@@ -265,7 +402,7 @@
       </span>
     </a>
 
-    <a class="card" href="kids-addition-game/" style="--accent:#e8802a; --tint:#fdf0e2;">
+    <a class="card" href="kids-addition-game/" data-keywords="たしざん けいさん さんすう かず" style="--accent:#e8802a; --tint:#fdf0e2;">
       <span class="emoji" aria-hidden="true">🔢</span>
       <span>
         <span class="name">たしざんとっくん</span>
@@ -273,7 +410,7 @@
       </span>
     </a>
 
-    <a class="card" href="phonics-english-app/" style="--accent:#7b3fb5; --tint:#f0e9fb;">
+    <a class="card" href="phonics-english-app/" data-keywords="えいご ふぉにっくす abc あるふぁべっと" style="--accent:#7b3fb5; --tint:#f0e9fb;">
       <span class="emoji" aria-hidden="true">🔤</span>
       <span>
         <span class="name">フォニックスたんけん</span>
@@ -281,7 +418,7 @@
       </span>
     </a>
 
-    <a class="card" href="rosenzu-game/" style="--accent:#0f8a8a; --tint:#e2f5f4;">
+    <a class="card" href="rosenzu-game/" data-keywords="ろせんず えき ちず でんしゃ かぞえる" style="--accent:#0f8a8a; --tint:#e2f5f4;">
       <span class="emoji" aria-hidden="true">🗺️</span>
       <span>
         <span class="name">ろせんず たんけん</span>
@@ -289,7 +426,7 @@
       </span>
     </a>
 
-    <a class="card" href="tenbyosha-game/" style="--accent:#c2477a; --tint:#fbe9f1;">
+    <a class="card" href="tenbyosha-game/" data-keywords="てんつなぎ かたち ずけい せん" style="--accent:#c2477a; --tint:#fbe9f1;">
       <span class="emoji" aria-hidden="true">✏️</span>
       <span>
         <span class="name">てんつなぎ とっくん</span>
@@ -297,7 +434,7 @@
       </span>
     </a>
 
-    <a class="card" href="tsumiki-game/" style="--accent:#b4791f; --tint:#f9efdd;">
+    <a class="card" href="tsumiki-game/" data-keywords="つみき かぞえる ずけい かず" style="--accent:#b4791f; --tint:#f9efdd;">
       <span class="emoji" aria-hidden="true">🧱</span>
       <span>
         <span class="name">つみきは いくつ？</span>
@@ -305,7 +442,7 @@
       </span>
     </a>
 
-    <a class="card" href="tokyu-sugoroku-game/" style="--accent:#cf2b3d; --tint:#fbe7e9;">
+    <a class="card" href="tokyu-sugoroku-game/" data-keywords="とうきゅう すごろく えき でんしゃ しぶや しんよこはま" style="--accent:#cf2b3d; --tint:#fbe7e9;">
       <span class="emoji" aria-hidden="true">🚉</span>
       <span>
         <span class="name">東急線すごろく</span>
@@ -313,7 +450,7 @@
       </span>
     </a>
 
-    <a class="card" href="nihon-chiri-tanken/" style="--accent:#1f7a5c; --tint:#e3f3ec;">
+    <a class="card" href="nihon-chiri-tanken/" data-keywords="ちり にほん けん けんちょう ちけい めいさん ちず" style="--accent:#1f7a5c; --tint:#e3f3ec;">
       <span class="emoji" aria-hidden="true">🏔️</span>
       <span>
         <span class="name">日本地理たんけん</span>
@@ -321,7 +458,7 @@
       </span>
     </a>
 
-    <a class="card" href="horihori-nippon/" style="--accent:#8a5a2b; --tint:#f5e8d4;">
+    <a class="card" href="horihori-nippon/" data-keywords="ちり にっぽん めいさん ちけい きこう" style="--accent:#8a5a2b; --tint:#f5e8d4;">
       <span class="emoji" aria-hidden="true">⛏️</span>
       <span>
         <span class="name">ほりほり にっぽん</span>
@@ -329,7 +466,7 @@
       </span>
     </a>
 
-    <a class="card" href="kokki-tanken/" style="--accent:#d2464b; --tint:#fbe3e2;">
+    <a class="card" href="kokki-tanken/" data-keywords="こっき はた せかい くに たいりく" style="--accent:#d2464b; --tint:#fbe3e2;">
       <span class="emoji" aria-hidden="true">🚩</span>
       <span>
         <span class="name">こっき たんけん</span>
@@ -337,7 +474,7 @@
       </span>
     </a>
 
-    <a class="card" href="weather-lab/" style="--accent:#2f8fd0; --tint:#e4f2fb;">
+    <a class="card" href="weather-lab/" data-keywords="てんき あめ せかい にほん ちず" style="--accent:#2f8fd0; --tint:#e4f2fb;">
       <span class="emoji" aria-hidden="true">🌤️</span>
       <span>
         <span class="name">あしたの天気やさん</span>
@@ -345,7 +482,7 @@
       </span>
     </a>
 
-    <a class="card" href="kanji-tamago/" style="--accent:#f4832a; --tint:#fdeadb;">
+    <a class="card" href="kanji-tamago/" data-keywords="かんじ たまご もんすたー" style="--accent:#f4832a; --tint:#fdeadb;">
       <span class="emoji" aria-hidden="true">🥚</span>
       <span>
         <span class="name">かんじタマゴ</span>
@@ -353,7 +490,7 @@
       </span>
     </a>
 
-    <a class="card" href="kanji-card/" style="--accent:#0b78be; --tint:#e4f1fa;">
+    <a class="card" href="kanji-card/" data-keywords="かんじ かーど いちねんせい 1ねんせい えき すたんぷ" style="--accent:#0b78be; --tint:#e4f1fa;">
       <span class="emoji" aria-hidden="true">🎴</span>
       <span>
         <span class="name">かんじカード 1ねんせい</span>
@@ -361,7 +498,7 @@
       </span>
     </a>
 
-    <a class="card" href="kanji-monster/" style="--accent:#2c8a63; --tint:#e2f3ea;">
+    <a class="card" href="kanji-monster/" data-keywords="かんじ もんすたー ずかん いきもの" style="--accent:#2c8a63; --tint:#e2f3ea;">
       <span class="emoji" aria-hidden="true">🐉</span>
       <span>
         <span class="name">かんじモンスター ずかん</span>
@@ -369,7 +506,7 @@
       </span>
     </a>
 
-    <a class="card" href="eki-no-aida/" style="--accent:#3f51b5; --tint:#e9ebfa;">
+    <a class="card" href="eki-no-aida/" data-keywords="えき ぶるーらいん でんしゃ くいず ちかてつ" style="--accent:#3f51b5; --tint:#e9ebfa;">
       <span class="emoji" aria-hidden="true">🚇</span>
       <span>
         <span class="name">えきと えきの あいだ</span>
@@ -377,7 +514,7 @@
       </span>
     </a>
 
-    <a class="card" href="nyoko-shinyokohama/" style="--accent:#4a9a2c; --tint:#eaf8df;">
+    <a class="card" href="nyoko-shinyokohama/" data-keywords="にょこ いもむし むし えき すたんぷ ふみきり" style="--accent:#4a9a2c; --tint:#eaf8df;">
       <span class="emoji" aria-hidden="true">🐛</span>
       <span>
         <span class="name">にょこにょこ えきめぐり</span>
@@ -385,7 +522,7 @@
       </span>
     </a>
 
-    <a class="card" href="karuta-harai/" style="--accent:#b8322a; --tint:#f7f1d9;">
+    <a class="card" href="karuta-harai/" data-keywords="かるた ひゃくにんいっしゅ うた" style="--accent:#b8322a; --tint:#f7f1d9;">
       <span class="emoji" aria-hidden="true">🎴</span>
       <span>
         <span class="name">かるた はらい</span>
@@ -393,7 +530,7 @@
       </span>
     </a>
 
-    <a class="card" href="rhythm-tashizan/" style="--accent:#7b4fd6; --tint:#f0e9fd;">
+    <a class="card" href="rhythm-tashizan/" data-keywords="たしざん りずむ たいこ うた けいさん おんがく" style="--accent:#7b4fd6; --tint:#f0e9fd;">
       <span class="emoji" aria-hidden="true">🥁</span>
       <span>
         <span class="name">リズムで たしざん</span>
@@ -401,7 +538,7 @@
       </span>
     </a>
 
-    <a class="card" href="waratte-imohori/" style="--accent:#a3407c; --tint:#fbe9f2;">
+    <a class="card" href="waratte-imohori/" data-keywords="いも いもほり けいさん かんじ なぞなぞ" style="--accent:#a3407c; --tint:#fbe9f2;">
       <span class="emoji" aria-hidden="true">🍠</span>
       <span>
         <span class="name">わらって いもほり</span>
@@ -409,7 +546,7 @@
       </span>
     </a>
 
-    <a class="card" href="manabi-densha/" style="--accent:#0b78be; --tint:#e8f3fb;">
+    <a class="card" href="manabi-densha/" data-keywords="でんしゃ えき すたんぷ かず ことば べんきょう" style="--accent:#0b78be; --tint:#e8f3fb;">
       <span class="emoji" aria-hidden="true">🚃</span>
       <span>
         <span class="name">まなび でんしゃ</span>
@@ -417,7 +554,7 @@
       </span>
     </a>
 
-    <a class="card" href="zukei-lab/" style="--accent:#3b6fd8; --tint:#e8f0ff;">
+    <a class="card" href="zukei-lab/" data-keywords="ずけい かたち りったい かくど" style="--accent:#3b6fd8; --tint:#e8f0ff;">
       <span class="emoji" aria-hidden="true">🔷</span>
       <span>
         <span class="name">さわって ずけい ラボ</span>
@@ -425,7 +562,7 @@
       </span>
     </a>
 
-    <a class="card" href="ekimae-omise/" style="--accent:#d9572b; --tint:#fdeee4;">
+    <a class="card" href="ekimae-omise/" data-keywords="おみせ かいもの おかね おつり えき" style="--accent:#d9572b; --tint:#fdeee4;">
       <span class="emoji" aria-hidden="true">🍱</span>
       <span>
         <span class="name">えきまえ おみせやさん</span>
@@ -433,7 +570,7 @@
       </span>
     </a>
 
-    <a class="card" href="shaso-tanken/" style="--accent:#d7261e; --tint:#fdeceb;">
+    <a class="card" href="shaso-tanken/" data-keywords="しゃそう びんご でんしゃ まど ずかん" style="--accent:#d7261e; --tint:#fdeceb;">
       <span class="emoji" aria-hidden="true">🪟</span>
       <span>
         <span class="name">しゃそう たんけん ビンゴ</span>
@@ -441,7 +578,7 @@
       </span>
     </a>
 
-    <a class="card" href="nyoko-race/" style="--accent:#3f9a2b; --tint:#e8f7dc;">
+    <a class="card" href="nyoko-race/" data-keywords="にょこ れーす かけっこ いも" style="--accent:#3f9a2b; --tint:#e8f7dc;">
       <span class="emoji" aria-hidden="true">🏁</span>
       <span>
         <span class="name">にょこすけ レース</span>
@@ -449,7 +586,7 @@
       </span>
     </a>
 
-    <a class="card" href="nyoko-shooting/" style="--accent:#d9480f; --tint:#fff0e0;">
+    <a class="card" href="nyoko-shooting/" data-keywords="にょこ しゅーてぃんぐ むし せみ とんぼ かまきり くわがた" style="--accent:#d9480f; --tint:#fff0e0;">
       <span class="emoji" aria-hidden="true">🐛</span>
       <span>
         <span class="name">にょこすけ シューティング</span>
@@ -457,7 +594,7 @@
       </span>
     </a>
 
-    <a class="card" href="eki-song/" style="--accent:#ff5fa2; --tint:#ffe6f2;">
+    <a class="card" href="eki-song/" data-keywords="うた えき れーな しんかんせん かんじ とどうふけん" style="--accent:#ff5fa2; --tint:#ffe6f2;">
       <span class="emoji" aria-hidden="true">🎤</span>
       <span>
         <span class="name">レーナの えきめいソング</span>
@@ -465,7 +602,7 @@
       </span>
     </a>
 
-    <a class="card" href="eki-uta/" style="--accent:#e6a23a; --tint:#fff4cf;">
+    <a class="card" href="eki-uta/" data-keywords="うた えき きっぷ ぷっぴ でんしゃ" style="--accent:#e6a23a; --tint:#fff4cf;">
       <span class="emoji" aria-hidden="true">🎫</span>
       <span>
         <span class="name">ぷっぴの えきうた</span>
@@ -473,7 +610,7 @@
       </span>
     </a>
 
-    <a class="card" href="tadataka-talk/" style="--accent:#2f6b4f; --tint:#e3f1e6;">
+    <a class="card" href="tadataka-talk/" data-keywords="ちり はかせ おしゃべり にっぽん めいさん" style="--accent:#2f6b4f; --tint:#e3f1e6;">
       <span class="emoji" aria-hidden="true">🧭</span>
       <span>
         <span class="name">ちりはかせ ただたか</span>
@@ -481,7 +618,7 @@
       </span>
     </a>
 
-    <a class="card" href="senro-tsukuro/" style="--accent:#2f7fe0; --tint:#e6f0fd;">
+    <a class="card" href="senro-tsukuro/" data-keywords="せんろ でんしゃ つくる とんねる" style="--accent:#2f7fe0; --tint:#e6f0fd;">
       <span class="emoji" aria-hidden="true">🛤️</span>
       <span>
         <span class="name">せんろ つくろう！</span>
@@ -489,7 +626,7 @@
       </span>
     </a>
 
-    <a class="card" href="custa-asobo/" style="--accent:#d9952b; --tint:#fff6d6;">
+    <a class="card" href="custa-asobo/" data-keywords="ぷりん かすた おしゃべり みにげーむ おしゃれ" style="--accent:#d9952b; --tint:#fff6d6;">
       <span class="emoji" aria-hidden="true">🍮</span>
       <span>
         <span class="name">カスタと あそぼ</span>
@@ -497,7 +634,7 @@
       </span>
     </a>
 
-    <a class="card" href="heimen-pattern/" style="--accent:#2a6fdb; --tint:#e6efff;">
+    <a class="card" href="heimen-pattern/" data-keywords="ずけい さんすう じゅけん めんせき かくど" style="--accent:#2a6fdb; --tint:#e6efff;">
       <span class="emoji" aria-hidden="true">📐</span>
       <span>
         <span class="name">へいめんずけい かいほう40</span>
@@ -505,7 +642,7 @@
       </span>
     </a>
 
-    <a class="card" href="ofuro-yasan/" style="--accent:#e8553e; --tint:#ffe9e3;">
+    <a class="card" href="ofuro-yasan/" data-keywords="おふろ せんとう えき でんしゃ すたんぷ" style="--accent:#e8553e; --tint:#ffe9e3;">
       <span class="emoji" aria-hidden="true">♨️</span>
       <span>
         <span class="name">でんしゃで おふろやさん</span>
@@ -513,7 +650,7 @@
       </span>
     </a>
 
-    <a class="card" href="fumikiri-zukan/" style="--accent:#e0a800; --tint:#fff3c4;">
+    <a class="card" href="fumikiri-zukan/" data-keywords="ふみきり でんしゃ ずかん かんかん うちゅう" style="--accent:#e0a800; --tint:#fff3c4;">
       <span class="emoji" aria-hidden="true">🚧</span>
       <span>
         <span class="name">ふみきり ずかん</span>
@@ -528,6 +665,212 @@
     おうちの方へ: 音が出ます。端末の音量をご確認ください。
   </footer>
 
+  <div class="empty" id="empty" hidden>
+    <span aria-hidden="true">🙈</span> みつからなかったよ<br>
+    べつの ことばで さがしてみてね<br>
+    <button type="button" id="showAll">ぜんぶ みる</button>
+  </div>
+
 </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var input   = document.getElementById("q");
+  var clear   = document.getElementById("clear");
+  var mic     = document.getElementById("mic");
+  var msg     = document.getElementById("msg");
+  var empty   = document.getElementById("empty");
+  var showAll = document.getElementById("showAll");
+  var cards   = Array.prototype.slice.call(document.querySelectorAll(".menu .card"));
+
+  // こえで さがすと かんじで かえってくることが おおいので、よみに なおす
+  var YOMI = {
+    "電車": "でんしゃ", "新幹線": "しんかんせん", "地下鉄": "ちかてつ", "線路": "せんろ",
+    "踏切": "ふみきり", "踏み切り": "ふみきり", "駅名": "えきめい", "駅": "えき",
+    "車掌": "しゃしょう", "車窓": "しゃそう", "路線図": "ろせんず", "路線": "ろせん",
+    "切符": "きっぷ", "東急": "とうきゅう", "渋谷": "しぶや", "新横浜": "しんよこはま",
+    "横浜": "よこはま", "漢字": "かんじ", "足し算": "たしざん", "足算": "たしざん",
+    "引き算": "ひきざん", "計算": "けいさん", "算数": "さんすう", "数": "かず",
+    "図形": "ずけい", "平面": "へいめん", "立体": "りったい", "角度": "かくど", "面積": "めんせき",
+    "積み木": "つみき", "積木": "つみき", "点": "てん", "形": "かたち",
+    "国旗": "こっき", "旗": "はた", "世界": "せかい", "国": "くに", "大陸": "たいりく",
+    "天気": "てんき", "雨": "あめ", "地図": "ちず", "地理": "ちり", "地形": "ちけい",
+    "名産": "めいさん", "都道府県": "とどうふけん", "県庁": "けんちょう", "県": "けん",
+    "日本一周": "にほんいっしゅう", "日本": "にほん", "双六": "すごろく", "旅": "たび",
+    "地球": "ちきゅう", "太陽": "たいよう", "宇宙": "うちゅう", "昼": "ひる", "夜": "よる",
+    "英語": "えいご", "言葉": "ことば", "歌": "うた", "絵本": "えほん", "本": "ほん",
+    "星": "ほし", "話": "はなし", "声": "こえ", "猫": "ねこ", "動物": "どうぶつ",
+    "蝉": "せみ", "虫": "むし", "芋掘り": "いもほり", "芋": "いも", "卵": "たまご",
+    "百人一首": "ひゃくにんいっしゅ", "図鑑": "ずかん", "探検": "たんけん",
+    "お店": "おみせ", "店": "みせ", "買い物": "かいもの", "お金": "おかね", "お釣り": "おつり",
+    "お風呂": "おふろ", "風呂": "ふろ", "銭湯": "せんとう", "温泉": "おんせん",
+    "勉強": "べんきょう", "受験": "じゅけん", "一年生": "いちねんせい", "1年生": "1ねんせい",
+    "太鼓": "たいこ", "音楽": "おんがく", "競争": "きょうそう", "博士": "はかせ"
+  };
+  var yomiRe = new RegExp(Object.keys(YOMI).sort(function (a, b) {
+    return b.length - a.length;
+  }).join("|"), "g");
+
+  // ひらがな・はんかく・こもじに そろえて、くうはくや きごうを とる
+  function norm(s) {
+    s = String(s || "");
+    if (s.normalize) s = s.normalize("NFKC");
+    s = s.replace(yomiRe, function (w) { return YOMI[w]; });
+    s = s.replace(/[ァ-ヶ]/g, function (c) {
+      return String.fromCharCode(c.charCodeAt(0) - 0x60);
+    });
+    return s.toLowerCase().replace(/[\s・、。，．,.!?！？「」『』（）()〜~ｰ]/g, "");
+  }
+
+  var items = cards.map(function (card) {
+    var name = card.querySelector(".name").textContent;
+    var desc = card.querySelector(".desc").textContent;
+    var kws  = (card.getAttribute("data-keywords") || "").split(/\s+/);
+    // なまえの ことばも キーワードに する（「かるた はらい」→「かるた」「はらい」）
+    name.split(/[\s　]+/).forEach(function (w) { kws.push(w); });
+    var slug = card.getAttribute("href").replace(/\/$/, "");
+    kws = kws.map(norm).filter(function (w) { return w.length >= 2; });
+    return {
+      card: card,
+      text: norm(name + desc + kws.join("")) + slug.replace(/-/g, ""),
+      kws:  kws
+    };
+  });
+
+  function score(item, q) {
+    var words = q.split(/\s+/).map(norm).filter(Boolean);
+    var total = 0;
+    words.forEach(function (w) {
+      if (item.text.indexOf(w) >= 0) total += 10 + w.length;
+      // 「でんしゃの ゲームが したい」の なかに キーワードが あれば あたり
+      item.kws.forEach(function (k) {
+        if (w !== k && w.indexOf(k) >= 0) total += k.length;
+      });
+    });
+    return total;
+  }
+
+  function search(q) {
+    q = (q || "").trim();
+    clear.hidden = !q;
+    if (!q) {
+      items.forEach(function (it) { it.card.hidden = false; it.card.style.order = ""; });
+      empty.hidden = true;
+      return 0;
+    }
+    var hits = 0;
+    items.forEach(function (it) {
+      var s = score(it, q);
+      it.card.hidden = s === 0;
+      it.card.style.order = s ? String(-s) : "";
+      if (s) hits++;
+    });
+    empty.hidden = hits > 0;
+    return hits;
+  }
+
+  function run(q, prefix) {
+    var hits = search(q);
+    if (!q.trim()) { msg.textContent = ""; return hits; }
+    msg.textContent = (prefix || "") + (hits ? hits + "こ みつかったよ" : "");
+    return hits;
+  }
+
+  input.addEventListener("input", function () { run(input.value); });
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { reset(); }
+    if (e.key === "Enter") { input.blur(); }
+  });
+
+  function reset() {
+    input.value = "";
+    run("");
+  }
+
+  clear.addEventListener("click", function () { reset(); input.focus(); });
+  showAll.addEventListener("click", function () { reset(); });
+
+  // ---- こえで さがす（つかえる ブラウザだけ 🎤 を だす） ----
+  var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return;
+  mic.hidden = false;
+
+  var rec = null;
+  var heard = "";
+
+  function stopUI() {
+    mic.classList.remove("listening");
+    mic.setAttribute("aria-label", "こえで さがす");
+    mic.textContent = "🎤";
+  }
+
+  mic.addEventListener("click", function () {
+    if (rec) { rec.stop(); return; }
+    try {
+      rec = new SR();
+    } catch (e) {
+      msg.textContent = "こえで さがすのは つかえないみたい";
+      return;
+    }
+    rec.lang = "ja-JP";
+    rec.interimResults = true;
+    rec.maxAlternatives = 3;
+    heard = "";
+
+    rec.onstart = function () {
+      mic.classList.add("listening");
+      mic.setAttribute("aria-label", "とめる");
+      mic.textContent = "👂";
+      msg.textContent = "きいてるよ… さがしたい ものを いってね";
+    };
+
+    rec.onresult = function (e) {
+      var r = e.results[e.results.length - 1];
+      var best = r[0].transcript;
+      if (r.isFinal) {
+        // ききとりの こうほの なかで、いちばん たくさん みつかる ものを つかう
+        var bestHits = -1;
+        for (var i = 0; i < r.length; i++) {
+          var t = r[i].transcript;
+          var n = 0;
+          items.forEach(function (it) { if (score(it, t)) n++; });
+          if (n > bestHits) { bestHits = n; best = t; }
+        }
+      }
+      heard = best.trim();
+      input.value = heard;
+      run(heard);
+    };
+
+    rec.onerror = function (e) {
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        msg.textContent = "マイクが つかえないよ。おうちの ひとに きいてみてね";
+      } else if (e.error === "no-speech") {
+        msg.textContent = "きこえなかったよ。もういちど 🎤 を おしてね";
+      } else if (e.error !== "aborted") {
+        msg.textContent = "うまく きけなかったよ。もういちど おしてね";
+      }
+      heard = "";
+    };
+
+    rec.onend = function () {
+      rec = null;
+      stopUI();
+      if (heard) run(heard, "「" + heard + "」で さがしたよ。");
+      else if (msg.textContent.indexOf("きいてるよ") === 0) msg.textContent = "";
+    };
+
+    try {
+      rec.start();
+    } catch (e) {
+      rec = null;
+      stopUI();
+      msg.textContent = "うまく きけなかったよ。もういちど おしてね";
+    }
+  });
+})();
+</script>
 </body>
 </html>
