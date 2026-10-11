@@ -5,6 +5,7 @@
  *  #/          … ホーム（なかまを えらぶ）
  *  #/g/<id>    … なかまの ページ（しゅるい いちらん・からだ・いっしょう）
  *  #/b/<id>    … しゅるいの ページ（え・データ・なきごえ・みつけた！）
+ *  #/t/<id>    … その むしと おしゃべり
  *  #/quiz      … むしクイズ（10もん）
  */
 
@@ -16,10 +17,11 @@
   /* ------------------------------ ほぞん ------------------------------ */
 
   const KEY = 'mushi-zukan-v1';
-  let save = { found: {}, best: 0, sound: true };
+  let save = { found: {}, best: 0, sound: true, friend: {} };
   try {
     const s = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (s && typeof s === 'object') save = Object.assign(save, s);
+    if (!save.friend || typeof save.friend !== 'object') save.friend = {};
   } catch (e) { /* よめなくても あそべる */ }
 
   function store() {
@@ -60,6 +62,7 @@
   soundBtn.addEventListener('click', () => {
     save.sound = !save.sound;
     MushiAudio.setOn(save.sound);
+    if (!save.sound) stopSpeak();
     MushiAudio.se('tap');
     paintSound();
     store();
@@ -71,6 +74,8 @@
     if (h.startsWith('#/b/')) {
       const b = bugOf(h.slice(4));
       location.hash = b ? '#/g/' + b.group : '#/';
+    } else if (h.startsWith('#/t/')) {
+      location.hash = '#/b/' + h.slice(4);
     } else {
       location.hash = '#/';
     }
@@ -113,6 +118,14 @@
           </span>
         </a>
       </section>
+      <h2 class="sec">💬 むしと おはなし</h2>
+      <section class="friends">
+        ${BUGS.map((b) => `<a class="friend" href="#/t/${b.id}" style="--accent:${groupOf(b.group).color};--tint:${groupOf(b.group).tint}">
+          <span class="friend-art">${BugArt.svg(b)}</span>
+          <span class="friend-nick">${esc(CHARAS[b.id].nick)}</span>
+          <span class="friend-name">${esc(b.name)}</span>
+        </a>`).join('')}
+      </section>
       <section class="tip" style="--accent:${groupOf(pick.group).color}">
         <h2>💡 きょうの まめちしき</h2>
         <p><a href="#/b/${pick.id}">${esc(pick.name)}</a> … ${rb(pick.trivia)}</p>
@@ -137,6 +150,7 @@
       <section class="bug-grid">
         ${list.map((b) => `<a class="bug-card${save.found[b.id] ? ' is-found' : ''}" href="#/b/${b.id}" style="--accent:${g.color};--tint:${g.tint}">
           <span class="bug-art">${BugArt.svg(b)}</span>
+          <span class="bug-nick">「${esc(CHARAS[b.id].nick)}」</span>
           <span class="bug-name">${esc(b.name)}</span>
           <span class="bug-size">${cm(b.size[0])}〜${cm(b.size[1])}cm</span>
           ${save.found[b.id] ? '<span class="badge" aria-label="みつけた">🖐</span>' : ''}
@@ -183,15 +197,21 @@
     app.innerHTML =
       `<article class="detail" style="--accent:${g.color};--tint:${g.tint}">
         <div class="detail-top">
-          <div class="detail-art">${BugArt.svg(b)}</div>
+          <div class="detail-art">${BugArt.svg(b, { marks: true })}</div>
           <div class="detail-head">
             <p class="detail-group">${esc(g.name)}の なかま</p>
             <h1>${esc(b.name)}</h1>
+            <p class="detail-nick">あいしょう「<b>${esc(CHARAS[b.id].nick)}</b>」 … ${rb(CHARAS[b.id].who)}</p>
             <button class="stamp${found ? ' on' : ''}" id="stamp" aria-pressed="${found}">
               <span aria-hidden="true">🖐</span> ${found ? 'みつけた！' : 'みつけたら タップ'}
             </button>
+            <a class="talk-btn" href="#/t/${b.id}"><span aria-hidden="true">💬</span> ${esc(CHARAS[b.id].nick)}と おはなし</a>
           </div>
         </div>
+        <section class="marks">
+          <h2>🔍 ここが めじるし！</h2>
+          <ol>${b.marks.map((m) => `<li>${rb(m.t)}</li>`).join('')}</ol>
+        </section>
         ${b.song ? `<div class="song">
           <button class="song-btn" id="song" ${save.sound ? '' : 'disabled'}><span aria-hidden="true">▶</span> なきごえを きく</button>
           <p class="song-text">「${esc(b.songText)}」</p>
@@ -376,15 +396,181 @@
     document.getElementById('again').addEventListener('click', () => { MushiAudio.se('tap'); startQuiz(); });
   }
 
+  /* ----------------------------- おしゃべり ----------------------------- */
+
+  // よみあげ（ブラウザの 音声合成。音声ファイルは つかわない）
+  let jaVoice = null;
+  function pickVoice() {
+    if (!('speechSynthesis' in window)) return;
+    const vs = window.speechSynthesis.getVoices().filter((v) => /^ja/i.test(v.lang));
+    jaVoice = vs.find((v) => /kyoko|otoya|google|nanami|haruka/i.test(v.name)) || vs[0] || null;
+  }
+  if ('speechSynthesis' in window) {
+    pickVoice();
+    window.speechSynthesis.onvoiceschanged = pickVoice;
+  }
+  function speak(text, v) {
+    if (!save.sound || !('speechSynthesis' in window)) return;
+    try {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(MushiTalk.plain(text).replace(/[♪]/g, ''));
+      u.lang = 'ja-JP';
+      if (jaVoice) u.voice = jaVoice;
+      u.pitch = v.pitch;
+      u.rate = v.rate;
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* よみあげ できなくても つづける */ }
+  }
+  function stopSpeak() {
+    try { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); } catch (e) { /* なにもしない */ }
+  }
+
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  let rec = null;
+
+  function talk(b) {
+    const c = CHARAS[b.id];
+    const g = groupOf(b.group);
+    const asked = new Set();
+    app.innerHTML =
+      `<section class="chat" style="--accent:${g.color};--tint:${g.tint}">
+        <div class="chat-head">
+          <a class="chat-avatar" href="#/b/${b.id}" aria-label="${esc(b.name)}の ずかん">${BugArt.svg(b)}</a>
+          <div>
+            <h1>${esc(c.nick)}</h1>
+            <p>${esc(b.name)} ・ ${rb(c.who)}</p>
+            <p class="hearts" id="hearts"></p>
+          </div>
+        </div>
+        <div class="log" id="log" aria-live="polite"></div>
+        <div class="dock">
+        <div class="chips" id="chips"></div>
+        <form class="say" id="say" autocomplete="off">
+          ${Recognition ? '<button type="button" class="mic" id="mic" aria-label="こえで はなす">🎤</button>' : ''}
+          <input id="msg" type="text" placeholder="${esc(c.nick)}に はなしかけよう" aria-label="はなしかける ことば" enterkeyhint="send">
+          <button type="submit" class="send">おくる</button>
+        </form>
+        </div>
+      </section>`;
+    const log = document.getElementById('log');
+    const chips = document.getElementById('chips');
+    const msg = document.getElementById('msg');
+
+    function paintHearts() {
+      const n = Math.min(10, save.friend[b.id] || 0);
+      document.getElementById('hearts').innerHTML =
+        `なかよし ${'❤️'.repeat(Math.ceil(n / 2))}${'🤍'.repeat(5 - Math.ceil(n / 2))}`;
+    }
+
+    function bubble(who, html) {
+      const d = document.createElement('div');
+      d.className = 'bubble ' + who;
+      d.innerHTML = who === 'bug'
+        ? `<span class="b-avatar">${BugArt.svg(b)}</span><p>${html}</p>`
+        : `<p>${html}</p>`;
+      log.appendChild(d);
+      d.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      return d;
+    }
+
+    function bugSays(r) {
+      const d = bubble('bug', rb(r.text));
+      if (r.song) {
+        const btn = document.createElement('button');
+        btn.className = 'song-btn small';
+        btn.innerHTML = '<span aria-hidden="true">▶</span> もういちど きく';
+        btn.disabled = !save.sound;
+        btn.addEventListener('click', () => toggleSong(btn, r.song));
+        d.querySelector('p').appendChild(btn);
+        // しゃべり おわってから なく
+        stopSpeak();
+        speak(r.text.split('。')[0] + '。', c.voice);
+        setTimeout(() => toggleSong(btn, r.song), 1400);
+      } else {
+        speak(r.text, c.voice);
+      }
+      if (r.goto) {
+        const a = document.createElement('a');
+        a.className = 'goto';
+        a.href = '#/t/' + r.goto;
+        a.textContent = `💬 ${CHARAS[r.goto].nick}と はなす`;
+        d.querySelector('p').appendChild(a);
+      }
+    }
+
+    function paintChips() {
+      chips.innerHTML = MushiTalk.chips(b, asked)
+        .map(([k, label]) => `<button type="button" class="chip" data-k="${k}">${rb(label)}</button>`).join('');
+      chips.querySelectorAll('.chip').forEach((btn) => btn.addEventListener('click', () => {
+        MushiAudio.se('tap');
+        send(MushiTalk.plain(btn.textContent));
+      }));
+    }
+
+    function send(text) {
+      text = String(text).trim();
+      if (!text) return;
+      MushiAudio.stopSong();
+      bubble('me', esc(text));
+      const r = MushiTalk.reply(b, text);
+      if (r.intent) asked.add(r.intent);
+      const before = save.friend[b.id] || 0;
+      save.friend[b.id] = Math.min(10, before + 1);
+      store();
+      setTimeout(() => {
+        bugSays(r);
+        if (before < 10 && save.friend[b.id] === 10) {
+          setTimeout(() => {
+            bubble('bug', rb(`${c.nick}と だいの なかよしに なったよ！ ❤️`)).classList.add('special');
+            MushiAudio.se('fanfare');
+          }, 700);
+        }
+        paintHearts();
+        paintChips();
+      }, 450);
+    }
+
+    document.getElementById('say').addEventListener('submit', (e) => {
+      e.preventDefault();
+      send(msg.value);
+      msg.value = '';
+    });
+
+    const mic = document.getElementById('mic');
+    if (mic) {
+      mic.addEventListener('click', () => {
+        if (rec) { rec.abort(); return; }
+        try {
+          rec = new Recognition();
+          rec.lang = 'ja-JP';
+          rec.interimResults = false;
+          rec.onresult = (e) => { send(e.results[0][0].transcript); };
+          rec.onend = () => { rec = null; mic.classList.remove('on'); };
+          rec.onerror = () => { rec = null; mic.classList.remove('on'); };
+          stopSpeak();
+          rec.start();
+          mic.classList.add('on');
+        } catch (e) { rec = null; mic.classList.remove('on'); }
+      });
+    }
+
+    paintHearts();
+    paintChips();
+    setTimeout(() => bugSays(MushiTalk.hello(b)), 250);
+  }
+
   /* ------------------------------ ルーター ------------------------------ */
 
   function route() {
     MushiAudio.stopSong();
+    stopSpeak();
+    if (rec) rec.abort();
     const h = location.hash || '#/';
     let m;
     backBtn.hidden = h === '#/' || h === '';
     if ((m = h.match(/^#\/g\/(\w+)/)) && groupOf(m[1])) group(groupOf(m[1]));
     else if ((m = h.match(/^#\/b\/(\w+)/)) && bugOf(m[1])) bug(bugOf(m[1]));
+    else if ((m = h.match(/^#\/t\/(\w+)/)) && bugOf(m[1])) talk(bugOf(m[1]));
     else if (h === '#/quiz') startQuiz();
     else { backBtn.hidden = true; home(); }
     window.scrollTo(0, 0);

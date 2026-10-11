@@ -76,7 +76,11 @@ const BUGS = [
       '{日本|にっぽん}じゅうで よく みかける、いちばん みぢかな セミの ひとつ。',
     ],
     trivia: 'なきごえが {油|あぶら}で あげものを する ときの「ジリジリ」と いう {音|おと}に にて いるから、この {名前|なまえ}に なったと いわれて いるよ。',
-    art: { kind: 'semi', body: '#3a2a1c', mark: '#8a6a3a', eye: '#5a3a22', wing: '#6b4a2b', wingOp: 0.94, vein: '#2e1e10', w: 1 },
+    art: { kind: 'semi', type: 'abura', base: '#2a1d14', light: '#5e4430', pat: '#8a6234', collar: '#7a5530', cross: '#6a4a2a', eye: '#5a3a20', wingType: 'opaque', wing: '#7a4a26', wingDark: '#4a2812', vein: '#2a160a', basal: '#3a2414' },
+    marks: [
+      { x: 74, y: 236, px: 54, py: 300, t: 'はねが {茶色|ちゃいろ}で、むこうが すけて みえない' },
+      { x: 150, y: 128, px: 248, py: 124, t: 'からだは こい {茶色|ちゃいろ}〜{黒|くろ}。むねの ふちが {茶色|ちゃいろ}っぽい' },
+    ],
   },
   {
     id: 'minmin',
@@ -93,7 +97,12 @@ const BUGS = [
       'おもに {昼|ひる}まに、{名前|なまえ}の とおり「ミンミン」と なく。',
     ],
     trivia: 'ないて いる ときは おなかを のばしたり ちぢめたり して、{音|おと}の {高|たか}さを かえて いるよ。',
-    art: { kind: 'semi', body: '#24302a', mark: '#6fae4a', eye: '#6f9a52', wing: '#e4f4f2', wingOp: 0.45, vein: '#3e5a34', w: 1.02 },
+    art: { kind: 'semi', type: 'minmin', base: '#141618', light: '#3a4038', pat: '#5fb050', collar: '#5fb050', cross: '#5fb050', eye: '#8a9a62', wingType: 'clear', wing: '#e8f6f2', wingDark: '#9ab0a0', vein: '#2c4a26', basal: '#6aa84f' },
+    marks: [
+      { x: 128, y: 88, px: 60, py: 96, t: 'むねに あざやかな {緑|みどり}の もよう' },
+      { x: 76, y: 250, px: 54, py: 306, t: 'はねは すきとおって いて、みゃくは {緑|みどり}〜{黒|くろ}' },
+      { x: 150, y: 274, px: 246, py: 300, t: 'おなかの 先が {白|しろ}っぽい（こなが ついて いる）' },
+    ],
   },
   {
     id: 'niinii',
@@ -110,7 +119,11 @@ const BUGS = [
       '{夏|なつ}の はじめ、いちばん はやく なきはじめる セミの ひとつ。',
     ],
     trivia: 'ぬけがらは {小|ちい}さくて まるく、{泥|どろ}が ついて いるのが めじるし。{木|き}の {低|ひく}い ところで みつかるよ。',
-    art: { kind: 'semi', body: '#5b5040', mark: '#a08f6a', eye: '#6b5a40', wing: '#ddd1b4', wingOp: 0.72, vein: '#5b4a32', w: 1.08, mottled: true },
+    art: { kind: 'semi', type: 'niinii', base: '#4a4436', light: '#7a7460', pat: '#a3a882', collar: '#aaa888', cross: '#b0ae90', eye: '#5a5040', wingType: 'mottled', wing: '#d8ccb0', wingDark: '#6a5638', vein: '#4a3c28', basal: '#7a6a4a', w: 1.12, l: 0.88 },
+    marks: [
+      { x: 78, y: 230, px: 52, py: 282, t: 'はねに {茶色|ちゃいろ}の まだらもよう。{木|き}の かわに そっくり' },
+      { x: 150, y: 120, px: 248, py: 118, t: 'からだが {小|ちい}さくて はばひろい。{灰色|はいいろ}っぽい {緑|みどり}' },
+    ],
   },
   {
     id: 'tsukutsuku',
@@ -127,7 +140,11 @@ const BUGS = [
       '{夏|なつ}の おわりから {秋|あき}の はじめに よく なく。',
     ],
     trivia: 'とちゅうで なきかたが かわる、ながくて ふくざつな うたを うたうよ。ツクツクボウシが なきだすと、{夏休|なつやす}みも そろそろ おわり。',
-    art: { kind: 'semi', body: '#26302a', mark: '#86b866', eye: '#7a9a5a', wing: '#e6f5f2', wingOp: 0.42, vein: '#3a5232', w: 0.86 },
+    art: { kind: 'semi', type: 'tsukutsuku', base: '#121614', light: '#323a34', pat: '#7cc05a', collar: '#6aa84a', cross: '#7cc05a', eye: '#5a6a4a', wingType: 'clear', wing: '#e8f6f2', wingDark: '#9ab0a0', vein: '#1e2a1c', basal: '#5a8a40', w: 0.84, l: 1.04 },
+    marks: [
+      { x: 136, y: 132, px: 62, py: 120, t: '{黒|くろ}い からだに、{緑|みどり}の ほそい もよう' },
+      { x: 150, y: 250, px: 240, py: 300, t: 'からだが ほっそり。はねが ながい' },
+    ],
   },
   {
     id: 'higurashi',
@@ -144,7 +161,11 @@ const BUGS = [
       'からだは {茶色|ちゃいろ}に {緑|みどり}の もよう。はねは すきとおって いる。',
     ],
     trivia: '「{日|ひ}が くれる」ころに なく ことから ついた {名前|なまえ}。なきごえから「カナカナ」とも よばれるよ。',
-    art: { kind: 'semi', body: '#7a4a24', mark: '#5f9a3e', eye: '#6a8a4a', wing: '#e8f4ee', wingOp: 0.42, vein: '#5a3e22', w: 0.94 },
+    art: { kind: 'semi', type: 'higurashi', base: '#7a3c1a', light: '#a8643a', pat: '#4f9a46', collar: '#a86a34', cross: '#4f9a46', eye: '#6a8a42', wingType: 'clear', wing: '#eef6ee', wingDark: '#a0a890', vein: '#5a3214', basal: '#8a5a2a', w: 0.94, l: 1.04 },
+    marks: [
+      { x: 150, y: 88, px: 60, py: 96, t: '{赤|あか}っぽい {茶色|ちゃいろ}の からだに {緑|みどり}の もよう' },
+      { x: 78, y: 250, px: 54, py: 310, t: 'はねは すきとおって いて、みゃくが {茶色|ちゃいろ}' },
+    ],
   },
   {
     id: 'kuma',
@@ -161,7 +182,12 @@ const BUGS = [
       'からだは {黒|くろ}くて ツヤツヤ。{朝|あさ}に にぎやかに なく。',
     ],
     trivia: '{大阪|おおさか}などの {町|まち}では いちばん {多|おお}い セミ。かれた えだと まちがえて、{電線|でんせん}の ケーブルに たまごを うみつけた ことも あるよ。',
-    art: { kind: 'semi', body: '#151515', mark: '#9a8a58', eye: '#3a3a30', wing: '#e8f6f0', wingOp: 0.42, vein: '#3c6a3a', w: 1.06 },
+    art: { kind: 'semi', type: 'kuma', base: '#0c0c0c', light: '#3a3a3a', pat: '#b08a4a', collar: '#2a2420', cross: '#8a6a3a', eye: '#3a3226', wingType: 'clear', wing: '#eaf6f0', wingDark: '#9ab0a0', vein: '#3a6232', basal: '#4a7a3a', w: 1.08 },
+    marks: [
+      { x: 150, y: 128, px: 248, py: 120, t: 'からだは まっ{黒|くろ}で ツヤツヤ。いちばん {大|おお}きい' },
+      { x: 124, y: 176, px: 56, py: 196, t: 'おなかの つけねに {白|しろ}い こな' },
+      { x: 72, y: 168, px: 54, py: 120, t: 'はねの つけねの みゃくが {緑|みどり}っぽい' },
+    ],
   },
 
   /* ----------------------------- カマキリ ----------------------------- */
@@ -178,7 +204,12 @@ const BUGS = [
       '{前|まえ}あしの つけねの あいだが {黄色|きいろ}。うしろばねを ひろげると {紫|むらさき}っぽい {茶色|ちゃいろ}。',
     ],
     trivia: 'らんのうは ふわふわで ピンポンだまくらい。{中|なか}に 200こ いじょうの たまごが はいって いるよ。',
-    art: { kind: 'kamakiri', body: '#6fae3a', dark: '#3f7a20', wing: '#8cc35a', base: '#f2d24b' },
+    art: { kind: 'kamakiri', body: '#6aa83a', light: '#a8d878', dark: '#2f5e18', wing: '#7cb84a', costa: '#b0dc80', eye: '#c8e8a0', base: '#f2d24b', hindTip: '#6a4a6a' },
+    marks: [
+      { x: 102, y: 88, px: 140, py: 40, t: '{前|まえ}あしの つけねの あいだが {黄色|きいろ}' },
+      { x: 326, y: 124, px: 330, py: 70, t: 'うしろばねは {紫|むらさき}っぽい {茶色|ちゃいろ}（はねの 先から すこし みえる）' },
+      { x: 250, y: 138, px: 222, py: 180, t: 'からだが {大|おお}きくて がっしり' },
+    ],
   },
   {
     id: 'chosen',
@@ -193,7 +224,11 @@ const BUGS = [
       'うしろばねは すきとおった うすい {茶色|ちゃいろ}。',
     ],
     trivia: '「チョウセン」と ついて いるけれど、むかしから {日本|にっぽん}に すんで いる カマキリ。ただ「カマキリ」とも よばれるよ。',
-    art: { kind: 'kamakiri', body: '#7cb342', dark: '#4a7a22', wing: '#9ccc65', base: '#f08a24' },
+    art: { kind: 'kamakiri', body: '#78b042', light: '#b4dc84', dark: '#3a6a1c', wing: '#8cc456', costa: '#c0e090', eye: '#d0ecaa', base: '#f07a1c', hindTip: '#d8c49a' },
+    marks: [
+      { x: 102, y: 88, px: 140, py: 40, t: '{前|まえ}あしの つけねの あいだが オレンジいろ' },
+      { x: 326, y: 124, px: 330, py: 70, t: 'うしろばねは すきとおった うすい {茶色|ちゃいろ}' },
+    ],
   },
   {
     id: 'harabiro',
@@ -208,7 +243,12 @@ const BUGS = [
       '{前|まえ}ばねに {白|しろ}い {点|てん}が ある。{前|まえ}あしに {黄色|きいろ}い つぶつぶが ならぶ。',
     ],
     trivia: 'ようちゅうの ころは、おなかを くいっと {上|うえ}に そらせて あるくよ。',
-    art: { kind: 'kamakiri', body: '#7ac143', dark: '#4b8a22', wing: '#95d15c', belly: 1.9, spot: true, dots: true },
+    art: { kind: 'kamakiri', body: '#74bc40', light: '#b4e080', dark: '#3a7018', wing: '#8ccc52', costa: '#c0e890', eye: '#d0f0a8', belly: 2.1, wideWing: true, spot: true, dots: true },
+    marks: [
+      { x: 250, y: 150, px: 222, py: 186, t: 'おなかの はばが ひろくて ずんぐり' },
+      { x: 212, y: 112, px: 210, py: 60, t: '{前|まえ}ばねに {白|しろ}い {点|てん}' },
+      { x: 97, y: 110, px: 120, py: 168, t: '{前|まえ}あしに {黄色|きいろ}い つぶつぶ' },
+    ],
   },
   {
     id: 'kokamakiri',
@@ -223,7 +263,11 @@ const BUGS = [
       '{前|まえ}あしの {内|うち}がわに、{黒|くろ}と {白|しろ}の もようが ある。',
     ],
     trivia: 'おどろくと {前|まえ}あしを ひろげて、{内|うち}がわの もようを みせて あいてを おどかすよ。',
-    art: { kind: 'kamakiri', body: '#a5794a', dark: '#6b4a2b', wing: '#b8905e', inner: true },
+    art: { kind: 'kamakiri', body: '#9a6e42', light: '#c8a070', dark: '#4e3420', wing: '#a87c4c', costa: '#c8a274', eye: '#d8bc90', inner: true, speckle: true },
+    marks: [
+      { x: 81, y: 117, px: 100, py: 170, t: '{前|まえ}あしの {内|うち}がわに {黒|くろ}と {白|しろ}の もよう' },
+      { x: 246, y: 112, px: 246, py: 60, t: 'はねは {茶色|ちゃいろ}で、こまかい てんてん もよう' },
+    ],
   },
 ];
 
