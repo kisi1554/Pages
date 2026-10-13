@@ -13,7 +13,7 @@
 
   /* ================= ほぞん ================= */
   const KEY = 'waratte-imohori.v1';
-  const save = { found: {}, total: 0, sound: true, mode: 'tashi10', fields: 0 };
+  const save = { found: {}, total: 0, sound: true, voice: true, mode: 'tashi10', fields: 0 };
   try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* つかえなくても あそべる */ }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* noop */ } }
 
@@ -111,8 +111,45 @@
   };
 
   function setSoundIcon() { $('soundBtn').textContent = save.sound ? '🔊' : '🔇'; }
-  $('soundBtn').addEventListener('click', () => { save.sound = !save.sound; persist(); setSoundIcon(); if (save.sound) SND.pop(); });
+  $('soundBtn').addEventListener('click', () => { save.sound = !save.sound; persist(); setSoundIcon(); if (save.sound) SND.pop(); else stopVoice(); });
   setSoundIcon();
+
+  /* ================= にょこすけの こえ（ブラウザの よみあげ。たかい こえで はやくち） ================= */
+  const SS = window.speechSynthesis;
+  let jaVoice = null;
+  function pickVoice() {
+    try { jaVoice = SS.getVoices().find((v) => /^ja/i.test(v.lang)) || null; } catch (e) { jaVoice = null; }
+  }
+  if (SS) {
+    pickVoice();
+    try { SS.addEventListener('voiceschanged', pickVoice); } catch (e) { /* ふるい ブラウザ */ }
+  }
+  // o.queue: まえの ことばを とめずに つづけて しゃべる / o.ifIdle: しゃべっている とちゅうなら しゃべらない
+  function speak(text, o = {}) {
+    if (!save.voice || !save.sound || !SS || typeof SpeechSynthesisUtterance === 'undefined') return;
+    const t = String(text)
+      .replace(/[\u{1F000}-\u{1FFFF}\u2600-\u27BF\uFE0F]/gu, '')
+      .replace(/〜/g, 'ー').replace(/[!！?？…・「」☆♪]/g, ' ').trim();
+    if (!t) return;
+    try {
+      if (o.ifIdle && (SS.speaking || SS.pending)) return;
+      if (!o.queue) SS.cancel();
+      const u = new SpeechSynthesisUtterance(t);
+      u.lang = 'ja-JP';
+      if (jaVoice) u.voice = jaVoice;
+      u.pitch = o.pitch || 1.9;
+      u.rate = o.rate || 1.2;
+      SS.speak(u);
+    } catch (e) { /* よみあげ できない ときは むし */ }
+  }
+  function stopVoice() { try { if (SS) SS.cancel(); } catch (e) { /* むし */ } }
+  function setVoiceIcon() { $('voiceBtn').textContent = save.voice ? '🗣️' : '🤐'; }
+  $('voiceBtn').addEventListener('click', () => {
+    save.voice = !save.voice; persist(); setVoiceIcon();
+    if (save.voice) speak('にょこすけ だよ'); else stopVoice();
+  });
+  setVoiceIcon();
+  if (!SS) $('voiceBtn').hidden = true;
 
   /* ================= いもの え（SVG） ================= */
   const DARK = '#3a1a2a';
@@ -581,6 +618,7 @@
     $('pullKid').innerHTML = nyoko('normal', true);
     $('pullBump').style.setProperty('--b', .6);
     $('pull').hidden = false;
+    speak(reward.pullMsg ? reward.pullMsg.replace('がんばれ', 'がんばる') : pick(['よーし、ひっぱるよー', 'いくよー、せーの', 'まかせて！']));
   }
   function tug() {
     if (!pull || pull.done) return;
@@ -595,11 +633,13 @@
     const sh = $('pullShout');
     sh.textContent = SHOUTS[pull.n % 2];
     sh.classList.remove('go'); void sh.offsetWidth; sh.classList.add('go');
+    if (pull.n < pull.need) speak(sh.textContent, { ifIdle: true, rate: 1.5 });
     if (pull.n === 1 || (p > 0.6 && !pull.hard)) { pull.hard = p > 0.6; $('pullKid').innerHTML = nyoko(p > 0.6 ? 'scrunch' : 'effort', true); }
     if (pull.n >= pull.need) {
       pull.done = true;
       sh.textContent = 'すっぽーん！';
       SND.suppon();
+      speak('すっぽーん', { rate: 1.3 });
       setTimeout(() => { $('pull').hidden = true; showReveal(pull.reward); }, 650);
     }
   }
@@ -640,7 +680,16 @@
   }
   function kidSay(face, text) {
     $('revealKid').innerHTML = `${nyoko(face)}<span class="say">${text}</span>`;
+    speak(text);
   }
+  // ほりだした あと、にょこすけを タッチすると しゃべる
+  const TICKLE = ['くすぐったいよー', 'えへへ', 'いも、おいしそう', 'つぎも がんばろうね', 'にょこにょこ'];
+  $('revealKid').addEventListener('click', () => {
+    if (!cur) return;
+    const t = pick(TICKLE);
+    $('revealKid').innerHTML = `${nyoko('laugh')}<span class="say">${t}</span>`;
+    speak(t);
+  });
 
   function showReveal(r) {
     clearTimers();
@@ -724,7 +773,7 @@
       default: break;
     }
     if (r.kid && r.fx !== 'fart' && r.fx !== 'sneeze' && r.fx !== 'fall') later(() => kidSay(r.kid[0], r.kid[1]), 900);
-    later(() => { $('revealCard').classList.add('show'); }, cardAt);
+    later(() => { $('revealCard').classList.add('show'); speak(`${r.name} だって`, { queue: true }); }, cardAt);
   }
 
   function note() {
@@ -769,7 +818,7 @@
   }
 
   $('revealNext').addEventListener('click', () => {
-    clearTimers();
+    clearTimers(); stopVoice();
     $('reveal').hidden = true;
     $('revealStage').classList.remove('shake-screen');
     run.busy = false;
@@ -816,7 +865,7 @@
   });
 
   function closeOverlays() {
-    clearTimers();
+    clearTimers(); stopVoice();
     for (const id of ['quiz', 'pull', 'reveal']) $(id).hidden = true;
     run.busy = false; cur = null; pull = null;
   }
