@@ -176,8 +176,8 @@ const HideData = {
 
   difficulties: [
     { id: 'easy', name: 'やさしい', emoji: '🌱', spots: 8, hint: 3 },
-    { id: 'normal', name: 'ふつう', emoji: '🌿', spots: 12, hint: 5 },
-    { id: 'hard', name: 'むずかしい', emoji: '🌳', spots: 99, hint: 99 },
+    { id: 'normal', name: 'ふつう', emoji: '🌿', spots: 14, hint: 5 },
+    { id: 'hard', name: 'むずかしい', emoji: '🌳', spots: 22, hint: 99 },
   ],
 
   /* なかま さがしの セミたち */
