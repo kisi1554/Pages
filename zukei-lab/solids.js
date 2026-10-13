@@ -331,3 +331,67 @@ const SOLIDS = [
     facts: [R('正三角形', 'せいさんかくけい') + 'が 20まい', '1つの ' + W.chou + 'に 5まいの めんが あつまる', 'サッカーボールの もとに なった かたち'] },
 ];
 const solidById = id => SOLIDS.find(s => s.id === id);
+
+/* =========================================================
+   おおきさを かえられる 立体（りったい タブの「かたちを かえる」）
+   1cm ＝ CM の ながさ
+   ========================================================= */
+const CM = 0.42;
+const KNUM = { 3: ['三', 'さん'], 4: ['四', 'し'], 5: ['五', 'ご'], 6: ['六', 'ろっ'], 7: ['七', 'なな'], 8: ['八', 'はっ'], 9: ['九', 'きゅう'], 10: ['十', 'じっ'] };
+const P_N = (v) => ({ k: 'n', n: 'かどの かず', min: 3, max: 10, v, unit: '' });
+const P_L = (k, n, v, min = 1, max = 6) => ({ k, n, v, min, max, unit: 'cm' });
+const SIZE = {
+  cube: { params: [P_L('a', '1ぺん', 4)], make: p => cubeMesh(p.a * CM / 2) },
+  box: { params: [P_L('a', 'よこ', 6), P_L('b', 'たかさ', 3), P_L('c', 'おくゆき', 4)], make: p => boxMesh(p.a * CM / 2, p.b * CM / 2, p.c * CM / 2) },
+  tri: { kind: 'prism', params: [P_N(3), P_L('a', 'そこの 1ぺん', 3), P_L('h', 'たかさ', 4)] },
+  hex: { kind: 'prism', params: [P_N(6), P_L('a', 'そこの 1ぺん', 2), P_L('h', 'たかさ', 4)] },
+  tetra: { kind: 'pyr', params: [P_N(3), P_L('a', 'そこの 1ぺん', 4), P_L('h', 'たかさ', 4)] },
+  pyr: { kind: 'pyr', params: [P_N(4), P_L('a', 'そこの 1ぺん', 4), P_L('h', 'たかさ', 4)] },
+  cyl: { params: [P_L('r', R('半径', 'はんけい'), 2, 1, 4), P_L('h', 'たかさ', 4)], make: p => cylinderMesh(40, p.r * CM, p.h * CM) },
+  cone: { params: [P_L('r', R('半径', 'はんけい'), 2, 1, 4), P_L('h', 'たかさ', 4)], make: p => coneMesh(40, p.r * CM, p.h * CM) },
+  sph: { params: [P_L('r', R('半径', 'はんけい'), 3, 1, 4)], make: p => sphereMesh(p.r * CM) },
+};
+const ngonOff = n => Math.PI / 2 - Math.PI / n; // 1つの へんが てまえを むく
+function sizeMake(id, p) {
+  const z = SIZE[id];
+  if (z.kind === 'prism') return prismMesh(p.n, p.a * CM / (2 * Math.sin(Math.PI / p.n)), p.h * CM, ngonOff(p.n));
+  if (z.kind === 'pyr') return pyramidMesh(p.n, p.a * CM / (2 * Math.sin(Math.PI / p.n)), p.h * CM, ngonOff(p.n));
+  return z.make(p);
+}
+function sizeName(id, p) {
+  const z = SIZE[id];
+  if (!z || !z.kind) return solidById(id).name;
+  const [k, y] = KNUM[p.n];
+  return z.kind === 'prism' ? R(k + '角柱', y + 'かくちゅう') : R(k + '角', y + 'かく') + 'すい';
+}
+/* 体積・表面積（3.14 を つかう） */
+function sizeVolume(id, p) {
+  const z = SIZE[id], PI = 3.14;
+  const ngonArea = (n, a) => n * a * a / (4 * Math.tan(Math.PI / n));
+  const o = { V: 0, S: 0, vf: '', sf: '', lv: 'mid' };
+  if (id === 'cube') { o.V = p.a ** 3; o.S = 6 * p.a * p.a; o.vf = `${p.a} × ${p.a} × ${p.a}`; o.sf = `${p.a} × ${p.a} × 6`; }
+  else if (id === 'box') { o.V = p.a * p.b * p.c; o.S = 2 * (p.a * p.b + p.b * p.c + p.c * p.a); o.vf = `${p.a} × ${p.c} × ${p.b}`; o.sf = `(${p.a}×${p.b} ＋ ${p.b}×${p.c} ＋ ${p.c}×${p.a}) × 2`; }
+  else if (z.kind === 'prism') {
+    const B = ngonArea(p.n, p.a); o.V = B * p.h; o.S = 2 * B + p.n * p.a * p.h;
+    o.vf = `${R('底面積', 'ていめんせき')} ${numTxt(B)} × たかさ ${p.h}`; o.sf = `${R('底面積', 'ていめんせき')} × 2 ＋ ${R('側面積', 'そくめんせき')}（${p.a}×${p.h}×${p.n}）`;
+  } else if (z.kind === 'pyr') {
+    const B = ngonArea(p.n, p.a), inr = p.a / (2 * Math.tan(Math.PI / p.n)), sl = Math.hypot(p.h, inr);
+    o.V = B * p.h / 3; o.S = B + p.n * p.a * sl / 2; o.lv = 'exam';
+    o.vf = `${R('底面積', 'ていめんせき')} ${numTxt(B)} × たかさ ${p.h} ÷ 3`; o.sf = `${R('底面積', 'ていめんせき')} ＋ ${R('三角形', 'さんかくけい')} ${p.n}まい`;
+  } else if (id === 'cyl') {
+    o.V = p.r * p.r * PI * p.h; o.S = 2 * p.r * p.r * PI + 2 * p.r * PI * p.h;
+    o.vf = `${p.r} × ${p.r} × 3.14 × ${p.h}`; o.sf = `${p.r}×${p.r}×3.14×2 ＋ ${p.r * 2}×3.14×${p.h}`;
+  } else if (id === 'cone') {
+    const l = Math.hypot(p.r, p.h); o.V = p.r * p.r * PI * p.h / 3; o.S = p.r * p.r * PI + PI * p.r * l; o.lv = 'exam';
+    o.vf = `${p.r} × ${p.r} × 3.14 × ${p.h} ÷ 3`; o.sf = `${p.r}×${p.r}×3.14 ＋ ${R('母線', 'ぼせん')} ${numTxt(l)}×${p.r}×3.14`;
+  } else if (id === 'sph') {
+    o.V = 4 / 3 * PI * p.r ** 3; o.S = 4 * PI * p.r * p.r; o.lv = 'exam';
+    o.vf = `${p.r} × ${p.r} × ${p.r} × 3.14 × 4 ÷ 3`; o.sf = `${p.r} × ${p.r} × 3.14 × 4`;
+  }
+  return o;
+}
+function numTxt(v) {
+  if (Math.abs(v - Math.round(v)) < 1e-6) return String(Math.round(v));
+  const r2 = Math.round(v * 100) / 100;
+  return (Math.abs(v * 100 - Math.round(v * 100)) < 1e-6 ? '' : 'やく ') + r2;
+}

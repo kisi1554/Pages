@@ -175,6 +175,13 @@ const STICKERS = [
   { id: 'angle', e: '📐', name: 'かくどの ひみつ', how: 'かくを あつめて 180°を みた' },
   { id: 'quiz8', e: '⭐', name: 'クイズ ほし', how: 'クイズで 8もん いじょう せいかい' },
   { id: 'quiz10', e: '👑', name: 'クイズ おうさま', how: 'クイズで ぜんもん せいかい' },
+  { id: 'para', e: '🛤️', name: 'へいこう・すいちょく', how: 'へいこうな へんや めんを しらべた' },
+  { id: 'revolve', e: '🌀', name: 'くるりん はかせ', how: 'まわして できる かたちを ぜんぶ つくった' },
+  { id: 'cut10', e: '💎', name: 'きりくち はかせ', how: '10しゅるいの きりくちを みつけた' },
+  { id: 'cutodai', e: '🎯', name: 'きりくち めいじん', how: 'きりくちの おだいを 3かい クリア' },
+  { id: 'minmax', e: '🔢', name: 'なんこ めいじん', how: 'なんこ もんだいに 3かい せいかい' },
+  { id: 'tangram10', e: '🐟', name: 'タングラム めいじん', how: 'タングラムの シルエットを 10こ といた' },
+  { id: 'setsq', e: '📏', name: 'さんかくじょうぎ', how: 'さんかくじょうぎの くみあわせを ぜんぶ みた' },
 ];
 const Stickers = {
   got: new Set(Store.get('stickers', [])),
@@ -201,7 +208,15 @@ const Loop = {
     requestAnimationFrame(tick);
   },
 };
-const App = { tab: 'solid' };
+const LEVELS = [
+  { id: 'k', name: 'ようじ〜2ねんせい', e: '🐣' },
+  { id: 'low', name: '3・4ねんせい', e: '🐥' },
+  { id: 'mid', name: '5・6ねんせい', e: '🦉' },
+  { id: 'exam', name: 'ちゅうがく じゅけん', e: '🎓' },
+];
+const App = { tab: 'solid', level: Store.get('level', 'low') };
+/* いまの レベルが lv いじょうか */
+const atLeast = lv => LEVELS.findIndex(l => l.id === App.level) >= LEVELS.findIndex(l => l.id === lv);
 
 /* =========================================================
    3D ビュー（canvas 2D で ぬりえ式に えがく）

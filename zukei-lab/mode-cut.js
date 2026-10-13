@@ -24,6 +24,48 @@ const CutMode = (() => {
     octa: [m => ({ n: N(m.verts[0].p), d: 0 }), m => ({ n: newell(m.polys[bottomPoly(m)].p), d: 0 }), m => ({ n: newell(m.polys[bottomPoly(m)].p), d: -0.4 })],
   };
   const found = new Set(Store.get('cutFound', []));
+  /* きりくち ずかん: かたち・アイコン・ヒント */
+  const ZUKAN = [
+    ['eqtri', '50,12 92,84 8,84', R('立方体', 'りっぽうたい') + 'の かどを ななめに'],
+    ['isotri', '50,8 80,88 20,88', R('四角', 'しかく') + 'すいを たてに'],
+    ['tri', '20,20 92,80 8,88', R('直方体', 'ちょくほうたい') + 'の かどを ななめに'],
+    ['rtri', '14,14 14,86 86,86', R('三角柱', 'さんかくちゅう') + 'を たてに'],
+    ['square', '14,14 86,14 86,86 14,86', R('立方体', 'りっぽうたい') + 'を まっすぐ'],
+    ['rect', '6,26 94,26 94,74 6,74', R('直方体', 'ちょくほうたい') + 'を まっすぐ'],
+    ['rhombus', '50,6 84,50 50,94 16,50', R('立方体', 'りっぽうたい') + 'の むかいあう かどを とおる'],
+    ['para', '26,24 94,24 74,76 6,76', R('直方体', 'ちょくほうたい') + 'を ななめに'],
+    ['isotrap', '30,22 70,22 94,80 6,80', R('立方体', 'りっぽうたい') + 'の となりあう へんの まんなか'],
+    ['trap', '20,22 64,22 94,80 6,80', R('直方体', 'ちょくほうたい') + 'の へんの まんなか'],
+    ['quad', '18,16 80,28 90,84 8,70', R('三角柱', 'さんかくちゅう') + 'や ' + R('四角', 'しかく') + 'すい'],
+    ['pent', '50,6 94,40 76,92 24,92 6,40', R('立方体', 'りっぽうたい') + 'を ななめに おおきく'],
+    ['rhex', '28,10 72,10 94,50 72,90 28,90 6,50', R('立方体', 'りっぽうたい') + 'の まんなかを ななめに'],
+    ['hex', '20,14 70,10 94,50 74,88 30,92 6,46', R('正八面体', 'せいはちめんたい') + 'を ずらして'],
+    ['circle', 'C', R('球', 'きゅう') + 'や ' + R('円柱', 'えんちゅう') + 'を まっすぐ'],
+    ['ellipse', 'E', R('円柱', 'えんちゅう') + 'を ななめに'],
+    ['curved', 'U', R('円', 'えん') + 'すいを たてに ずらして'],
+  ];
+  let odai = null, odaiWins = Store.get('cutOdai', 0);
+  const icon = (pts, on) => {
+    const st = on ? 'fill="#ff8a8e" stroke="#c62828"' : 'fill="#e3e9f2" stroke="#b5c2d6"';
+    const body = pts === 'C' ? `<circle cx="50" cy="50" r="42" ${st}/>` : pts === 'E' ? `<ellipse cx="50" cy="50" rx="46" ry="28" ${st}/>`
+      : pts === 'U' ? `<path d="M10 88 L90 88 Q86 20 50 12 Q14 20 10 88 Z" ${st}/>` : `<polygon points="${pts}" ${st}/>`;
+    return `<svg viewBox="0 0 100 100" aria-hidden="true">${body.replace('/>', ' stroke-width="4"/>')}</svg>`;
+  };
+  function drawZukan() {
+    $('cutZukan').innerHTML = ZUKAN.map(([k, pts]) => {
+      const on = found.has(k);
+      return `<div class="zk ${on ? 'on' : ''} ${odai === k ? 'target' : ''}">${icon(pts, on)}<span>${on || odai === k ? SHAPE[k][0] : '？'}</span></div>`;
+    }).join('');
+    $('cutCount').textContent = `${ZUKAN.filter(z => found.has(z[0])).length} / ${ZUKAN.length}`;
+  }
+  $('btnCutOdai').addEventListener('click', () => {
+    Snd.tap();
+    const rest = ZUKAN.filter(z => !found.has(z[0])), z = pick(rest.length ? rest : ZUKAN);
+    odai = z[0];
+    $('cutOdaiMsg').classList.remove('hide');
+    $('cutOdaiMsg').innerHTML = `🎯 おだい：<b>${SHAPE[odai][0]}</b>を つくろう！<br><span class="small">ヒント：${z[2]}</span>`;
+    drawZukan();
+  });
   let S, mesh, cands = [], sel = [], plane = null, base = 0, lim = [0, 0], off = 0, phase = 'setup', cut = null, sep = 0, show = 0;
 
   const chips = $('cutSolids');
@@ -118,7 +160,7 @@ const CutMode = (() => {
     $('btnCut').disabled = !(plane && phase === 'setup' && sectionOf(mesh, plane.n, curD()));
     $('cutAfter').classList.toggle('hide', phase !== 'cut');
     $('cutHint').textContent = phase === 'cut' ? 'まわして きりくちを よく みてみよう' : '● を 3つ えらぶと きる ばしょが きまるよ';
-    $('cutFound').innerHTML = [...found].map(k => `<span>${SHAPE[k] ? SHAPE[k][0] : k}</span>`).join('') || '<span class="small">まだ ないよ</span>';
+    drawZukan();
     view.dirty = true;
   }
   $('rgCutOff').addEventListener('input', e => {
@@ -140,9 +182,15 @@ const CutMode = (() => {
       found.add(c.key); Store.set('cutFound', [...found]);
       if (isNew) setTimeout(() => toast(`あたらしい きりくち！ ${c.name}`), 900);
     }
+    if (odai && c.key === odai) {
+      odaiWins++; Store.set('cutOdai', odaiWins);
+      $('cutOdaiMsg').innerHTML = `🎉 おだい クリア！ ${SHAPE[odai][0]}が できたね。もう1もん やってみよう`;
+      odai = null; if (odaiWins >= 3) Stickers.give('cutodai');
+    }
     if (S.id === 'cube' && c.key === 'rhex') Stickers.give('hex');
     if (S.curved) Stickers.give('circle');
     if (found.size >= 5) Stickers.give('cut5');
+    if (found.size >= 10) Stickers.give('cut10');
     setTimeout(Snd.ok.bind(Snd), 450);
     refresh();
   });

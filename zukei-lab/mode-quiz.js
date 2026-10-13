@@ -68,7 +68,8 @@ const QuizMode = (() => {
     return shuffle([...s]).map(v => ({ label: String(v), ok: v === ans }));
   };
   function qCount() {
-    const S = solidById(pick(['cube', 'box', 'tri', 'hex', 'tetra', 'pyr', 'octa'])), m = prepMesh(S.make());
+    const ids = atLeast('mid') ? ['cube', 'box', 'tri', 'hex', 'tetra', 'pyr', 'octa'] : atLeast('low') ? ['cube', 'box', 'tri', 'hex', 'tetra', 'pyr'] : ['cube', 'box', 'tri', 'pyr'];
+    const S = solidById(pick(ids)), m = prepMesh(S.make());
     const k = pick(['F', 'E', 'V']), val = { F: m.groupCount, E: m.edges.length, V: m.verts.length };
     const word = { F: W.men, E: W.hen, V: W.chou }[k], unit = { F: 'つ', E: 'ほん', V: 'こ' }[k];
     return {
@@ -77,8 +78,9 @@ const QuizMode = (() => {
     };
   }
   function qName() {
-    const S = pick(SOLIDS), m = prepMesh(S.make());
-    const others = shuffle(SOLIDS.filter(s => s !== S)).slice(0, 3);
+    const pool = atLeast('low') ? SOLIDS : SOLIDS.filter(s => ['cube', 'box', 'cyl', 'cone', 'sph', 'pyr', 'tri'].includes(s.id));
+    const S = pick(pool), m = prepMesh(S.make());
+    const others = shuffle(pool.filter(s => s !== S)).slice(0, 3);
     return {
       q: 'この りったいの なまえは？', hint: 'まわして よく みてね', kind: '3d', setup: () => use3(m), draw3: solidDraw(m),
       choices: shuffle([S, ...others]).map(s => ({ label: s.name, ok: s === S })), explain: `${S.name}だよ。`,
@@ -218,6 +220,7 @@ const QuizMode = (() => {
       ['trap', [[0, 0], [3.2, 0], [2.3, 1.6], [0.4, 1.6]]], ['eqtri', [[0, 0], [2, 0], [1, S3]]],
       ['isotri', [[0, 0], [2, 0], [1, 2.6]]], ['rtri', [[0, 0], [3, 0], [0, 1.8]]], ['risotri', [[0, 0], [2, 0], [0, 2]]],
     ];
+    if (!atLeast('low')) L.splice(0, L.length, ...L.filter(l => ['square', 'rect', 'eqtri', 'rtri'].includes(l[0])));
     const [key, P0] = pick(L), rot = Math.random() * Math.PI * 2, P = P0.map(([x, y]) => [x * Math.cos(rot) - y * Math.sin(rot), x * Math.sin(rot) + y * Math.cos(rot)]);
     const cl = classify2D(P), others = shuffle(L.map(l => l[0]).filter(k => k !== key)).slice(0, 3);
     return {
@@ -238,8 +241,43 @@ const QuizMode = (() => {
     { q: `${R('四角', 'しかく')}すいの ${W.chou}は いくつ？`, s: 'pyr', a: '5', w: ['4', '6', '8'], e: 'そこの かど 4こ と てっぺん 1こ で 5こ' },
     { q: `${R('三角形', 'さんかくけい')}の 3つの ${W.kaku}を ぜんぶ たすと？`, a: '180°', w: ['90°', '270°', '360°'], e: 'どんな さんかくでも 180°' },
   ];
+  ['low', 'mid', 'mid', 'low', 'mid', 'k', 'mid', 'mid', 'exam', 'low', 'mid'].forEach((lv, i) => { FACTS[i].lv = lv; });
+  FACTS.push(
+    { q: 'さいころの めんは いくつ？', s: 'cube', a: '6', w: ['4', '8', '12'], e: 'さいころの めんは 6つ。1から 6までの めが かいてあるね', lv: 'k' },
+    { q: 'ボールと おなじ かたちは どれ？', s: 'sph', a: R('球', 'きゅう'), w: [R('円柱', 'えんちゅう'), R('円', 'えん') + 'すい', R('立方体', 'りっぽうたい')], e: 'ボールの かたちを ' + R('球', 'きゅう') + 'と いうよ', lv: 'k' },
+    { q: 'さんかくの かどは いくつ？', a: '3', w: ['2', '4', '5'], e: 'さんかくは かどが 3つ、へんも 3ぼん', lv: 'k' },
+    { q: 'しかくの へんは なんぼん？', a: '4', w: ['3', '5', '6'], e: 'しかくは へんが 4ほん、かども 4つ', lv: 'k' },
+    { q: 'つみきで ころがりやすい かたちは どれ？', s: 'cyl', a: R('円柱', 'えんちゅう'), w: [R('立方体', 'りっぽうたい'), R('直方体', 'ちょくほうたい'), R('四角', 'しかく') + 'すい'], e: 'まるい めんが あると ころがるよ', lv: 'k' },
+  );
+  /* 体積の けいさん */
+  function qVol() {
+    let id, p, txt, ans, wrong;
+    if (!atLeast('exam') || Math.random() < 0.4) {
+      id = Math.random() < 0.3 ? 'cube' : 'box';
+      p = id === 'cube' ? { a: 2 + rnd(4) } : { a: 2 + rnd(5), b: 1 + rnd(4), c: 2 + rnd(4) };
+      ans = id === 'cube' ? p.a ** 3 : p.a * p.b * p.c;
+      txt = id === 'cube' ? `1ぺん ${p.a}cmの ${R('立方体', 'りっぽうたい')}` : `よこ ${p.a}cm・おくゆき ${p.c}cm・たかさ ${p.b}cmの ${R('直方体', 'ちょくほうたい')}`;
+      wrong = id === 'cube' ? [p.a * p.a * 6, p.a * 3, p.a * p.a] : [2 * (p.a * p.b + p.b * p.c + p.c * p.a), p.a + p.b + p.c, p.a * p.c];
+    } else {
+      id = pick(['cyl', 'cone', 'tri']);
+      if (id === 'tri') { p = { n: 4, a: 2 + rnd(3), h: 2 + rnd(4) }; id = 'hex'; ans = p.a * p.a * p.h; txt = `${R('底面', 'ていめん')}が 1ぺん ${p.a}cmの ${R('正方形', 'せいほうけい')}で、たかさ ${p.h}cmの ${R('四角柱', 'しかくちゅう')}`; wrong = [p.a * p.a * p.h / 3, p.a * 4 * p.h, p.a * p.h]; }
+      else {
+        p = { r: 1 + rnd(3), h: 3 * (1 + rnd(2)) };
+        const base = p.r * p.r * 3.14;
+        ans = id === 'cyl' ? base * p.h : base * p.h / 3;
+        txt = `${R('半径', 'はんけい')} ${p.r}cm・たかさ ${p.h}cmの ${id === 'cyl' ? R('円柱', 'えんちゅう') : R('円', 'えん') + 'すい'}（3.14で けいさん）`;
+        wrong = id === 'cyl' ? [base * p.h / 3, p.r * 2 * 3.14 * p.h, p.r * p.h * 3.14] : [base * p.h, base * p.h / 2, p.r * 2 * 3.14 * p.h / 3];
+      }
+    }
+    const m = prepMesh(sizeMake(id, p)), fmtV = v => numTxt(v).replace('やく ', '') + 'cm³';
+    const opts = [ans, ...wrong.filter(v => Math.abs(v - ans) > 1e-6)].filter((v, i, a) => a.findIndex(x => Math.abs(x - v) < 1e-6) === i).slice(0, 4);
+    return {
+      q: `${txt}の ${R('体積', 'たいせき')}は？`, hint: 'まわして かたちを たしかめよう', kind: '3d', setup: () => use3(m), draw3: solidDraw(m),
+      choices: shuffle(opts).map(v => ({ label: fmtV(v), ok: v === ans })), explain: `${R('体積', 'たいせき')}は ${fmtV(ans)}。` + (id === 'cone' ? '（すいは ÷3 を わすれずに）' : ''),
+    };
+  }
   function qFact() {
-    const f = pick(FACTS), S = f.s ? solidById(f.s) : null, m = S ? prepMesh(S.make()) : null;
+    const f = pick(FACTS.filter(x => atLeast(x.lv) && (atLeast('low') || x.lv === 'k'))), S = f.s ? solidById(f.s) : null, m = S ? prepMesh(S.make()) : null;
     return {
       q: f.q, kind: m ? '3d' : '2d', setup: () => m && use3(m), draw3: m ? solidDraw(m) : null,
       draw2: () => { fitCanvas(cv2); c2.clearRect(0, 0, cv2.width, cv2.height); text2('🤔', [cv2.width / 2, cv2.height / 2], '#000', 90); },
@@ -257,7 +295,13 @@ const QuizMode = (() => {
   }
   function start() {
     Snd.tap();
-    qs = shuffle([qCount, qCount, qName, qNet, qTri, qQuad, qCut, qDice, qShape, qFact]).map(f => ({ f }));
+    const POOL = {
+      k: [qCount, qCount, qName, qName, qDice, qDice, qShape, qShape, qFact, qFact],
+      low: [qCount, qCount, qName, qNet, qTri, qQuad, qDice, qShape, qFact, qShape],
+      mid: [qCount, qName, qNet, qTri, qQuad, qCut, qDice, qShape, qFact, qVol],
+      exam: [qCount, qNet, qTri, qQuad, qCut, qCut, qShape, qFact, qVol, qVol],
+    };
+    qs = shuffle(POOL[App.level] || POOL.low).map(f => ({ f }));
     qi = 0; score = 0;
     $('btnQuizStart').classList.add('hide');
     show();

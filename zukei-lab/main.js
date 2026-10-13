@@ -10,10 +10,56 @@
     document.querySelectorAll('.tab').forEach(s => s.classList.toggle('on', s.id === 'tab-' + t));
     Store.set('tab', t);
     requestAnimationFrame(() => {
-      const v = VIEWS[t]; if (v) { v.resize(); v.dirty = true; }
+      const v = t === 'solid' && App.solidSub === 'revolve' ? RevolveMode.view : VIEWS[t]; if (v) { v.resize(); v.dirty = true; }
       if (t === 'build') BuildMode.onShow();
     });
+    if (!$('levelModal').classList.contains('hide')) return;
+    showGuide(t, false);
   }
+
+  /* ---- レベル（なんねんせい） ---- */
+  const lvBtn = $('btnLevel'), lvGrid = $('levelGrid');
+  function updLevel() {
+    const L = LEVELS.find(l => l.id === App.level) || LEVELS[1];
+    lvBtn.textContent = L.e; lvBtn.title = L.name;
+    lvGrid.querySelectorAll('button').forEach(b => b.classList.toggle('on', b.dataset.lv === App.level));
+  }
+  LEVELS.forEach(l => {
+    const b = document.createElement('button'); b.dataset.lv = l.id; b.innerHTML = `<b>${l.e}</b>${l.name}`;
+    b.addEventListener('click', () => {
+      Snd.ok(); App.level = l.id; Store.set('level', l.id); updLevel();
+      window.dispatchEvent(new Event('levelchange'));
+      $('levelModal').classList.add('hide');
+      toast(`${l.e} ${l.name} に したよ`);
+      showGuide(App.tab, false);
+    });
+    lvGrid.appendChild(b);
+  });
+  lvBtn.addEventListener('click', () => { Snd.tap(); $('levelModal').classList.remove('hide'); });
+  $('levelModal').addEventListener('click', e => { if (e.target.id === 'levelModal' && Store.get('level', null)) $('levelModal').classList.add('hide'); });
+  updLevel();
+
+  /* ---- はじめての ガイド（タブごとに 1かいだけ） ---- */
+  const GUIDES = {
+    solid: ['🧊 りったい', [['drag', '👆', 'ゆびで ドラッグすると りったいが <b>くるっと まわる</b>よ'], ['pinch', '🤏', '2ほんゆびで ひろげると おおきく みえるよ'],
+      ['tap', '👆', '「めんを ぬる」「へんを なぞる」で かずを かぞえよう'], ['tap', '📦', '「ひらく」で ' + W.tenkai + 'に なるよ。「まわして できる かたち」も ためしてね']]],
+    cut: ['✂️ きる', [['tap', '👆', 'りったいの <b>● を 3つ</b> タップすると きる ばしょが きまるよ'], ['tap', '✂️', '「きる！」で まっぷたつ。きりくちの なまえが でるよ'], ['tap', '🎯', '「おだい」で きりくち ずかんを うめよう']]],
+    roll: ['🎲 ころがす', [['tap', '⬆️', 'やじるしで さいころを ころがそう'], ['tap', '❓', '「よそう もんだい」で うえの めを あてよう'], ['tap', '⚙️', '「かたちを ころがす」で まるや さんかくの とおりみちを みよう']]],
+    build: ['🧱 くっつける', [['tap', '👆', 'めんを タップすると <b>つみきが くっつく</b>よ'], ['drag', '👆', 'ドラッグで まわして いろんな ほうこうから みよう'], ['tap', '🧩', '「かたち パズル」は ピースを ドラッグ、タップで まわすよ']]],
+    plane: ['📐 かたち・かくど', [['drag', '👆', 'あかい <b>●</b> を ドラッグして かたちを かえよう'], ['tap', '🏷️', 'かたちの なまえと ' + W.kakudo + 'が すぐに わかるよ'], ['tap', '📏', 'おうぎ形や ' + R('三角', 'さんかく') + 'じょうぎも あるよ']]],
+    quiz: ['❓ クイズ', [['tap', '▶️', '「はじめる」で 10もん'], ['drag', '👆', 'りったいの もんだいは まわして たしかめられるよ'], ['tap', '🎓', 'みぎうえの ' + '🐥' + ' で レベルを かえられるよ']]],
+    words: ['📖 ことば', [['tap', '📖', 'ずけいの ことばを よんでみよう'], ['tap', '▶️', '「ためしてみる」で その ばしょに とぶよ']]],
+  };
+  const guided = new Set(Store.get('guided', []));
+  function showGuide(t, force) {
+    const g = GUIDES[t]; if (!g || (!force && guided.has(t))) return;
+    $('guideTitle').innerHTML = g[0];
+    $('guideBody').innerHTML = g[1].map(([a, e, txt]) => `<div class="gi"><div class="ga ${a}"><span>${e}</span></div><div>${txt}</div></div>`).join('');
+    $('guide').classList.remove('hide');
+    guided.add(t); Store.set('guided', [...guided]);
+  }
+  $('btnGuideOk').addEventListener('click', () => { Snd.tap(); $('guide').classList.add('hide'); });
+  $('btnHelp').addEventListener('click', () => { Snd.tap(); showGuide(App.tab, true); });
   document.querySelectorAll('.tabs button').forEach(b => b.addEventListener('click', () => { Snd.tap(); setTab(b.dataset.tab); }));
 
   /* ---- おと ---- */
@@ -60,6 +106,7 @@
   $('wordList').innerHTML = WORDS.map((w, i) => `<div class="word">${w.s}<div><h3>${w.w}</h3><p>${w.d}</p><button class="btn sm go" data-i="${i}">ためしてみる ▶</button></div></div>`).join('');
   $('wordList').addEventListener('click', e => { const b = e.target.closest('.go'); if (!b) return; Snd.tap(); setTab(WORDS[+b.dataset.i].tab); window.scrollTo(0, 0); });
 
+  if (!Store.get('level', null)) $('levelModal').classList.remove('hide');
   const first = Store.get('tab', 'solid');
   setTab(document.getElementById('tab-' + first) ? first : 'solid');
   Loop.start();

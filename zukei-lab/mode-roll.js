@@ -196,14 +196,35 @@ const RollMode = (() => {
     { id: 3, name: R('正三角形', 'せいさんかくけい') }, { id: 4, name: R('正方形', 'せいほうけい') },
     { id: 6, name: R('正六角形', 'せいろっかくけい') }, { id: 0, name: R('円', 'えん') },
   ];
-  let shape = 4, st2 = null, playing = false, stepLeft = 0;
-  const shapeBox = $('roll2Shapes');
+  let shape = 4, st2 = null, playing = false, stepLeft = 0, ptKind = 'v';
+  const shapeBox = $('roll2Shapes'), ptBox = $('roll2Point');
+  const PTS = [['v', 'かど', 'まわり'], ['m', 'へんの まんなか', 'はんけいの まんなか'], ['c', R('中心', 'ちゅうしん'), R('中心', 'ちゅうしん')]];
+  function buildPts() {
+    ptBox.innerHTML = '';
+    PTS.forEach(([k, a, b]) => {
+      const el = document.createElement('button'); el.innerHTML = shape ? a : b; el.classList.toggle('on', k === ptKind);
+      el.addEventListener('click', () => { Snd.tap(); ptKind = k; reset2(); }); ptBox.appendChild(el);
+    });
+  }
+  /* あかい ● の いち */
+  function markPt(V) {
+    const n = V.length, i = st2.mark;
+    if (ptKind === 'v') return V[i].slice();
+    if (ptKind === 'm') { const j = (i + 1) % n; return [(V[i][0] + V[j][0]) / 2, (V[i][1] + V[j][1]) / 2]; }
+    return [V.reduce((s, p) => s + p[0], 0) / n, V.reduce((s, p) => s + p[1], 0) / n];
+  }
+  const circD = () => st2.r * (ptKind === 'v' ? 1 : ptKind === 'm' ? 0.5 : 0);
+  function circPt() {
+    const r = st2.r, cx = st2.x0 + r + r * st2.theta, cy = st2.ground - r, d = circD();
+    return [cx - d * Math.sin(st2.theta), cy + d * Math.cos(st2.theta)];
+  }
   SHAPES.forEach(s => {
     const b = document.createElement('button'); b.innerHTML = s.name; b.dataset.id = s.id;
     b.addEventListener('click', () => { Snd.tap(); shape = s.id; reset2(); }); shapeBox.appendChild(b);
   });
   function reset2() {
     shapeBox.querySelectorAll('button').forEach(b => b.classList.toggle('on', +b.dataset.id === shape));
+    buildPts();
     fitCanvas(cv2);
     const Wd = cv2.width, Hd = cv2.height, s = Math.min(Wd / 7.5, Hd / 3.2);
     const ground = Hd * 0.72, x0 = Wd * 0.08;
@@ -216,14 +237,16 @@ const RollMode = (() => {
       st2.V = V;
       // しるしは いちばん うえの かど
       let mi = 0; V.forEach((p, i) => { if (p[1] < V[mi][1] - 1e-6 || (Math.abs(p[1] - V[mi][1]) < 1e-6 && p[0] < V[mi][0])) mi = i; });
-      st2.mark = mi; st2.path.push(V[mi].slice());
+      st2.mark = mi; st2.path.push(markPt(V));
     } else {
-      st2.r = s * 0.55; st2.theta = 0; st2.path.push([x0 + st2.r, ground]);
+      st2.r = s * 0.55; st2.theta = 0; st2.path.push(circPt());
     }
     playing = false; stepLeft = 0;
     msg2();
   }
   function msg2() {
+    if (ptKind === 'c') { $('roll2Msg').innerHTML = shape ? `${R('中心', 'ちゅうしん')}は でこぼこの ある みちに なるよ（${R('弧', 'こ')}が つながる）。かどの ときより ひくくて なだらか。` : `${R('円', 'えん')}の ${R('中心', 'ちゅうしん')}は いつも おなじ たかさ。まっすぐな せんに なるよ！`; return; }
+    if (ptKind === 'm') { $('roll2Msg').innerHTML = shape ? 'へんの まんなかは、かどより ちいさな アーチを えがくよ。じくからの きょりが みじかいからだね。' : `${R('中心', 'ちゅうしん')}と まわりの あいだの 点は、なみの ような せんを えがくよ。`; return; }
     $('roll2Msg').innerHTML = shape ? `あかい ● の とおった あとを みてみよう。${R('円', 'えん')}の いちぶ（${R('弧', 'こ')}）を つないだ みちに なるよ。1かいで まわる ${W.kakudo}は ${360 / shape}°（${R('外角', 'がいかく')}）。`
       : `あかい ● が えがく アーチを ${R('サイクロイド', 'さいくろいど')}と いうよ。1しゅう ころがると ${R('直径', 'ちょっけい')}の やく 3.14ばい すすむ（${R('円周', 'えんしゅう')}）！`;
   }
@@ -243,14 +266,14 @@ const RollMode = (() => {
       st2.ang = Math.min(ext, st2.ang + sp);
       const P0 = st2.base[st2.pv], c = Math.cos(st2.ang), s = Math.sin(st2.ang);
       st2.V = st2.base.map(p => { const dx = p[0] - P0[0], dy = p[1] - P0[1]; return [P0[0] + dx * c - dy * s, P0[1] + dx * s + dy * c]; });
-      st2.path.push(st2.V[st2.mark].slice());
+      st2.path.push(markPt(st2.V));
       if (st2.ang >= ext) { st2.ang = 0; st2.steps++; Snd.tap(); return true; }
       return false;
     }
     const r = st2.r, before = Math.floor(st2.theta / (Math.PI / 2));
     st2.theta += sp;
     const cx = st2.x0 + r + r * st2.theta, cy = st2.ground - r;
-    st2.path.push([cx - r * Math.sin(st2.theta), cy + r * Math.cos(st2.theta)]);
+    st2.path.push(circPt());
     if (Math.floor(st2.theta / (Math.PI / 2)) !== before) { Snd.tap(); return true; }
     return false;
   }
@@ -282,14 +305,14 @@ const RollMode = (() => {
       c.fillStyle = 'rgba(255,209,102,.85)'; c.fill(); c.strokeStyle = '#2a3645'; c.lineWidth = 3 * d; c.stroke();
       if (st2.ang > 0) {
         const P0 = st2.base[st2.pv]; c.strokeStyle = 'rgba(59,111,216,.6)'; c.setLineDash([5 * d, 5 * d]);
-        c.beginPath(); c.moveTo(P0[0], P0[1]); c.lineTo(st2.V[st2.mark][0], st2.V[st2.mark][1]); c.stroke(); c.setLineDash([]);
+        c.beginPath(); c.moveTo(P0[0], P0[1]); const mp = markPt(st2.V); c.lineTo(mp[0], mp[1]); c.stroke(); c.setLineDash([]);
       }
-      const m = st2.V[st2.mark];
+      const m = markPt(st2.V);
       c.fillStyle = '#e5484d'; c.beginPath(); c.arc(m[0], m[1], 9 * d, 0, 7); c.fill();
     } else {
       const r = st2.r, cx = st2.x0 + r + r * st2.theta, cy = st2.ground - r;
       c.beginPath(); c.arc(cx, cy, r, 0, 7); c.fillStyle = 'rgba(144,202,249,.8)'; c.fill(); c.strokeStyle = '#2a3645'; c.lineWidth = 3 * d; c.stroke();
-      c.beginPath(); c.moveTo(cx, cy); const mx = cx - r * Math.sin(st2.theta), my = cy + r * Math.cos(st2.theta); c.lineTo(mx, my); c.strokeStyle = '#3b6fd8'; c.stroke();
+      c.beginPath(); c.moveTo(cx, cy); const [mx, my] = circPt(); c.lineTo(mx, my); c.strokeStyle = '#3b6fd8'; c.stroke();
       c.fillStyle = '#e5484d'; c.beginPath(); c.arc(mx, my, 9 * d, 0, 7); c.fill();
       c.fillStyle = '#2a3645'; c.beginPath(); c.arc(cx, cy, 4 * d, 0, 7); c.fill();
     }

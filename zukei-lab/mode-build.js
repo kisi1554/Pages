@@ -15,16 +15,41 @@ const BuildMode = (() => {
   const K = (x, y, z) => x + ',' + y + ',' + z;
   const DIR6 = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
   const wc = (x, y, z) => [x - 3, y - 1.5 + 0.5, z - 3]; // つみきの まんなか
+  /* たかさの ちず（rows は おく→てまえ、数字＝つむ かず）から つみきを つくる */
+  function hm(rows) {
+    const out = [], z0 = 3 - Math.floor(rows.length / 2);
+    rows.forEach((r, j) => {
+      const x0 = 3 - Math.floor(r.length / 2);
+      [...r].forEach((ch, i) => { for (let y = 0; y < +ch; y++) out.push([x0 + i, y, z0 + j]); });
+    });
+    return out;
+  }
   const ODAI = [
-    { name: 'L の かたち', c: [[3, 0, 3], [4, 0, 3], [3, 1, 3]] },
-    { name: 'かいだん', c: [[2, 0, 3], [3, 0, 3], [4, 0, 3], [3, 1, 3], [4, 1, 3], [4, 2, 3]] },
-    { name: 'じゅうじ', c: [[3, 0, 3], [2, 0, 3], [4, 0, 3], [3, 0, 2], [3, 0, 4]] },
-    { name: 'おおきな さいころ', c: [[3, 0, 3], [4, 0, 3], [3, 0, 4], [4, 0, 4], [3, 1, 3], [4, 1, 3], [3, 1, 4], [4, 1, 4]] },
-    { name: 'タワー', c: [[3, 0, 3], [3, 1, 3], [3, 2, 3], [2, 0, 3], [3, 0, 2]] },
-    { name: 'ベンチ', c: [[2, 0, 3], [4, 0, 3], [2, 1, 3], [3, 1, 3], [4, 1, 3]] },
-    { name: 'ねじれ', c: [[2, 0, 3], [3, 0, 3], [3, 0, 2], [3, 1, 2], [3, 1, 1]] },
-    { name: 'おしろ', c: [[2, 0, 2], [3, 0, 2], [4, 0, 2], [2, 0, 3], [3, 0, 3], [4, 0, 3], [2, 1, 2], [4, 1, 2], [3, 1, 3], [3, 2, 3]] },
-  ];
+    ['L の かたち', ['21']], ['かいだん', ['123']], ['じゅうじ', ['010', '111', '010']], ['おおきな さいころ', ['22', '22']],
+    ['タワー', ['01', '13']], ['ベンチ', ['212']], ['ピラミッド', ['111', '121', '111']], ['おしろ', ['212', '131']],
+    ['ふたごの とう', ['301', '103']], ['L の かべ', ['333', '300', '300']], ['すべりだい', ['321']], ['みはらしだい', ['111', '131', '111']],
+    ['くぼみ', ['222', '202', '222']], ['ジグザグ', ['21', '12']], ['コの じ', ['222', '200', '222']], ['やま', ['1', '2', '3', '2', '1']],
+  ].map(([name, rows]) => ({ name, c: hm(rows) }));
+  /* 三面図から いちばん すくない／おおい かず（つみきは うかない） */
+  function minMax(list) {
+    const F = {}, Sd = {}, T = new Map();
+    for (const [x, y, z] of list) {
+      F[x] = Math.max(F[x] || 0, y + 1); Sd[z] = Math.max(Sd[z] || 0, y + 1); T.set(x + ',' + z, [x, z]);
+    }
+    const cells = [...T.values()].map(([x, z]) => ({ x, z, u: Math.min(F[x], Sd[z]) }));
+    const max = cells.reduce((s, c) => s + c.u, 0);
+    let best = Infinity, bestH = null; const h = new Array(cells.length);
+    const ok = () => Object.keys(F).every(x => cells.some((c, i) => c.x === +x && h[i] === F[x])) && Object.keys(Sd).every(z => cells.some((c, i) => c.z === +z && h[i] === Sd[z]));
+    (function dfs(i, sum) {
+      if (sum + (cells.length - i) >= best) return;
+      if (i === cells.length) { if (ok()) { best = sum; bestH = h.slice(); } return; }
+      h[i] = 1; dfs(i + 1, sum + 1);
+      if (cells[i].u > 1) { h[i] = cells[i].u; dfs(i + 1, sum + cells[i].u); }
+    })(0, 0);
+    const build = H => cells.flatMap((c, i) => [...Array(H[i])].map((_, y) => [c.x, y, c.z]));
+    return { min: best, max, minSet: build(bestH), maxSet: build(cells.map(c => c.u)) };
+  }
+  let howQ = null, howWins = Store.get('howWins', 0);
   const colBox = $('blockColors');
   COLS.forEach((c, i) => {
     const b = document.createElement('button'); b.style.background = c; b.setAttribute('aria-label', 'いろ');
@@ -98,12 +123,16 @@ const BuildMode = (() => {
     if (!odai || !cubes.size) return;
     const p = proj(cubeList()), t = proj(odai.c);
     if (same(p.f, t.f) && same(p.t, t.t) && same(p.s, t.s)) {
-      Snd.ok(); $('odaiMsg').innerHTML = `できた！ 「${odai.name}」 せいかい 🎉 ` + (cubes.size === odai.c.length ? '' : `<br><span class="small">（おなじ さんめんずでも つみきの かずが ちがう つくりかたも あるよ）</span>`);
+      if (howQ) return;
+      const mm = minMax(odai.c), n = cubes.size;
+      Snd.ok(); $('odaiMsg').innerHTML = `できた！ 「${odai.name}」 せいかい 🎉 つみき ${n}こ` +
+        (n === mm.min && mm.min !== mm.max ? '（いちばん すくない かず！）' : n === mm.max && mm.min !== mm.max ? '（いちばん おおい かず！）' : '') +
+        (atLeast('low') && mm.min !== mm.max ? `<br><span class="small">この ${R('三面図', 'さんめんず')}なら いちばん すくなくて ${mm.min}こ、いちばん おおくて ${mm.max}こで つくれるよ</span>` : '');
       cleared.add(odaiIdx); Store.set('odai', [...cleared]); Stickers.give('odai'); odai.done = true;
     }
   }
   $('btnOdai').addEventListener('click', () => {
-    Snd.tap(); odaiIdx = (odaiIdx + 1) % ODAI.length; odai = { ...ODAI[odaiIdx] };
+    Snd.tap(); odaiIdx = (odaiIdx + 1) % ODAI.length; odai = { ...ODAI[odaiIdx] }; howQ = null; $('blkChoices').innerHTML = '';
     cubes.clear(); changed();
     $('odaiMsg').innerHTML = `おだい ${odaiIdx + 1}「${odai.name}」：オレンジの ${R('三面図', 'さんめんず')}と おなじに なるように つみきを おこう`;
   });
@@ -112,7 +141,38 @@ const BuildMode = (() => {
     odai.c.forEach(([x, y, z], i) => cubes.set(K(x, y, z), { x, y, z, c: i % COLS.length }));
     changed();
   });
-  $('btnBlkClear').addEventListener('click', () => { Snd.tap(); cubes.clear(); odai = null; $('odaiMsg').innerHTML = ''; changed(); });
+  $('btnBlkClear').addEventListener('click', () => { Snd.tap(); cubes.clear(); odai = null; howQ = null; $('blkChoices').innerHTML = ''; $('odaiMsg').innerHTML = ''; changed(); });
+  /* なんこ もんだい: 三面図だけ みて いちばん すくない／おおい かずを こたえる */
+  $('btnHowMany').addEventListener('click', () => {
+    Snd.tap();
+    let list, mm, g = 0;
+    do {
+      const w = 2 + rnd(2), d = 2 + rnd(2), rows = [];
+      for (let j = 0; j < d; j++) { let r = ''; for (let i = 0; i < w; i++) r += Math.random() < 0.2 ? '0' : String(1 + rnd(3)); rows.push(r); }
+      list = hm(rows); mm = list.length ? minMax(list) : null;
+    } while ((!mm || mm.min === mm.max || mm.max > 20) && g++ < 200);
+    const ask = Math.random() < 0.5 ? 'min' : 'max', ans = mm[ask];
+    howQ = { ask, ans, mm }; odai = { name: 'なんこ もんだい', c: list };
+    cubes.clear(); changed();
+    $('odaiMsg').innerHTML = `オレンジの ${R('三面図', 'さんめんず')}に なるように つみきを つむと、<b>いちばん ${ask === 'min' ? 'すくなくて' : 'おおくて'}</b> なんこ？<br><span class="small">つみきは うかないよ（したに かならず つみきが ある）</span>`;
+    const set = new Set([ans]); [ans - 1, ans + 1, ans + 2, ans - 2, mm.min, mm.max].forEach(v => { if (v > 0 && set.size < 4) set.add(v); });
+    const box = $('blkChoices'); box.innerHTML = '';
+    shuffle([...set]).forEach(v => {
+      const b = document.createElement('button'); b.textContent = v + 'こ';
+      b.addEventListener('click', () => {
+        if (!howQ || howQ.done) return; howQ.done = true;
+        [...box.children].forEach(x => { x.disabled = true; if (x.textContent === ans + 'こ') x.classList.add('ok'); });
+        const ok = v === ans;
+        if (ok) { Snd.ok(); howWins++; Store.set('howWins', howWins); if (howWins >= 3) Stickers.give('minmax'); } else { Snd.ng(); b.classList.add('ng'); }
+        const S2 = ask === 'min' ? mm.minSet : mm.maxSet;
+        cubes.clear(); S2.forEach(([x, y, z], i) => cubes.set(K(x, y, z), { x, y, z, c: i % COLS.length }));
+        changed();
+        $('odaiMsg').innerHTML = (ok ? '⭕ せいかい！ ' : 'ざんねん… ') + `いちばん すくなくて <b>${mm.min}</b>こ、いちばん おおくて <b>${mm.max}</b>こ。` +
+          `<br><span class="small">${ask === 'min' ? 'まえと よこの たかさが そろう ところだけ たかく つむと すくなく なる' : 'どの ばしょも、まえと よこの たかさの ひくい ほうまで つめる'}。ゆびで まわして たしかめよう</span>`;
+      });
+      box.appendChild(b);
+    });
+  });
 
   function drawBlock() {
     view.clear();
@@ -141,6 +201,7 @@ const BuildMode = (() => {
   const hex = k => [2 * Math.cos(Math.PI / 3 * k), 2 * Math.sin(Math.PI / 3 * k)];
   const H = [0, 1, 2, 3, 4, 5].map(hex), O = [0, 0];
   const PCOL = ['#ff8a80', '#ffd166', '#80deea', '#a5d6a7', '#b39ddb', '#ffab91', '#90caf9', '#f48fb1'];
+  const TCOL = { L: '#ff8a80', M: '#ffd166', S: '#80deea', Q: '#a5d6a7', P: '#b39ddb' };
   const PUZ = [
     { t: 'さんかく 2まいで ' + R('正方形', 'せいほうけい'), step: 45, sol: [[[0, 0], [2, 0], [2, 2]], [[0, 0], [2, 2], [0, 2]]] },
     { t: 'さんかく 2まいで おおきな さんかく', step: 45, sol: [[[0, 0], [2, 0], [2, 2]], [[2, 0], [4, 0], [2, 2]]] },
@@ -152,6 +213,7 @@ const BuildMode = (() => {
     { t: 'おうち', step: 45, sol: [[[0, 0], [2, 0], [2, 2]], [[0, 0], [2, 2], [0, 2]], [[-1, 2], [3, 2], [1, 4]]] },
     { t: 'おさかな', step: 45, sol: [[[0, 2], [4, 2], [2, 4]], [[0, 2], [2, 0], [4, 2]], [[4, 2], [6, 4], [6, 0]]] },
     { t: 'タングラムで ' + R('正方形', 'せいほうけい'), step: 45, sol: [[[0, 0], [4, 0], [2, 2]], [[0, 0], [2, 2], [0, 4]], [[2, 4], [4, 4], [4, 2]], [[2, 2], [3, 1], [4, 2], [3, 3]], [[3, 1], [4, 0], [4, 2]], [[2, 2], [3, 3], [1, 3]], [[0, 4], [1, 3], [3, 3], [2, 4]]] },
+    ...TANGRAM.map(g => ({ t: 'タングラム：' + g.t, step: 45, tg: true, sol: g.sol.map(s => s[1]), cols: g.sol.map(s => TCOL[s[0]]) })),
     { t: 'じゆうに つくろう', step: 15, free: true, sol: [] },
   ];
   const FREE = [
@@ -185,7 +247,7 @@ const BuildMode = (() => {
     unit = Math.min(Wd, Hd) / 11;
     org = [Wd / 2, Hd / 2];
   }
-  function targetPolys() { const P = PUZ[pz]; return P.sol.map(poly => poly.map(([x, y]) => [x + tOff[0], y + tOff[1]])); }
+  function targetPolys() { const P = PUZ[pz]; return (P.solS || []).map(poly => poly.map(([x, y]) => [x + tOff[0], y + tOff[1]])); }
   function loadPuz(i) {
     pz = i; sel.value = i; layout(); doneP = false; selP = null;
     const P = PUZ[i];
@@ -194,19 +256,24 @@ const BuildMode = (() => {
     const Wu = cv2.width / unit, Hu = cv2.height / unit;
     pieces = [];
     if (P.free) { $('puzMsg').innerHTML = 'したの ボタンで かたちを だして、くっつけて いろんな かたちを つくろう。ピースを わくの そとに だすと きえるよ。'; return; }
+    // おだいの おおきさを がめんに あわせる
+    const all0 = P.sol.flat(), dim = Math.max(Math.max(...all0.map(p => p[0])) - Math.min(...all0.map(p => p[0])), Math.max(...all0.map(p => p[1])) - Math.min(...all0.map(p => p[1])));
+    const sc = Math.min(1, Math.min(4.6, Wu * 0.8, Hu * 0.42) / dim);
+    P.sc = sc;
+    P.solS = P.sol.map(poly => poly.map(([x, y]) => [x * sc, y * sc]));
     // おだいの いち
-    const all = P.sol.flat(), mn = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1]))], mx = [Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
+    const all = P.solS.flat(), mn = [Math.min(...all.map(p => p[0])), Math.min(...all.map(p => p[1]))], mx = [Math.max(...all.map(p => p[0])), Math.max(...all.map(p => p[1]))];
     const landscape = Wu > Hu;
     const tc = landscape ? [-Wu / 4, 0] : [0, Hu / 4 - 0.5];
     tOff = [tc[0] - (mn[0] + mx[0]) / 2, tc[1] - (mn[1] + mx[1]) / 2];
     // ピースを ばらまく
-    const n = P.sol.length;
-    P.sol.forEach((poly, k) => {
+    const n = P.solS.length;
+    P.solS.forEach((poly, k) => {
       const rot = P.step * (1 + rnd(Math.round(360 / P.step) - 1));
       let x, y;
       if (landscape) { const cols = Math.ceil(n / 3); x = Wu / 4 + ((k % cols) - (cols - 1) / 2) * (Wu / 2.2 / cols); y = (Math.floor(k / cols) - 1) * (Hu / 3.3); }
       else { const cols = Math.min(n, 4); x = ((k % cols) - (cols - 1) / 2) * (Wu / (cols + 0.4)); y = -Hu / 4 + (Math.floor(k / cols) - (Math.ceil(n / cols) - 1) / 2) * 2.4; }
-      pieces.push(mkPiece(poly, PCOL[k % PCOL.length], x, y, rot));
+      pieces.push(mkPiece(poly, P.cols ? P.cols[k] : PCOL[k % PCOL.length], x, y, rot));
     });
     $('puzMsg').innerHTML = 'グレーの かげに ぴったり あうように ピースを ならべよう。';
   }
@@ -270,6 +337,7 @@ const BuildMode = (() => {
       doneP = true; Snd.ok(); solved.add(pz); Store.set('puzzle', [...solved]);
       $('puzMsg').innerHTML = 'ぴったり！ できたね 🎉 「つぎ ▶」で つぎの もんだいへ';
       Stickers.give('puzzle'); if (solved.size >= 5) Stickers.give('puzzle5');
+      if ([...solved].filter(k => PUZ[k] && PUZ[k].tg).length >= 10) Stickers.give('tangram10');
     }
   }
   $('btnPRot').addEventListener('click', () => { if (selP) { rotate(selP); check(); } });
@@ -294,7 +362,7 @@ const BuildMode = (() => {
       if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw * d; c.stroke(); }
     };
     targetPolys().forEach(p => poly(p, doneP ? 'rgba(47,168,107,.3)' : 'rgba(80,98,122,.28)', null));
-    if (PUZ[pz].t === 'おさかな') { const e = toScr([1.6 + tOff[0], 2.5 + tOff[1]]); c.fillStyle = '#50627a'; c.beginPath(); c.arc(e[0], e[1], unit * 0.15, 0, 7); c.fill(); }
+    if (PUZ[pz].t === 'おさかな') { const k = PUZ[pz].sc || 1, e = toScr([1.6 * k + tOff[0], 2.5 * k + tOff[1]]); c.fillStyle = '#50627a'; c.beginPath(); c.arc(e[0], e[1], unit * 0.15 * k, 0, 7); c.fill(); }
     for (const pc of pieces) {
       const w = world(pc);
       poly(w, pc.col, '#2a3645', pc === selP ? 3.4 : 2);

@@ -7,14 +7,16 @@
 <meta name="description" content="りったいを まわす・ひらく・きる・ころがす・くっつける。めん・へん・ちょうてん・かくどを さわって まなべる ずけいの アプリ。">
 <meta name="theme-color" content="#3b6fd8">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔷</text></svg>">
-<link rel="stylesheet" href="style.css?v=28b6111">
+<link rel="stylesheet" href="style.css?v=830318e">
 </head>
 <body>
 <header class="top">
   <a class="home" href="../" aria-label="あそびメニューへ">🏠</a>
   <h1>🔷 さわって ずけい ラボ</h1>
   <div class="top-btns">
-    <button id="btnStickers" class="pill">⭐ シール <span id="stCount"></span></button>
+    <button id="btnLevel" class="pill" aria-label="レベル"></button>
+    <button id="btnHelp" class="pill" aria-label="つかいかた">？</button>
+    <button id="btnStickers" class="pill">⭐ <span class="pill-t">シール </span><span id="stCount"></span></button>
     <button id="btnSound" class="pill" aria-label="おと">🔊</button>
   </div>
 </header>
@@ -34,10 +36,16 @@
   <section id="tab-solid" class="tab on">
     <div class="stage">
       <canvas id="cvSolid"></canvas>
+      <canvas id="cvRevolve" class="hide"></canvas>
       <div class="hint" id="solidHint">ゆびで うごかすと 360° くるっと まわるよ</div>
       <div class="zoom"><button data-z="in">＋</button><button data-z="out">－</button><button data-z="reset">⟲</button></div>
     </div>
     <div class="panel">
+      <div class="seg" id="solidSub">
+        <button data-s="zukan" class="on">🧊 りったい ずかん</button>
+        <button data-s="revolve">🌀 まわして できる かたち</button>
+      </div>
+      <div id="solidMain" class="col">
       <div class="picker" id="solidPicker"></div>
       <div class="card info">
         <h2 id="solidName"></h2>
@@ -53,6 +61,7 @@
         <button data-c="face">🖍️ <ruby>面<rt>めん</rt></ruby>を ぬる</button>
         <button data-c="edge">✏️ <ruby>辺<rt>へん</rt></ruby>を なぞる</button>
         <button data-c="vert">📍 <ruby>頂点<rt>ちょうてん</rt></ruby></button>
+        <button data-c="para">📐 <ruby>平行<rt>へいこう</rt></ruby>・<ruby>垂直<rt>すいちょく</rt></ruby></button>
       </div>
       <div class="row">
         <button class="tog" id="tgSpin">🔄 くるくる</button>
@@ -70,7 +79,32 @@
         </div>
         <p class="small" id="netMsg"><ruby>展開図<rt>てんかいず</rt></ruby>（ひらいた かたち）を みてみよう</p>
       </div>
+      <div class="card" id="sizeCard">
+        <div class="card-h">📏 かたちを かえる</div>
+        <div id="sizeSliders" class="sliders"></div>
+        <div id="volBox" class="vol"></div>
+        <div class="row"><button class="btn sm" id="btnRule">📊 きまりの ひょう</button></div>
+        <div id="ruleTable"></div>
+      </div>
       <ul class="facts" id="solidFacts"></ul>
+      </div>
+      <div id="revolvePanel" class="col hide">
+        <div class="chips" id="revShapes"></div>
+        <div class="card info">
+          <h2 id="revTitle"></h2>
+          <p class="msg" id="revMsg"></p>
+          <div id="revVol" class="vol"></div>
+        </div>
+        <div class="row">
+          <button class="btn big" id="btnRevPlay">🌀 まわす</button>
+          <input type="range" id="rgRev" min="0" max="360" value="0" aria-label="まわす かくど">
+        </div>
+        <div class="row">
+          <button class="tog" id="tgRevCut">✂️ まっぷたつ</button>
+          <button class="btn sm" id="btnRevFront">👀 まよこから みる</button>
+        </div>
+        <ul class="facts" id="revFacts"></ul>
+      </div>
     </div>
   </section>
 
@@ -101,7 +135,11 @@
       </div>
       <div class="small">おためし：</div>
       <div class="chips" id="cutPresets"></div>
-      <div class="card found"><div class="small">みつけた きりくち</div><div id="cutFound" class="found-list"></div></div>
+      <div class="card">
+        <div class="row between"><span class="card-h">📚 きりくち ずかん <span id="cutCount" class="small"></span></span><button class="btn sm" id="btnCutOdai">🎯 おだい</button></div>
+        <p class="msg odai hide" id="cutOdaiMsg"></p>
+        <div id="cutZukan" class="zukan"></div>
+      </div>
     </div>
   </section>
 
@@ -137,6 +175,8 @@
       </div>
       <div id="rollPlane" class="hide">
         <div class="chips" id="roll2Shapes"></div>
+        <div class="small">あかい ● の ばしょ</div>
+        <div class="chips" id="roll2Point"></div>
         <div class="row">
           <button class="btn big" id="btnRoll2">▶️ ころがす</button>
           <button class="btn" id="btnRoll2Step">1かいずつ</button>
@@ -184,9 +224,11 @@
         <div class="row">
           <button class="btn" id="btnOdai">🏯 おだい</button>
           <button class="btn sm" id="btnOdaiAns">こたえ</button>
+          <button class="btn sm" id="btnHowMany">🔢 なんこ もんだい</button>
           <button class="btn sm" id="btnBlkClear">🗑️ ぜんぶ けす</button>
         </div>
         <p class="msg" id="odaiMsg"></p>
+        <div class="choices" id="blkChoices"></div>
       </div>
       <div id="buildPuzzle" class="hide">
         <select id="puzSel" class="sel" aria-label="もんだい"></select>
@@ -258,6 +300,20 @@
 </main>
 
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="levelModal" class="modal hide" role="dialog" aria-modal="true">
+  <div class="modal-box">
+    <h2>🎓 なんねんせい？</h2>
+    <p class="small">えらんだ レベルで クイズの もんだいや、<ruby>体積<rt>たいせき</rt></ruby>などの けいさんの でかたが かわるよ。あとから いつでも かえられます。</p>
+    <div class="level-grid" id="levelGrid"></div>
+  </div>
+</div>
+<div id="guide" class="modal hide" role="dialog" aria-modal="true">
+  <div class="modal-box guide-box">
+    <h2 id="guideTitle"></h2>
+    <div id="guideBody" class="guide-list"></div>
+    <button class="btn big" id="btnGuideOk">わかった！</button>
+  </div>
+</div>
 <div id="modal" class="modal hide" role="dialog" aria-modal="true">
   <div class="modal-box">
     <h2>⭐ シール ちょう</h2>
@@ -266,14 +322,16 @@
   </div>
 </div>
 
-<script src="core.js?v=28b6111"></script>
-<script src="solids.js?v=28b6111"></script>
-<script src="mode-solid.js?v=28b6111"></script>
-<script src="mode-cut.js?v=28b6111"></script>
-<script src="mode-roll.js?v=28b6111"></script>
-<script src="mode-build.js?v=28b6111"></script>
-<script src="mode-plane.js?v=28b6111"></script>
-<script src="mode-quiz.js?v=28b6111"></script>
-<script src="main.js?v=28b6111"></script>
+<script src="core.js?v=830318e"></script>
+<script src="solids.js?v=830318e"></script>
+<script src="mode-solid.js?v=830318e"></script>
+<script src="mode-revolve.js?v=830318e"></script>
+<script src="mode-cut.js?v=830318e"></script>
+<script src="mode-roll.js?v=830318e"></script>
+<script src="tangram.js?v=830318e"></script>
+<script src="mode-build.js?v=830318e"></script>
+<script src="mode-plane.js?v=830318e"></script>
+<script src="mode-quiz.js?v=830318e"></script>
+<script src="main.js?v=830318e"></script>
 </body>
 </html>
