@@ -155,6 +155,8 @@
   <button class="tool" data-tool="view">👆<span>みる</span></button>
   <button class="tool" data-tool="draw">✏️<span>せんろ</span></button>
   <button class="tool" data-tool="train">🚃<span>でんしゃ</span></button>
+  <button class="tool" data-tool="koka">🏗️<span>こうか</span></button>
+  <button class="tool" data-tool="water">🌊<span>かわ</span></button>
   <button class="tool" data-tool="eki">🚉<span>えき</span></button>
   <button class="tool" data-tool="tun">⛰️<span>トンネル</span></button>
   <button class="tool" data-tool="fumi">🚧<span>ふみきり</span></button>
@@ -181,7 +183,9 @@
         <li>せんろに せんろを つなぐと <b>ポイント</b>（わかれみち）や <b>クロス</b> に なるよ。</li>
         <li>👆 <b>みる</b>：ゆびで うごかせるよ。ポイントの ▶ を タップすると いくさきが かわるよ。でんしゃを タップすると とまる・はしる。</li>
         <li>🚃 <b>でんしゃ</b>：せんろを タップすると でんしゃが でるよ。ながさも えらべるよ。</li>
-        <li>🚉 えき・⛰️ トンネル・🚧 ふみきり は まっすぐの せんろに おけるよ。</li>
+        <li>🏗️ <b>こうか・てっきょう</b>：せんろを なぞると たかい せんろに なるよ。したの せんろと ぶつからずに こうさ（りったい こうさ）できるよ。✏️ せんろ で「こうか」を えらんで かいても いいよ。</li>
+        <li>🌊 <b>かわ</b>：かわの うえの せんろは てっきょうに なるよ。</li>
+        <li>🚉 えき・⛰️ トンネル・🚧 ふみきり は じめんの まっすぐの せんろに おけるよ。</li>
         <li>ふたつの ゆびで ひろげたり ちぢめたり できるよ。</li>
         <li>🎥 <b>おいかける</b> で でんしゃに ついていくよ。</li>
         <li>まちがえたら ↩️ <b>もどす</b>。つくった せんろは じどうで のこるよ。</li>
@@ -232,19 +236,33 @@ const rpos = r => { const l = local(r.a, r.b, r.p); return [r.x + l[0], r.y + l[
 const rnd = n => Math.floor(Math.random() * n);
 
 // ===== じょうたい =====
-let tiles = new Map(), specials = new Set(), trains = [];
+let tiles = new Map(), specials = new Set(), elev = new Set(), trains = [];
 const cam = { x: 0, y: 0, z: 1 };
-let tool = 'draw', speedLv = 1, sound = true, followId = 0, trType = 0, trCars = 4;
+let tool = 'draw', lvSel = 0, speedLv = 1, sound = true, followId = 0, trType = 0, trCars = 4;
 let bgDirty = true, statDirty = true, quiet = false, trainSeq = 1;
 let undoStack = [], rec = null;
 
 const get = (x, y) => tiles.get(K(x, y));
-const newT = () => ({ p: [], k: '', sw: 0, d: '' });
-const clone = t => t ? { p: t.p.map(q => [q[0], q[1]]), k: t.k, sw: t.sw, d: t.d } : null;
+const newT = () => ({ p: [], k: '', sw: 0, d: '', w: 0 });
+const clone = t => t ? { p: t.p.map(q => [q[0], q[1], q[2] | 0]), k: t.k, sw: t.sw, d: t.d, w: t.w | 0 } : null;
 const isStraight1 = t => !!t && t.p.length === 1 && t.p[0][1] === opp(t.p[0][0]);
 const usesEdge = (t, e) => !!t && t.p.some(q => q[0] === e || q[1] === e);
 const linked = (x, y, e) => usesEdge(get(x + DX[e], y + DY[e]), opp(e));
 const hasPath = (t, a, b) => !!t && t.p.some(q => (q[0] === a && q[1] === b) || (q[0] === b && q[1] === a));
+// たかさ（レベル）：0 じめん・1 こうか・2 てっきょう
+const LV_NAME = ['じめん', 'こうか', 'てっきょう'], LV_ICON = ['🟩', '🏗️', '🌉'];
+const lvOf = q => q[2] | 0;
+const sameEdges = (q, a, b) => (q[0] === a && q[1] === b) || (q[0] === b && q[1] === a);
+const pathLv = (t, a, b) => { const q = t && t.p.find(q => sameEdges(q, a, b)); return q ? lvOf(q) : 0; };
+const hasPathLv = (t, a, b, lv) => !!t && t.p.some(q => lvOf(q) === lv && sameEdges(q, a, b));
+const effLv = (x, y, lv) => { const t = get(x, y); return t && t.w && !lv ? 2 : lv; };
+// となりの マスとの さかいめの たかさ（0:じめん 1:たかい）
+function endH(x, y, e) {
+  const n = get(x + DX[e], y + DY[e]); if (!n) return 1;
+  let any = false;
+  for (const q of n.p) if (q[0] === opp(e) || q[1] === opp(e)) { if (lvOf(q) > 0) return 1; any = true; }
+  return any ? 0 : 1;
+}
 
 function norm(t) {
   if (!t) return null;
@@ -254,15 +272,18 @@ function norm(t) {
     const id = Math.min(q[0], q[1]) * 4 + Math.max(q[0], q[1]);
     if (seen.has(id)) return false; seen.add(id); return true;
   });
-  if (t.p.length) t.d = '';
-  if (t.k && !isStraight1(t)) t.k = '';
+  t.w = t.w ? 1 : 0;
+  t.p.forEach(q => { q[2] = q[2] | 0; if (t.w && !q[2]) q[2] = 2; });
+  if (t.p.length || t.w) t.d = '';
+  if (t.k && (!isStraight1(t) || lvOf(t.p[0]))) t.k = '';
   if (t.sw >= t.p.length) t.sw = 0;
-  if (!t.p.length && !t.d) return null;
+  if (!t.p.length && !t.d && !t.w) return null;
   return t;
 }
 function rawSet(k, t) {
   if (t) tiles.set(k, t); else tiles.delete(k);
   if (t && (t.k === 'tun' || t.k === 'fumi')) specials.add(k); else specials.delete(k);
+  if (t && t.p.some(lvOf)) elev.add(k); else elev.delete(k);
   bgDirty = statDirty = true;
 }
 function put(x, y, t) {
@@ -289,48 +310,55 @@ function undo() {
 
 // ===== せんろを つなぐ ルール =====
 // ストロークの はし：dir の ほうこうへ つなげる
-function endApply(x, y, dir) {
+function endApply(x, y, dir, lv) {
+  lv = effLv(x, y, lv);
   const t = clone(get(x, y)) || newT();
   if (usesEdge(t, dir)) return;
-  if (!t.p.length) t.p = [[opp(dir), dir]];
+  if (!t.p.length) t.p = [[opp(dir), dir, lv]];
   else {
     let done = false;
     for (let i = 0; i < t.p.length && !done; i++) {
       const [p, q] = t.p[i], lp = linked(x, y, p), lq = linked(x, y, q);
-      if (lp && !lq) { t.p[i] = [p, dir]; done = true; }
-      else if (lq && !lp) { t.p[i] = [q, dir]; done = true; }
-      else if (!lp && !lq && t.p.length === 1) { t.p[i] = [opp(dir), dir]; done = true; }
+      const l = lvOf(t.p[i]);
+      if (lp && !lq) { t.p[i] = [p, dir, l]; done = true; }
+      else if (lq && !lp) { t.p[i] = [q, dir, l]; done = true; }
+      else if (!lp && !lq && t.p.length === 1) { t.p[i] = [opp(dir), dir, lv]; done = true; }
     }
     if (!done) {
-      if (t.p.length >= 3) { t.p = [[opp(dir), dir]]; t.sw = 0; }
+      if (t.p.length >= 3) { t.p = [[opp(dir), dir, lv]]; t.sw = 0; }
       else {
         const es = new Set(); t.p.forEach(q => { es.add(q[0]); es.add(q[1]); });
         const X = es.has(opp(dir)) ? opp(dir) : [...es][0];
-        t.p.push([X, dir]); t.sw = t.p.length - 1;
+        t.p.push([X, dir, lv]); t.sw = t.p.length - 1;
       }
     }
   }
   put(x, y, t);
 }
 // ストロークの とちゅう：a から b へ とおりぬける
-function middleApply(x, y, a, b) {
+// ちがう たかさの せんろどうしは つながらない（立体交差）
+function middleApply(x, y, a, b, lv) {
   if (a === b) return;
+  lv = effLv(x, y, lv);
   const t = clone(get(x, y)) || newT();
-  if (hasPath(t, a, b)) return;
+  if (hasPathLv(t, a, b, lv)) return;
+  const same = t.p.findIndex(q => sameEdges(q, a, b));
+  if (same >= 0) { t.p[same][2] = lv; put(x, y, t); return; }
   if (t.p.length) {
     for (let i = 0; i < t.p.length; i++) {
+      if (lvOf(t.p[i]) !== lv) continue;
       const [p, q] = t.p[i]; let o = -1;
       if (p === a || p === b) o = q; else if (q === a || q === b) o = p;
-      if (o >= 0 && !linked(x, y, o)) { t.p[i] = [a, b]; put(x, y, t); return; }
+      if (o >= 0 && !linked(x, y, o)) { t.p[i] = [a, b, lv]; put(x, y, t); return; }
     }
-    if (t.p.length >= 3) { t.p = [[a, b]]; t.sw = 0; }
-    else { t.p.push([a, b]); t.sw = t.p.length - 1; }
-  } else t.p = [[a, b]];
+    if (t.p.length >= 3) { t.p = t.p.filter(q => lvOf(q) !== lv).slice(0, 2); }
+    t.p.push([a, b, lv]); t.sw = t.p.length - 1;
+  } else t.p = [[a, b, lv]];
   put(x, y, t);
 }
 const edgeTo = (f, t) => { const dx = t.x - f.x, dy = t.y - f.y; return dx > 0 ? 1 : dx < 0 ? 3 : dy > 0 ? 2 : 0; };
 class Stroke {
-  constructor() { this.L = []; }
+  constructor(lv) { this.L = []; this.lv = lv | 0; }
   add(x, y) {
     const L = this.L;
     if (L.length) {
@@ -350,14 +378,14 @@ class Stroke {
     const n = L.length; if (n < 2) return;
     const cur = L[n - 1], pr = L[n - 2], toPrev = edgeTo(cur, pr), toCur = opp(toPrev);
     put(pr.x, pr.y, clone(pr.base));
-    if (n === 2) endApply(pr.x, pr.y, toCur);
-    else middleApply(pr.x, pr.y, edgeTo(pr, L[n - 3]), toCur);
-    endApply(cur.x, cur.y, toPrev);
+    if (n === 2) endApply(pr.x, pr.y, toCur, this.lv);
+    else middleApply(pr.x, pr.y, edgeTo(pr, L[n - 3]), toCur, this.lv);
+    endApply(cur.x, cur.y, toPrev, this.lv);
     sfx.put();
   }
 }
-function rectLoop(x, y, w, h) {
-  const s = new Stroke();
+function rectLoop(x, y, w, h, lv) {
+  const s = new Stroke(lv);
   for (let i = 0; i <= w; i++) s.add(x + i, y);
   for (let j = 1; j <= h; j++) s.add(x + w, y + j);
   for (let i = w - 1; i >= 0; i--) s.add(x + i, y + h);
@@ -365,30 +393,31 @@ function rectLoop(x, y, w, h) {
 }
 function tapTrack(x, y) {
   const t = clone(get(x, y));
-  if (!t || !t.p.length) { const n = newT(); n.p = [[3, 1]]; put(x, y, n); sfx.put(); return; }
-  t.p = t.p.map(q => [(q[0] + 1) & 3, (q[1] + 1) & 3]);
+  if (!t || !t.p.length) { const n = t || newT(); n.p = [[3, 1, lvSel]]; put(x, y, n); sfx.put(); return; }
+  t.p = t.p.map(q => [(q[0] + 1) & 3, (q[1] + 1) & 3, lvOf(q)]);
   put(x, y, t); sfx.click();
 }
-function sharedEdge(t) {
+function sharedEdge(t) { // おなじ たかさで 2ほん いじょうが つかう へん（ポイント）
   if (!t || t.p.length < 2) return -1;
-  const cnt = [0, 0, 0, 0];
-  t.p.forEach(q => { cnt[q[0]]++; cnt[q[1]]++; });
-  const q = t.p[t.sw];
-  if (cnt[q[0]] > 1) return q[0];
-  if (cnt[q[1]] > 1) return q[1];
-  return cnt.findIndex(c => c > 1);
+  const cnt = new Array(12).fill(0);
+  t.p.forEach(q => { cnt[q[0] * 3 + lvOf(q)]++; cnt[q[1] * 3 + lvOf(q)]++; });
+  const q = t.p[t.sw], l = lvOf(q);
+  if (cnt[q[0] * 3 + l] > 1) return q[0];
+  if (cnt[q[1] * 3 + l] > 1) return q[1];
+  const i = cnt.findIndex(c => c > 1);
+  return i < 0 ? -1 : (i / 3) | 0;
 }
 
 // ===== でんしゃ =====
-function chooseExit(t, e) {
+// でぐちの へん*3+たかさ を かえす。おなじ たかさを ゆうせん（ちがう たかさは のぼり・くだり）
+function chooseExit(t, e, lv) {
   if (!t) return -1;
   const c = [];
-  for (const q of t.p) { if (q[0] === e) c.push(q[1]); else if (q[1] === e) c.push(q[0]); }
+  t.p.forEach((q, i) => { if (q[0] === e || q[1] === e) c.push(i); });
   if (!c.length) return -1;
-  if (c.length === 1) return c[0];
-  const q = t.p[t.sw];
-  if (q) { if (q[0] === e) return q[1]; if (q[1] === e) return q[0]; }
-  return c[0];
+  const same = c.filter(i => lvOf(t.p[i]) === lv), pool = same.length ? same : c;
+  const q = t.p[pool.includes(t.sw) ? t.sw : pool[0]];
+  return (q[0] === e ? q[1] : q[0]) * 3 + lvOf(q);
 }
 // role 0:せんとう 1:うしろの しゃりょう 2:うしろむきに たどる（でんしゃを おくとき）
 function advance(tr, r, dist, role) {
@@ -398,13 +427,15 @@ function advance(tr, r, dist, role) {
     if (dist <= rem) { r.p += dist / len; return moved + dist; }
     dist -= rem; moved += rem; r.p = 1;
     const nx = r.x + DX[r.b], ny = r.y + DY[r.b], e = opp(r.b), t = get(nx, ny);
+    const curLv = pathLv(get(r.x, r.y), r.a, r.b);
     let ex;
-    if (role === 1) { const c = tr.ch.get(K(nx, ny) * 4 + e); ex = (c !== undefined && hasPath(t, e, c)) ? c : chooseExit(t, e); }
-    else ex = chooseExit(t, e);
+    if (role === 1) { const c = tr.ch.get(K(nx, ny) * 4 + e); ex = (c !== undefined && hasPathLv(t, e, (c / 3) | 0, c % 3)) ? c : chooseExit(t, e, curLv); }
+    else ex = chooseExit(t, e, curLv);
     if (ex < 0) { r.blocked = true; return moved; }
+    const exE = (ex / 3) | 0;
     if (role === 0) tr.ch.set(K(nx, ny) * 4 + e, ex);
-    else if (role === 2) tr.ch.set(K(nx, ny) * 4 + ex, e);
-    r.x = nx; r.y = ny; r.a = e; r.b = ex; r.p = 0;
+    else if (role === 2) tr.ch.set(K(nx, ny) * 4 + exE, e * 3 + ex % 3);
+    r.x = nx; r.y = ny; r.a = e; r.b = exE; r.p = 0;
     if (role === 0 && tr.live) onEnter(tr);
   }
   return moved;
@@ -416,10 +447,10 @@ function spawnTrain(x, y, ty, n, silent) {
   const q = t.p[t.sw] || t.p[0];
   const tr = { id: trainSeq++, ty, n, r: [], ch: new Map(), flip: false, wait: 0, stop: false, rev: false, live: false, smoke: 0, moving: false };
   const lead = { x, y, a: q[0], b: q[1], p: .5 };
-  tr.ch.set(K(x, y) * 4 + lead.a, lead.b);
+  tr.ch.set(K(x, y) * 4 + lead.a, lead.b * 3 + lvOf(q));
   advance(tr, lead, (n - 1) * CARP + BOG, 0);
   delete lead.blocked;
-  tr.ch.set(K(lead.x, lead.y) * 4 + lead.a, lead.b);
+  tr.ch.set(K(lead.x, lead.y) * 4 + lead.a, lead.b * 3 + pathLv(get(lead.x, lead.y), lead.a, lead.b));
   const back = { x: lead.x, y: lead.y, a: lead.b, b: lead.a, p: 1 - lead.p };
   const rs = [{ ...lead }], offs = [];
   for (let c = 0; c < n; c++) offs.push(c * CARP, c * CARP + BOG);
@@ -439,7 +470,7 @@ function spawnTrain(x, y, ty, n, silent) {
 function reverseTrain(tr) {
   tr.ch.clear();
   for (const r of tr.r) {
-    tr.ch.set(K(r.x, r.y) * 4 + r.b, r.a);
+    tr.ch.set(K(r.x, r.y) * 4 + r.b, r.a * 3 + pathLv(get(r.x, r.y), r.a, r.b));
     const a = r.a; r.a = r.b; r.b = a; r.p = 1 - r.p;
   }
   tr.r.reverse(); tr.flip = !tr.flip;
@@ -482,9 +513,11 @@ function checkTrains() {
   if (!trains.some(t => t.id === followId)) setFollow(0);
   statDirty = true;
 }
-function carEnds(tr, c) {
+function carEnds(tr, c, withLv) {
   const n = tr.n, fi = tr.flip ? 2 * n - 1 - 2 * c : 2 * c, bi = tr.flip ? 2 * n - 2 - 2 * c : 2 * c + 1;
-  return [rpos(tr.r[fi]), rpos(tr.r[bi])];
+  const F = tr.r[fi], B = tr.r[bi];
+  if (!withLv) return [rpos(F), rpos(B)];
+  return [rpos(F), rpos(B), pathLv(get(F.x, F.y), F.a, F.b) > 0 || pathLv(get(B.x, B.y), B.a, B.b) > 0];
 }
 function hitTrain(wx, wy) {
   let best = null, bd = .55;
@@ -573,6 +606,53 @@ function pathStroke(c, a, b, off) {
 }
 function axisRot(c, t) { c.translate(.5, .5); if (t.p[0][0] % 2 === 0) c.rotate(Math.PI / 2); }
 
+// up=false: じめんの せんろ / up=true: こうか・てっきょう（どだいつき）
+function drawTrackPaths(c, x, y, t, up, s) {
+  const idx = [];
+  t.p.forEach((q, i) => { if ((lvOf(q) > 0) === up) idx.push(i); });
+  if (!idx.length) return;
+  const sh = sharedEdge(t), swq = t.p[t.sw], swl = lvOf(swq);
+  idx.sort((i, j) => (i === t.sw) - (j === t.sw));
+  if (up) for (const i of idx) {
+    const q = t.p[i], br = lvOf(q) === 2;
+    c.lineWidth = .68; c.strokeStyle = br ? '#5c4a40' : '#c9ced5'; pathStroke(c, q[0], q[1], 0);
+    if (br && s >= 20 && q[1] === opp(q[0])) {
+      const nx = -DY[q[1]], ny = DX[q[1]];
+      c.lineWidth = .04; c.strokeStyle = '#c4481f'; c.beginPath();
+      for (let f = .125; f < 1; f += .25) { const P = local(q[0], q[1], f); c.moveTo(P[0] - nx * .32, P[1] - ny * .32); c.lineTo(P[0] + nx * .32, P[1] + ny * .32); }
+      c.stroke();
+    }
+    c.lineWidth = br ? .075 : .05; c.strokeStyle = br ? '#e0602f' : '#8d949d';
+    pathStroke(c, q[0], q[1], -.31); pathStroke(c, q[0], q[1], .31);
+  }
+  for (const i of idx) {
+    const q = t.p[i], dim = sh >= 0 && i !== t.sw && (q[0] === sh || q[1] === sh) && lvOf(q) === swl;
+    c.lineWidth = .46; c.strokeStyle = dim ? '#8db8ec' : '#2f7fe0'; pathStroke(c, q[0], q[1], 0);
+    c.lineWidth = .045; c.strokeStyle = dim ? '#6a98d2' : '#1b5cb2';
+    pathStroke(c, q[0], q[1], -.12); pathStroke(c, q[0], q[1], .12);
+    if (s >= 30) { c.lineWidth = .02; c.strokeStyle = 'rgba(255,255,255,.35)'; pathStroke(c, q[0], q[1], 0); }
+  }
+  for (let e = 0; e < 4; e++) {
+    if (!idx.some(i => t.p[i][0] === e || t.p[i][1] === e)) continue;
+    c.save(); c.translate(.5, .5); c.rotate((e - 1) * Math.PI / 2);
+    if (linked(x, y, e)) { c.fillStyle = 'rgba(15,50,110,.55)'; c.fillRect(.485, -.23, .03, .46); }
+    else {
+      c.fillStyle = '#d63a2f'; c.fillRect(.36, -.27, .13, .54);
+      c.fillStyle = '#fff'; c.fillRect(.36, -.09, .13, .18);
+    }
+    c.restore();
+  }
+  if (sh >= 0 && s >= 20 && (swl > 0) === up && (swq[0] === sh || swq[1] === sh)) { // ポイントの やじるし
+    const other = swq[0] === sh ? swq[1] : swq[0];
+    const P = local(sh, other, .42), P2 = local(sh, other, .5);
+    const ang = Math.atan2(P2[1] - P[1], P2[0] - P[0]);
+    c.save(); c.translate(P[0], P[1]); c.rotate(ang);
+    c.beginPath(); c.moveTo(.17, 0); c.lineTo(-.1, -.13); c.lineTo(-.1, .13); c.closePath();
+    c.fillStyle = '#ffde3b'; c.fill(); c.lineWidth = .03; c.strokeStyle = '#7a5a00'; c.stroke();
+    c.restore();
+  }
+}
+
 function drawBg() {
   bgDirty = false;
   const c = bctx, s = S();
@@ -586,22 +666,39 @@ function drawBg() {
     for (let y = y0; y <= y1; y++) { const Y = Math.round(sy(y)) + .5; c.moveTo(0, Y); c.lineTo(W, Y); }
     c.stroke();
   }
+  // 0) かわ
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const o of out) {
+    if (!o.t.w) continue;
+    const X = sx(o.x), Y = sy(o.y);
+    c.fillStyle = '#58b2e6'; c.fillRect(X - .5, Y - .5, s + 1, s + 1);
+    if (s >= 20) {
+      c.strokeStyle = 'rgba(255,255,255,.5)'; c.lineWidth = Math.max(1, s * .035); c.beginPath();
+      c.arc(X + s * .3, Y + s * .38, s * .12, Math.PI * 1.15, Math.PI * 1.85);
+      c.arc(X + s * .72, Y + s * .74, s * .12, Math.PI * 1.15, Math.PI * 1.85);
+      c.stroke();
+    }
+  }
   if (s < 11) { // とおくから みたとき：かんたんに
-    c.setTransform(DPR, 0, 0, DPR, 0, 0);
     c.fillStyle = '#7fc25a';
     if (s >= 4) for (const o of out) if (o.t.d) c.fillRect(sx(o.x) + s * .2, sy(o.y) + s * .2, s * .6, s * .6);
-    c.lineWidth = Math.max(1.6, s * .46); c.lineCap = 'round'; c.lineJoin = 'round';
-    c.strokeStyle = '#2f7fe0'; c.beginPath();
-    for (const o of out) {
-      const X = sx(o.x), Y = sy(o.y);
-      for (const q of o.t.p) {
-        const A = MID(q[0]), B = MID(q[1]);
-        c.moveTo(X + A[0] * s, Y + A[1] * s);
-        if (q[1] === opp(q[0])) c.lineTo(X + B[0] * s, Y + B[1] * s);
-        else c.quadraticCurveTo(X + s / 2, Y + s / 2, X + B[0] * s, Y + B[1] * s);
+    c.lineCap = 'round'; c.lineJoin = 'round';
+    const lines = up => {
+      c.beginPath();
+      for (const o of out) {
+        const X = sx(o.x), Y = sy(o.y);
+        for (const q of o.t.p) {
+          if ((lvOf(q) > 0) !== up) continue;
+          const A = MID(q[0]), B = MID(q[1]);
+          c.moveTo(X + A[0] * s, Y + A[1] * s);
+          if (q[1] === opp(q[0])) c.lineTo(X + B[0] * s, Y + B[1] * s);
+          else c.quadraticCurveTo(X + s / 2, Y + s / 2, X + B[0] * s, Y + B[1] * s);
+        }
       }
-    }
-    c.stroke();
+    };
+    lines(false); c.lineWidth = Math.max(1.6, s * .46); c.strokeStyle = '#2f7fe0'; c.stroke();
+    lines(true); c.lineWidth = Math.max(3, s * .8); c.strokeStyle = '#eef1f4'; c.stroke();
+    c.lineWidth = Math.max(1.6, s * .46); c.strokeStyle = '#2f7fe0'; c.stroke();
     c.fillStyle = '#e3dccd';
     for (const o of out) if (o.t.k === 'eki') c.fillRect(sx(o.x), sy(o.y), s, s);
     c.lineCap = 'butt';
@@ -621,38 +718,31 @@ function drawBg() {
       for (let i = -1.4; i < 1.5; i += .4) c.fillRect(-.015, i, .03, .2);
     }
   }
-  // 2) せんろ
+  // 2) じめんの せんろ
   c.lineCap = 'butt';
   for (const o of out) {
-    const t = o.t; if (!t.p.length) continue;
+    if (!o.t.p.length) continue;
     tileTf(c, o.x, o.y, s);
-    const sh = sharedEdge(t);
-    const order = t.p.map((q, i) => i).sort((i, j) => (i === t.sw) - (j === t.sw));
-    for (const i of order) {
-      const q = t.p[i], dim = sh >= 0 && i !== t.sw && (q[0] === sh || q[1] === sh);
-      c.lineWidth = .46; c.strokeStyle = dim ? '#8db8ec' : '#2f7fe0'; pathStroke(c, q[0], q[1], 0);
-      c.lineWidth = .045; c.strokeStyle = dim ? '#6a98d2' : '#1b5cb2';
-      pathStroke(c, q[0], q[1], -.12); pathStroke(c, q[0], q[1], .12);
-      if (s >= 30) { c.lineWidth = .02; c.strokeStyle = 'rgba(255,255,255,.35)'; pathStroke(c, q[0], q[1], 0); }
-    }
-    for (let e = 0; e < 4; e++) {
-      if (!usesEdge(t, e)) continue;
-      c.save(); c.translate(.5, .5); c.rotate((e - 1) * Math.PI / 2);
-      if (linked(o.x, o.y, e)) { c.fillStyle = 'rgba(15,50,110,.55)'; c.fillRect(.485, -.23, .03, .46); }
-      else {
-        c.fillStyle = '#d63a2f'; c.fillRect(.36, -.27, .13, .54);
-        c.fillStyle = '#fff'; c.fillRect(.36, -.09, .13, .18);
+    drawTrackPaths(c, o.x, o.y, o.t, false, s);
+  }
+  // 2b) こうか・てっきょうの かげと はしら
+  for (const o of out) {
+    const t = o.t; if (!t.p.some(lvOf)) continue;
+    const ground = t.p.some(q => !lvOf(q));
+    tileTf(c, o.x, o.y, s);
+    for (const q of t.p) {
+      if (!lvOf(q)) continue;
+      const h0 = endH(o.x, o.y, q[0]), h1 = endH(o.x, o.y, q[1]), h = (h0 + h1) / 2;
+      if (h > 0) {
+        c.save(); c.translate(.13 * h, .2 * h);
+        c.lineWidth = .62; c.strokeStyle = 'rgba(0,0,0,.2)'; pathStroke(c, q[0], q[1], 0);
+        c.restore();
       }
-      c.restore();
-    }
-    if (sh >= 0 && s >= 20) { // ポイントの やじるし
-      const q = t.p[t.sw], other = q[0] === sh ? q[1] : q[0];
-      const P = local(sh, other, .42), P2 = local(sh, other, .5);
-      const ang = Math.atan2(P2[1] - P[1], P2[0] - P[0]);
-      c.save(); c.translate(P[0], P[1]); c.rotate(ang);
-      c.beginPath(); c.moveTo(.17, 0); c.lineTo(-.1, -.13); c.lineTo(-.1, .13); c.closePath();
-      c.fillStyle = '#ffde3b'; c.fill(); c.lineWidth = .03; c.strokeStyle = '#7a5a00'; c.stroke();
-      c.restore();
+      if (h0 && h1 && !ground) {
+        const P = local(q[0], q[1], .5);
+        c.fillStyle = 'rgba(0,0,0,.18)'; c.fillRect(P[0] - .1 + .13, P[1] - .1 + .2, .2, .2);
+        c.fillStyle = lvOf(q) === 2 ? '#8a7f75' : '#a7adb5'; c.fillRect(P[0] - .12 + .06, P[1] - .12 + .1, .24, .24);
+      }
     }
   }
   // 3) き・いえ・えきの かんばん
@@ -733,14 +823,14 @@ function drawFg(dt) {
   const c = fctx, s = S();
   c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, fg.width, fg.height);
   c.setTransform(DPR, 0, 0, DPR, 0, 0);
-  const pos = [];
+  const pos = [], cars = [], marks = [];
   for (const tr of trains) {
     const ty = TYPES[tr.ty], L0 = rpos(tr.r[0]);
     const vis = onScreen(L0[0], L0[1], tr.n * CARP + 2);
     for (let ci = 0; ci < tr.n; ci++) {
-      const [F, B] = carEnds(tr, ci);
-      pos.push([(F[0] + B[0]) / 2, (F[1] + B[1]) / 2]);
-      if (vis) drawCar(c, F, B, ty, ci, tr.n, s);
+      const [F, B, up] = carEnds(tr, ci, true);
+      if (!up) pos.push([(F[0] + B[0]) / 2, (F[1] + B[1]) / 2]);
+      if (vis) cars.push({ F, B, ty, ci, n: tr.n, up });
       if (ty.loco && ci === 0 && tr.moving) {
         tr.smoke += dt;
         if (tr.smoke > .13 && smoke.length < 300) {
@@ -749,22 +839,10 @@ function drawFg(dt) {
         }
       }
     }
-    if (tr.id === followId && vis && s >= 11) {
-      c.font = `${Math.round(Math.max(16, s * .45))}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
-      c.fillText('🎥', sx(L0[0]), sy(L0[1]) - s * .35);
-    }
-    if (tr.stop && vis && s >= 11) {
-      c.font = `${Math.round(Math.max(14, s * .4))}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
-      c.fillText('⏸️', sx(L0[0]), sy(L0[1]) - s * .3);
-    }
+    if (vis && s >= 11 && (tr.id === followId || tr.stop)) marks.push([tr.id === followId ? '🎥' : '⏸️', L0]);
   }
-  // けむり
-  for (const p of smoke) { p.life -= dt * .9; p.r += dt * .35; p.y -= dt * .25; }
-  smoke = smoke.filter(p => p.life > 0);
-  for (const p of smoke) {
-    c.fillStyle = `rgba(245,245,245,${(p.life * .7).toFixed(3)})`;
-    c.beginPath(); c.arc(sx(p.x), sy(p.y), p.r * s, 0, 7); c.fill();
-  }
+  // じめんの でんしゃ
+  for (const o of cars) if (!o.up) drawCar(c, o.F, o.B, o.ty, o.ci, o.n, s);
   // トンネル・ふみきり
   let anyClosed = false;
   for (const k of specials) {
@@ -809,6 +887,29 @@ function drawFg(dt) {
     kanT -= dt;
     if (kanT <= 0) { kanT = .32; kanH = !kanH; sfx.kan(kanH); }
   }
+  // こうか・てっきょう（したを とおる でんしゃの うえに かく）
+  if (s >= 11) {
+    c.lineCap = 'butt';
+    for (const k of elev) {
+      const t = tiles.get(k); if (!t) continue;
+      const x = KX(k), y = KY(k);
+      if (!onScreen(x + .5, y + .5, 1)) continue;
+      tileTf(c, x, y, s); drawTrackPaths(c, x, y, t, true, s);
+    }
+  }
+  c.setTransform(DPR, 0, 0, DPR, 0, 0);
+  for (const o of cars) if (o.up) drawCar(c, o.F, o.B, o.ty, o.ci, o.n, s);
+  for (const [m, L0] of marks) {
+    c.font = `${Math.round(Math.max(16, s * .45))}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+    c.fillText(m, sx(L0[0]), sy(L0[1]) - s * .35);
+  }
+  // けむり
+  for (const p of smoke) { p.life -= dt * .9; p.r += dt * .35; p.y -= dt * .25; }
+  smoke = smoke.filter(p => p.life > 0);
+  for (const p of smoke) {
+    c.fillStyle = `rgba(245,245,245,${(p.life * .7).toFixed(3)})`;
+    c.beginPath(); c.arc(sx(p.x), sy(p.y), p.r * s, 0, 7); c.fill();
+  }
 }
 
 // ===== ループ =====
@@ -847,7 +948,7 @@ function toast(msg, ms = 2600) {
 
 // ===== そうさ =====
 const ptrs = new Map(); let gest = null;
-const DRAG_TOOLS = ['erase', 'deco', 'eki', 'tun', 'fumi'];
+const DRAG_TOOLS = ['erase', 'deco', 'eki', 'tun', 'fumi', 'koka', 'water'];
 fg.addEventListener('contextmenu', e => e.preventDefault());
 fg.addEventListener('pointerdown', e => {
   ensureAudio();
@@ -861,7 +962,7 @@ fg.addEventListener('pointerdown', e => {
   const w = toWorld(e.clientX, e.clientY);
   const pan = tool === 'view' || tool === 'train' || e.button === 1 || e.button === 2;
   gest = { kind: pan ? 'pan' : tool, sx: e.clientX, sy: e.clientY, moved: false, tx: Math.floor(w.x), ty: Math.floor(w.y), cx: cam.x, cy: cam.y, last: null, dragging: false };
-  if (gest.kind === 'draw') { begin(); gest.stroke = new Stroke(); gest.stroke.add(gest.tx, gest.ty); }
+  if (gest.kind === 'draw') { begin(); gest.stroke = new Stroke(lvSel); gest.stroke.add(gest.tx, gest.ty); }
   else if (DRAG_TOOLS.includes(gest.kind)) begin();
 });
 fg.addEventListener('pointermove', e => {
@@ -880,10 +981,11 @@ fg.addEventListener('pointermove', e => {
   if (gest.kind === 'draw') { gest.stroke.add(tx, ty); return; }
   if (!gest.dragging && tx === gest.tx && ty === gest.ty) return;
   if (!gest.dragging) { gest.dragging = true; gest.last = { x: gest.tx, y: gest.ty }; dragOp(gest.kind, gest.tx, gest.ty); }
-  let cx = gest.last.x, cy = gest.last.y, g = 0;
+  let cx = gest.last.x, cy = gest.last.y, g = 0, px0 = cx, py0 = cy;
   while ((cx !== tx || cy !== ty) && g++ < 2000) {
     if (Math.abs(tx - cx) >= Math.abs(ty - cy)) cx += Math.sign(tx - cx); else cy += Math.sign(ty - cy);
-    dragOp(gest.kind, cx, cy);
+    dragOp(gest.kind, cx, cy, { x: px0, y: py0 });
+    px0 = cx; py0 = cy;
   }
   gest.last = { x: tx, y: ty };
 });
@@ -933,15 +1035,33 @@ function tapPan(px, py) {
   if (t && sharedEdge(t) >= 0) {
     const sh = sharedEdge(t);
     let i = t.sw;
-    for (let g = 0; g < t.p.length; g++) { i = (i + 1) % t.p.length; if (t.p[i][0] === sh || t.p[i][1] === sh) break; }
+    const cq = t.p[t.sw], L0 = (cq[0] === sh || cq[1] === sh) ? lvOf(cq) : -1;
+    for (let g = 0; g < t.p.length; g++) {
+      i = (i + 1) % t.p.length; const q = t.p[i];
+      if ((q[0] === sh || q[1] === sh) && (L0 < 0 || lvOf(q) === L0)) break;
+    }
     t.sw = i; bgDirty = true; sfx.click(); scheduleSave();
   }
 }
-function dragOp(kind, x, y) {
+const groundStraight = t => isStraight1(t) && !lvOf(t.p[0]);
+// e の へんを とおる せんろの たかさを lv に する
+function setEdgeLv(x, y, e, lv) {
+  const t = clone(get(x, y)); if (!t) return;
+  let ch = false;
+  t.p.forEach(q => { if ((q[0] === e || q[1] === e) && lvOf(q) !== lv) { q[2] = lv; ch = true; } });
+  if (ch) { put(x, y, t); sfx.put(); }
+}
+function dragOp(kind, x, y, prev) {
   const t = get(x, y);
   if (kind === 'erase') { if (t) { put(x, y, null); sfx.erase(); } }
   else if (kind === 'deco') { if (!t) { const n = newT(); n.d = DECOS[rnd(DECOS.length)]; put(x, y, n); sfx.put(); } }
-  else if (isStraight1(t) && t.k !== kind) { const n = clone(t); n.k = kind; put(x, y, n); sfx.put(); }
+  else if (kind === 'water') { if (!t || !t.w) { const n = clone(t) || newT(); n.w = 1; put(x, y, n); sfx.put(); } }
+  else if (kind === 'koka') {
+    if (!prev || (prev.x === x && prev.y === y)) return;
+    const d = edgeTo(prev, { x, y });
+    setEdgeLv(prev.x, prev.y, d, lvSel); setEdgeLv(x, y, opp(d), lvSel);
+  }
+  else if (groundStraight(t) && t.k !== kind) { const n = clone(t); n.k = kind; put(x, y, n); sfx.put(); }
 }
 function tapOp(kind, x, y, px, py) {
   const t = get(x, y);
@@ -951,12 +1071,26 @@ function tapOp(kind, x, y, px, py) {
     if (t) { put(x, y, null); sfx.erase(); }
     return;
   }
+  if (kind === 'water') {
+    const n = clone(t) || newT(); n.w = n.w ? 0 : 1; put(x, y, n); sfx.put(); return;
+  }
+  if (kind === 'koka') { // タップ：どの せんろを うえに するか じゅんばんに かわる
+    if (!t || !t.p.length) { toast('せんろの うえを なぞってね'); return; }
+    const n = clone(t), up = lvSel || 1;
+    if (n.p.length === 1) n.p[0][2] = lvOf(n.p[0]) ? 0 : up;
+    else {
+      const i = n.p.findIndex(lvOf);
+      n.p.forEach(q => { q[2] = 0; });
+      if (i < 0) n.p[0][2] = up; else if (i + 1 < n.p.length) n.p[i + 1][2] = up;
+    }
+    put(x, y, n); sfx.put(); return;
+  }
   if (kind === 'deco') {
-    if (t && t.p.length) { toast('くさの ところに おいてね'); return; }
+    if (t && (t.p.length || t.w)) { toast('くさの ところに おいてね'); return; }
     const n = newT(); n.d = t ? DECOS[(DECOS.indexOf(t.d) + 1) % DECOS.length] : DECOS[rnd(DECOS.length)];
     put(x, y, n); sfx.put(); return;
   }
-  if (!isStraight1(t)) { toast('まっすぐの せんろに おいてね'); return; }
+  if (!groundStraight(t)) { toast('じめんの まっすぐの せんろに おいてね'); return; }
   const n = clone(t); n.k = t.k === kind ? '' : kind; put(x, y, n); sfx.put();
 }
 
@@ -964,7 +1098,9 @@ function tapOp(kind, x, y, px, py) {
 const $ = id => document.getElementById(id);
 const HINTS = {
   view: 'ゆびで うごかせるよ。ポイントの ▶ や でんしゃを タップしてね',
-  draw: 'ゆびで なぞると せんろが できるよ。タップで くるっと まわる',
+  draw: 'ゆびで なぞると せんろが できるよ。「こうか」を えらぶと たかい ところを とおる せんろに なるよ',
+  koka: 'せんろを なぞると こうか や てっきょうに なって、したの せんろと ぶつからずに こうさ できるよ',
+  water: 'なぞると かわが できるよ。かわの うえの せんろは てっきょうに なるよ',
   train: 'でんしゃを えらんで、せんろを タップしてね',
   eki: 'まっすぐの せんろを タップ・なぞると えきに なるよ',
   tun: 'まっすぐの せんろを なぞると トンネルに なるよ',
@@ -976,13 +1112,25 @@ function setTool(t, silent) {
   tool = t;
   document.querySelectorAll('.tool').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
   fg.classList.toggle('pan', t === 'view' || t === 'train');
-  $('sub').hidden = t !== 'train';
+  if (t === 'koka' && !lvSel) lvSel = 1;
+  $('sub').hidden = !['train', 'draw', 'koka'].includes(t);
+  buildSub();
   if (!silent) { toast(HINTS[t]); sfx.click(); }
   scheduleSave();
 }
 document.querySelectorAll('.tool').forEach(b => b.addEventListener('click', () => { ensureAudio(); setTool(b.dataset.tool); }));
 function buildSub() {
   const sub = $('sub'); sub.innerHTML = '';
+  if (tool === 'draw' || tool === 'koka') {
+    LV_NAME.forEach((nm, i) => {
+      const b = document.createElement('button');
+      b.className = 'ty' + (i === lvSel ? ' on' : '');
+      b.innerHTML = `<b style="font-size:22px;line-height:1">${LV_ICON[i]}</b><span>${nm}</span>`;
+      b.addEventListener('click', () => { lvSel = i; buildSub(); sfx.click(); scheduleSave(); });
+      sub.appendChild(b);
+    });
+    return;
+  }
   TYPES.forEach((ty, i) => {
     const b = document.createElement('button');
     b.className = 'ty' + (i === trType ? ' on' : '');
@@ -1049,19 +1197,48 @@ function fitAll() {
   bgDirty = true; scheduleSave();
 }
 function markRun(x, y, kind, len) {
-  const t = get(x, y); if (!isStraight1(t)) return;
+  const t = get(x, y); if (!groundStraight(t)) return;
   const ax = t.p[0][0] % 2 === 1, dx = ax ? 1 : 0, dy = ax ? 0 : 1;
   for (let i = 0; i < len; i++) {
     const u = get(x + dx * i, y + dy * i);
-    if (!isStraight1(u) || u.p[0][0] % 2 !== t.p[0][0] % 2) return;
+    if (!groundStraight(u) || u.p[0][0] % 2 !== t.p[0][0] % 2) return;
   }
   for (let i = 0; i < len; i++) { const n = clone(get(x + dx * i, y + dy * i)); n.k = kind; put(x + dx * i, y + dy * i, n); }
+}
+// (x,y) の まっすぐな せんろ（たて vert / よこ）の たかさを lv に
+function raiseAxis(x, y, vert, lv) {
+  const t = clone(get(x, y)); if (!t) return false;
+  let ch = false;
+  t.p.forEach(q => { if (q[1] === opp(q[0]) && (q[0] % 2 === 0) === vert) { q[2] = lv; ch = true; } });
+  if (ch) put(x, y, t);
+  return ch;
+}
+// たいらな クロスを りったい こうさに する（よこの せんろを こうかに）
+function gradeSeparate(keys) {
+  for (const k of keys) {
+    const t = tiles.get(k); if (!t || t.p.length !== 2) continue;
+    const [p, q] = t.p;
+    if (lvOf(p) || lvOf(q) || p[1] !== opp(p[0]) || q[1] !== opp(q[0]) || p[0] % 2 === q[0] % 2) continue;
+    const x = KX(k), y = KY(k);
+    for (const sg of [-1, 1]) for (let d = 0; d <= 2; d++) {
+      const u = get(x + sg * d, y);
+      if (!u || !u.p.some(q => q[1] === opp(q[0]) && q[0] % 2 === 1) || (d > 0 && u.k)) break;
+      raiseAxis(x + sg * d, y, false, u.w ? 2 : 1);
+    }
+  }
 }
 function genCourse(scale) {
   const b = bounds();
   const Wd = Math.round(22 * scale + rnd(10 * scale)), Hd = Math.round(14 * scale + rnd(6 * scale));
   const ox = b ? b.x1 + 6 : -Math.floor(Wd / 2), oy = b ? Math.round((b.y0 + b.y1) / 2 - Hd / 2) : -Math.floor(Hd / 2);
   quiet = true; begin();
+  // かわ（うえを とおる せんろは てっきょうに なる）
+  let rx = ox + Math.round(Wd * (.3 + Math.random() * .4));
+  const rw = scale > 2 ? 3 : 2;
+  for (let y = oy - 5; y <= oy + Hd + 5; y++) {
+    if (Math.random() < .22) rx += Math.random() < .5 ? -1 : 1;
+    for (let i = 0; i < rw; i++) { const n = clone(get(rx + i, y)) || newT(); n.w = 1; put(rx + i, y, n); }
+  }
   rectLoop(ox, oy, Wd, Hd);
   const loops = 2 + Math.round(1.6 * scale);
   for (let i = 0; i < loops; i++) {
@@ -1071,6 +1248,7 @@ function genCourse(scale) {
     const y = oy - Math.round(h * .3) + rnd(Math.max(1, Hd - Math.round(h * .4)));
     rectLoop(x, y, w, h);
   }
+  gradeSeparate([...rec.keys()]);
   // えき・トンネル・ふみきり
   markRun(ox + Math.floor(Wd / 2) - 1, oy, 'eki', 3);
   markRun(ox + 3, oy + Hd, 'tun', Math.min(8, 3 + Math.round(scale * 1.2)));
@@ -1079,7 +1257,7 @@ function genCourse(scale) {
   const extra = Math.round(3 * scale);
   for (let i = 0; i < extra * 6; i++) {
     const x = ox + rnd(Wd + 1), y = oy + rnd(Hd + 1), r = Math.random();
-    if (isStraight1(get(x, y)) && !get(x, y).k) markRun(x, y, r < .45 ? 'eki' : r < .75 ? 'tun' : 'fumi', r < .45 ? 3 : r < .75 ? 4 : 1);
+    if (groundStraight(get(x, y)) && !get(x, y).k) markRun(x, y, r < .45 ? 'eki' : r < .75 ? 'tun' : 'fumi', r < .45 ? 3 : r < .75 ? 4 : 1);
   }
   // き・いえ
   for (let y = oy - 3; y <= oy + Hd + 3; y++) for (let x = ox - 3; x <= ox + Wd + 3; x++) {
@@ -1109,26 +1287,27 @@ function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(save, 
 function save() {
   try {
     const T = [];
-    for (const [k, t] of tiles) T.push([KX(k), KY(k), t.p.map(q => '' + q[0] + q[1]).join(''), t.k, t.sw, t.d]);
+    for (const [k, t] of tiles) T.push([KX(k), KY(k), t.p.map(q => '' + q[0] + q[1] + lvOf(q)).join(''), t.k, t.sw, t.d, t.w]);
     const R = trains.map(tr => ({ ty: tr.ty, n: tr.n, f: tr.flip ? 1 : 0, s: tr.stop ? 1 : 0, r: tr.r.map(r => [r.x, r.y, r.a, r.b, Math.round(r.p * 1000) / 1000]) }));
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 1, T, R, cam: { x: cam.x, y: cam.y, z: cam.z }, o: { sound, speedLv, trType, trCars, tool } }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ v: 2, T, R, cam: { x: cam.x, y: cam.y, z: cam.z }, o: { sound, speedLv, trType, trCars, tool, lvSel } }));
   } catch (e) { /* ほぞん できなくても あそべる */ }
 }
 function load() {
   let d = null;
   try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { d = null; }
-  if (!d || d.v !== 1) return false;
+  if (!d || (d.v !== 1 && d.v !== 2)) return false;
+  const step = d.v === 1 ? 2 : 3; // v1 は たかさ なし
   try {
-    for (const [x, y, ps, k, sw, deco] of d.T) {
-      const t = { p: [], k: k || '', sw: sw || 0, d: deco || '' };
-      for (let i = 0; i + 1 < ps.length; i += 2) t.p.push([+ps[i], +ps[i + 1]]);
+    for (const [x, y, ps, k, sw, deco, w] of d.T) {
+      const t = { p: [], k: k || '', sw: sw || 0, d: deco || '', w: w ? 1 : 0 };
+      for (let i = 0; i + step - 1 < ps.length; i += step) t.p.push([+ps[i], +ps[i + 1], step === 3 ? +ps[i + 2] : 0]);
       const nt = norm(t); if (nt) rawSet(K(x, y), nt);
     }
     for (const r of d.R || []) {
       const tr = { id: trainSeq++, ty: r.ty % TYPES.length, n: r.n, r: [], ch: new Map(), flip: !!r.f, wait: 0, stop: !!r.s, rev: false, live: true, smoke: 0, moving: false };
       tr.r = r.r.map(a => ({ x: a[0], y: a[1], a: a[2], b: a[3], p: a[4] }));
       if (tr.r.length !== tr.n * 2) continue;
-      for (const q of tr.r) tr.ch.set(K(q.x, q.y) * 4 + q.a, q.b);
+      for (const q of tr.r) tr.ch.set(K(q.x, q.y) * 4 + q.a, q.b * 3 + pathLv(get(q.x, q.y), q.a, q.b));
       trains.push(tr);
     }
     trains = trains.filter(tr => tr.r.every(r => hasPath(get(r.x, r.y), r.a, r.b)));
@@ -1136,6 +1315,7 @@ function load() {
     if (d.o) {
       sound = d.o.sound !== false; speedLv = (d.o.speedLv | 0) % 3; trType = (d.o.trType | 0) % TYPES.length;
       trCars = Math.max(1, Math.min(16, d.o.trCars | 0 || 4)); if (HINTS[d.o.tool]) tool = d.o.tool;
+      lvSel = (d.o.lvSel | 0) % 3;
     }
     return true;
   } catch (e) { return false; }
@@ -1147,21 +1327,26 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) save(
 // ===== はじめの コース =====
 function starter() {
   quiet = true;
+  for (let x = -9; x <= 9; x++) { const n = newT(); n.w = 1; put(x, 0, n); } // かわ → てっきょう
   rectLoop(-5, -3, 10, 6);
-  markRun(-1, -3, 'eki', 3);
-  markRun(-5, 0, 'fumi', 1);
-  markRun(1, 3, 'tun', 3);
-  for (const [x, y, d] of [[-7, -2, '🌳'], [7, 1, '🌲'], [0, 0, '🏠'], [-2, 1, '🌳'], [3, -1, '🌷'], [7, -3, '🏢'], [-7, 2, '🌻'], [2, 1, '🌳']]) {
+  rectLoop(-1, -6, 4, 12);
+  for (const x of [-1, 3]) for (const y of [-4, -3, -2, 2, 3, 4]) raiseAxis(x, y, true, 1); // こうかで りったい こうさ
+  markRun(-4, -3, 'eki', 3);
+  markRun(5, -2, 'fumi', 1);
+  markRun(-4, 3, 'tun', 2);
+  for (const [x, y, d] of [[-7, -2, '🌳'], [7, 2, '🌲'], [1, -1, '🏠'], [-3, 1, '🌳'], [1, 2, '🌷'], [7, -3, '🏢'], [-7, 2, '🌻'], [-3, -1, '🌳'], [5, -6, '🏫'], [-3, 5, '🌸']]) {
     const n = newT(); n.d = d; put(x, y, n);
   }
-  spawnTrain(-3, 3, 0, 3, true);
+  spawnTrain(1, 3, 0, 3, true);
+  spawnTrain(3, -5, 4, 3, true);
   quiet = false;
-  cam.x = .5; cam.y = .8; cam.z = Math.max(.35, Math.min(1.1, W / (14 * TS)));
+  fitAll();
 }
 
 // ===== スタート =====
 resize();
-if (!load() || !tiles.size) { tiles.clear(); specials.clear(); trains = []; starter(); tool = 'draw'; }
+if (!load() || !tiles.size) { tiles.clear(); specials.clear(); elev.clear(); trains = []; starter(); tool = 'draw'; }
+
 undoStack = [];
 setTool(tool, true); setSpeedUI(); setSoundUI(); buildSub(); updStat();
 toast('ゆびで なぞると せんろが できるよ！ 🌏 メニューで きょだいな コースも つくれるよ', 4200);
