@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2f6fe0">
+<title>あおちゃんの とけい</title>
+<style>
+  :root {
+    --blue: #2f6fe0;
+    --blue-d: #1d4fb0;
+    --sky: #e6f0ff;
+    --sky2: #cfe0ff;
+    --ink: #1c2b4a;
+    --sub: #5a6b8c;
+    --card: #ffffff;
+    --go: #20b26b;
+    --go-d: #168a52;
+    --stop: #ef5a4c;
+    --stop-d: #c63f33;
+    --gray: #9aa7bf;
+    --gray-d: #74819b;
+    --sun: #ffcf33;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Rounded Mplus 1c", "Yu Gothic", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, #dbe9ff 0%, #f4f8ff 60%, #fff 100%);
+    background-attachment: fixed;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+  }
+  .app {
+    max-width: 980px;
+    margin: 0 auto;
+    min-height: 100%;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  header { display: flex; align-items: center; gap: 10px; }
+  .back {
+    flex: none; width: 52px; height: 52px; border-radius: 16px;
+    display: grid; place-items: center; font-size: 26px; text-decoration: none;
+    background: var(--card); box-shadow: 0 4px 0 var(--sky2);
+  }
+  h1 { flex: 1; margin: 0; font-size: clamp(22px, 5.4vw, 32px); text-align: center; letter-spacing: .04em; }
+  h1 rt { font-size: .45em; }
+  .icon-btn {
+    flex: none; width: 52px; height: 52px; border-radius: 16px; border: 0;
+    font-size: 26px; background: var(--card); box-shadow: 0 4px 0 var(--sky2); cursor: pointer;
+  }
+  .icon-btn:active, .back:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--sky2); }
+
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tab {
+    border: 0; border-radius: 22px; padding: 12px 8px; min-height: 72px;
+    font: inherit; font-size: clamp(18px, 4.6vw, 24px); font-weight: 700;
+    color: var(--blue-d); background: var(--card); box-shadow: 0 5px 0 var(--sky2);
+    cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .tab .e { font-size: 1.5em; }
+  .tab[aria-selected="true"] { color: #fff; background: var(--blue); box-shadow: 0 5px 0 var(--blue-d); }
+  .tab:active { transform: translateY(3px); }
+  @media (max-width: 480px) {
+    .tab { flex-direction: column; gap: 0; font-size: 17px; padding: 8px 4px; white-space: nowrap; }
+    .tab .e { font-size: 1.6em; }
+  }
+
+  .panel { display: none; flex: 1; }
+  .panel.on { display: flex; }
+  .stage {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 14px;
+    background: var(--card); border-radius: 30px; padding: 18px 14px 20px;
+    box-shadow: 0 6px 0 var(--sky2);
+  }
+  .face-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+  .controls { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+
+  /* まるい とけい */
+  .face {
+    --p: 0;
+    position: relative;
+    width: min(74vw, 46vh, 360px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    background: var(--sky);
+    box-shadow: inset 0 0 0 10px #fff, 0 0 0 6px var(--sky2);
+  }
+  .pie {
+    position: absolute; inset: 14px; border-radius: 50%;
+    background: conic-gradient(var(--fill, var(--blue)) calc(var(--p) * 1turn), transparent 0);
+    transition: background .2s;
+  }
+  .ticks { position: absolute; inset: 0; }
+  .ticks i {
+    position: absolute; left: 50%; top: 4px; width: 4px; height: 12px; margin-left: -2px;
+    background: var(--sky2); border-radius: 2px; transform-origin: 50% calc(min(74vw, 46vh, 360px) / 2 - 4px);
+  }
+  .ticks i.big { width: 6px; margin-left: -3px; height: 18px; background: #9db9ea; }
+  .runner {
+    position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+    transform: rotate(calc(var(--p) * 1turn));
+  }
+  .runner span {
+    position: absolute; left: 0; top: 0;
+    font-size: min(12vw, 7.5vh, 58px);
+    transform: translate(-50%, calc(-1 * min(74vw, 46vh, 360px) / 2 + 2px)) translateY(-50%);
+    filter: drop-shadow(0 3px 0 rgba(0,0,0,.12));
+  }
+  .center {
+    position: absolute; inset: 22%; border-radius: 50%;
+    background: #fff; display: grid; place-items: center; text-align: center;
+    box-shadow: 0 4px 0 var(--sky2);
+  }
+  .big-num { font-size: min(13vw, 8vh, 64px); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+  .unit { font-size: .42em; font-weight: 700; margin: 0 .05em; }
+  .small-num { font-size: min(5vw, 3.2vh, 22px); color: var(--sub); font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .say { min-height: 1.6em; font-size: clamp(18px, 4.8vw, 26px); font-weight: 700; color: var(--blue-d); text-align: center; }
+
+  .row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; width: 100%; }
+  .btn {
+    border: 0; border-radius: 26px; cursor: pointer;
+    font: inherit; font-weight: 800; color: #fff;
+    min-height: 84px; min-width: 150px; padding: 10px 22px;
+    font-size: clamp(22px, 5.6vw, 30px);
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    background: var(--c, var(--blue)); box-shadow: 0 7px 0 var(--cd, var(--blue-d));
+  }
+  .btn:active { transform: translateY(5px); box-shadow: 0 2px 0 var(--cd, var(--blue-d)); }
+  .btn.go { --c: var(--go); --cd: var(--go-d); }
+  .btn.stop { --c: var(--stop); --cd: var(--stop-d); }
+  .btn.sub { --c: var(--gray); --cd: var(--gray-d); min-width: 120px; font-size: clamp(18px, 4.6vw, 24px); min-height: 70px; }
+  .btn.main { flex: 1 1 200px; max-width: 320px; }
+  .btn[disabled] { opacity: .4; pointer-events: none; }
+
+  .chips { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; width: 100%; max-width: 460px; }
+  .chip {
+    border: 0; border-radius: 20px; cursor: pointer; min-height: 64px;
+    font: inherit; font-weight: 800; font-size: clamp(17px, 4.4vw, 22px);
+    background: var(--sky); color: var(--blue-d); box-shadow: 0 5px 0 var(--sky2);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15;
+  }
+  .chip small { font-size: .9em; }
+  .chip .e { font-size: 1.15em; }
+  .chip:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--sky2); }
+  .chip.sel { background: var(--blue); color: #fff; box-shadow: 0 5px 0 var(--blue-d); }
+  .adj { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: 100%; max-width: 460px; }
+  .adj .chip small { font-size: .7em; }
+  .adj .chip { min-height: 56px; background: #fff; border: 3px solid var(--sky2); box-shadow: none; }
+  .locked .chips, .locked .adj { display: none; }
+
+  .records { width: 100%; max-width: 460px; }
+  .records h2 { margin: 4px 0 6px; font-size: 18px; color: var(--sub); text-align: center; }
+  .records ol { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .records li {
+    background: var(--sky); border-radius: 14px; padding: 6px 12px; font-weight: 700; font-size: 18px;
+    font-variant-numeric: tabular-nums;
+  }
+  .records .empty { color: var(--sub); font-weight: 400; background: none; }
+
+  /* おわりの おいわい */
+  .done {
+    position: fixed; inset: 0; z-index: 10; display: none;
+    background: rgba(28, 43, 74, .55); align-items: center; justify-content: center; padding: 20px;
+  }
+  .done.on { display: flex; }
+  .done-card {
+    background: #fff; border-radius: 34px; padding: 26px 22px; text-align: center;
+    width: min(92vw, 460px); box-shadow: 0 10px 0 var(--sky2);
+    animation: pop .5s cubic-bezier(.2, 1.6, .4, 1);
+  }
+  .done-card .e { font-size: 96px; display: block; animation: wiggle .6s ease-in-out infinite alternate; }
+  .done-card p { font-size: clamp(26px, 7vw, 38px); font-weight: 800; margin: 8px 0 18px; color: var(--blue-d); }
+  .stars { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 11; }
+  .stars span { position: absolute; top: -60px; font-size: 40px; animation: fall linear forwards; }
+  @keyframes pop { from { transform: scale(.4); opacity: 0; } }
+  @keyframes wiggle { from { transform: rotate(-12deg) scale(1); } to { transform: rotate(12deg) scale(1.08); } }
+  @keyframes fall { to { transform: translateY(115vh) rotate(540deg); } }
+  .face.ring { animation: ring .12s linear infinite alternate; }
+  @keyframes ring { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+
+  /* よこもち タブレット */
+  @media (orientation: landscape) and (min-width: 700px) {
+    .stage { flex-direction: row; align-items: center; justify-content: center; gap: 28px; padding: 22px; }
+    .face { width: min(40vw, 62vh, 420px); }
+    .ticks i { transform-origin: 50% calc(min(40vw, 62vh, 420px) / 2 - 4px); }
+    .runner span { transform: translate(-50%, calc(-1 * min(40vw, 62vh, 420px) / 2 + 2px)) translateY(-50%); font-size: min(6vw, 9vh, 64px); }
+    .big-num { font-size: min(7vw, 11vh, 74px); }
+    .face-wrap, .controls { width: auto; flex: 1; max-width: 460px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .done-card, .done-card .e, .face.ring, .stars span { animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <a class="back" href="../" aria-label="メニューに もどる">🏠</a>
+    <h1><ruby>青<rt>あお</rt></ruby>ちゃんの とけい</h1>
+    <button class="icon-btn" id="soundBtn" aria-label="おと">🔊</button>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tabSw" aria-selected="true" aria-controls="sw"><span class="e">⏱️</span>ストップウォッチ</button>
+    <button class="tab" role="tab" id="tabTm" aria-selected="false" aria-controls="tm"><span class="e">⏳</span>タイマー</button>
+  </div>
+
+  <!-- ストップウォッチ -->
+  <section class="panel on" id="sw" role="tabpanel" aria-labelledby="tabSw">
+    <div class="stage">
+      <div class="face-wrap">
+        <div class="face" id="swFace">
+          <div class="pie"></div>
+          <div class="ticks"></div>
+          <div class="runner"><span>🐳</span></div>
+          <div class="center">
+            <div>
+              <div class="big-num" id="swMain">0<span class="unit">びょう</span></div>
+              <div class="small-num" id="swSub">0.0</div>
+            </div>
+          </div>
+        </div>
+        <div class="say" id="swSay">スタートを おしてね</div>
+      </div>
+      <div class="controls">
+        <div class="row">
+          <button class="btn go main" id="swStart">▶ スタート</button>
+        </div>
+        <div class="row">
+          <button class="btn sub" id="swReset">↺ リセット</button>
+        </div>
+        <div class="records">
+          <h2>📒 きろく</h2>
+          <ol id="swRecords"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- タイマー -->
+  <section class="panel" id="tm" role="tabpanel" aria-labelledby="tabTm">
+    <div class="stage">
+      <div class="face-wrap">
+        <div class="face" id="tmFace">
+          <div class="pie"></div>
+          <div class="ticks"></div>
+          <div class="center">
+            <div>
+              <div class="big-num" id="tmMain">1<span class="unit">ぷん</span></div>
+              <div class="small-num" id="tmSub">1:00</div>
+            </div>
+          </div>
+        </div>
+        <div class="say" id="tmSay">じかんを えらんでね</div>
+      </div>
+      <div class="controls" id="tmControls">
+        <div class="chips" id="presets"></div>
+        <div class="adj">
+          <button class="chip" data-add="-60"><b>−1</b><small>ぷん</small></button>
+          <button class="chip" data-add="-10"><b>−10</b><small>びょう</small></button>
+          <button class="chip" data-add="10"><b>＋10</b><small>びょう</small></button>
+          <button class="chip" data-add="60"><b>＋1</b><small>ぷん</small></button>
+        </div>
+        <div class="row">
+          <button class="btn go main" id="tmStart">▶ スタート</button>
+        </div>
+        <div class="row">
+          <button class="btn sub" id="tmReset">↺ もどす</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="done" id="done" role="dialog" aria-modal="true" aria-labelledby="doneMsg">
+  <div class="done-card">
+    <span class="e">⏰</span>
+    <p id="doneMsg">じかんだよ！</p>
+    <button class="btn go" id="doneOk">👍 わかった</button>
+  </div>
+</div>
+<div class="stars" id="stars"></div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const KEY = 'ao-tokei-v1';
+
+  // ---------- ほぞん ----------
+  const state = {
+    tab: 'sw',
+    sound: true,
+    sw: { running: false, startAt: 0, acc: 0, records: [] },
+    tm: { total: 60, running: false, endAt: 0, left: 60 }
+  };
+  function load() {
+    try {
+      const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (!s) return;
+      if (s.tab === 'sw' || s.tab === 'tm') state.tab = s.tab;
+      if (typeof s.sound === 'boolean') state.sound = s.sound;
+      if (s.sw) Object.assign(state.sw, s.sw);
+      if (s.tm) Object.assign(state.tm, s.tm);
+      if (!Array.isArray(state.sw.records)) state.sw.records = [];
+    } catch (e) { /* つかえない ときは そのまま */ }
+  }
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ }
+  }
+
+  // ---------- おと（WebAudio の ごうせいおん） ----------
+  let ac = null;
+  function audio() {
+    if (!state.sound) return null;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { return null; }
+    return ac;
+  }
+  function tone(freq, start, dur, type = 'sine', vol = 0.25) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + start;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  const sfx = {
+    tap() { tone(880, 0, 0.08, 'triangle', 0.15); },
+    start() { tone(660, 0, 0.12, 'triangle'); tone(990, 0.1, 0.18, 'triangle'); },
+    stop() { tone(990, 0, 0.12, 'triangle'); tone(660, 0.1, 0.2, 'triangle'); },
+    tick() { tone(1320, 0, 0.07, 'square', 0.08); },
+    minute() { tone(1046, 0, 0.15, 'sine', 0.2); tone(1318, 0.12, 0.25, 'sine', 0.2); },
+    // ドミソド〜♪ の おしらせ
+    alarm() {
+      const n = [523, 659, 784, 1046, 784, 1046];
+      n.forEach((f, i) => tone(f, i * 0.16, 0.3, 'triangle', 0.3));
+    }
+  };
+  function renderSound() {
+    $('soundBtn').textContent = state.sound ? '🔊' : '🔇';
+    $('soundBtn').setAttribute('aria-label', state.sound ? 'おと オン' : 'おと オフ');
+  }
+  $('soundBtn').addEventListener('click', () => {
+    state.sound = !state.sound;
+    renderSound(); save();
+    if (state.sound) sfx.tap();
+  });
+
+  // ---------- がめんを くらく しない ----------
+  let wake = null;
+  async function keepAwake(on) {
+    try {
+      if (on && !wake && 'wakeLock' in navigator) {
+        wake = await navigator.wakeLock.request('screen');
+        wake.addEventListener('release', () => { wake = null; });
+      } else if (!on && wake) { await wake.release(); wake = null; }
+    } catch (e) { wake = null; }
+  }
+  function updateWake() { keepAwake(state.sw.running || state.tm.running); }
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') { updateWake(); frame(); }
+  });
+
+  // ---------- めもり ----------
+  document.querySelectorAll('.ticks').forEach((box) => {
+    for (let i = 0; i < 60; i++) {
+      const t = document.createElement('i');
+      if (i % 5 === 0) t.className = 'big';
+      t.style.transform = `rotate(${i * 6}deg)`;
+      box.appendChild(t);
+    }
+  });
+
+  // ---------- タブ ----------
+  function showTab(tab) {
+    state.tab = tab;
+    $('tabSw').setAttribute('aria-selected', tab === 'sw');
+    $('tabTm').setAttribute('aria-selected', tab === 'tm');
+    $('sw').classList.toggle('on', tab === 'sw');
+    $('tm').classList.toggle('on', tab === 'tm');
+    save(); frame();
+  }
+  $('tabSw').addEventListener('click', () => { sfx.tap(); showTab('sw'); });
+  $('tabTm').addEventListener('click', () => { sfx.tap(); showTab('tm'); });
+
+  // ---------- じかんの ひょうじ ----------
+  function bigText(sec, mode) {
+    // mode: 'up' は きりすて、'down' は きりあげ
+    const s = mode === 'down' ? Math.ceil(sec) : Math.floor(sec);
+    const m = Math.floor(s / 60), r = s % 60;
+    if (m === 0) return `${r}<span class="unit">びょう</span>`;
+    if (r === 0) return `${m}<span class="unit">ぷん</span>`;
+    return `${m}<span class="unit">ふん</span>${r}`;
+  }
+  function clock(sec, tenths) {
+    const s = Math.max(0, sec);
+    const m = Math.floor(s / 60), r = Math.floor(s % 60);
+    const base = `${m}:${String(r).padStart(2, '0')}`;
+    return tenths ? `${base}.${Math.floor((s * 10) % 10)}` : base;
+  }
+  function words(sec) {
+    const s = Math.round(sec);
+    const m = Math.floor(s / 60), r = s % 60;
+    if (m === 0) return `${r}びょう`;
+    if (r === 0) return `${m}ぷん`;
+    return `${m}ふん ${r}びょう`;
+  }
+
+  // ---------- ストップウォッチ ----------
+  const sw = state.sw;
+  let lastSwMinute = 0;
+  function swElapsed() { return (sw.acc + (sw.running ? Date.now() - sw.startAt : 0)) / 1000; }
+  function renderSwButtons() {
+    const b = $('swStart');
+    if (sw.running) { b.className = 'btn stop main'; b.textContent = '■ ストップ'; }
+    else { b.className = 'btn go main'; b.textContent = sw.acc > 0 ? '▶ つづき' : '▶ スタート'; }
+    $('swReset').disabled = sw.running || sw.acc === 0;
+  }
+  function renderRecords() {
+    const ol = $('swRecords');
+    ol.innerHTML = '';
+    if (!sw.records.length) {
+      const li = document.createElement('li');
+      li.className = 'empty';
+      li.textContent = 'ストップすると ここに のこるよ';
+      ol.appendChild(li);
+      return;
+    }
+    sw.records.forEach((r, i) => {
+      const li = document.createElement('li');
+      li.textContent = `${i === 0 ? '🆕' : '⭐'} ${clock(r, true)}`;
+      ol.appendChild(li);
+    });
+  }
+  $('swStart').addEventListener('click', () => {
+    if (sw.running) {
+      sw.acc += Date.now() - sw.startAt;
+      sw.running = false;
+      sfx.stop();
+      const t = sw.acc / 1000;
+      if (t >= 0.1) {
+        sw.records.unshift(Math.floor(t * 10) / 10);
+        sw.records = sw.records.slice(0, 5);
+        renderRecords();
+      }
+      $('swSay').textContent = `${words(Math.floor(t))} だったよ！`;
+    } else {
+      sw.startAt = Date.now();
+      sw.running = true;
+      lastSwMinute = Math.floor(swElapsed() / 60);
+      sfx.start();
+      $('swSay').textContent = 'よーい どん！';
+    }
+    renderSwButtons(); save(); updateWake(); loop();
+  });
+  $('swReset').addEventListener('click', () => {
+    sfx.tap();
+    sw.acc = 0; sw.running = false;
+    $('swSay').textContent = 'スタートを おしてね';
+    renderSwButtons(); save(); frame();
+  });
+  function frameSw() {
+    const t = swElapsed();
+    $('swMain').innerHTML = bigText(t, 'up');
+    $('swSub').textContent = clock(t, true);
+    // 1ぷんで とけいを 1しゅう
+    $('swFace').style.setProperty('--p', (t % 60) / 60);
+    const m = Math.floor(t / 60);
+    if (sw.running && m > lastSwMinute) {
+      lastSwMinute = m;
+      sfx.minute();
+      $('swSay').textContent = `${m}ぷん たったよ！`;
+    }
+  }
+
+  // ---------- タイマー ----------
+  const tm = state.tm;
+  const PRESETS = [
+    { s: 10, e: '🐣', label: '10びょう' },
+    { s: 30, e: '🐰', label: '30びょう' },
+    { s: 60, e: '🦊', label: '1ぷん' },
+    { s: 180, e: '🍜', label: '3ぷん' },
+    { s: 300, e: '🪥', label: '5ぷん' },
+    { s: 600, e: '🧸', label: '10ぷん' }
+  ];
+  const MAX = 60 * 60;
+  const presetBox = $('presets');
+  PRESETS.forEach((p) => {
+    const b = document.createElement('button');
+    b.className = 'chip';
+    b.dataset.sec = p.s;
+    b.innerHTML = `<span class="e">${p.e}</span><small>${p.label}</small>`;
+    b.addEventListener('click', () => { sfx.tap(); setTotal(p.s); });
+    presetBox.appendChild(b);
+  });
+  document.querySelectorAll('[data-add]').forEach((b) => {
+    b.addEventListener('click', () => {
+      sfx.tap();
+      setTotal(Math.min(MAX, Math.max(10, tm.left + Number(b.dataset.add))));
+    });
+  });
+  function setTotal(s) {
+    tm.total = s; tm.left = s; tm.running = false;
+    $('tmSay').textContent = `${words(s)}で いい？`;
+    renderTmButtons(); save(); frame();
+  }
+  function tmLeft() { return tm.running ? Math.max(0, (tm.endAt - Date.now()) / 1000) : tm.left; }
+  function renderTmButtons() {
+    const b = $('tmStart');
+    if (tm.running) { b.className = 'btn stop main'; b.textContent = '⏸ ちょっと まって'; }
+    else { b.className = 'btn go main'; b.textContent = tm.left < tm.total ? '▶ つづき' : '▶ スタート'; }
+    $('tmReset').disabled = tm.running || tm.left === tm.total;
+    $('tmControls').classList.toggle('locked', tm.running);
+    presetBox.querySelectorAll('.chip').forEach((c) => c.classList.toggle('sel', Number(c.dataset.sec) === tm.total));
+  }
+  let lastTick = -1;
+  $('tmStart').addEventListener('click', () => {
+    if (tm.running) {
+      tm.left = tmLeft();
+      tm.running = false;
+      sfx.stop();
+      $('tmSay').textContent = 'ひとやすみ ちゅう';
+    } else {
+      if (tm.left <= 0) tm.left = tm.total;
+      tm.endAt = Date.now() + tm.left * 1000;
+      tm.running = true;
+      lastTick = -1;
+      sfx.start();
+      $('tmSay').textContent = 'スタート！';
+    }
+    renderTmButtons(); save(); updateWake(); loop();
+  });
+  $('tmReset').addEventListener('click', () => {
+    sfx.tap();
+    tm.left = tm.total; tm.running = false;
+    $('tmSay').textContent = 'じかんを えらんでね';
+    renderTmButtons(); save(); frame();
+  });
+  function frameTm() {
+    const left = tmLeft();
+    $('tmMain').innerHTML = bigText(left, 'down');
+    $('tmSub').textContent = clock(Math.ceil(left), false);
+    const face = $('tmFace');
+    face.style.setProperty('--p', tm.total ? left / tm.total : 0);
+    const ratio = tm.total ? left / tm.total : 0;
+    face.style.setProperty('--fill', ratio > 0.5 ? 'var(--blue)' : ratio > 0.2 ? 'var(--sun)' : 'var(--stop)');
+    if (!tm.running) return;
+    const whole = Math.ceil(left);
+    if (whole !== lastTick) {
+      if (lastTick !== -1 && whole <= 5 && whole > 0) {
+        sfx.tick();
+        $('tmSay').textContent = `あと ${whole}…`;
+      } else if (whole > 5) {
+        $('tmSay').textContent = `あと ${words(whole)}`;
+      }
+      lastTick = whole;
+    }
+    if (left <= 0) finish();
+  }
+
+  // ---------- じかんだよ！ ----------
+  let alarmTimer = null, alarmCount = 0;
+  function finish() {
+    tm.running = false; tm.left = 0;
+    renderTmButtons(); save(); updateWake();
+    $('tmSay').textContent = 'じかんだよ！';
+    $('tmFace').classList.add('ring');
+    $('done').classList.add('on');
+    $('doneOk').focus();
+    stars();
+    alarmCount = 0;
+    sfx.alarm();
+    try { navigator.vibrate && navigator.vibrate([300, 150, 300, 150, 300]); } catch (e) { /* ignore */ }
+    clearInterval(alarmTimer);
+    // とめるまで 1.6びょう ごとに ならす（さいだい 20かい）
+    alarmTimer = setInterval(() => {
+      if (++alarmCount >= 20) { clearInterval(alarmTimer); return; }
+      sfx.alarm();
+    }, 1600);
+  }
+  function stars() {
+    const box = $('stars');
+    const icons = ['⭐', '🌟', '💙', '🎉', '✨', '🐳'];
+    for (let i = 0; i < 24; i++) {
+      const s = document.createElement('span');
+      s.textContent = icons[i % icons.length];
+      s.style.left = Math.random() * 100 + 'vw';
+      s.style.animationDuration = 2 + Math.random() * 2 + 's';
+      s.style.animationDelay = Math.random() * 1.2 + 's';
+      box.appendChild(s);
+      setTimeout(() => s.remove(), 5000);
+    }
+  }
+  $('doneOk').addEventListener('click', () => {
+    clearInterval(alarmTimer);
+    sfx.tap();
+    $('done').classList.remove('on');
+    $('tmFace').classList.remove('ring');
+    tm.left = tm.total;
+    $('tmSay').textContent = 'よく できました！ 💙';
+    renderTmButtons(); save(); frame();
+  });
+
+  // ---------- うごかす ----------
+  function frame() {
+    if (state.tab === 'sw' || sw.running) frameSw();
+    frameTm();
+  }
+  let raf = 0;
+  function loop() {
+    cancelAnimationFrame(raf);
+    const step = () => {
+      frame();
+      if (sw.running || tm.running) raf = requestAnimationFrame(step);
+    };
+    step();
+  }
+  // がめんが うらに いっても タイマーが おわったら ならす
+  setInterval(() => { if (tm.running && tmLeft() <= 0) finish(); }, 500);
+
+  // ---------- はじめ ----------
+  load();
+  if (tm.running && tmLeft() <= 0) { tm.running = false; tm.left = tm.total; }
+  renderSound();
+  renderRecords();
+  renderSwButtons();
+  renderTmButtons();
+  if (!sw.running && sw.acc > 0) $('swSay').textContent = 'とちゅうから つづけられるよ';
+  showTab(state.tab);
+  updateWake();
+  loop();
+})();
+</script>
+</body>
+</html>
