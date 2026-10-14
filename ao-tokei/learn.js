@@ -2,7 +2,7 @@
 (() => {
   'use strict';
   const KEY = 'ao-tokei-learn-v1';
-  const host = window.AoTokei || { sfx: {}, tone() {}, isSound: () => false };
+  const host = window.AoTokei || { sfx: {}, tone() {}, isSound: () => false, speak() {}, tick() {} };
   const sfx = (name) => { try { host.sfx[name] && host.sfx[name](); } catch (e) { /* ignore */ } };
   const stage = document.getElementById('lrStage');
   const NS = 'http://www.w3.org/2000/svg';
@@ -64,17 +64,9 @@
   }
   window.AoClock = { timeText };
 
-  function speak(text) {
-    if (!host.isSound() || !('speechSynthesis' in window)) return;
-    try {
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = 'ja-JP'; u.rate = 0.9; u.pitch = 1.15;
-      speechSynthesis.speak(u);
-    } catch (e) { /* ignore */ }
-  }
-  const good = () => { host.tone(784, 0, 0.12, 'triangle', 0.25); host.tone(1046, 0.1, 0.12, 'triangle', 0.25); host.tone(1318, 0.2, 0.25, 'triangle', 0.25); };
-  const boo = () => { host.tone(330, 0, 0.18, 'sawtooth', 0.12); host.tone(262, 0.15, 0.25, 'sawtooth', 0.12); };
+  const speak = (text) => { host.speak && host.speak(text); };
+  const good = () => sfx('correct');
+  const boo = () => sfx('wrong');
 
   // ---------- アナログ とけい（SVG） ----------
   function el(tag, attrs, parent) {
@@ -277,11 +269,12 @@
       </div></div>`));
       const ck = makeClock(q('.clock-box'));
       numsToggle(q('#nowNums'), ck);
-      let last = -1;
+      let last = -1, lastSec = -1;
       const tick = () => {
         const d = new Date();
         const t = d.getHours() * 60 + d.getMinutes();
         ck.set(t + d.getSeconds() / 60, d.getSeconds());
+        if (d.getSeconds() !== lastSec) { if (lastSec !== -1) host.tick(d.getSeconds()); lastSec = d.getSeconds(); }
         if (t !== last) {
           last = t;
           const p = period(t);
