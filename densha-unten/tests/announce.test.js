@@ -95,3 +95,12 @@ test("ブルーライン: 横浜→あざみ野 13駅・17.9km、最高80km/h", 
   assert.equal(b.meta.maxSpeed, 80);
   assert.match(announcement(b, "next", 5).text, /新幹線/);
 });
+
+test("ブルーライン（南）: 湘南台→横浜 20駅・22.5km、第三軌条", () => {
+  const b = validateRoute(readJSON("data/routes/blueline-south.json"));
+  assert.equal(b.stations.length, 20);
+  assert.equal(b.stations[0].name, "湘南台");
+  assert.equal(b.stations.at(-1).stop, 22500);
+  assert.equal(b.meta.power, "third-rail");
+  assert.match(announcement(b, "next", 10).text, /^次は、上大岡、上大岡。京急線は、お乗り換えです。/);
+});
