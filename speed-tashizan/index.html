@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スピードたしざん</title>
+<style>
+  :root {
+    --bg: #fff8ec;
+    --ink: #2b2b2b;
+    --sub: #7a6e5d;
+    --accent: #ff7a1a;
+    --accent-dark: #d95f00;
+    --btn: #ffffff;
+    --line: #f0dcc0;
+    --ok: #1fae6b;
+    --ng: #e5484d;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Zen Maru Gothic", "M PLUS Rounded 1c", "Hiragino Sans", "Noto Sans JP", sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .app {
+    max-width: 720px; margin: 0 auto; min-height: 100%;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    display: flex; flex-direction: column;
+  }
+  .topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .topbar a, .iconbtn {
+    font: inherit; font-size: 18px; color: var(--sub); text-decoration: none;
+    background: none; border: 2px solid var(--line); border-radius: 999px;
+    padding: 6px 14px; cursor: pointer; min-height: 44px; display: inline-flex; align-items: center;
+  }
+  .screen { flex: 1; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+  .screen.on { display: flex; }
+  h1 { font-size: clamp(32px, 8vw, 52px); margin: 0; color: var(--accent-dark); }
+  .lead { font-size: 20px; color: var(--sub); margin: 0; line-height: 1.6; }
+  .modes { display: grid; gap: 12px; width: 100%; max-width: 420px; }
+  .mode {
+    font: inherit; font-size: 26px; font-weight: bold; color: #fff;
+    background: var(--accent); border: none; border-radius: 22px;
+    padding: 18px 20px; cursor: pointer; box-shadow: 0 6px 0 var(--accent-dark);
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .mode:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--accent-dark); }
+  .mode small { font-size: 16px; font-weight: normal; opacity: .95; }
+
+  /* プレイ画面 */
+  #play { justify-content: flex-start; gap: 12px; padding-top: 8px; }
+  .status { width: 100%; display: flex; justify-content: space-between; align-items: baseline; font-size: 22px; }
+  .timer { font-size: 32px; font-weight: bold; font-variant-numeric: tabular-nums; }
+  .dots { display: flex; gap: 6px; justify-content: center; }
+  .dot { width: 18px; height: 18px; border-radius: 50%; background: var(--line); }
+  .dot.done { background: var(--ok); }
+  .dot.now { background: var(--accent); }
+  .question {
+    font-size: clamp(64px, 18vw, 110px); font-weight: bold; line-height: 1.1;
+    margin: 6px 0; font-variant-numeric: tabular-nums;
+  }
+  .question.shake { animation: shake .35s; color: var(--ng); }
+  .question.good { color: var(--ok); }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-12px)} 75%{transform:translateX(12px)} }
+  .pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: 100%; }
+  .num {
+    font: inherit; font-size: clamp(28px, 7vw, 40px); font-weight: bold; color: var(--ink);
+    background: var(--btn); border: 3px solid var(--line); border-radius: 18px;
+    aspect-ratio: 1 / 1; min-height: 56px; cursor: pointer; box-shadow: 0 4px 0 var(--line);
+    font-variant-numeric: tabular-nums;
+  }
+  .num:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+  .num.ng { background: #ffe3e3; border-color: var(--ng); }
+
+  /* 横持ち：問題と ボタンを 横に ならべる */
+  @media (orientation: landscape) and (min-width: 700px) and (max-height: 600px) {
+    #play.on { display: grid; grid-template-columns: 1fr 1.3fr; grid-template-rows: auto 1fr; align-items: center; column-gap: 24px; }
+    #play .status { grid-column: 1 / -1; }
+    #play .pad { grid-column: 2; }
+    #play .mid { grid-column: 1; grid-row: 2; }
+    .num { aspect-ratio: auto; height: 72px; }
+  }
+
+  /* けっか */
+  .result-time { font-size: clamp(56px, 16vw, 96px); font-weight: bold; color: var(--accent-dark); font-variant-numeric: tabular-nums; }
+  .badge { font-size: 24px; font-weight: bold; color: #fff; background: var(--ok); border-radius: 999px; padding: 6px 18px; }
+  .best { font-size: 20px; color: var(--sub); }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .sub {
+    font: inherit; font-size: 22px; font-weight: bold; color: var(--accent-dark);
+    background: #fff; border: 3px solid var(--accent); border-radius: 18px; padding: 12px 22px; cursor: pointer; min-height: 56px;
+  }
+  .count { font-size: clamp(100px, 30vw, 180px); font-weight: bold; color: var(--accent); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <a href="../">← メニュー</a>
+    <button class="iconbtn" id="soundBtn" type="button">🔊 おと オン</button>
+  </div>
+
+  <!-- スタート -->
+  <section class="screen on" id="title">
+    <h1>⚡ スピード たしざん</h1>
+    <p class="lead">10もん とけるまで なんびょう かな？<br>こたえの ボタンを はやく おそう！</p>
+    <div class="modes" id="modes"></div>
+  </section>
+
+  <!-- カウントダウン -->
+  <section class="screen" id="ready">
+    <div class="count" id="count">3</div>
+  </section>
+
+  <!-- プレイ -->
+  <section class="screen" id="play">
+    <div class="status">
+      <span id="qno">1 / 10</span>
+      <span class="timer" id="timer">0.0<small>びょう</small></span>
+    </div>
+    <div class="mid">
+      <div class="dots" id="dots"></div>
+      <div class="question" id="question">1 + 1 =</div>
+    </div>
+    <div class="pad" id="pad"></div>
+  </section>
+
+  <!-- けっか -->
+  <section class="screen" id="result">
+    <p class="lead">クリア！</p>
+    <div class="result-time" id="resultTime">0.0びょう</div>
+    <div class="badge" id="newBest" hidden>🏆 しんきろく！</div>
+    <div class="best" id="bestLine"></div>
+    <div class="best" id="missLine"></div>
+    <div class="row">
+      <button class="mode" id="againBtn" type="button">もういちど</button>
+      <button class="sub" id="backBtn" type="button">モードを えらぶ</button>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const TOTAL = 10;     // 1かいの もんだいすう
+  const MAX_ANS = 15;   // こたえボタンは 1〜15
+
+  // ===== モード =====
+  // ふやすときは ここに 1つ たす。make() は { a, b, op, ans } を かえす（ans は 1〜15）
+  const rand = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
+  const MODES = [
+    {
+      id: 'plus3',
+      name: 'たす 1・2・3',
+      desc: '〇 ＋ 1〜3',
+      make() {
+        const b = rand(1, 3);
+        const a = rand(1, MAX_ANS - b);
+        return { a, b, op: '+', ans: a + b };
+      },
+    },
+  ];
+
+  // ===== ほぞん =====
+  const KEY = 'speed-tashizan:v1';
+  let store = { sound: true, best: {} };
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && typeof s === 'object') store = Object.assign(store, s);
+  } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} };
+
+  // ===== おと（WebAudio） =====
+  let ctx = null;
+  function beep(freq, dur, type = 'sine', when = 0, vol = 0.18) {
+    if (!store.sound) return;
+    try {
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      if (ctx.state === 'suspended') ctx.resume();
+      const t = ctx.currentTime + when;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+      o.connect(g).connect(ctx.destination);
+      o.start(t); o.stop(t + dur);
+    } catch (e) {}
+  }
+  const sOk = () => { beep(880, 0.09, 'triangle'); beep(1320, 0.12, 'triangle', 0.06); };
+  const sNg = () => beep(160, 0.22, 'square', 0, 0.12);
+  const sTick = () => beep(660, 0.12, 'sine');
+  const sGo = () => beep(990, 0.25, 'sine');
+  const sClear = () => [523, 659, 784, 1047].forEach((f, i) => beep(f, 0.22, 'triangle', i * 0.11));
+
+  const $ = (id) => document.getElementById(id);
+  const soundBtn = $('soundBtn');
+  function drawSound() { soundBtn.textContent = store.sound ? '🔊 おと オン' : '🔇 おと オフ'; }
+  soundBtn.addEventListener('click', () => { store.sound = !store.sound; save(); drawSound(); if (store.sound) sOk(); });
+  drawSound();
+
+  // ===== がめん =====
+  function show(id) {
+    document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('on', s.id === id));
+  }
+  const fmt = (ms) => (Math.floor(ms / 100) / 10).toFixed(1);
+
+  function drawModes() {
+    const box = $('modes');
+    box.innerHTML = '';
+    MODES.forEach((m) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'mode';
+      const best = store.best[m.id];
+      b.innerHTML = `<span>${m.name}</span><small>${m.desc}　${best ? 'ベスト ' + fmt(best) + 'びょう' : 'まだ きろく なし'}</small>`;
+      b.addEventListener('click', () => start(m));
+      box.appendChild(b);
+    });
+  }
+
+  // こたえボタン 1〜15
+  const pad = $('pad');
+  for (let n = 1; n <= MAX_ANS; n++) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'num'; b.textContent = n; b.dataset.n = n;
+    pad.appendChild(b);
+  }
+
+  // ===== ゲーム =====
+  let mode = null, qs = [], idx = 0, t0 = 0, raf = 0, miss = 0, playing = false, lock = false;
+
+  function makeSet(m) {
+    const list = [];
+    while (list.length < TOTAL) {
+      const q = m.make();
+      const prev = list[list.length - 1];
+      if (prev && prev.a === q.a && prev.b === q.b) continue; // おなじ もんだいを つづけない
+      list.push(q);
+    }
+    return list;
+  }
+
+  function start(m) {
+    mode = m; qs = makeSet(m); idx = 0; miss = 0;
+    show('ready');
+    let n = 3;
+    $('count').textContent = n; sTick();
+    const iv = setInterval(() => {
+      n--;
+      if (n > 0) { $('count').textContent = n; sTick(); return; }
+      clearInterval(iv);
+      $('count').textContent = 'スタート！'; sGo();
+      setTimeout(begin, 350);
+    }, 650);
+  }
+
+  function begin() {
+    show('play');
+    playing = true; lock = false;
+    t0 = performance.now();
+    drawQ();
+    const loop = () => { $('timer').firstChild.nodeValue = fmt(performance.now() - t0); if (playing) raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+  }
+
+  function drawQ() {
+    const q = qs[idx];
+    const el = $('question');
+    el.className = 'question';
+    el.textContent = `${q.a} ${q.op} ${q.b} =`;
+    $('qno').textContent = `${idx + 1} / ${TOTAL}`;
+    $('dots').innerHTML = qs.map((_, i) => `<span class="dot${i < idx ? ' done' : i === idx ? ' now' : ''}"></span>`).join('');
+    pad.querySelectorAll('.ng').forEach((b) => b.classList.remove('ng'));
+  }
+
+  pad.addEventListener('pointerdown', (e) => {
+    const b = e.target.closest('.num');
+    if (!b || !playing || lock) return;
+    e.preventDefault();
+    const n = Number(b.dataset.n), q = qs[idx], el = $('question');
+    if (n === q.ans) {
+      sOk();
+      el.textContent = `${q.a} ${q.op} ${q.b} = ${q.ans}`;
+      el.className = 'question good';
+      lock = true;
+      idx++;
+      setTimeout(() => { lock = false; idx < TOTAL ? drawQ() : finish(); }, 180);
+    } else {
+      sNg(); miss++;
+      b.classList.add('ng');
+      el.className = 'question';
+      void el.offsetWidth;
+      el.className = 'question shake';
+    }
+  });
+
+  function finish() {
+    playing = false;
+    cancelAnimationFrame(raf);
+    const ms = performance.now() - t0 - 180; // さいごの ひょうじ まちは のぞく
+    const prev = store.best[mode.id];
+    const isBest = !prev || ms < prev;
+    if (isBest) { store.best[mode.id] = ms; save(); }
+    $('resultTime').textContent = fmt(ms) + 'びょう';
+    $('newBest').hidden = !isBest;
+    $('bestLine').textContent = 'ベスト ' + fmt(store.best[mode.id]) + 'びょう（' + mode.name + '）';
+    $('missLine').textContent = miss ? 'まちがい ' + miss + 'かい' : 'まちがい なし！ すごい！';
+    show('result');
+    sClear();
+  }
+
+  $('againBtn').addEventListener('click', () => start(mode));
+  $('backBtn').addEventListener('click', () => { drawModes(); show('title'); });
+
+  drawModes();
+})();
+</script>
+</body>
+</html>
