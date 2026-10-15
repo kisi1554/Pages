@@ -1,0 +1,1242 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>そりゅうし たんけん ラボ</title>
+<style>
+  :root {
+    --bg: #0b1330;
+    --panel: #16224f;
+    --panel2: #0e183c;
+    --ink: #f3f6ff;
+    --sub: #aeb9e6;
+    --lhc: #ff8a3d;
+    --ice: #3fc8ff;
+    --sk: #ffd23f;
+    --accent: var(--lhc);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body { min-height: 100vh; padding-bottom: env(safe-area-inset-bottom); }
+  button { font-family: inherit; }
+  rt { font-size: .5em; color: var(--sub); }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px 8px;
+  }
+  h1 {
+    flex: 1;
+    margin: 0;
+    font-size: clamp(20px, 5.2vw, 30px);
+    letter-spacing: .05em;
+  }
+  .iconbtn {
+    flex: none;
+    min-width: 56px;
+    height: 56px;
+    padding: 0 12px;
+    border: 3px solid #2c3a74;
+    border-radius: 16px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .iconbtn .big { font-size: 24px; }
+
+  .tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 0 14px;
+  }
+  .tab {
+    min-height: 74px;
+    padding: 8px 4px;
+    border: 3px solid #2c3a74;
+    border-radius: 18px;
+    background: var(--panel);
+    color: var(--ink);
+    font-size: clamp(13px, 3.5vw, 18px);
+    font-weight: bold;
+    line-height: 1.3;
+    cursor: pointer;
+  }
+  .tab .em { display: block; font-size: 28px; }
+  .tab small { display: block; font-size: .72em; color: var(--sub); font-weight: normal; }
+  .tab[aria-selected="true"] {
+    border-color: var(--c);
+    box-shadow: 0 0 0 3px var(--c) inset, 0 0 18px var(--c);
+  }
+
+  main { padding: 12px 14px 24px; }
+  .stage { display: grid; gap: 12px; }
+  @media (min-width: 820px) and (orientation: landscape) {
+    .stage { grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); align-items: start; }
+  }
+  .canvas-wrap {
+    position: relative;
+    border: 3px solid var(--accent);
+    border-radius: 20px;
+    overflow: hidden;
+    background: #000;
+  }
+  canvas { display: block; width: 100%; touch-action: manipulation; }
+  .side { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    background: var(--panel);
+    border-radius: 18px;
+    padding: 12px 14px;
+    font-size: 16px;
+    line-height: 1.75;
+  }
+  .card h2 { margin: 0 0 4px; font-size: 19px; color: var(--accent); }
+  .card p { margin: 0; }
+  .msg {
+    min-height: 3.6em;
+    background: var(--panel2);
+    border: 2px dashed #34458a;
+    border-radius: 16px;
+    padding: 10px 14px;
+    font-size: 18px;
+    line-height: 1.6;
+    font-weight: bold;
+  }
+  .btns { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; }
+  .btns.one { grid-template-columns: 1fr; }
+  .btn {
+    min-height: 66px;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 18px;
+    background: var(--accent);
+    color: #1a1a2a;
+    font-size: clamp(17px, 4.6vw, 21px);
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,.4);
+    line-height: 1.3;
+  }
+  .btn.sub { background: #e8ecff; }
+  .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.4); }
+  .btn:disabled { opacity: .35; cursor: default; }
+  .btn.pulse:not(:disabled) { animation: pulse 0.8s ease-in-out infinite alternate; }
+  @keyframes pulse { from { filter: brightness(1); } to { filter: brightness(1.35); transform: scale(1.03); } }
+  .meter {
+    height: 26px;
+    border-radius: 13px;
+    background: var(--panel2);
+    overflow: hidden;
+    border: 2px solid #34458a;
+  }
+  .meter > i {
+    display: block;
+    height: 100%;
+    width: 0;
+    background: linear-gradient(90deg, #ffd23f, #ff5a3d);
+    transition: width .15s;
+  }
+  .speed { font-size: 15px; color: var(--sub); margin-top: 4px; }
+  .legend { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 15px; }
+  .legend span::before {
+    content: "";
+    display: inline-block;
+    width: 14px; height: 14px;
+    margin-right: 6px;
+    border-radius: 50%;
+    background: var(--dot);
+    vertical-align: -1px;
+  }
+  .fact { font-size: 15px; color: var(--sub); }
+  .fact b { color: var(--ink); }
+  .fact button {
+    margin-top: 6px;
+    border: 2px solid #34458a;
+    border-radius: 12px;
+    background: var(--panel2);
+    color: var(--ink);
+    font-size: 15px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .stars { font-size: 20px; letter-spacing: .1em; }
+  [hidden] { display: none !important; }
+
+  /* ずかん */
+  dialog {
+    width: min(760px, 94vw);
+    max-height: 88vh;
+    border: 3px solid #6a4cff;
+    border-radius: 22px;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 16px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  .zhead { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .zhead h2 { flex: 1; margin: 0; font-size: 22px; }
+  .zgrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  .zc {
+    background: var(--panel);
+    border-radius: 16px;
+    padding: 10px 12px;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .zc .sym {
+    display: inline-grid;
+    place-items: center;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: var(--c);
+    color: #111;
+    font-weight: bold;
+    font-size: 20px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+  .zc .nm { font-size: 18px; font-weight: bold; vertical-align: middle; }
+  .zc.lock { opacity: .55; }
+  .zc.lock .sym { background: #3a4677; color: #aeb9e6; }
+  .zc .wh { color: var(--sub); }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%) translateY(140%);
+    background: #fff6c9;
+    color: #3a2a00;
+    padding: 12px 20px;
+    border-radius: 18px;
+    font-size: 18px;
+    font-weight: bold;
+    box-shadow: 0 8px 24px rgba(0,0,0,.5);
+    transition: transform .3s;
+    z-index: 10;
+    max-width: 92vw;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>⚛️ <ruby>素粒子<rt>そりゅうし</rt></ruby> たんけん ラボ</h1>
+  <button class="iconbtn" id="zukanBtn" aria-label="ずかん"><span class="big">📘</span> <span id="zcount">0</span></button>
+  <button class="iconbtn" id="soundBtn" aria-label="おと"><span class="big" id="soundIcon">🔊</span></button>
+</header>
+
+<nav class="tabs" role="tablist">
+  <button class="tab" role="tab" data-tab="lhc" style="--c:var(--lhc)"><span class="em">🌀</span>LHC<small>スイス・フランス</small></button>
+  <button class="tab" role="tab" data-tab="ice" style="--c:var(--ice)"><span class="em">🧊</span>アイスキューブ<small>なんきょく</small></button>
+  <button class="tab" role="tab" data-tab="sk" style="--c:var(--sk)"><span class="em">💧</span>スーパーカミオカンデ<small>ぎふけん</small></button>
+</nav>
+
+<main>
+  <!-- LHC -->
+  <section class="stage" id="p-lhc" data-accent="var(--lhc)">
+    <div class="canvas-wrap"><canvas id="cv-lhc"></canvas></div>
+    <div class="side">
+      <div class="card">
+        <div>はやさ</div>
+        <div class="meter"><i id="lhcMeter"></i></div>
+        <div class="speed" id="lhcSpeed">ひかりの はやさの 0%</div>
+      </div>
+      <div class="btns">
+        <button class="btn" id="lhcAcc">⚡ かそく！</button>
+        <button class="btn pulse" id="lhcHit" disabled>💥 ぶつける！</button>
+      </div>
+      <div class="msg" id="lhcMsg">「かそく！」を なんかいも おして、ようしを はやく しよう！</div>
+      <div class="card">
+        <h2>LHC（エル・エイチ・シー）</h2>
+        <p>ちかの まるい トンネルで、<b>ようし</b>を ぐるぐる はしらせて はやくして、ドカーンと ぶつけるよ。こわれて とびだした つぶを しらべるんだ。</p>
+      </div>
+      <div class="card legend">
+        <span style="--dot:#ff4fd8">ミューオン</span>
+        <span style="--dot:#4dff7a">でんし</span>
+        <span style="--dot:#ffe94d">ひかりの つぶ</span>
+        <span style="--dot:#ff9a3d">クォーク</span>
+        <span style="--dot:#ffffff">ニュートリノ（みえない）</span>
+        <span style="--dot:#ffd700">ヒッグス</span>
+      </div>
+      <div class="card fact" id="lhcFact"></div>
+    </div>
+  </section>
+
+  <!-- IceCube -->
+  <section class="stage" id="p-ice" data-accent="var(--ice)" hidden>
+    <div class="canvas-wrap"><canvas id="cv-ice"></canvas></div>
+    <div class="side">
+      <div class="btns one">
+        <button class="btn" id="iceGo">🌌 ニュートリノを まつ</button>
+      </div>
+      <div class="msg" id="iceMsg">ボタンか がめんを タッチして、ニュートリノを まとう！</div>
+      <div class="card">
+        <h2>アイスキューブ</h2>
+        <p>なんきょくの ふかい こおりの なかに、ひかりセンサーの たまが ずらり。うちゅうから きた <b>ニュートリノ</b>が こおりに ぶつかると、ぴかっと ひかるよ。</p>
+      </div>
+      <div class="card fact">
+        いろは ひかった じゅんばん：<br>
+        <b style="color:#ff5050">あか</b> → <b style="color:#ffd000">きいろ</b> → <b style="color:#40e070">みどり</b> → <b style="color:#4aa8ff">あお</b> → <b style="color:#b070ff">むらさき</b>（あとから）<br>
+        たまが おおきいほど たくさん ひかったよ。
+      </div>
+      <div class="card fact" id="iceFact"></div>
+    </div>
+  </section>
+
+  <!-- Super-Kamiokande -->
+  <section class="stage" id="p-sk" data-accent="var(--sk)" hidden>
+    <div class="canvas-wrap"><canvas id="cv-sk"></canvas></div>
+    <div class="side">
+      <div class="card fact">
+        🎯 <b>くっきりした わ</b> → ミューオン<br>
+        ☁️ <b>ふわっと ぼやけた わ</b> → でんし
+      </div>
+      <div class="btns one">
+        <button class="btn" id="skGo">💧 ニュートリノを まつ</button>
+      </div>
+      <div class="btns" id="skQuiz">
+        <button class="btn sub" id="skMu" disabled>🎯 くっきり<br>ミューオン</button>
+        <button class="btn sub" id="skE" disabled>☁️ ぼやけ<br>でんし</button>
+      </div>
+      <div class="msg" id="skMsg">「ニュートリノを まつ」を おしてね。</div>
+      <div class="card">
+        <h2>スーパーカミオカンデ</h2>
+        <p>やまの ちかの おおきな みずの タンク。ニュートリノが みずに ぶつかると、あおい ひかりの <b>「わ」</b>が かべに うつるよ。わの かたちで つぶを あてよう！</p>
+      </div>
+      <div class="card">あたり：<span class="stars" id="skStars"></span></div>
+      <div class="card fact" id="skFact"></div>
+    </div>
+  </section>
+</main>
+
+<dialog id="zukan">
+  <div class="zhead">
+    <h2>📘 そりゅうし ずかん <span id="zcount2"></span></h2>
+    <button class="iconbtn" id="zClose" aria-label="とじる">✖</button>
+  </div>
+  <div class="zgrid" id="zgrid"></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  const $ = (s) => document.querySelector(s);
+  const TAU = Math.PI * 2;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+  /* ---------- ほぞん ---------- */
+  const KEY = 'soryushi-lab-v1';
+  const save = { found: {}, sound: true, skStars: 0, tab: 'lhc' };
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (s && typeof s === 'object') Object.assign(save, s);
+  } catch (e) { /* つかえないときは ほぞん しない */ }
+  function persist() {
+    try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* むし */ }
+  }
+
+  /* ---------- おと（WebAudio の ごうせいおん） ---------- */
+  let ac = null;
+  function audio() {
+    if (!save.sound) return null;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { return null; }
+    return ac;
+  }
+  function tone(freq, dur, type, vol, when, slideTo) {
+    const a = audio(); if (!a) return;
+    const t = a.currentTime + (when || 0);
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, t);
+    if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol || 0.15, t + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(a.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  function boom() {
+    const a = audio(); if (!a) return;
+    const len = Math.floor(a.sampleRate * 0.9);
+    const buf = a.createBuffer(1, len, a.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2.5);
+    const src = a.createBufferSource(); src.buffer = buf;
+    const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+    const g = a.createGain(); g.gain.value = 0.5;
+    src.connect(f).connect(g).connect(a.destination);
+    src.start();
+    tone(120, 0.6, 'sine', 0.35, 0, 40);
+  }
+  function fanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.28, 'triangle', 0.16, i * 0.12)); }
+  function chime() { tone(880, 0.18, 'triangle', 0.14); tone(1320, 0.3, 'triangle', 0.12, 0.1); }
+  function bubu() { tone(220, 0.25, 'square', 0.08); tone(180, 0.35, 'square', 0.08, 0.22); }
+  let lastPing = 0;
+  function ping(freq) {
+    const now = performance.now();
+    if (now - lastPing < 35) return;
+    lastPing = now;
+    tone(freq, 0.12, 'sine', 0.06);
+  }
+
+  function updateSoundIcon() { $('#soundIcon').textContent = save.sound ? '🔊' : '🔇'; }
+  $('#soundBtn').addEventListener('click', () => {
+    save.sound = !save.sound; persist(); updateSoundIcon();
+    if (save.sound) chime();
+  });
+  updateSoundIcon();
+
+  /* ---------- ずかん ---------- */
+  const P = {
+    proton:   { name: 'ようし', sym: 'p', color: '#ff6a6a', where: 'LHC', desc: 'げんしの まんなかに ある つぶ。LHCで ぐるぐる はしらせて ぶつける。' },
+    electron: { name: 'でんし', sym: 'e', color: '#4dff7a', where: 'LHC・アイスキューブ・カミオカンデ', desc: 'でんきの もとに なる、とても かるい つぶ。' },
+    muon:     { name: 'ミューオン', sym: 'μ', color: '#ff4fd8', where: 'LHC・アイスキューブ・カミオカンデ', desc: 'でんしの おもい おにいさん。かべを どんどん つきぬける。' },
+    photon:   { name: 'ひかりの つぶ（こうし）', sym: 'γ', color: '#ffe94d', where: 'LHC', desc: 'ひかりは つぶでも ある！ でんきを もたないので すじは みえない。' },
+    quark:    { name: 'クォーク', sym: 'q', color: '#ff9a3d', where: 'LHC', desc: 'ようしの なかみ。ひとりでは でてこず、つぶの シャワー（ジェット）に なる。' },
+    neutrino: { name: 'ニュートリノ', sym: 'ν', color: '#9fd8ff', where: 'アイスキューブ・カミオカンデ', desc: 'ちきゅうも すりぬける ゆうれいみたいな つぶ。たいようや うちゅうから やってくる。' },
+    tau:      { name: 'タウ', sym: 'τ', color: '#c38bff', where: 'アイスキューブ', desc: 'ミューオンより もっと おもい なかま。すぐに こわれる。とても めずらしい！' },
+    z:        { name: 'Zボソン', sym: 'Z', color: '#7fe3ff', where: 'LHC', desc: 'ちからを はこぶ つぶ。すぐに ミューオンや でんしの ペアに かわる。' },
+    w:        { name: 'Wボソン', sym: 'W', color: '#a0ffd0', where: 'LHC', desc: 'ちからを はこぶ つぶ。こわれると ニュートリノが こっそり にげる。' },
+    higgs:    { name: 'ヒッグス りゅうし', sym: 'H', color: '#ffd700', where: 'LHC', desc: 'ほかの つぶに おもさを あげる ふしぎな つぶ。2012ねんに みつかった！' },
+  };
+  const ORDER = ['proton', 'electron', 'muon', 'photon', 'quark', 'neutrino', 'tau', 'z', 'w', 'higgs'];
+
+  let toastTimer = 0;
+  function toast(text) {
+    const t = $('#toast');
+    t.textContent = text;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+  function discover(ids) {
+    const fresh = ids.filter((id) => P[id] && !save.found[id]);
+    fresh.forEach((id) => { save.found[id] = true; });
+    if (fresh.length) {
+      persist();
+      updateZCount();
+      toast('📘 ずかんに 「' + fresh.map((id) => P[id].name).join('」「') + '」が はいったよ！');
+      setTimeout(fanfare, 300);
+    }
+  }
+  function updateZCount() {
+    const n = ORDER.filter((id) => save.found[id]).length;
+    $('#zcount').textContent = n + '/' + ORDER.length;
+    $('#zcount2').textContent = n + ' / ' + ORDER.length;
+  }
+  function renderZukan() {
+    const g = $('#zgrid'); g.innerHTML = '';
+    ORDER.forEach((id) => {
+      const p = P[id], ok = !!save.found[id];
+      const d = document.createElement('div');
+      d.className = 'zc' + (ok ? '' : ' lock');
+      d.style.setProperty('--c', p.color);
+      d.innerHTML = '<span class="sym">' + (ok ? p.sym : '？') + '</span><span class="nm">' + (ok ? p.name : '？？？') + '</span>' +
+        '<div>' + (ok ? p.desc : 'まだ みつけて いないよ。') + '</div>' +
+        '<div class="wh">みつかる ばしょ：' + p.where + '</div>';
+      g.appendChild(d);
+    });
+  }
+  const dlg = $('#zukan');
+  $('#zukanBtn').addEventListener('click', () => {
+    renderZukan();
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    tone(660, 0.12, 'triangle', 0.1);
+  });
+  $('#zClose').addEventListener('click', () => { if (dlg.close) dlg.close(); else dlg.removeAttribute('open'); });
+  updateZCount();
+
+  /* ---------- まめちしき ---------- */
+  const FACTS = {
+    lhc: [
+      'LHCは ちか 100メートルに ある トンネル。1しゅう やく <b>27キロメートル</b>！',
+      'ようしは 1びょうかんに リングを やく <b>1まん1000かい</b> まわるよ。',
+      'いちばん はやいと <b>ひかりの はやさの 99.9999991%</b>。',
+      '2012ねん、ここで <b>ヒッグス りゅうし</b>が みつかったよ。',
+      'つぶを まげる じしゃくは マイナス 271ど。<b>うちゅうより つめたい</b>！',
+      'アトラスという けんしゅつきは たかさ 25メートル。<b>8かいだての ビル</b>くらい！',
+    ],
+    ice: [
+      'こおりの なかの <b>1りっぽうキロメートル</b>（たて・よこ・たかさ 1キロ）が まるごと けんしゅつき。',
+      'ひかりセンサーの たまは <b>5160こ</b>。おゆで こおりに あなを あけて うめたよ。',
+      'ニュートリノは <b>ちきゅうも すりぬける</b>。だから したから くるのも みはれる！',
+      '2018ねん、とおい <b>ブラックホール</b>の ある ぎんがから きた ニュートリノを みつけた。',
+      'なんきょくの ふかい こおりは とても すきとおっていて、ひかりが とおくまで とどく。',
+    ],
+    sk: [
+      'ぎふけん かみおかの やまの <b>ちか 1000メートル</b>に あるよ。',
+      'タンクには <b>5まんトン</b>の きれいな みず。ひかりセンサーは やく <b>1まん1000こ</b>。',
+      '1998ねん、ニュートリノに <b>おもさが ある</b>ことを みつけたよ。',
+      'まえの カミオカンデは 1987ねん、<b>ほしの だいばくはつ</b>から きた ニュートリノを みつけて ノーベルしょう！',
+      'みずの なかで ひかりより はやく すすむ つぶは、<b>あおい ひかり（チェレンコフこう）</b>を だすよ。',
+      'いまは みずに すこし ガドリニウムを まぜて、もっと よく みえるように しているよ。',
+    ],
+  };
+  const factIdx = { lhc: 0, ice: 0, sk: 0 };
+  function showFact(k) {
+    const el = $('#' + k + 'Fact');
+    el.innerHTML = '💡 まめちしき<br>' + FACTS[k][factIdx[k] % FACTS[k].length] + '<br><button type="button">つぎの まめちしき ▶</button>';
+    el.querySelector('button').addEventListener('click', () => { factIdx[k]++; showFact(k); tone(990, 0.08, 'sine', 0.08); });
+  }
+  ['lhc', 'ice', 'sk'].forEach((k) => { factIdx[k] = Math.floor(Math.random() * FACTS[k].length); showFact(k); });
+
+  /* ---------- キャンバス ---------- */
+  function makeCanvas(id, ratio) {
+    const cv = document.getElementById(id);
+    const ctx = cv.getContext('2d');
+    const o = { cv, ctx, W: 300, H: 225, onResize: null };
+    o.fit = function () {
+      const w = cv.parentElement.clientWidth || 300;
+      let h = w * ratio;
+      const maxH = Math.max(260, window.innerHeight * 0.66);
+      if (h > maxH) h = maxH;
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      if (Math.abs(w - o.W) < 1 && Math.abs(h - o.H) < 80 && cv.width === Math.round(w * dpr)) return;
+      cv.width = Math.round(w * dpr);
+      cv.height = Math.round(h * dpr);
+      cv.style.height = h + 'px';
+      o.W = w; o.H = h;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (o.onResize) o.onResize();
+    };
+    return o;
+  }
+  function label(ctx, text, x, y, color, size, align) {
+    ctx.font = 'bold ' + (size || 14) + 'px "Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif';
+    ctx.textAlign = align || 'center';
+    ctx.textBaseline = 'middle';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = 'rgba(0,0,0,.75)';
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = color || '#fff';
+    ctx.fillText(text, x, y);
+  }
+
+  /* ======================================================
+     LHC
+     ====================================================== */
+  const lhc = makeCanvas('cv-lhc', 0.8);
+  lhc.energy = 0;
+  lhc.a = 0;
+  lhc.mode = 'ring';   // ring | boom | event
+  lhc.t = 0;
+  lhc.ev = null;
+  lhc.busy = false;
+
+  const C = { muon: '#ff4fd8', electron: '#4dff7a', photon: '#ffe94d', jet: '#ff9a3d', soft: '#8fa3d8', met: '#ffffff' };
+  // けんしゅつきの そう（R0 に たいする わりあい）
+  const L = { tracker: 0.42, ecal: 0.55, hcal: 0.72, sol: 0.76, mu0: 0.79, mu1: 0.98 };
+
+  function speedText(e) {
+    if (e >= 1) return 'ひかりの はやさの 99.9999991%！';
+    const pct = 100 * (1 - Math.pow(10, -e * 7));
+    const digits = Math.max(0, Math.min(6, Math.floor(e * 7) - 1));
+    return 'ひかりの はやさの ' + pct.toFixed(digits) + '%';
+  }
+  function lhcUI() {
+    $('#lhcMeter').style.width = Math.round(lhc.energy * 100) + '%';
+    $('#lhcSpeed').textContent = speedText(lhc.energy);
+    $('#lhcHit').disabled = lhc.energy < 1 || lhc.busy;
+    $('#lhcAcc').disabled = lhc.busy;
+  }
+
+  $('#lhcAcc').addEventListener('click', () => {
+    if (lhc.busy) return;
+    if (lhc.mode !== 'ring') { lhc.mode = 'ring'; }
+    lhc.energy = Math.min(1, lhc.energy + 0.125);
+    tone(180 + lhc.energy * 700, 0.18, 'sawtooth', 0.06, 0, 260 + lhc.energy * 900);
+    if (lhc.energy >= 1) {
+      $('#lhcMsg').textContent = 'じゅんび OK！ 「ぶつける！」を おそう！';
+      chime();
+    } else {
+      $('#lhcMsg').textContent = 'ぐんぐん はやく なってる！ もっと おして！';
+    }
+    lhcUI();
+  });
+  $('#lhcHit').addEventListener('click', () => {
+    if (lhc.energy < 1 || lhc.busy) return;
+    lhc.busy = true;
+    lhc.mode = 'boom'; lhc.t = 0;
+    lhc.ev = lhcEvent();
+    boom();
+    $('#lhcMsg').textContent = 'ドカーン！！ アトラスの なかを みてみよう…';
+    lhcUI();
+  });
+
+  function lhcEvent() {
+    const tr = [];
+    const A = () => Math.random() * TAU;
+    const sgn = () => (Math.random() < 0.5 ? -1 : 1);
+    const add = (t, ang, k) => tr.push({ t, ang, k });
+    const ns = 6 + Math.floor(Math.random() * 7);
+    for (let i = 0; i < ns; i++) add('soft', A(), sgn() * rnd(3, 9));
+
+    let kind, found = ['proton'], msg, star = false;
+    const r = Math.random();
+    const jet = (a) => {
+      const n = 5 + Math.floor(Math.random() * 5);
+      for (let i = 0; i < n; i++) add('jet', a + rnd(-0.18, 0.18), sgn() * rnd(0.2, 1.6));
+      tr.push({ t: 'jetblob', ang: a });
+    };
+    if (r < 0.14) {
+      kind = 'higgs'; star = true;
+      if (Math.random() < 0.5) {
+        const a = A();
+        add('photon', a, 0); add('photon', a + Math.PI + rnd(-0.5, 0.5), 0);
+        found.push('higgs', 'photon');
+        msg = '🌟 ヒッグス りゅうし はっけん！！ ひかりの つぶ 2こに かわったよ！';
+      } else {
+        const a = A();
+        for (let i = 0; i < 4; i++) add('muon', a + i * TAU / 4 + rnd(-0.4, 0.4), sgn() * rnd(0.25, 0.8));
+        found.push('higgs', 'muon', 'z');
+        msg = '🌟 ヒッグス りゅうし はっけん！！ ミューオン 4ほんに かわったよ！';
+      }
+    } else if (r < 0.36) {
+      kind = 'z';
+      const lep = Math.random() < 0.5 ? 'muon' : 'electron';
+      const a = A(), k = rnd(0.25, 0.7);
+      add(lep, a, k); add(lep, a + Math.PI + rnd(-0.3, 0.3), -k * rnd(0.8, 1.2));
+      found.push('z', lep);
+      msg = 'Zボソンが できて、' + P[lep].name + ' 2ほんに かわったよ！';
+    } else if (r < 0.56) {
+      kind = 'w';
+      const lep = Math.random() < 0.5 ? 'muon' : 'electron';
+      const a = A();
+      add(lep, a, sgn() * rnd(0.3, 0.8));
+      tr.push({ t: 'met', ang: a + Math.PI + rnd(-0.4, 0.4) });
+      found.push('w', lep, 'neutrino');
+      msg = 'Wボソン！ ' + P[lep].name + 'と、みえない ニュートリノが にげたよ（しろい てんせん）。';
+    } else if (r < 0.7) {
+      kind = 'gj';
+      const a = A();
+      add('photon', a, 0); jet(a + Math.PI + rnd(-0.3, 0.3));
+      found.push('photon', 'quark');
+      msg = 'ひかりの つぶと、クォークの シャワー（ジェット）が でたよ！';
+    } else {
+      kind = 'jets';
+      const a = A();
+      jet(a); jet(a + Math.PI + rnd(-0.3, 0.3));
+      if (Math.random() < 0.4) jet(a + Math.PI / 2 + rnd(-0.4, 0.4));
+      found.push('quark');
+      msg = 'クォークが とびだして、つぶの シャワー（ジェット）に なったよ！';
+    }
+    tr.forEach((t) => { t.pts = trackPts(t); });
+    const maxN = Math.max.apply(null, tr.map((t) => (t.pts ? t.pts.length : 0)));
+    return { tr, kind, found, msg, star, maxN };
+  }
+
+  // つぶの みち（R0=1 の たんい）
+  function trackPts(t) {
+    if (t.t === 'jetblob') return null;
+    let rmax = L.tracker, straight = false;
+    if (t.t === 'muon') rmax = L.mu1;
+    else if (t.t === 'photon') { rmax = (L.tracker + L.ecal) / 2; straight = true; }
+    else if (t.t === 'met') { rmax = 0.9; straight = true; }
+    else if (t.t === 'soft') rmax = 0.38;
+    const pts = [[0, 0]];
+    let x = 0, y = 0, th = t.ang;
+    const ds = 0.008;
+    const maxS = t.t === 'soft' ? Math.min(1.2, (TAU * 0.9) / Math.abs(t.k)) : 2.5;
+    for (let s = 0; s < maxS; s += ds) {
+      let k = straight ? 0 : t.k;
+      const rr = Math.hypot(x, y);
+      if (rr > L.sol) k = -k * 0.5; // じしゃくの そとでは ぎゃくに まがる
+      th += k * ds;
+      x += Math.cos(th) * ds; y += Math.sin(th) * ds;
+      if (Math.hypot(x, y) > rmax) break;
+      pts.push([x, y]);
+    }
+    return pts;
+  }
+
+  function drawRing(o, dt) {
+    const { ctx, W, H } = o;
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0a1230'); g.addColorStop(1, '#102046');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2 + 6, R = Math.min(W, H) * 0.36;
+
+    // ちめん
+    label(ctx, 'ちか 100メートルの まるい トンネル（1しゅう 27キロ）', W / 2, 18, '#aeb9e6', Math.max(11, Math.min(15, W / 34)));
+
+    ctx.lineWidth = 16; ctx.strokeStyle = '#26356a';
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 3; ctx.strokeStyle = '#4b6bd0';
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, TAU); ctx.stroke();
+
+    const exps = [['アトラス', -Math.PI / 2], ['アリス', 0], ['CMS', Math.PI / 2], ['LHCb', Math.PI]];
+    exps.forEach(([n, a]) => {
+      const x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+      ctx.fillStyle = n === 'アトラス' ? '#ff8a3d' : '#5a6fb8';
+      ctx.fillRect(x - 11, y - 11, 22, 22);
+      const lx = cx + Math.cos(a) * (R + 30), ly = cy + Math.sin(a) * (R + 26);
+      label(ctx, n, lx, ly, '#fff', 13);
+    });
+
+    o.a += (0.5 + o.energy * o.energy * 14) * dt;
+    const glow = 0.4 + o.energy * 0.6;
+    const draw = (sign, col) => {
+      for (let i = 14; i >= 0; i--) {
+        const a = sign * o.a - sign * i * (0.04 + o.energy * 0.05) - Math.PI / 2;
+        const x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R;
+        ctx.globalAlpha = (1 - i / 15) * glow;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.arc(x, y, 7 - i * 0.3, 0, TAU); ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    };
+    draw(1, '#ff5a5a');
+    draw(-1, '#5ab0ff');
+    ctx.globalAlpha = 1;
+
+    label(ctx, 'ようし', cx, cy - 14, '#ff9a9a', 16);
+    label(ctx, '→ ← はんたいむきに まわる', cx, cy + 12, '#aeb9e6', 13);
+    if (o.energy >= 1) {
+      const p = 0.5 + 0.5 * Math.sin(performance.now() / 150);
+      label(ctx, 'じゅんび OK！', cx, cy + 40, 'rgba(255,230,80,' + (0.5 + p * 0.5) + ')', 20);
+    }
+  }
+
+  function drawDetector(o, prog, t) {
+    const { ctx, W, H } = o;
+    ctx.fillStyle = '#05070f'; ctx.fillRect(0, 0, W, H);
+    const cx = W / 2, cy = H / 2, R0 = Math.min(W, H) * 0.47;
+    const ring = (r1, r2, col) => {
+      ctx.beginPath(); ctx.arc(cx, cy, r2 * R0, 0, TAU); ctx.arc(cx, cy, r1 * R0, 0, TAU, true);
+      ctx.fillStyle = col; ctx.fill();
+    };
+    // ミューオンけんしゅつき
+    for (let i = 0; i < 12; i++) {
+      for (let s = 0; s < 3; s++) {
+        const r = L.mu0 + s * 0.065;
+        ctx.beginPath();
+        ctx.arc(cx, cy, (r + 0.04) * R0, i * TAU / 12 + 0.03, (i + 1) * TAU / 12 - 0.03);
+        ctx.arc(cx, cy, r * R0, (i + 1) * TAU / 12 - 0.03, i * TAU / 12 + 0.03, true);
+        ctx.fillStyle = '#3a1d2a'; ctx.fill();
+      }
+    }
+    ring(L.hcal, L.sol, '#3a3a46');     // じしゃく
+    ring(L.ecal, L.hcal, '#2d2412');    // ハドロン
+    ring(L.tracker, L.ecal, '#11301c'); // でんじ
+    ring(0, L.tracker, '#0b1430');      // すじを みる ところ
+    ctx.strokeStyle = 'rgba(120,150,255,.15)'; ctx.lineWidth = 1;
+    for (let i = 1; i <= 6; i++) { ctx.beginPath(); ctx.arc(cx, cy, i * L.tracker / 6.5 * R0, 0, TAU); ctx.stroke(); }
+
+    const ev = o.ev;
+    if (!ev) return;
+    const n = Math.floor(prog * ev.maxN);
+    const toXY = (p) => [cx + p[0] * R0, cy + p[1] * R0];
+    const done = prog >= 1;
+
+    const sector = (ang, r1, r2, col, w) => {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r2 * R0, ang - w, ang + w);
+      ctx.arc(cx, cy, r1 * R0, ang + w, ang - w, true);
+      ctx.fillStyle = col; ctx.fill();
+    };
+
+    ev.tr.forEach((tk) => {
+      if (tk.t === 'jetblob') {
+        if (prog > 0.45) {
+          const a = Math.min(1, (prog - 0.45) * 3);
+          ctx.globalAlpha = a;
+          sector(tk.ang, L.ecal, L.hcal, 'rgba(255,150,60,.85)', 0.2);
+          sector(tk.ang, L.tracker, L.ecal, 'rgba(255,200,80,.45)', 0.16);
+          ctx.globalAlpha = 1;
+          if (done) {
+            const [x, y] = [cx + Math.cos(tk.ang) * (L.hcal + 0.06) * R0, cy + Math.sin(tk.ang) * (L.hcal + 0.06) * R0];
+            label(ctx, 'ジェット', x, y, C.jet, 14);
+          }
+        }
+        return;
+      }
+      const pts = tk.pts, m = Math.min(pts.length, n);
+      if (m < 2) return;
+      ctx.beginPath();
+      let p = toXY(pts[0]); ctx.moveTo(p[0], p[1]);
+      for (let i = 1; i < m; i++) { p = toXY(pts[i]); ctx.lineTo(p[0], p[1]); }
+      ctx.strokeStyle = C[tk.t];
+      ctx.lineWidth = tk.t === 'soft' ? 1.3 : tk.t === 'jet' ? 1.8 : 3;
+      if (tk.t === 'photon' || tk.t === 'met') ctx.setLineDash([6, 6]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      const end = pts[pts.length - 1];
+      const endAng = Math.atan2(end[1], end[0]);
+      const arrived = m >= pts.length;
+      if (!arrived) return;
+      if (tk.t === 'electron') sector(endAng, L.tracker, L.ecal - 0.02, 'rgba(77,255,122,.85)', 0.06);
+      if (tk.t === 'photon') sector(endAng, L.tracker, L.ecal - 0.02, 'rgba(255,233,77,.9)', 0.06);
+      if (tk.t === 'jet') sector(endAng, L.ecal, L.hcal, 'rgba(255,150,60,.35)', 0.04);
+      if (tk.t === 'muon') {
+        for (let s = 0; s < 3; s++) {
+          const r = L.mu0 + 0.02 + s * 0.065;
+          let best = pts[0], bd = 9;
+          for (const q of pts) { const d = Math.abs(Math.hypot(q[0], q[1]) - r); if (d < bd) { bd = d; best = q; } }
+          const [x, y] = toXY(best);
+          ctx.fillStyle = '#ff2060'; ctx.fillRect(x - 4, y - 4, 8, 8);
+        }
+      }
+      if (tk.t === 'met') {
+        const [x, y] = toXY(end);
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.moveTo(x + Math.cos(endAng) * 10, y + Math.sin(endAng) * 10);
+        ctx.lineTo(x + Math.cos(endAng + 2.5) * 10, y + Math.sin(endAng + 2.5) * 10);
+        ctx.lineTo(x + Math.cos(endAng - 2.5) * 10, y + Math.sin(endAng - 2.5) * 10);
+        ctx.fill();
+      }
+      if (done && tk.t !== 'soft' && tk.t !== 'jet') {
+        const names = { muon: 'ミューオン', electron: 'でんし', photon: 'ひかり', met: 'ニュートリノ？' };
+        const rr = tk.t === 'muon' ? 0.9 : tk.t === 'met' ? 0.9 : 0.5;
+        const q = pts.reduce((b, c) => (Math.abs(Math.hypot(c[0], c[1]) - rr) < Math.abs(Math.hypot(b[0], b[1]) - rr) ? c : b), pts[0]);
+        const [x, y] = toXY(q);
+        label(ctx, names[tk.t], x + Math.cos(endAng) * 18, y + Math.sin(endAng) * 18, C[tk.t], 14);
+      }
+    });
+
+    // まんなかの ひかり
+    const fl = Math.max(0, 1 - t * 1.5);
+    if (fl > 0) {
+      const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, R0 * 0.5);
+      gr.addColorStop(0, 'rgba(255,255,255,' + fl + ')'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, R0 * 0.5, 0, TAU); ctx.fill();
+    }
+    if (ev.star && done) {
+      const p = 0.5 + 0.5 * Math.sin(performance.now() / 200);
+      ctx.strokeStyle = 'rgba(255,215,0,' + (0.4 + p * 0.6) + ')';
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(cx, cy, 14 + p * 6, 0, TAU); ctx.stroke();
+      label(ctx, '★ ヒッグス ★', cx, cy - 34, '#ffd700', 18);
+    }
+    label(ctx, 'アトラスの なか（よこから みた ところ）', 8, 16, '#aeb9e6', 12, 'left');
+  }
+
+  lhc.frame = function (dt) {
+    if (lhc.mode === 'ring') { drawRing(lhc, dt); return; }
+    lhc.t += dt;
+    if (lhc.mode === 'boom') {
+      drawRing(lhc, dt * 3);
+      const { ctx, W, H } = lhc;
+      const cx = W / 2, cy = H / 2 + 6 - Math.min(W, H) * 0.36;
+      const r = lhc.t * Math.max(W, H) * 2.2;
+      ctx.fillStyle = 'rgba(255,255,230,' + Math.min(1, lhc.t * 2.5) + ')';
+      ctx.beginPath(); ctx.arc(W / 2, cy, r, 0, TAU); ctx.fill();
+      if (lhc.t > 0.5) { lhc.mode = 'event'; lhc.t = 0; }
+      return;
+    }
+    // event
+    const prog = Math.min(1, lhc.t / 1.8);
+    drawDetector(lhc, prog, lhc.t);
+    if (lhc.t < 1.8 && Math.random() < 0.3) ping(400 + Math.random() * 900);
+    if (prog >= 1 && lhc.busy) {
+      lhc.busy = false;
+      lhc.energy = 0.5;
+      $('#lhcMsg').textContent = lhc.ev.msg + '　もういちど かそく して ぶつけよう！';
+      if (lhc.ev.star) fanfare(); else chime();
+      discover(lhc.ev.found);
+      lhcUI();
+    }
+  };
+
+  /* ======================================================
+     アイスキューブ
+     ====================================================== */
+  const ice = makeCanvas('cv-ice', 0.95);
+  ice.ev = null;
+  ice.t = 0;
+  ice.busy = false;
+  ice.doms = [];
+  const NS = 8, ND = 12;
+  const ICE_TOP = 0.16, DOM_Y0 = 0.36, DOM_Y1 = 0.95;
+  ice.onResize = function () {
+    ice.doms = [];
+    for (let i = 0; i < NS; i++) {
+      for (let j = 0; j < ND; j++) {
+        ice.doms.push({ x: (0.09 + 0.82 * i / (NS - 1)) * ice.W, y: (DOM_Y0 + (DOM_Y1 - DOM_Y0) * j / (ND - 1)) * ice.H });
+      }
+    }
+    ice.ev = null;
+    if (ice.busy) { ice.busy = false; $('#iceGo').disabled = false; }
+  };
+  const stars = Array.from({ length: 40 }, () => [Math.random(), Math.random() * ICE_TOP * 0.85, Math.random()]);
+
+  function iceEvent() {
+    const { W, H } = ice;
+    const r = Math.random();
+    const kind = r < 0.55 ? 'track' : r < 0.9 ? 'cascade' : 'double';
+    const up = Math.random() < 0.5;
+    const diag = Math.hypot(W, H);
+    const sx = 0.82 * W / (NS - 1), sy = (DOM_Y1 - DOM_Y0) * H / (ND - 1);
+    const sp = Math.max(sx, sy);
+    const v = diag / 1.6;          // ミューオンの はやさ（px/びょう）
+    const c = v * 0.8;             // こおりの なかの ひかり
+    // とんでくる むき
+    const ang = (up ? -Math.PI / 2 : Math.PI / 2) + rnd(-0.7, 0.7);
+    const dir = [Math.cos(ang), Math.sin(ang)];
+    const center = [rnd(0.25, 0.75) * W, rnd(DOM_Y0 + 0.15, DOM_Y1 - 0.15) * H];
+    let V, srcs = [], tauEnd = null, muEnd = null;
+    if (kind === 'track') {
+      V = [center[0] - dir[0] * diag * 0.35, center[1] - dir[1] * diag * 0.35];
+      muEnd = [V[0] + dir[0] * diag * 1.2, V[1] + dir[1] * diag * 1.2];
+    } else {
+      V = center;
+      if (kind === 'double') {
+        V = [center[0] - dir[0] * diag * 0.12, center[1] - dir[1] * diag * 0.12];
+        tauEnd = [V[0] + dir[0] * diag * 0.24, V[1] + dir[1] * diag * 0.24];
+      }
+    }
+    const Lt = sp * 1.5, Lc = sp * 2.3;
+    const hits = [];
+    let tmax = 0;
+    ice.doms.forEach((d, idx) => {
+      let best = Infinity, bright = 0;
+      if (kind === 'track') {
+        const rx = d.x - V[0], ry = d.y - V[1];
+        const u = Math.max(0, rx * dir[0] + ry * dir[1]);
+        const px = V[0] + dir[0] * u, py = V[1] + dir[1] * u;
+        const dd = Math.hypot(d.x - px, d.y - py);
+        if (dd < Lt && Math.random() > 0.2 * dd / Lt) { best = u / v + dd / c; bright = 1 - dd / Lt; }
+      } else {
+        const casc = (P0, t0) => {
+          const dd = Math.hypot(d.x - P0[0], d.y - P0[1]);
+          if (dd < Lc && Math.random() > 0.25 * dd / Lc) {
+            const tt = t0 + dd / c;
+            if (tt < best) { best = tt; bright = Math.max(bright, 1 - dd / Lc); }
+          }
+        };
+        casc(V, 0);
+        if (tauEnd) casc(tauEnd, Math.hypot(tauEnd[0] - V[0], tauEnd[1] - V[1]) / v);
+      }
+      if (best < Infinity) { hits.push({ idx, t: best, b: bright }); tmax = Math.max(tmax, best); }
+    });
+    // ゆうれい ニュートリノの でぱつ てん
+    const from = [V[0] - dir[0] * diag, V[1] - dir[1] * diag];
+    return { kind, up, dir, V, from, hits, tmax: Math.max(tmax, 0.3), v, c, Lc, tauEnd, muEnd, lit: new Set() };
+  }
+
+  function iceStart() {
+    if (ice.busy) return;
+    ice.busy = true;
+    ice.ev = iceEvent();
+    ice.t = 0;
+    $('#iceGo').disabled = true;
+    $('#iceMsg').textContent = ice.ev.up ? 'したから なにか くる…！ ちきゅうを すりぬけて きた？' : 'そらから なにか くる…！';
+    tone(300, 0.9, 'sine', 0.08, 0, 900);
+  }
+  $('#iceGo').addEventListener('click', iceStart);
+  ice.cv.addEventListener('click', iceStart);
+
+  ice.frame = function (dt) {
+    const { ctx, W, H } = ice;
+    ice.t += dt;
+    // そら
+    ctx.fillStyle = '#050a1e'; ctx.fillRect(0, 0, W, ICE_TOP * H);
+    stars.forEach(([x, y, p]) => {
+      ctx.fillStyle = 'rgba(255,255,255,' + (0.4 + 0.6 * Math.abs(Math.sin(performance.now() / 900 + p * 10))) + ')';
+      ctx.fillRect(x * W, y * H, 2, 2);
+    });
+    // こおり
+    const g = ctx.createLinearGradient(0, ICE_TOP * H, 0, H);
+    g.addColorStop(0, '#cfe9ff'); g.addColorStop(0.08, '#2a5f8f'); g.addColorStop(1, '#071d36');
+    ctx.fillStyle = g; ctx.fillRect(0, ICE_TOP * H, W, H * (1 - ICE_TOP));
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0, ICE_TOP * H - 3, W, 6);
+    // けんきゅうじょ
+    const bx = W / 2, by = ICE_TOP * H;
+    ctx.fillStyle = '#c0c8d8'; ctx.fillRect(bx - 22, by - 18, 44, 16);
+    ctx.fillStyle = '#7f8aa0'; ctx.fillRect(bx - 4, by - 26, 8, 8);
+    label(ctx, 'けんきゅうじょ', bx, by - 34, '#fff', 11);
+    // ケーブル と センサー
+    ctx.strokeStyle = 'rgba(200,230,255,.22)'; ctx.lineWidth = 1;
+    for (let i = 0; i < NS; i++) {
+      const x = (0.09 + 0.82 * i / (NS - 1)) * W;
+      ctx.beginPath(); ctx.moveTo(x, ICE_TOP * H); ctx.lineTo(x, DOM_Y1 * H + 6); ctx.stroke();
+    }
+    label(ctx, 'ふかさ 1450m', 6, DOM_Y0 * H - 16, '#cfe9ff', 12, 'left');
+    label(ctx, '2450m', 6, DOM_Y1 * H + 14 > H - 8 ? H - 10 : DOM_Y1 * H + 14, '#cfe9ff', 12, 'left');
+
+    const ev = ice.ev;
+    const GHOST = 0.9;
+    const tt = ev ? ice.t - GHOST : -1;
+
+    // ひかり の ひろがり / ミューオン
+    if (ev && tt >= 0) {
+      if (ev.kind === 'track') {
+        const d = tt * ev.v;
+        const x = ev.V[0] + ev.dir[0] * d, y = ev.V[1] + ev.dir[1] * d;
+        ctx.strokeStyle = 'rgba(255,120,240,.7)'; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(ev.V[0], ev.V[1]); ctx.lineTo(x, y); ctx.stroke();
+        ctx.fillStyle = '#ff7ff0'; ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.fill();
+      } else {
+        const r = tt * ev.c;
+        if (r < ev.Lc * 1.1) {
+          ctx.fillStyle = 'rgba(160,230,255,' + Math.max(0, 0.35 - r / ev.Lc * 0.3) + ')';
+          ctx.beginPath(); ctx.arc(ev.V[0], ev.V[1], r, 0, TAU); ctx.fill();
+        }
+        if (ev.tauEnd) {
+          const tl = Math.hypot(ev.tauEnd[0] - ev.V[0], ev.tauEnd[1] - ev.V[1]) / ev.v;
+          const f = Math.min(1, tt / tl);
+          ctx.strokeStyle = 'rgba(200,150,255,.9)'; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.moveTo(ev.V[0], ev.V[1]);
+          ctx.lineTo(ev.V[0] + (ev.tauEnd[0] - ev.V[0]) * f, ev.V[1] + (ev.tauEnd[1] - ev.V[1]) * f); ctx.stroke();
+          const r2 = (tt - tl) * ev.c;
+          if (r2 > 0 && r2 < ev.Lc * 1.1) {
+            ctx.fillStyle = 'rgba(200,170,255,' + Math.max(0, 0.35 - r2 / ev.Lc * 0.3) + ')';
+            ctx.beginPath(); ctx.arc(ev.tauEnd[0], ev.tauEnd[1], r2, 0, TAU); ctx.fill();
+          }
+        }
+      }
+    }
+
+    // センサー
+    const litMap = new Map();
+    if (ev && tt >= 0) ev.hits.forEach((h) => { if (tt >= h.t) litMap.set(h.idx, h); });
+    ice.doms.forEach((d, i) => {
+      const h = litMap.get(i);
+      if (h) {
+        if (!ev.lit.has(i)) { ev.lit.add(i); ping(1400 - (h.t / ev.tmax) * 900); }
+        const hue = (h.t / ev.tmax) * 270;
+        const rad = 4 + h.b * 11;
+        ctx.fillStyle = 'hsla(' + hue + ',100%,60%,.35)';
+        ctx.beginPath(); ctx.arc(d.x, d.y, rad + 5, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'hsl(' + hue + ',100%,58%)';
+        ctx.beginPath(); ctx.arc(d.x, d.y, rad, 0, TAU); ctx.fill();
+      } else {
+        ctx.fillStyle = '#9fb6cf';
+        ctx.beginPath(); ctx.arc(d.x, d.y, 3, 0, TAU); ctx.fill();
+      }
+    });
+
+    // ゆうれい ニュートリノ
+    if (ev && ice.t < GHOST + 0.2) {
+      const f = Math.min(1, ice.t / GHOST);
+      const x = ev.from[0] + (ev.V[0] - ev.from[0]) * f, y = ev.from[1] + (ev.V[1] - ev.from[1]) * f;
+      ctx.setLineDash([5, 7]); ctx.strokeStyle = 'rgba(200,230,255,.8)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(ev.from[0], ev.from[1]); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
+      label(ctx, 'ν', x, y, '#bfe6ff', 20);
+    }
+
+    // おわり
+    if (ev && ice.busy && tt > ev.tmax + 0.8) {
+      ice.busy = false;
+      $('#iceGo').disabled = false;
+      let msg, found = ['neutrino'];
+      if (ev.kind === 'track') { msg = 'ミューオンの すじ！ ニュートリノが ミューオンに かわって、まっすぐ とんだよ。'; found.push('muon'); chime(); }
+      else if (ev.kind === 'cascade') { msg = 'まるい ひかりの かたまり！ でんしの シャワーが ひろがったよ。'; found.push('electron'); chime(); }
+      else { msg = '🌟 ダブルバン！！ ぴかっ・ぴかっと 2かい ひかった。タウ ニュートリノだ！ とても めずらしい！'; found.push('tau'); fanfare(); }
+      if (ev.up) msg += '（ちきゅうの うらがわから きたよ）';
+      $('#iceMsg').textContent = msg;
+      discover(found);
+    }
+    if (ev && !ice.busy && ev.kind === 'track') {
+      // きた ほうこうの やじるし
+      const ax = W - 46, ay = ICE_TOP * H + 40;
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.moveTo(ax + ev.dir[0] * 22, ay + ev.dir[1] * 22); ctx.lineTo(ax - ev.dir[0] * 22, ay - ev.dir[1] * 22); ctx.stroke();
+      ctx.fillStyle = '#fff';
+      const ex = ax - ev.dir[0] * 22, ey = ay - ev.dir[1] * 22, a = Math.atan2(-ev.dir[1], -ev.dir[0]);
+      ctx.beginPath(); ctx.moveTo(ex + Math.cos(a) * 8, ey + Math.sin(a) * 8);
+      ctx.lineTo(ex + Math.cos(a + 2.4) * 8, ey + Math.sin(a + 2.4) * 8);
+      ctx.lineTo(ex + Math.cos(a - 2.4) * 8, ey + Math.sin(a - 2.4) * 8); ctx.fill();
+      label(ctx, 'きた ほうこう', ax, ay + 34, '#fff', 11);
+    }
+    if (!ev) label(ctx, 'タッチで ニュートリノを まとう', W / 2, H * 0.27, '#ffffff', Math.min(18, W / 20));
+  };
+
+  /* ======================================================
+     スーパーカミオカンデ
+     ====================================================== */
+  const sk = makeCanvas('cv-sk', 0.8);
+  sk.pmts = [];
+  sk.ev = null;
+  sk.t = 0;
+  sk.state = 'idle'; // idle | anim | quiz | done
+  sk.g = 20;
+  sk.onResize = function () {
+    const g = Math.max(15, Math.min(sk.W, sk.H) / 20);
+    sk.g = g;
+    sk.pmts = [];
+    const cols = Math.floor((sk.W - g * 0.5) / g), rows = Math.floor((sk.H - g * 0.5) / g);
+    const ox = (sk.W - (cols - 1) * g) / 2, oy = (sk.H - (rows - 1) * g) / 2;
+    for (let j = 0; j < rows; j++) for (let i = 0; i < cols; i++) sk.pmts.push({ x: ox + i * g, y: oy + j * g });
+    if (sk.ev) sk.ev = skEvent(sk.ev.type, sk.ev.src);
+  };
+
+  function skEvent(forceType, forceSrc) {
+    const { W, H, g } = sk;
+    const m = Math.min(W, H);
+    const src = forceSrc || (Math.random() < 0.25 ? 'sun' : 'air');
+    const type = forceType || (src === 'sun' ? 'electron' : (Math.random() < 0.5 ? 'muon' : 'electron'));
+    const R = src === 'sun' ? rnd(0.12, 0.17) * m : rnd(0.2, 0.32) * m;
+    const cx = rnd(R * 0.7, W - R * 0.7), cy = rnd(R * 0.7, H - R * 0.7);
+    const hits = [];
+    sk.pmts.forEach((p, i) => {
+      const d = Math.hypot(p.x - cx, p.y - cy);
+      let q = 0;
+      if (src === 'sun') {
+        if (Math.abs(d - R) < g * 1.8 && Math.random() < 0.3) q = rnd(0.05, 0.4);
+        else if (Math.random() < 0.02) q = rnd(0, 0.15);
+      } else if (type === 'muon') {
+        if (Math.abs(d - R) < g * 0.75) q = rnd(0.7, 1);
+        else if (d < R && Math.random() < 0.35) q = rnd(0.15, 0.45);
+        else if (Math.random() < 0.012) q = rnd(0, 0.15);
+      } else {
+        const w = g * 1.5;
+        const pr = Math.exp(-Math.pow((d - R) / w, 2));
+        if (Math.random() < pr * 0.85) q = pr * rnd(0.3, 0.9);
+        else if (Math.random() < 0.03) q = rnd(0, 0.2);
+      }
+      if (q > 0) hits.push({ i, q, t: rnd(0, 0.7) + Math.max(0, d - R) / (m * 3) });
+    });
+    const from = [rnd(-0.2, 1.2) * W, Math.random() < 0.5 ? -40 : H + 40];
+    if (src === 'sun') { from[0] = -40; from[1] = rnd(0, H); }
+    return { type, src, R, cx, cy, hits, from, shown: new Set() };
+  }
+
+  function skStart() {
+    if (sk.state === 'anim' || sk.state === 'quiz') return;
+    sk.ev = skEvent();
+    sk.t = 0;
+    sk.state = 'anim';
+    $('#skGo').disabled = true;
+    $('#skMu').disabled = true; $('#skE').disabled = true;
+    $('#skMsg').textContent = sk.ev.src === 'sun' ? '☀️ たいようから ニュートリノが きた！' : '🌍 くうきの なかで できた ニュートリノが きた！';
+    tone(260, 0.8, 'sine', 0.07, 0, 780);
+  }
+  $('#skGo').addEventListener('click', skStart);
+  sk.cv.addEventListener('click', () => { if (sk.state === 'idle' || sk.state === 'done') skStart(); });
+
+  function skAnswer(ans) {
+    if (sk.state !== 'quiz') return;
+    sk.state = 'done';
+    $('#skMu').disabled = true; $('#skE').disabled = true;
+    $('#skGo').disabled = false;
+    const ev = sk.ev;
+    const nm = P[ev.type].name;
+    if (ans === ev.type) {
+      save.skStars = (save.skStars || 0) + 1; persist();
+      $('#skMsg').textContent = '⭕ せいかい！ ' + nm + 'の わ だよ。' + (ev.type === 'muon' ? 'ふちが くっきり！' : 'ふちが ふわっと ぼやけてるね。');
+      fanfare();
+    } else {
+      $('#skMsg').textContent = '❌ ざんねん。これは ' + nm + 'の わ。' + (ev.type === 'muon' ? 'ふちが くっきり しているよ。' : 'ふちが ぼやけて いるよ。');
+      bubu();
+    }
+    renderStars();
+    discover(['neutrino', ev.type]);
+  }
+  $('#skMu').addEventListener('click', () => skAnswer('muon'));
+  $('#skE').addEventListener('click', () => skAnswer('electron'));
+  function renderStars() {
+    const n = save.skStars || 0;
+    $('#skStars').textContent = n === 0 ? 'まだ 0こ' : (n <= 10 ? '⭐'.repeat(n) : '⭐ × ' + n);
+  }
+  renderStars();
+
+  const qColor = (q) => 'hsl(' + Math.round(240 * (1 - Math.min(1, q))) + ',100%,55%)';
+
+  sk.frame = function (dt) {
+    const { ctx, W, H, g } = sk;
+    sk.t += dt;
+    const bg = ctx.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.max(W, H) * 0.7);
+    bg.addColorStop(0, '#0c2c5c'); bg.addColorStop(1, '#030b1d');
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+    const ev = sk.ev;
+    const GHOST = 0.8;
+    const tt = sk.t - GHOST;
+    const shown = new Map();
+    if (ev && tt >= 0) ev.hits.forEach((h) => { if (tt >= h.t) shown.set(h.i, h); });
+
+    const pr = g * 0.36;
+    sk.pmts.forEach((p, i) => {
+      const h = shown.get(i);
+      if (h) {
+        if (!ev.shown.has(i)) { ev.shown.add(i); if (Math.random() < 0.5) ping(600 + h.q * 1200); }
+        ctx.fillStyle = qColor(h.q);
+        ctx.beginPath(); ctx.arc(p.x, p.y, pr + 1.5, 0, TAU); ctx.fill();
+      } else {
+        ctx.fillStyle = '#3d3520';
+        ctx.beginPath(); ctx.arc(p.x, p.y, pr, 0, TAU); ctx.fill();
+        ctx.fillStyle = '#6b5a2a';
+        ctx.beginPath(); ctx.arc(p.x - pr * 0.25, p.y - pr * 0.25, pr * 0.35, 0, TAU); ctx.fill();
+      }
+    });
+
+    if (ev) {
+      if (sk.t < GHOST + 0.1) {
+        const f = Math.min(1, sk.t / GHOST);
+        const x = ev.from[0] + (ev.cx - ev.from[0]) * f, y = ev.from[1] + (ev.cy - ev.from[1]) * f;
+        ctx.setLineDash([5, 7]); ctx.strokeStyle = 'rgba(220,240,255,.85)'; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(ev.from[0], ev.from[1]); ctx.lineTo(x, y); ctx.stroke(); ctx.setLineDash([]);
+        label(ctx, 'ν', x, y, '#bfe6ff', 22);
+      } else if (tt < 1) {
+        // あおい ひかり
+        const a = Math.max(0, 0.5 - tt * 0.5);
+        ctx.strokeStyle = 'rgba(90,170,255,' + a + ')';
+        ctx.lineWidth = g * 1.2;
+        ctx.beginPath(); ctx.arc(ev.cx, ev.cy, Math.min(1, tt * 1.8) * ev.R, 0, TAU); ctx.stroke();
+      }
+      if (sk.state === 'anim' && tt > 1.3) {
+        sk.state = 'quiz';
+        $('#skMu').disabled = false; $('#skE').disabled = false;
+        $('#skMsg').textContent = 'わが うつったよ！ くっきり？ ぼやけてる？ したの ボタンで こたえてね。';
+        chime();
+      }
+      if (sk.state === 'done') {
+        label(ctx, P[ev.type].name + 'の わ', ev.cx, Math.max(16, ev.cy - ev.R - g), ev.type === 'muon' ? '#ff9ff0' : '#9fffb8', 16);
+      }
+    } else {
+      label(ctx, 'かべ いっぱいの ひかりセンサー', W / 2, H / 2 - 14, '#ffe9a0', Math.min(18, W / 18));
+      label(ctx, 'タッチで ニュートリノを まとう', W / 2, H / 2 + 14, '#ffffff', Math.min(16, W / 20));
+    }
+  };
+
+  /* ---------- タブ ---------- */
+  const sims = { lhc, ice, sk };
+  let cur = null;
+  function setTab(k) {
+    if (!sims[k]) k = 'lhc';
+    cur = k;
+    save.tab = k; persist();
+    document.querySelectorAll('.tab').forEach((b) => b.setAttribute('aria-selected', b.dataset.tab === k ? 'true' : 'false'));
+    ['lhc', 'ice', 'sk'].forEach((n) => { $('#p-' + n).hidden = n !== k; });
+    document.documentElement.style.setProperty('--accent', 'var(--' + k + ')');
+    sims[k].fit();
+  }
+  document.querySelectorAll('.tab').forEach((b) => b.addEventListener('click', () => { setTab(b.dataset.tab); tone(520, 0.1, 'triangle', 0.08); }));
+  window.addEventListener('resize', () => { if (cur) sims[cur].fit(); });
+
+  let last = performance.now();
+  function loop(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (cur) sims[cur].frame(dt);
+    requestAnimationFrame(loop);
+  }
+  setTab(save.tab);
+  lhcUI();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
