@@ -64,6 +64,13 @@
   };
   Body.prototype.wake = function () { if (this.sleep) { this.sleep = false; this.still = 0; } };
 
+  // となりを おこす ほど うごいているか（おきた ばかり・はやい・うごく バケツ）
+  function restless(b) {
+    if (b.sleep || !b.alive) return false;
+    if (b.mode === KINEMATIC) return !!(b.vx || b.vy || b.w);
+    if (b.mode !== DYNAMIC && b.mode !== PINNED) return false;
+    return b.still < 0.15 || b.speed() > WAKE_V;
+  }
   function imOf(b) { return (b.mode === DYNAMIC && !b.sleep) ? b.im : 0; }
   function iIOf(b) { return ((b.mode === DYNAMIC || b.mode === PINNED) && !b.sleep) ? b.iI : 0; }
 
@@ -223,7 +230,7 @@
     // ぶつかり さがし
     var boxes = new Array(n);
     for (i = 0; i < n; i++) if (bodies[i].alive) boxes[i] = aabb(bodies[i]);
-    var contacts = [], tmp = [];
+    var contacts = [], tmp = [], pairs = [];
     for (i = 0; i < n; i++) {
       var A = bodies[i];
       if (!A.alive) continue;
@@ -247,20 +254,34 @@
         tmp.length = 0;
         collide(A, B, tmp);
         if (!tmp.length) continue;
-        A.touched = B.touched = true;
-        // ねむって いる ものを おこす
-        if (A.sleep && bAct && (B.speed() > WAKE_V || B.mode === KINEMATIC)) A.wake();
-        if (B.sleep && aAct && (A.speed() > WAKE_V || A.mode === KINEMATIC)) B.wake();
-        if (!this.bell) {
-          if (A.tag === "bell" && B.mode === DYNAMIC) this.bell = { time: this.time, body: B };
-          else if (B.tag === "bell" && A.mode === DYNAMIC) this.bell = { time: this.time, body: A };
-        }
-        for (var k = 0; k < tmp.length; k++) {
-          var c = tmp[k];
-          c.a = A; c.b = B;
-          c.id = A.id + ":" + B.id + ":" + c.key;
-          contacts.push(c);
-        }
+        pairs.push([A, B, tmp.slice()]);
+      }
+    }
+    // ねむって いる ものを おこす。おきた ものは さらに となりを おこす
+    // （シーソーに のって ねむった ボールが、シーソーを うごかない かべの ように とめて しまわない ため）
+    var changed = true;
+    while (changed) {
+      changed = false;
+      for (i = 0; i < pairs.length; i++) {
+        var pa = pairs[i][0], pb = pairs[i][1];
+        if (pa.sleep && restless(pb)) { pa.wake(); changed = true; }
+        if (pb.sleep && restless(pa)) { pb.wake(); changed = true; }
+      }
+    }
+    for (i = 0; i < pairs.length; i++) {
+      A = pairs[i][0]; B = pairs[i][1];
+      var cs = pairs[i][2];
+      if (A.sleep && B.sleep) continue;
+      A.touched = B.touched = true;
+      if (!this.bell) {
+        if (A.tag === "bell" && B.mode === DYNAMIC) this.bell = { time: this.time, body: B };
+        else if (B.tag === "bell" && A.mode === DYNAMIC) this.bell = { time: this.time, body: A };
+      }
+      for (var k = 0; k < cs.length; k++) {
+        var c = cs[k];
+        c.a = A; c.b = B;
+        c.id = A.id + ":" + B.id + ":" + c.key;
+        contacts.push(c);
       }
     }
     this.contactsN = contacts.length;

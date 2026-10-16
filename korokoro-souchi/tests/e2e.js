@@ -27,8 +27,8 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     };
 
     // ホーム
-    check((await page.locator(".stage-btn").count()) === 15, `${tag}: ステージが 15こ`);
-    check((await page.locator(".stage-btn.lock").count()) === 14, `${tag}: はじめは 1 だけ ひらいている`);
+    check((await page.locator(".stage-btn").count()) === 30, `${tag}: ステージが 30こ`);
+    check((await page.locator(".stage-btn.lock").count()) === 28, `${tag}: はじめは 1 と 16 だけ ひらいている`);
     await noHScroll("ホーム");
     await page.screenshot({ path: path.join(out, `${tag}-home.png`) });
 
@@ -83,6 +83,18 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     await page.waitForFunction(() => window.KoroApp.bell(), null, { timeout: 12000 }).catch(() => {});
     check(await page.evaluate(() => window.KoroApp.bell()), `${tag}: ステージ15 ベルが なった`);
     await page.click("#againBtn").catch(() => {});
+
+    // もっと ステージ: 26（シーソー）と 30（バケツ → とびら → シーソー）を こたえで うごかす
+    for (const n of [26, 30]) {
+      await page.evaluate((i) => { window.KoroApp.openStage(i); window.KoroApp.placeSolution(); }, n - 1);
+      await page.waitForTimeout(200);
+      await page.screenshot({ path: path.join(out, `${tag}-stage${n}-edit.png`) });
+      await page.evaluate(() => window.KoroApp.start());
+      await page.waitForFunction(() => window.KoroApp.bell(), null, { timeout: 15000 }).catch(() => {});
+      await page.screenshot({ path: path.join(out, `${tag}-stage${n}-run.png`) });
+      check(await page.evaluate(() => window.KoroApp.bell()), `${tag}: ステージ${n} ベルが なった`);
+      await page.click("#againBtn").catch(() => {});
+    }
 
     // じゆう モード: ほぞん スロット
     await page.evaluate(() => window.KoroApp.showHome());

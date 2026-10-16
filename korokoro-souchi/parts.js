@@ -29,7 +29,8 @@
     bucket:  { name: "バケツ",     sub: "かっしゃ", rot: "flip" },
     wall:    { name: "かべ",       sub: "",         rot: "step" },
     fan:     { name: "ファン",     sub: "かぜ",     rot: "step" },
-    bell:    { name: "ベル",       sub: "ゴール",   rot: "none" }
+    bell:    { name: "ベル",       sub: "ゴール",   rot: "none" },
+    block:   { name: "だい",       sub: "",         rot: "none" }   // ステージ よう の うごかない だい（どうぐばこ には でない）
   };
   var ORDER = ["steel", "rubber", "board_s", "board_m", "board_l", "domino", "seesaw", "spring", "bucket", "wall", "fan", "bell"];
 
@@ -82,6 +83,9 @@
       case "fan":
         o.push(new B({ shape: "b", hw: 28, hh: 34, x: p.x, y: p.y, a: a, e: 0.2, mu: 0.5, tag: "fan" }));
         break;
+      case "block":
+        o.push(new B({ shape: "b", hw: p.w / 2, hh: p.h / 2, x: p.x, y: p.y, a: a, e: 0.2, mu: 0.6, tag: "block" }));
+        break;
       case "bell":
         o.push(new B({ shape: "c", r: 30, x: p.x, y: p.y, e: 0.3, mu: 0.4, tag: "bell" }));
         break;
@@ -116,11 +120,13 @@
       for (var i = 0; i < buckets.length; i++) {
         var q = buckets[i], bs = q.bodies, bot = bs[0];
         if (!q.on) {
-          var x0 = bs[1].x + 6, x1 = bs[2].x - 6, y0 = bs[1].y - 40, y1 = bot.y;
+          // なかに はいった ものの おもさの ごうけいが need（ふつうは 500）いじょうで さがる
+          var x0 = bs[1].x + 6, x1 = bs[2].x - 6, y0 = bs[1].y - 40, y1 = bot.y, sum = 0, need = q.p.need || 500;
           for (var j = 0; j < world.bodies.length; j++) {
             var o = world.bodies[j];
-            if (o.mode === DYN && o.alive && o.x > x0 && o.x < x1 && o.y > y0 && o.y < y1 && o.m >= 500) { q.on = true; q.at = world.time; break; }
+            if (o.mode === DYN && o.alive && o.x > x0 && o.x < x1 && o.y > y0 && o.y < y1) sum += o.m;
           }
+          if (sum >= need) { q.on = true; q.at = world.time; }
         }
         var v = 0;
         if (q.on && q.done < q.p.d) {
@@ -411,6 +417,19 @@
     });
   }
 
+  function drawBlock(ctx, b) {
+    inBody(ctx, b, function () {
+      rr(ctx, -b.hw, -b.hh, b.hw * 2, b.hh * 2, Math.min(5, b.hw, b.hh));
+      ctx.fillStyle = GRAY.light; ctx.fill();
+      ctx.save(); ctx.clip();
+      ctx.strokeStyle = "rgba(111,119,130,.35)"; ctx.lineWidth = 2;
+      for (var k = -b.hw - b.hh * 2; k < b.hw + b.hh; k += 20) { ctx.beginPath(); ctx.moveTo(k, -b.hh); ctx.lineTo(k + b.hh * 2, b.hh); ctx.stroke(); }
+      ctx.restore();
+      rr(ctx, -b.hw, -b.hh, b.hw * 2, b.hh * 2, Math.min(5, b.hw, b.hh));
+      ctx.lineWidth = 2.5; ctx.strokeStyle = GRAY.dark; ctx.stroke();
+    });
+  }
+
   // ひとつの ぶひんを かく。bs は その ぶひんの からだ（うごいた あとの いち）
   function draw(ctx, p, bs, o) {
     o = o || {};
@@ -426,6 +445,7 @@
       case "fan": drawFan(ctx, bs[0], fixed, o.time || 0, o.running); break;
       case "bell": drawBell(ctx, bs[0], o.ring); break;
       case "bucket": drawBucket(ctx, bs, fixed, p); break;
+      case "block": drawBlock(ctx, bs[0]); break;
     }
   }
 

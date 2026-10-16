@@ -64,14 +64,17 @@
   /* ============================================================
      ホーム
      ============================================================ */
-  function unlocked(i) { return i === 0 || !!store.cleared[i] || !!store.cleared[i - 1]; }
+  // 1 と 16（もっと ステージ の はじめ）は さいしょから あそべる
+  function unlocked(i) { return i === 0 || i === 15 || !!store.cleared[i] || !!store.cleared[i - 1]; }
 
   function renderHome() {
     var g = $("stageGrid"); g.innerHTML = "";
     STAGES.forEach(function (st, i) {
       var b = document.createElement("button");
       b.className = "stage-btn" + (store.cleared[i] ? " done" : "") + (unlocked(i) ? "" : " lock");
-      b.innerHTML = '<span class="lv">' + (i < 5 ? "★" : i < 10 ? "★★" : "★★★") + '</span><span class="n">' + (i + 1) +
+      if (i === 15) { var h = document.createElement("h3"); h.className = "grid-sec"; h.textContent = "もっと ステージ（16〜30）"; g.appendChild(h); }
+      var lv = i % 15;
+      b.innerHTML = '<span class="lv">' + (lv < 5 ? "★" : lv < 10 ? "★★" : "★★★") + '</span><span class="n">' + (i + 1) +
         '</span><span class="nm">' + st.name + "</span>";
       b.setAttribute("aria-label", "ステージ " + (i + 1) + " " + st.name + (store.cleared[i] ? " クリアずみ" : ""));
       b.addEventListener("click", function () {

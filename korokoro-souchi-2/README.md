@@ -5,6 +5,8 @@
 
 公開URL: https://kisi1554.github.io/Pages/korokoro-souchi-2/
 
+> **この ステージは [`korokoro-souchi/`](../korokoro-souchi/) の「もっと ステージ（16〜30）」に まとめました。** あそびメニューからは はずしています。
+>
 > おなじ おだいで べつに つくった [`korokoro-souchi/`](../korokoro-souchi/) とは べつの アプリ（ステージ・エンジンは べつ）。
 > ほぞんの キーも べつ（`korokoro-souchi-2-v1`）なので まざらない。
 
