@@ -193,7 +193,7 @@
         </g>
       </svg>
       <h1>きょうふの<br>エレベーター</h1>
-      <p class="lead">よるの ホテル「よぞら」。<br>てっぺんまで のぼった エレベーターが…<br>とつぜん ストーン！</p>
+      <p class="lead">よるの ホテル「よぞら」。<br>100かいまで のぼった エレベーターが…<br>とつぜん ストーーン！<br>🦗 つくぼうも いっしょに のるよ。</p>
     </div>
 
     <h2>だれが のる？</h2>
@@ -265,12 +265,14 @@ const STOP = Symbol('stop');
 const AVATARS = ['🐻', '🐰', '🐱', '🐶', '🐼', '🦊'];
 const NPCS = ['🐷', '🐸', '🐵', '🐨', '🐯', '🐭', '🐹', '🦁', '🐮', '🐔'];
 const LEVELS = {
-  easy:   { name: 'やさしい', emoji: '🌙', desc: '7かいから ふわっと 1かい',  top: 7,  g: 8,  brake: 12, up: 11, upDec: 7  },
-  normal: { name: 'ふつう',   emoji: '👻', desc: '13かいから ストーン！ 3かい', top: 13, g: 12, brake: 20, up: 16, upDec: 10 },
-  hard:   { name: 'こわい',   emoji: '💀', desc: 'なんども おちる。ゆうきの ある こ だけ', top: 13, g: 16, brake: 28, up: 22, upDec: 13 },
+  easy:   { name: 'やさしい', emoji: '🌙', desc: '30かいから ふわっと 1かい',  top: 30,  g: 8,  brake: 12, up: 11, upDec: 7  },
+  normal: { name: 'ふつう',   emoji: '👻', desc: '100かいから ストーーン！ 3かい', top: 100, g: 12, brake: 20, up: 18, upDec: 10 },
+  hard:   { name: 'こわい',   emoji: '💀', desc: '100かいから なんども おちる。ゆうきの ある こ だけ', top: 100, g: 16, brake: 28, up: 24, upDec: 13 },
 };
 const DROP_LINES = ['きゃーーっ！', 'おちるーーっ！', 'うわああーっ！', 'ひゅーーん！'];
 const UP_LINES = ['こんどは うえへ！？', 'ぐいーーん！', 'あがって いくーー！'];
+const TK_DROP = ['ツクツクーーー！', 'ひえええーー！', 'たすけてーー！', 'オーシン ツクツクーー！', 'ぼくの はねー！'];
+const TK_UP = ['ま、また のぼるの！？', 'もう いいってばー！', 'ひゃああ！'];
 const pick = a => a[Math.floor(Math.random() * a.length)];
 const rand = (a, b) => a + Math.random() * (b - a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -344,10 +346,10 @@ const SND = {
   update() {
     if (!this.ctx) return;
     const t = this.ctx.currentTime, v = Math.abs(S.vel);
-    this.windG.gain.setTargetAtTime(Math.min(.45, v / 22 * .45), t, .08);
-    this.windF.frequency.setTargetAtTime(350 + v * 70, t, .1);
+    this.windG.gain.setTargetAtTime(Math.min(.5, v / 30 * .45), t, .08);
+    this.windF.frequency.setTargetAtTime(Math.min(3200, 350 + v * 40), t, .1);
     this.motorG.gain.setTargetAtTime(S.motor ? Math.min(.12, .03 + v * .015) : 0, t, .15);
-    this.motorO.frequency.setTargetAtTime(40 + v * 4, t, .1);
+    this.motorO.frequency.setTargetAtTime(Math.min(160, 40 + v * 3), t, .1);
     this.droneG.gain.setTargetAtTime(S.drone * .09, t, .5);
   },
   silence() {
@@ -394,6 +396,7 @@ const SND = {
   power()   { this.tone(220, .9, 'sawtooth', .06, 0, 40); },
   wow()     { [523, 659, 784, 1046].forEach((f, i) => this.tone(f, 1.2, 'triangle', .1, i * .12)); },
   happy()   { [523, 659, 784, 1046, 784, 1046].forEach((f, i) => this.tone(f, .35, 'triangle', .16, i * .13)); },
+  tsuku()   { for (let i = 0; i < 6; i++) this.tone(i % 2 ? 3600 : 4300, .07, 'square', .035, i * .09); },
   MELODY: [659, 784, 988, 932, 880, 698, 659, 0, 587, 698, 880, 831, 784, 659, 622, 0],
   note(i) { const f = this.MELODY[i % this.MELODY.length]; if (f) this.tone(f, .9, 'triangle', .07); },
 };
@@ -419,7 +422,7 @@ function resetScene() {
     alt: 0, vel: 0, acc: 0, door: 1, light: 1, shake: 0, ghost: 0, ghostOut: 0, flash: 0, lightning: 0,
     motor: false, drone: 0, music: false, musT: 0, musI: 0, heart: false, heartT: 0,
     photoAt: null, photo: null, dropT: 0, upT: 0, flickUntil: 0, time: S.time || 0,
-    top: LEVELS[save.level].top, riding: false, returning: false,
+    top: LEVELS[save.level].top, riding: false, returning: false, tkSay: '', tkUntil: 0, tkLift: 0, tkV: 0, tkScared: false, tkHappy: false,
   });
   ITEMS.forEach(it => { it.lift = 0; it.v = 0; it.rot = 0; });
   setHands(false);
@@ -455,6 +458,8 @@ function lightning() { S.lightning = 1; SND.thunder(); }
 function flicker(sec) { S.flickUntil = S.time + sec; SND.buzz(); }
 
 function narr(html) { $('#narr').innerHTML = html; }
+// つくぼうの ふきだし
+function tk(text, scared = false, sec = 2.8) { S.tkSay = text; S.tkScared = scared; S.tkUntil = S.time + sec; SND.tsuku(); }
 
 function setHands(on) {
   hands = on;
@@ -465,7 +470,9 @@ function setHands(on) {
 /* ---------- けしき（えんきん ほうで かく） ---------- */
 const R0 = mulberry32(20261016);
 const STARS = Array.from({ length: 70 }, () => ({ x: R0(), y: R0() * .55, r: R0() * 1.4 + .4, p: R0() * 6 }));
-const MOUNT = []; for (let X = -4800; X <= 4800; X += 160) MOUNT.push([X, 50 + R0() * 180]);
+const MOUNT = []; for (let X = -70000; X <= 70000; X += 1800) MOUNT.push([X, 150 + R0() * 650]);
+// ふじさん（とおくの 1つだけ たかい やま）
+const FUJI = { X: -2200, D: 22000, z: 3776, half: 5600 };
 const CITY = [];
 for (let X = -380; X <= 380;) {
   const w = 10 + R0() * 22, z = 12 + R0() ** 2 * 80, win = [];
@@ -473,7 +480,16 @@ for (let X = -380; X <= 380;) {
   CITY.push({ X, w, z, win, col: ['#1d1934', '#221c3c', '#181530'][R0() * 3 | 0] });
   X += w + R0() * 5;
 }
-const GLIGHTS = Array.from({ length: 160 }, () => ({ X: (R0() - .5) * 900, D: 90 + R0() * 380 }));
+// じめんの あかり（ちかく〜とおく 8km まで）
+const GLIGHTS = Array.from({ length: 520 }, () => { const D = 90 * Math.exp(R0() * Math.log(8000 / 90)); return { X: (R0() - .5) * D * 1.8, D }; });
+// とおくの まち（たかい ビル）
+const CITY2 = [];
+for (let X = -2600; X <= 2600;) {
+  const w = 25 + R0() * 45, z = 30 + R0() ** 2 * 200, win = [];
+  for (let wz = 6; wz < z - 4; wz += 9) for (let wx = 5; wx < w - 4; wx += 10) if (R0() < .3) win.push([wx, wz]);
+  CITY2.push({ X, w, z, win, col: ['#1a1630', '#1e1a38', '#16132c'][R0() * 3 | 0] });
+  X += w + R0() * 40;
+}
 const HOUSES = [];
 for (let X = -150; X <= 150;) {
   const w = 9 + R0() * 6;
@@ -523,14 +539,54 @@ function drawOutside(R, t) {
   }
   if (Lg > 0) { ctx.fillStyle = `rgba(225,215,255,${Lg * .6})`; ctx.fillRect(R.x, R.y, R.w, R.h); }
 
-  // やま
-  ctx.fillStyle = '#1c1433'; ctx.beginPath(); ctx.moveTo(cx - 3000, bottom + 5);
-  for (const [X, z] of MOUNT) ctx.lineTo(cx + f * X / 3000, eye + f * (ea - z) / 3000);
-  ctx.lineTo(cx + 3000, bottom + 5); ctx.closePath(); ctx.fill();
+  // ふじさん
+  {
+    const fx = cx + f * FUJI.X / FUJI.D, fb = eye + f * ea / FUJI.D, ft = eye + f * (ea - FUJI.z) / FUJI.D;
+    const hw = f * FUJI.half / FUJI.D, fh = fb - ft;
+    const mountain = () => {
+      ctx.beginPath(); ctx.moveTo(fx - hw, fb);
+      ctx.quadraticCurveTo(fx - hw * .45, fb - fh * .55, fx - hw * .14, ft);
+      ctx.lineTo(fx + hw * .14, ft);
+      ctx.quadraticCurveTo(fx + hw * .45, fb - fh * .55, fx + hw, fb); ctx.closePath();
+    };
+    const fg = ctx.createLinearGradient(0, ft, 0, fb);
+    fg.addColorStop(0, '#3a4378'); fg.addColorStop(1, '#22264a');
+    ctx.fillStyle = fg; mountain(); ctx.fill();
+    ctx.save(); mountain(); ctx.clip();
+    ctx.fillStyle = Lg > .2 ? '#ffffff' : '#dfe4ff';
+    ctx.beginPath(); ctx.moveTo(fx - hw, ft - 5);
+    ctx.lineTo(fx + hw, ft - 5); ctx.lineTo(fx + hw, ft + fh * .26);
+    const n = 7;
+    for (let i = n; i >= 0; i--) ctx.lineTo(fx - hw + hw * 2 * i / n, ft + fh * (i % 2 ? .2 : .34));
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+  // とおくの やま
+  ctx.fillStyle = '#1c1433'; ctx.beginPath(); ctx.moveTo(cx - 4000, bottom + 5);
+  for (const [X, z] of MOUNT) ctx.lineTo(cx + f * X / 12000, eye + f * (ea - z) / 12000);
+  ctx.lineTo(cx + 4000, bottom + 5); ctx.closePath(); ctx.fill();
+
+  // じめん
+  const gy = eye + f * ea / 12000;
+  ctx.fillStyle = '#14102a'; ctx.fillRect(R.x, gy, R.w, bottom - gy);
+  // とおくの まち
+  const k5 = f / 2500, cb2 = eye + f * ea / 2500;
+  if (cb2 < bottom + R.h) {
+    for (const b of CITY2) {
+      const x = cx + b.X * k5; if (x + b.w * k5 < R.x || x > R.x + R.w) continue;
+      const y = eye + f * (ea - b.z) / 2500;
+      ctx.fillStyle = b.col; ctx.fillRect(x, y, b.w * k5, cb2 - y + 1);
+    }
+    ctx.fillStyle = '#ffd86b';
+    const ws2 = Math.max(1, k5 * 3);
+    for (const b of CITY2) {
+      const x = cx + b.X * k5; if (x + b.w * k5 < R.x || x > R.x + R.w) continue;
+      for (const [wx, wz] of b.win) ctx.fillRect(x + wx * k5, eye + f * (ea - wz) / 2500, ws2, ws2);
+    }
+  }
 
   // まち
   const cb = eye + f * ea / 500, k = f / 500;
-  ctx.fillStyle = '#14102a'; ctx.fillRect(R.x, cb, R.w, bottom - cb);
   ctx.fillStyle = '#ffb35c';
   for (const g of GLIGHTS) {
     const y = eye + f * ea / g.D; if (y > bottom) continue;
@@ -538,6 +594,7 @@ function drawOutside(R, t) {
     ctx.fillRect(x, y, 1.6, 1.6);
   }
   for (const b of CITY) {
+    if (cb - b.z * k > bottom) continue;
     const x = cx + b.X * k; if (x + b.w * k < R.x || x > R.x + R.w) continue;
     const y = eye + f * (ea - b.z) / 500;
     ctx.fillStyle = b.col; ctx.fillRect(x, y, b.w * k, cb - y + 1);
@@ -545,12 +602,15 @@ function drawOutside(R, t) {
   ctx.fillStyle = '#ffd86b';
   const ws = Math.max(1, k * 1.6);
   for (const b of CITY) {
+    if (cb - b.z * k > bottom) continue;
     const x = cx + b.X * k; if (x + b.w * k < R.x || x > R.x + R.w) continue;
     for (const [wx, wz] of b.win) ctx.fillRect(x + wx * k, eye + f * (ea - wz) / 500, ws, ws);
   }
+  if (cb < bottom + R.h * .12) {
   const glow = ctx.createLinearGradient(0, cb - R.h * .12, 0, cb);
   glow.addColorStop(0, 'rgba(255,160,90,0)'); glow.addColorStop(1, 'rgba(255,160,90,.18)');
   ctx.fillStyle = glow; ctx.fillRect(R.x, cb - R.h * .12, R.w, R.h * .12);
+  }
 
   // ちかくの いえ・がいとう・き
   const hb = eye + f * ea / 80;
@@ -590,7 +650,8 @@ function drawOutside(R, t) {
 
   // エレベーターの みちの はしら（うごくと びゅんびゅん ながれる）
   const kb = f / 2.5, th = Math.max(6, kb * .2), blur = Math.min(R.h * .6, Math.abs(S.vel) * kb * .035);
-  for (let n = 0; n <= S.top; n++) {
+  const n0 = Math.max(0, Math.floor(S.alt / FLOOR_H) - 3), n1 = Math.min(S.top, n0 + 8);
+  for (let n = n0; n <= n1; n++) {
     const y = eye + f * (ea - (n * FLOOR_H - .4)) / 2.5;
     if (y < R.y - th - blur || y > bottom + blur) continue;
     if (blur > 2) {
@@ -698,14 +759,22 @@ function drawWall(R, t, light) {
   const top = S.top;
   ctx.fillStyle = '#3a1d0a'; ctx.strokeStyle = '#3a1d0a'; ctx.lineWidth = 2;
   ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `bold ${Math.max(9, rr * .2)}px sans-serif`;
-  for (let fl = 1; fl <= top; fl++) {
-    const a = Math.PI + .14 + (fl - 1) / (top - 1) * (Math.PI - .28);
+  ctx.font = `bold ${Math.max(8, rr * .17)}px sans-serif`;
+  const tickStep = top > 40 ? 5 : top > 13 ? 1 : 1, labStep = top > 40 ? 20 : top > 13 ? 5 : 2;
+  for (let n = 1; n <= top; n++) {
+    if (n !== 1 && n % tickStep) continue;
+    const a = Math.PI + .14 + (n - 1) / (top - 1) * (Math.PI - .28);
     const c = Math.cos(a), s = Math.sin(a);
     ctx.beginPath(); ctx.moveTo(dcx + c * rr * .88, dcy + s * rr * .88); ctx.lineTo(dcx + c * rr, dcy + s * rr); ctx.stroke();
-    if (top <= 7 || fl % 2 === 1) ctx.fillText(String(fl), dcx + c * rr * .7, dcy + s * rr * .7);
+    if (n === 1 || n % labStep === 0 || (top <= 13 && n % 2 === 1)) ctx.fillText(String(n), dcx + c * rr * .7, dcy + s * rr * .7);
   }
   const fF = Math.min(top, Math.max(1, S.alt / FLOOR_H + 1));
+  // いまの かい（デジタル）
+  const txt = `${Math.round(fF)}F`;
+  ctx.font = `bold ${Math.max(11, rr * .27)}px monospace`;
+  const tw = ctx.measureText(txt).width + 10, th = Math.max(14, rr * .3), ty = dcy - rr * .34;
+  ctx.fillStyle = '#120806'; ctx.fillRect(dcx - tw / 2, ty - th / 2, tw, th);
+  ctx.fillStyle = '#ffb02e'; ctx.fillText(txt, dcx, ty + 1);
   const na = Math.PI + .14 + (fF - 1) / (top - 1) * (Math.PI - .28);
   ctx.strokeStyle = '#a01818'; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(dcx, dcy); ctx.lineTo(dcx + Math.cos(na) * rr * .8, dcy + Math.sin(na) * rr * .8); ctx.stroke();
@@ -729,6 +798,90 @@ function drawItems(R, dt) {
     ctx.fillText(it.e, 0, 0);
     ctx.restore();
   });
+}
+
+/* ---------- つくぼう（ツクツクボウシ。つくぼうと おしゃべり の なかま） ---------- */
+function ell(c, x, y, rx, ry, fill, stroke, lw, rot = 0) {
+  c.beginPath(); c.ellipse(x, y, rx, ry, rot, 0, Math.PI * 2);
+  if (fill) { c.fillStyle = fill; c.fill(); }
+  if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw || 2; c.stroke(); }
+}
+function line(c, pts, col, lw) {
+  c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x, y) : c.moveTo(x, y));
+  c.strokeStyle = col; c.lineWidth = lw; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke();
+}
+// あしもとが (0,0)、たかさ やく 72。mood: 'smug' | 'shock' | 'happy'
+function drawTsuku(c, mood, t, flap) {
+  const bz = 1 + Math.sin(t * (flap ? 60 : 4)) * (flap ? .14 : .03);
+  [-1, 1].forEach(sx => {
+    c.save(); c.translate(sx * 6, -34); c.scale(bz, 1);
+    ell(c, sx * 12, 12, 9, 22, 'rgba(220,240,255,.8)', '#6c8c9c', 1.5, -sx * (flap ? .9 : .5));
+    c.restore();
+  });
+  if (mood === 'shock') {
+    line(c, [[-8, -18], [-18, -30], [-22, -40]], '#2f5d3a', 2.5); line(c, [[8, -18], [18, -30], [22, -40]], '#2f5d3a', 2.5);
+  } else {
+    line(c, [[-8, -16], [-16, -6], [-18, 0]], '#2f5d3a', 2.5); line(c, [[8, -16], [16, -6], [18, 0]], '#2f5d3a', 2.5);
+  }
+  ell(c, 0, -20, 11, 19, '#2f5d3a');
+  line(c, [[-8, -18], [0, -15], [8, -18]], '#6fb46b', 2); line(c, [[-8, -10], [0, -7], [8, -10]], '#6fb46b', 2);
+  ell(c, 0, -37, 15, 8, '#3d7a45');
+  c.beginPath(); c.moveTo(-6, -40); c.quadraticCurveTo(0, -33, 6, -40); c.quadraticCurveTo(3, -36, 0, -31); c.quadraticCurveTo(-3, -36, -6, -40);
+  c.fillStyle = '#9bd38a'; c.fill();
+  const an = mood === 'shock' ? -6 : 0;
+  line(c, [[-8, -58], [-11, -68 + an], [-17, -71 + an * 1.5]], '#2c6b39', 2); line(c, [[8, -58], [11, -68 + an], [17, -71 + an * 1.5]], '#2c6b39', 2);
+  ell(c, 0, -52, 20, 13, '#4f9a55', '#2c6b39', 2.5);
+  [-1, 1].forEach(sx => {
+    c.beginPath(); c.arc(sx * 18, -55, 7.5, 0, Math.PI * 2); c.fillStyle = '#fff'; c.fill();
+    c.strokeStyle = '#2c6b39'; c.lineWidth = 2.5; c.stroke();
+    if (mood === 'shock') ell(c, sx * 18, -55, 2, 2, '#1d1d1d');
+    else if (mood === 'happy') line(c, [[sx * 18 - 4, -54], [sx * 18, -58], [sx * 18 + 4, -54]], '#1d1d1d', 2);
+    else { ell(c, sx * 18.5, -55, 3.6, 3.6, '#1d1d1d'); ell(c, sx * 18.5 + 1.3, -56.5, 1.3, 1.3, '#fff'); }
+  });
+  ell(c, -9, -46, 3.6, 2, 'rgba(255,140,160,.55)'); ell(c, 9, -46, 3.6, 2, 'rgba(255,140,160,.55)');
+  if (mood === 'shock') ell(c, 0, -44, 3.5, 4.5, '#1d3a22');
+  else if (mood === 'happy') { c.beginPath(); c.moveTo(-5, -47); c.quadraticCurveTo(0, -40, 5, -47); c.closePath(); c.fillStyle = '#1d3a22'; c.fill(); }
+  else { c.beginPath(); c.moveTo(-5, -46); c.quadraticCurveTo(2, -42, 6, -48); c.strokeStyle = '#1d3a22'; c.lineWidth = 2; c.stroke(); }
+  if (mood === 'shock') {  // あせ
+    ell(c, 24, -62, 2.5, 4, 'rgba(150,210,255,.9)'); ell(c, -25, -66, 2, 3.2, 'rgba(150,210,255,.9)');
+  }
+}
+
+// かごの みぎの てすりに とまっている つくぼう
+function drawTsukuCabin(R, t, dt, light) {
+  const lw = Math.max(6, R.w * .035), x0 = R.x + R.w + lw * 2, side = W - x0;
+  const hy = R.y + R.h - R.h * .33;
+  const sc = Math.max(.42, Math.min(1.25, side * .8 / 60));
+  const x = side > 40 ? x0 + side / 2 : W - 30;
+  const wl = -S.acc / 9.8;
+  const scared = wl > .4 || S.ghost > .3 || S.ghostOut > .3 || (S.tkSay && S.time < S.tkUntil && S.tkScared);
+  const target = wl > .45 ? -H * .22 * Math.min(1.2, wl) : 0;
+  S.tkV += ((target - S.tkLift) * 16 - S.tkV * (wl > .45 ? 4 : 9)) * dt;
+  S.tkLift = Math.min(0, S.tkLift + S.tkV * dt);
+  if (S.tkLift === 0 && S.tkV > 0) S.tkV = 0;
+  const y = hy + S.tkLift + (scared ? Math.sin(t * 40) * 1.2 : 0);
+  ctx.save();
+  ctx.globalAlpha = .55 + .45 * light;
+  ctx.translate(x, y); ctx.scale(sc, sc);
+  if (wl > .45) ctx.rotate(Math.sin(t * 3) * .4);
+  drawTsuku(ctx, scared ? 'shock' : (S.tkHappy ? 'happy' : 'smug'), t, wl > .45 || scared);
+  ctx.restore();
+  // ふきだし
+  if (S.tkSay && S.time < S.tkUntil) {
+    let fs = Math.max(14, Math.min(20, W * .042));
+    ctx.font = `bold ${fs}px sans-serif`;
+    let tw = ctx.measureText(S.tkSay).width;
+    if (tw > W * .7) { fs *= W * .7 / tw; ctx.font = `bold ${fs}px sans-serif`; tw = ctx.measureText(S.tkSay).width; }
+    const bw = tw + 22, bh = fs + 16;
+    const bx = Math.max(8, Math.min(W - bw - 8, x - bw + 24)), by = y - 80 * sc - bh - 8;
+    ctx.fillStyle = '#eaffd8'; ctx.strokeStyle = '#2c6b39'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, 12); else ctx.rect(bx, by, bw, bh);
+    ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x - 6, by + bh - 1); ctx.lineTo(x + 2, by + bh + 10); ctx.lineTo(x + 6, by + bh - 1); ctx.fill();
+    ctx.fillStyle = '#1d3a22'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(S.tkSay, bx + 11, by + bh / 2 + 1);
+  }
 }
 
 function drawGhost(x, y, s, a, t) {
@@ -797,6 +950,7 @@ function draw(t, dt) {
     ctx.fillStyle = '#ff5a5a'; ctx.beginPath(); ctx.arc(ex, ey, 5, 0, 7); ctx.fill();
   }
   drawGhost(W / 2, R.y + R.h * .4, R.w * .62, S.ghost, t);
+  drawTsukuCabin(R, t, dt, light);
   if (S.lightning > 0) { ctx.fillStyle = `rgba(220,210,255,${S.lightning * .18})`; ctx.fillRect(-20, -20, W + 40, H + 40); }
   ctx.restore();
 
@@ -855,16 +1009,18 @@ function startLoop() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); 
 function stopLoop() { cancelAnimationFrame(raf); raf = 0; SND.silence(); }
 
 /* ---------- のりものの すすみかた ---------- */
+// to は「なんかい」で かく（1かい = たかさ 0）
+const fl = (a, b) => (rand(a, b) - 1) * FLOOR_H;
 function makePlan(lv) {
-  if (lv === 'easy') return [{ t: 'drop', to: rand(11, 14), photo: true }, { t: 'up', to: rand(19, 23) }, { t: 'drop', to: 0 }];
+  if (lv === 'easy') return [{ t: 'drop', to: fl(6, 10), photo: true }, { t: 'up', to: fl(18, 22) }, { t: 'drop', to: 0 }];
   if (lv === 'normal') return [
-    { t: 'drop', to: rand(18, 24), photo: true }, { t: 'up', to: rand(42, 48) },
-    { t: 'drop', to: rand(8, 13) }, { t: 'up', to: rand(28, 36) }, { t: 'drop', to: 0 },
+    { t: 'drop', to: fl(12, 20), photo: true }, { t: 'up', to: fl(65, 80) },
+    { t: 'drop', to: fl(5, 10) }, { t: 'up', to: fl(35, 50) }, { t: 'drop', to: 0 },
   ];
   return [
-    { t: 'fake' }, { t: 'drop', to: rand(14, 20), photo: true }, { t: 'up', to: rand(48, 52), ghost: true },
-    { t: 'drop', to: rand(4, 8) }, { t: 'up', to: rand(36, 44) }, { t: 'fake' },
-    { t: 'drop', to: rand(16, 22) }, { t: 'up', to: rand(28, 36) }, { t: 'drop', to: 0 },
+    { t: 'fake' }, { t: 'drop', to: fl(20, 30), photo: true }, { t: 'up', to: fl(92, 97), ghost: true },
+    { t: 'drop', to: fl(3, 6) }, { t: 'up', to: fl(55, 65) }, { t: 'fake' },
+    { t: 'drop', to: fl(20, 28) }, { t: 'up', to: fl(40, 50) }, { t: 'drop', to: 0 },
   ];
 }
 
@@ -879,17 +1035,21 @@ async function ride() {
   show('ride'); startLoop();
   const plan = makePlan(lvKey);
   try {
-    narr('ようこそ、ホテル「よぞら」へ。'); await w(sleep(2000));
+    narr('ようこそ、ホテル「よぞら」へ。'); await w(sleep(1800));
+    tk('ぼくも のる〜！ ツクツク！'); await w(sleep(1800));
     narr(`${L.top}かいの てんぼうしつへ<br>ごあんない します。`); await w(sleep(2300));
     narr('ベルトを しめてね。…カチッ！'); SND.click(); await w(sleep(1500));
     SND.door(); await w(tween(S, 'door', 0, 1500));
     SND.clunk(); S.shake = .35;
     narr('うえへ まいります…'); S.motor = true; S.drone = 1; S.music = true; S.musI = 0;
-    const asc = cruise(top, L.top > 10 ? 6 : 4.5);
-    await w(sleep(2200)); flicker(1.2);
+    const asc = cruise(top, L.top > 50 ? 26 : 10);
+    await w(sleep(2400)); tk('へへーん。ぼくは ぜーんぜん こわく ないもんね〜');
+    await w(sleep(3200)); flicker(1.2);
     narr('この ホテルには<br>ふしぎな うわさが あるんだって…');
-    await w(sleep(3000)); lightning();
+    await w(sleep(3400)); lightning();
     narr('よるに なると<br>おばけが エレベーターを うごかす らしい…');
+    await w(sleep(3400)); tk('…ね、ねえ。まだ つかないの？', true);
+    await w(sleep(3000)); narr(`ぐんぐん のぼって いくよ…<br>めざすは ${L.top}かい！`);
     await w(asc);
     S.music = false; S.motor = false; SND.clunk(); S.shake = .6; vibrate(60);
     narr('ガコン！　…とまった？'); await w(sleep(1300));
@@ -897,27 +1057,30 @@ async function ride() {
     await w(sleep(800));
     SND.laugh(); tween(S, 'ghost', 1, 700); narr('うふふふ…　ようこそ…'); await w(sleep(2100));
     await w(tween(S, 'ghost', 0, 500));
-    narr('き、きえた…？'); await w(sleep(1000));
+    tk('ぎゃっ！？ お、おばけ…！？', true); narr('き、きえた…？'); await w(sleep(1600));
     SND.door(); tween(S, 'light', .3, 900); await w(tween(S, 'door', 1, 1800));
     SND.wow(); narr('わあ…！ まちが ぜんぶ みえる！'); await w(sleep(2600));
+    narr('ほら、ひだりの ほうに<br>🗻 ふじさん が みえるよ！'); await w(sleep(1600));
+    S.tkHappy = true; tk('ふじさんだー！ きれい〜！'); await w(sleep(2600)); S.tkHappy = false;
     narr('おちる ときに しゃしんを とるよ。<br>🙌 ばんざい してね！'); await w(sleep(2800));
     narr('…あれ？　なにか おとが…'); SND.creak(); S.heart = true; S.heartT = 0;
     await w(sleep(rand(1500, 3600)));
 
     for (const st of plan) {
       if (st.t === 'fake') {
-        S.heart = false; narr('ガタッ！？'); SND.clunk();
+        S.heart = false; narr('ガタッ！？'); SND.clunk(); tk('い、いま ゆれた！？', true);
         await w(burst(S.alt - 1.2, L.g, L.brake)); S.shake = .8; vibrate(80);
         await w(sleep(500)); narr('…い、いまのは なに？'); S.heart = true; S.heartT = 0;
         await w(sleep(rand(1400, 3000)));
       } else if (st.t === 'drop') {
         S.heart = false; narr(pick(DROP_LINES)); SND.whoosh(); vibrate([200, 60, 200]);
+        setTimeout(() => { if (tok === rideTok) tk(pick(TK_DROP), true); }, 700);
         if (st.photo) S.photoAt = (S.alt + st.to) / 2;
         await w(burst(st.to, L.g, L.brake));
         SND.clunk(); S.shake = 1; vibrate(120);
         if (st.to > 0) await w(sleep(rand(250, 900)));
       } else {
-        narr(pick(UP_LINES)); SND.whoosh(); S.motor = true;
+        narr(pick(UP_LINES)); SND.whoosh(); S.motor = true; tk(pick(TK_UP), true);
         await w(burst(st.to, L.up, L.upDec)); S.motor = false;
         if (st.ghost) { tween(S, 'ghostOut', 1, 300); SND.laugh(); narr('ばあっ！'); }
         await w(sleep(rand(200, 1000)));
@@ -926,7 +1089,8 @@ async function ride() {
     }
     S.drone = 0; await w(sleep(700));
     tween(S, 'light', 1, 900); SND.ding(); narr('おかえりなさい！<br>よく がんばったね！');
-    await w(sleep(1300)); SND.happy(); await w(sleep(1500));
+    await w(sleep(1300)); SND.happy(); S.tkHappy = true; tk('ぜ、ぜんぜん こわく なかったし…！');
+    await w(sleep(2600));
     finish(lvKey);
   } catch (e) {
     if (e !== STOP) console.error(e);
@@ -943,8 +1107,9 @@ async function stopRide() {
   setHands(false); $('#stopBtn').hidden = true; $('#handsWrap').hidden = true;
   tween(S, 'ghost', 0, 300); tween(S, 'ghostOut', 0, 300); tween(S, 'light', 1, 600);
   narr('だいじょうぶ。<br>ゆっくり おりるよ。');
+  setTimeout(() => { if (tok === rideTok) tk('ふ、ふん。ぼくも おりたかったし…'); }, 1500);
   S.motor = true;
-  await cruise(0, 4);
+  await cruise(0, Math.max(4, S.alt / 12));
   if (tok !== rideTok) return;
   S.motor = false; SND.clunk(); SND.ding();
   narr('ついたよ。<br>また こんど ちょうせん しよう！');
@@ -975,6 +1140,16 @@ function renderPhoto(c, p) {
   const say = ['きゃー！', 'ひゃあ！', 'わあー！', 'たすけてー', '！？'];
   people.forEach((e, i) => {
     const me = i === 1, cxp = Wp * (.14 + i * .24), hy = Hp * .44;
+    if (i === 0 && p.tk) {
+      // つくぼうは ふわっと ういて うつる
+      x.save(); x.translate(cxp + Hp * .04, Hp * .62); x.rotate(-.2); x.scale(Hp / 190, Hp / 190);
+      drawTsuku(x, 'shock', 0, true); x.restore();
+      x.font = `bold ${Hp * .045}px sans-serif`;
+      const t2 = 'ツクツクー！', tw2 = x.measureText(t2).width + Hp * .04;
+      x.fillStyle = '#eaffd8'; x.beginPath(); x.ellipse(Math.max(tw2 / 2 + 4, cxp), Hp * .14, tw2 / 2, Hp * .045, 0, 0, 7); x.fill();
+      x.fillStyle = '#1d3a22'; x.fillText(t2, Math.max(tw2 / 2 + 4, cxp), Hp * .14);
+      return;
+    }
     const up = me ? p.up : r() < .4;
     const bw = Hp * .2, col = me ? '#e8b84a' : cols[i];
     x.fillStyle = col;
@@ -1028,7 +1203,7 @@ function finish(lv) {
   const others = NPCS.slice().sort(() => Math.random() - .5).slice(0, 3);
   const p = {
     d: `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`, lv, av: save.avatar, npcs: others,
-    up: S.photo ? S.photo.up : false, seed: Math.floor(Math.random() * 1e9),
+    up: S.photo ? S.photo.up : false, seed: Math.floor(Math.random() * 1e9), tk: true,
   };
   save.rides++;
   save.best[lv] = Math.max(save.best[lv] || 0, stars);
