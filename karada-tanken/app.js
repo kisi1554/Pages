@@ -215,18 +215,49 @@
     Sound.unlock();
     tone2();
     setTimeout(function () { sh.hidden = true; }, 1500);
-    showScene(0);
+    showScene(0, { travel: true, delay: 1.5 });
   }
   function tone2() { Sound.pop(); setTimeout(Sound.pop, 180); setTimeout(Sound.pop, 360); }
 
   function stopGame() {
     if (run && run.game) { run.game.dispose(); run.game = null; }
+    if (travelDone) { travelDone = null; clearTimeout(travelTimer); $("travel").hidden = true; }
   }
 
-  function showScene(si) {
+  function routeOf(c) { return c.scenes.map(function (s) { return s.map; }); }
+  function mapSvg(c, si, extra) {
+    var o = { focus: c.scenes[si].org, dot: c.scenes[si].map, route: routeOf(c), step: si, color: c.color };
+    for (var k in extra) o[k] = extra[k];
+    return A.body(o);
+  }
+  /* からだマップを おおきく だす（つぎの ばめんへ いどう／マップを タップ） */
+  var travelTimer = 0, travelDone = null;
+  function showTravel(svgHtml, cap, ms, then) {
+    var tr = $("travel");
+    $("tmap").innerHTML = svgHtml; $("tcap").innerHTML = rb(cap);
+    tr.hidden = false;
+    clearTimeout(travelTimer);
+    travelDone = function () { clearTimeout(travelTimer); tr.hidden = true; var f = then; travelDone = null; if (f) f(); };
+    travelTimer = setTimeout(travelDone, ms);
+  }
+  $("travel").addEventListener("pointerdown", function (e) { e.preventDefault(); if (travelDone) travelDone(); });
+  $("wmap").addEventListener("click", function () {
+    if (!run || travelDone) return;
+    Sound.tap();
+    var c = D.COURSES[run.ci];
+    showTravel(mapSvg(c, run.si, { kid: 22 }), "📍 いま ここ： " + c.scenes[run.si].place, 2500, null);
+  });
+
+  function showScene(si, opt) {
+    opt = opt || {};
     stopGame();
+    if (travelDone) { travelDone = null; clearTimeout(travelTimer); $("travel").hidden = true; }
     var c = D.COURSES[run.ci], sc = c.scenes[si];
+    var prev = si > 0 ? c.scenes[si - 1] : null;
     run.si = si;
+    $("wmap").innerHTML = mapSvg(c, si);
+    $("wplace").innerHTML = rb(sc.place);
+    $("picon").textContent = sc.icon;
     // すすみぐあい
     var prog = $("prog"); prog.innerHTML = "";
     c.scenes.forEach(function (s, i) {
@@ -237,7 +268,6 @@
       prog.appendChild(li);
     });
     $("place").innerHTML = rb(sc.place);
-    $("mini").innerHTML = A.body({ dot: sc.map || [100, 180] });
     $("intro").innerHTML = rb(sc.intro);
     $("choices").innerHTML = "";
     $("result").hidden = true; $("result").innerHTML = "";
@@ -256,7 +286,13 @@
     stage.setAttribute("data-hit", "0");
     var ctx = makeCtx(sc, art);
     run.game = ctx;
-    GAMES[sc.game.type](ctx);
+    function go() { if (run && run.game === ctx) GAMES[sc.game.type](ctx); }
+    if (!opt.travel) { go(); return; }
+    var same = prev && prev.org === sc.org;
+    var cap = !prev ? "たんけん スタート！ まずは " + sc.place + " から" :
+      same ? sc.place + " で つぎの ミッション！" : "つぎは " + sc.place + " へ！";
+    showTravel(mapSvg(c, si, { from: prev && !same ? prev.map : null, kid: 26, begin: opt.delay || 0 }), cap,
+      (opt.delay || 0) * 1000 + (same ? 1300 : 1900), go);
   }
 
   function makeCtx(sc, art) {
@@ -333,7 +369,7 @@
   $("nextBtn").addEventListener("click", function () {
     Sound.tap();
     var c = D.COURSES[run.ci];
-    if (run.si < c.scenes.length - 1) showScene(run.si + 1);
+    if (run.si < c.scenes.length - 1) showScene(run.si + 1, { travel: true });
     else finishCourse();
   });
 

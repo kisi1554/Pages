@@ -36,12 +36,14 @@ async function rhythm(page) {
 }
 
 async function playScene(page, opt, shots) {
+  await page.waitForSelector("#travel", { state: "hidden", timeout: 10000 });
   const type = await page.getAttribute("#stage", "data-game");
   const scene = await page.getAttribute("#stage", "data-scene");
   if (shots) await page.screenshot({ path: shots + "-" + scene + ".png" });
   if (type === "chew" && opt.quick) {
     const c = await center(page, "#stageSvg");
-    for (let i = 0; i < 3; i++) { await page.waitForSelector('#stage[data-hit="1"]'); await page.mouse.click(c.x, c.y); await page.waitForTimeout(300); }
+    // 3かい あたって「ごっくん」が でるまで（はずれは かぞえない）
+    for (let i = 0; i < 20 && (await page.isHidden("#gulpBtn")); i++) { await page.waitForSelector('#stage[data-hit="1"]'); await page.mouse.click(c.x, c.y); await page.waitForTimeout(300); }
     await page.click("#gulpBtn");
   } else if (["chew", "push", "beat"].includes(type)) {
     await rhythm(page);
@@ -110,7 +112,8 @@ async function playCourse(page, ci, opt, shots) {
   for (let s = 0; s < 10; s++) {
     log.push(await playScene(page, opt, s < 99 && shots ? shots : null));
     await page.click("#nextBtn", { force: true });
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(800);
+    if (shots && s === 1 && await page.isVisible("#travel")) await page.screenshot({ path: shots + "-travel.png" });
     if (!(await page.isHidden("#modal"))) break;
   }
   return log;

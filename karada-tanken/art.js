@@ -21,30 +21,40 @@ var KaradaArt = (function () {
       '<ellipse cx="76" cy="75" rx="7" ry="4" fill="#ff8fa3" opacity=".55"/><ellipse cx="124" cy="75" rx="7" ry="4" fill="#ff8fa3" opacity=".55"/>' +
       '<path d="M91 80 Q100 89 109 80" fill="#e8667a" stroke="#a33a4a" stroke-width="2" stroke-linecap="round"/>';
   }
-  function organs() {
-    return (
-      // きかん・しょくどう
+  function organs(focus) {
+    function g(id, inner) { return '<g data-org="' + id + '"' + (focus === id ? ' class="on"' : "") + ">" + inner + "</g>"; }
+    var s = "";
+    // きかん（はい の なかま）・しょくどう
+    s += g("hai",
       '<path d="M98 98 L98 132" stroke="#a5d8ff" stroke-width="5" stroke-linecap="round"/>' +
       '<path d="M98 130 Q90 132 86 140 M98 130 Q106 132 112 140" stroke="#a5d8ff" stroke-width="3.5" fill="none" stroke-linecap="round"/>' +
-      '<path d="M103 98 Q104 140 110 180" stroke="#f4a6a6" stroke-width="5" fill="none" stroke-linecap="round"/>' +
-      // はい
       '<path d="M95 132 Q78 124 70 142 Q64 164 68 184 Q82 190 96 182 Z" fill="#ffc9d0" stroke="#f08c9a" stroke-width="2"/>' +
-      '<path d="M105 132 Q122 124 130 142 Q136 164 132 184 Q124 188 118 182 Q114 172 105 170 Z" fill="#ffc9d0" stroke="#f08c9a" stroke-width="2"/>' +
-      // しんぞう
+      '<path d="M105 132 Q122 124 130 142 Q136 164 132 184 Q124 188 118 182 Q114 172 105 170 Z" fill="#ffc9d0" stroke="#f08c9a" stroke-width="2"/>');
+    s += g("shokudo", '<path d="M103 98 Q104 140 110 180" stroke="#f4a6a6" stroke-width="5" fill="none" stroke-linecap="round"/>');
+    // かんぞう（うすく・コースには でない）
+    s += g("kanzo", '<path d="M64 186 Q88 180 104 190 Q96 204 68 200 Z" fill="#c97b63" opacity=".45"/>');
+    s += g("shinzo",
       '<path d="M110 176 C95 166 95 152 103 150 C107 149 110 152 110 154 C110 152 113 149 117 150 C125 152 125 166 110 176Z" fill="#e03131" stroke="#a51111" stroke-width="1.5"/>' +
-      '<ellipse cx="105" cy="156" rx="2.5" ry="1.6" fill="#fff" opacity=".7"/>' +
-      // かんぞう（うすく）
-      '<path d="M64 186 Q88 180 104 190 Q96 204 68 200 Z" fill="#c97b63" opacity=".45"/>' +
-      // い
-      '<path d="M108 184 Q134 180 134 198 Q132 214 112 214 Q100 214 97 206 Q108 204 110 196 Z" fill="#ffa94d" stroke="#e8590c" stroke-width="2"/>' +
-      // だいちょう・しょうちょう
-      '<path d="M86 250 L78 250 Q72 250 72 242 L72 226 Q72 218 80 218 L120 218 Q128 218 128 226 L128 242 Q128 250 120 250 L106 250 L102 258" stroke="#d9a066" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>' +
-      '<path d="M84 228 Q92 222 100 228 T116 228 Q120 234 114 236 T98 236 T84 238 Q80 244 88 244 T104 244 T116 243" stroke="#ffc078" stroke-width="5" fill="none" stroke-linecap="round"/>'
-    );
+      '<ellipse cx="105" cy="156" rx="2.5" ry="1.6" fill="#fff" opacity=".7"/>');
+    s += g("i", '<path d="M108 184 Q134 180 134 198 Q132 214 112 214 Q100 214 97 206 Q108 204 110 196 Z" fill="#ffa94d" stroke="#e8590c" stroke-width="2"/>');
+    s += g("daicho", '<path d="M86 250 L78 250 Q72 250 72 242 L72 226 Q72 218 80 218 L120 218 Q128 218 128 226 L128 242 Q128 250 120 250 L106 250 L102 258" stroke="#d9a066" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>');
+    s += g("shocho", '<path d="M84 228 Q92 222 100 228 T116 228 Q120 234 114 236 T98 236 T84 238 Q80 244 88 244 T104 244 T116 243" stroke="#ffc078" stroke-width="5" fill="none" stroke-linecap="round"/>');
+    if (focus === "kekkan") {
+      s += g("kekkan",
+        '<path d="M114 160 Q140 166 148 222 M112 168 Q126 200 118 252 L116 330 M108 150 Q100 120 100 100" stroke="#e03131" stroke-width="3.5" fill="none" stroke-linecap="round"/>' +
+        '<path d="M104 166 Q62 170 52 222 M102 172 Q78 204 84 252 L86 330" stroke="#3b5bdb" stroke-width="3.5" fill="none" stroke-linecap="round"/>');
+    }
+    if (focus === "hone") {
+      var r = "";
+      for (var k = 0; k < 5; k++) { var y = 134 + k * 15; r += "M100 " + y + " Q74 " + (y - 2) + " 70 " + (y + 12) + " M100 " + y + " Q126 " + (y - 2) + " 130 " + (y + 12) + " "; }
+      s += g("hone", '<path d="' + r + 'M100 118 L100 236" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round"/>' +
+        '<path d="M78 232 Q100 222 122 232 Q118 252 100 250 Q82 252 78 232Z" fill="#fff"/>');
+    }
+    return s;
   }
   function body(opt) {
     opt = opt || {};
-    var s = "";
+    var f = opt.focus, s = "";
     // あし
     s += '<rect x="73" y="236" width="25" height="104" rx="12.5" fill="' + SKIN + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/>';
     s += '<rect x="102" y="236" width="25" height="104" rx="12.5" fill="' + SKIN + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/>';
@@ -54,15 +64,17 @@ var KaradaArt = (function () {
     s += '<path d="M68 128 Q52 172 48 222 M132 128 Q148 172 152 222" stroke="' + SKIN + '" stroke-width="19" fill="none" stroke-linecap="round"/>';
     s += '<circle cx="47" cy="230" r="11" fill="' + SKIN + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/><circle cx="153" cy="230" r="11" fill="' + SKIN + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/>';
     // うでと あしの ほね（うっすら）
-    s += '<g stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".9"><path d="M66 134 Q55 172 50 218 M134 134 Q145 172 150 218 M85 256 L85 330 M115 256 L115 330"/></g>';
-    s += '<g fill="#fff" opacity=".9"><circle cx="56" cy="176" r="3.5"/><circle cx="144" cy="176" r="3.5"/><circle cx="85" cy="296" r="4"/><circle cx="115" cy="296" r="4"/></g>';
+    s += '<g data-org="hone"' + (f === "hone" ? ' class="on"' : "") + '><g stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".9"><path d="M66 134 Q55 172 50 218 M134 134 Q145 172 150 218 M85 256 L85 330 M115 256 L115 330"/></g>' +
+      '<g fill="#fff" opacity=".9"><circle cx="56" cy="176" r="3.5"/><circle cx="144" cy="176" r="3.5"/><circle cx="85" cy="296" r="4"/><circle cx="115" cy="296" r="4"/></g></g>';
+    if (f === "kinniku") s += '<g data-org="kinniku" class="on"><ellipse cx="59" cy="156" rx="7" ry="20" transform="rotate(18 59 156)" fill="#f03e3e" stroke="#a51111" stroke-width="2"/></g>';
     // くび・どう
     s += '<rect x="91" y="94" width="18" height="22" fill="' + SKIN + '"/>';
     s += '<path d="M66 118 Q100 108 134 118 Q142 122 142 136 L138 238 Q138 260 118 262 L82 262 Q62 260 62 238 L58 136 Q58 122 66 118Z" fill="' + BODY + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/>';
-    s += organs();
+    s += organs(f);
     // あたま
     s += '<circle cx="100" cy="58" r="42" fill="' + SKIN + '" stroke="' + SKIN_DK + '" stroke-width="2.5"/>';
     s += face();
+    if (f === "kuchi") s += '<g data-org="kuchi" class="on"><ellipse cx="100" cy="83" rx="15" ry="9" fill="#e8667a" stroke="#a33a4a" stroke-width="2"/><path d="M90 80 L110 80" stroke="#fff" stroke-width="3"/></g>';
     if (opt.hots) {
       opt.hots.forEach(function (h, i) {
         s += '<g class="hot" data-course="' + i + '" role="button" aria-label="' + h.label + '">' +
@@ -72,11 +84,27 @@ var KaradaArt = (function () {
           '<text x="' + h.x + '" y="' + (h.y + 4.5) + '" font-size="13" text-anchor="middle">' + h.e + "</text></g>";
       });
     }
-    if (opt.dot) {
-      s += '<circle cx="' + opt.dot[0] + '" cy="' + opt.dot[1] + '" r="22" fill="#fa5252" opacity=".25"><animate attributeName="r" values="12;26;12" dur="1.4s" repeatCount="indefinite"/></circle>';
-      s += '<circle cx="' + opt.dot[0] + '" cy="' + opt.dot[1] + '" r="9" fill="#fa5252" stroke="#fff" stroke-width="3"/>';
+    // コースの みちすじ（とおった ところは じっせん、これからは てんせん）
+    if (opt.route) {
+      var pts = opt.route, step = opt.step | 0, col = opt.color || "#fa5252";
+      for (var i = 1; i < pts.length; i++) {
+        var a = pts[i - 1], b = pts[i];
+        if (a[0] === b[0] && a[1] === b[1]) continue;
+        s += '<path d="M' + a[0] + " " + a[1] + " L" + b[0] + " " + b[1] + '" stroke="' + col + '" stroke-width="' + (i <= step ? 4 : 3) + '" stroke-linecap="round"' + (i <= step ? "" : ' stroke-dasharray="2 6" opacity=".7"') + "/>";
+      }
+      pts.forEach(function (p, i) {
+        s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="5" fill="' + (i < step ? col : "#fff") + '" stroke="' + col + '" stroke-width="2.5"/>';
+      });
     }
-    return svg("0 0 200 360", s, opt.label ? ' role="img" aria-label="' + opt.label + '"' : "");
+    if (opt.dot) {
+      var d = opt.dot, fr = opt.from;
+      function mv(attr, a, b) { return fr ? '<animate attributeName="' + attr + '" values="' + a + ";" + b + '" dur="1s" begin="' + ((opt.begin || 0) + .25) + 's" fill="freeze" calcMode="spline" keySplines=".5 0 .3 1"/>' : ""; }
+      var x0 = fr ? fr[0] : d[0], y0 = fr ? fr[1] : d[1];
+      s += '<circle cx="' + x0 + '" cy="' + y0 + '" r="22" fill="#fa5252" opacity=".25">' + mv("cx", x0, d[0]) + mv("cy", y0, d[1]) + '<animate attributeName="r" values="12;28;12" dur="1.4s" repeatCount="indefinite"/></circle>';
+      s += '<circle cx="' + x0 + '" cy="' + y0 + '" r="9" fill="#fa5252" stroke="#fff" stroke-width="3">' + mv("cx", x0, d[0]) + mv("cy", y0, d[1]) + "</circle>";
+      if (opt.kid) s += '<text x="' + (x0 + 8) + '" y="' + (y0 - 8) + '" font-size="' + opt.kid + '">' + mv("x", x0 + 8, d[0] + 8) + mv("y", y0 - 8, d[1] - 8) + "🧒</text>";
+    }
+    return svg("0 0 200 360", s, (f ? ' class="focus"' : "") + (opt.label ? ' role="img" aria-label="' + opt.label + '"' : ""));
   }
 
   /* ---------- ほねの かたち（ちゅうしん 0,0・たて むき） ---------- */
