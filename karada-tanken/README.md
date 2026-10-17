@@ -35,6 +35,12 @@
 - `words` … おぼえた ことば（31こ）。ヘッダーの 📖 ずかん で みられる。
 - `sound`（おと オン／オフ）、`fart`（おならの おと オン／オフ。だいちょうの ばめんで きりかえ）。
 
+### ズームしない ように
+
+- viewport を `maximum-scale=1, user-scalable=no` に し、`touch-action: manipulation` で ダブルタップ ズームを とめる。
+- iOS Safari は viewport の しばりを むしするので、`gesturestart`（ピンチ）・2ほん ゆびの `touchmove`・
+  すばやい 2かいめの `touchend`・Ctrl＋ホイール／Ctrl＋＋− を `app.js` で とめる（ボタンの クリックは いかす）。
+
 ## しくみ
 
 | ファイル | なかみ |

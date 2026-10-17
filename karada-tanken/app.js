@@ -1061,6 +1061,30 @@
     });
   };
 
+  /* ---------- いとしない ズームを ふせぐ ----------
+     iOS Safari は user-scalable=no を むしするので、ピンチ・ダブルタップ・Ctrl+ホイールを とめる */
+  (function () {
+    function stop(e) { e.preventDefault(); }
+    ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, stop, { passive: false }); });
+    document.addEventListener("touchmove", function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    var lastEnd = 0;
+    document.addEventListener("touchend", function (e) {
+      var t = Date.now();
+      // すばやい 2かいめの タップ（ダブルタップ）は ズームに ならない ように する。ボタンなどの クリックは そのまま いかす
+      if (t - lastEnd < 350 && e.cancelable) {
+        var el = e.target, tap = el.closest && el.closest("button, input, a, [data-np], [data-drop], [data-spot], [data-piece], .slot, .hot");
+        e.preventDefault();
+        if (tap && tap.tagName === "BUTTON" && !tap.disabled) tap.click();
+      }
+      lastEnd = t;
+    }, { passive: false });
+    document.addEventListener("dblclick", stop, { passive: false });
+    window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+    document.addEventListener("keydown", function (e) {
+      if ((e.ctrlKey || e.metaKey) && ["+", "-", "=", "0", ";"].indexOf(e.key) >= 0) e.preventDefault();
+    });
+  })();
+
   /* ---------- はじめ ---------- */
   updateSoundBtn();
   renderHome();
