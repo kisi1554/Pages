@@ -3,7 +3,7 @@
    ============================================================ */
 (function () {
   "use strict";
-  var K = window.KoroParts, P = window.KoroPhysics, STAGES = window.KoroStages.STAGES, SND = window.KoroSound;
+  var K = window.KoroParts, P = window.KoroPhysics, STAGES = window.KoroStages.STAGES, COURSES = window.KoroStages.COURSES, SND = window.KoroSound;
   var W = K.W, H = K.H, FLOOR = K.FLOOR;
   var KEY = "korokoro-souchi-v1";
 
@@ -16,6 +16,7 @@
     if (!Array.isArray(d.slots)) d.slots = [];
     while (d.slots.length < 5) d.slots.push(null);
     if (d.sound === undefined) d.sound = true;
+    if (typeof d.goal !== "string") d.goal = "chiin";
     return d;
   }
   var store = load();
@@ -64,25 +65,40 @@
   /* ============================================================
      ホーム
      ============================================================ */
-  // 1 と 16（もっと ステージ の はじめ）は さいしょから あそべる
-  function unlocked(i) { return i === 0 || i === 15 || !!store.cleared[i] || !!store.cleared[i - 1]; }
+  // コース: やさしい（31〜50）・コース1（1〜15）・コース2（16〜30）。それぞれの 1ばんめは さいしょから あそべる
+  function courseOf(i) {
+    for (var k = 0; k < COURSES.length; k++) if (i >= COURSES[k].from && i < COURSES[k].to) return COURSES[k];
+    return COURSES[0];
+  }
+  function unlocked(i) {
+    var c = courseOf(i);
+    return i === c.from || !!store.cleared[i] || !!store.cleared[i - 1];
+  }
+  function nextInCourse(i) { return i + 1 < courseOf(i).to ? i + 1 : -1; }
 
   function renderHome() {
     var g = $("stageGrid"); g.innerHTML = "";
-    STAGES.forEach(function (st, i) {
-      var b = document.createElement("button");
-      b.className = "stage-btn" + (store.cleared[i] ? " done" : "") + (unlocked(i) ? "" : " lock");
-      if (i === 15) { var h = document.createElement("h3"); h.className = "grid-sec"; h.textContent = "もっと ステージ（16〜30）"; g.appendChild(h); }
-      var lv = i % 15;
-      b.innerHTML = '<span class="lv">' + (lv < 5 ? "★" : lv < 10 ? "★★" : "★★★") + '</span><span class="n">' + (i + 1) +
-        '</span><span class="nm">' + st.name + "</span>";
-      b.setAttribute("aria-label", "ステージ " + (i + 1) + " " + st.name + (store.cleared[i] ? " クリアずみ" : ""));
-      b.addEventListener("click", function () {
-        SND.unlock();
-        if (!unlocked(i)) { toast("まえの ステージを クリアすると ひらくよ"); SND.ng(); return; }
-        SND.click(); openStage(i);
-      });
-      g.appendChild(b);
+    COURSES.forEach(function (c) {
+      var n = c.to - c.from, done = 0;
+      for (var j = c.from; j < c.to; j++) if (store.cleared[j]) done++;
+      var h = document.createElement("h3"); h.className = "grid-sec" + (c.id === "easy" ? " easy" : "");
+      h.textContent = c.name + "　" + done + " / " + n;
+      g.appendChild(h);
+      for (var i = c.from; i < c.to; i++) (function (i) {
+        var st = STAGES[i], k = i - c.from;
+        var b = document.createElement("button");
+        b.className = "stage-btn" + (c.id === "easy" ? " easy" : "") + (store.cleared[i] ? " done" : "") + (unlocked(i) ? "" : " lock");
+        b.setAttribute("data-i", i);
+        var lv = c.id === "easy" ? "♪" : k < 5 ? "★" : k < 10 ? "★★" : "★★★";
+        b.innerHTML = '<span class="lv">' + lv + '</span><span class="n">' + (k + 1) + '</span><span class="nm">' + st.name + "</span>";
+        b.setAttribute("aria-label", c.name + " " + (k + 1) + " " + st.name + (store.cleared[i] ? " クリアずみ" : ""));
+        b.addEventListener("click", function () {
+          SND.unlock();
+          if (!unlocked(i)) { toast("まえの ステージを クリアすると ひらくよ"); SND.ng(); return; }
+          SND.click(); openStage(i);
+        });
+        g.appendChild(b);
+      })(i);
     });
   }
 
@@ -118,7 +134,8 @@
     var st = STAGES[i];
     inv = st.inv;
     layout = clone(st.fixed).concat(clone(placedMemo[i] || []));
-    $("stageNo").textContent = (i + 1) + " / " + STAGES.length;
+    var c = courseOf(i);
+    $("stageNo").textContent = (c.id === "easy" ? "やさしい " : c.id === "c1" ? "コース1 " : "コース2 ") + (i - c.from + 1) + " / " + (c.to - c.from);
     $("hintText").textContent = st.hint;
     $("hintBtn").hidden = false; $("slotBtn").hidden = true;
     showPlay(st.name);
@@ -374,7 +391,7 @@
     if (sim) { stop(); SND.click(); return; }
     if (drag) return;
     sim = K.buildWorld(clone(layout));
-    acc = 0; ringAt = null; clearShown = false; squash = {}; confetti = []; tool = null; hint = null;
+    acc = 0; ringAt = null; clearShown = false; bellFx = null; squash = {}; confetti = []; tool = null; hint = null;
     SND.click(); renderToolbox(); updateButtons();
   });
 
@@ -415,8 +432,11 @@
     SND.roll(Math.min(1, lv / 900));
   }
 
+  var bellFx = null;   // ベルが なったときに でる えもじ
   function onBell() {
-    SND.chiin();
+    var g = SND.goal();
+    bellFx = { e: g.e, name: g.name, t: performance.now() };
+    $("clearIcon").textContent = g.e;
     var bells = [];
     layout.forEach(function (p) { if (p.t === "bell") bells.push(p); });
     bells.forEach(function (p) { burstConfetti(p.x, p.y); });
@@ -427,18 +447,19 @@
         if (!sim || clearShown) return;
         clearShown = true; SND.fanfare();
         var used = layout.filter(function (p) { return !p.f; }).length;
-        $("clearMsg").textContent = "「" + STAGES[stageIdx].name + "」 ぶひん " + used + "こ で クリア！" + (first && stageIdx + 1 < STAGES.length ? " つぎの ステージが ひらいたよ" : "");
-        $("nextBtn").textContent = stageIdx + 1 < STAGES.length ? "つぎへ ›" : "メニューへ";
+        $("clearMsg").textContent = "「" + STAGES[stageIdx].name + "」 ぶひん " + used + "こ で クリア！" + (first && nextInCourse(stageIdx) >= 0 ? " つぎの ステージが ひらいたよ" : "");
+        $("nextBtn").textContent = nextInCourse(stageIdx) >= 0 ? "つぎへ ›" : "メニューへ";
         $("clearBox").hidden = false;
       }, 1500);
     } else {
-      toast("チーン！ やったね！");
+      toast(g.name + "！ やったね！");
     }
   }
   $("againBtn").addEventListener("click", function () { SND.click(); stop(); });
   $("nextBtn").addEventListener("click", function () {
     SND.click(); stop();
-    if (stageIdx + 1 < STAGES.length) openStage(stageIdx + 1); else showHome();
+    var nx = nextInCourse(stageIdx);
+    if (nx >= 0) openStage(nx); else showHome();
   });
 
   /* ---------- かみふぶき ---------- */
@@ -494,6 +515,20 @@
       if (!running && p.t === "bell") {
         ctx.fillStyle = "#e67700"; ctx.font = "bold 22px sans-serif"; ctx.textAlign = "center";
         ctx.fillText("ゴール", p.x, p.y - 52);
+      }
+      if (running && p.t === "bell" && bellFx) {
+        // なった おとの えもじが ぴょこっと でる
+        var age = (now - bellFx.t) / 1000;
+        if (age < 2.2) {
+          var up = Math.min(1, age * 4), sc = 1 + 0.25 * Math.sin(Math.min(age, 0.6) * Math.PI / 0.6);
+          ctx.save(); ctx.globalAlpha = Math.min(1, (2.2 - age) * 2);
+          ctx.translate(p.x, p.y - 70 - 50 * up); ctx.scale(sc, sc);
+          ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.font = "64px sans-serif"; ctx.fillStyle = "#000"; ctx.fillText(bellFx.e, 0, 0);
+          ctx.font = "bold 30px sans-serif"; ctx.lineWidth = 6; ctx.strokeStyle = "#fff"; ctx.fillStyle = "#e8590c";
+          ctx.strokeText(bellFx.name, 0, 52); ctx.fillText(bellFx.name, 0, 52);
+          ctx.restore();
+        }
       }
     }
   }
@@ -604,6 +639,33 @@
     store: function () { return store; }
   };
 
+  /* ---------- ゴールの おと を えらぶ ---------- */
+  function renderGoals() {
+    var box = $("goalList"); box.innerHTML = "";
+    SND.GOALS.forEach(function (g) {
+      var b = document.createElement("button");
+      b.className = "goal-opt" + (store.goal === g.id ? " sel" : "");
+      b.setAttribute("aria-pressed", store.goal === g.id ? "true" : "false");
+      b.innerHTML = '<span class="ge">' + g.e + '</span><span class="gn">' + g.name + "</span>";
+      b.addEventListener("click", function () {
+        store.goal = g.id; save(); SND.setGoal(g.id);
+        if (!store.sound) toast("おとが オフに なっているよ 🔇");
+        SND.goal(g.id === "random" ? null : g.id);
+        renderGoals(); syncGoalBtn();
+      });
+      box.appendChild(b);
+    });
+  }
+  function syncGoalBtn() {
+    var g = SND.GOALS.filter(function (x) { return x.id === store.goal; })[0] || SND.GOALS[0];
+    $("goalBtn").textContent = g.e;
+    $("goalBtn").setAttribute("aria-label", "ゴールの おと: " + g.name);
+  }
+  $("goalBtn").addEventListener("click", function () { SND.unlock(); SND.click(); renderGoals(); $("goalBox").hidden = false; });
+  $("goalClose").addEventListener("click", function () { SND.click(); $("goalBox").hidden = true; });
+
+  SND.setGoal(store.goal);
+  syncGoalBtn();
   syncSound();
   showHome();
 })();

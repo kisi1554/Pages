@@ -3,16 +3,17 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const K = require("../parts.js");
-const { STAGES } = require("../stages.js");
+const { STAGES, COURSES } = require("../stages.js");
 
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const count = (arr) => arr.reduce((m, p) => ((m[p.t] = (m[p.t] || 0) + 1), m), {});
 
-test("ステージは 30こ。1〜15 と 16〜30 の 2コース、どちらも 1〜5 は 1こ、6〜10 は 2〜3こ おく", () => {
-  assert.equal(STAGES.length, 30);
+test("ステージは 50こ。1〜15・16〜30 の 2コースと 31〜50 の やさしい コース", () => {
+  assert.equal(STAGES.length, 50);
   STAGES.forEach((st, i) => {
     const n = Object.values(st.inv).reduce((a, b) => a + b, 0), j = i % 15;
-    if (j < 5) assert.equal(n, 1, `#${i + 1}`);
+    if (i >= 30) assert.ok(i < 48 ? n === 1 : n === 2, `#${i + 1} やさしい コースは 1こ（さいごの 2つは 2こ）`);
+    else if (j < 5) assert.equal(n, 1, `#${i + 1}`);
     else if (j < 10) assert.ok(n >= 2 && n <= 3, `#${i + 1}`);
     else assert.ok(n >= (i < 15 ? 2 : 1), `#${i + 1}`);
     assert.ok(st.name && st.hint, `#${i + 1} なまえ と ヒント`);
@@ -24,7 +25,25 @@ test("ステージは 30こ。1〜15 と 16〜30 の 2コース、どちらも 1
     const kinds = new Set(STAGES.slice(a, b).flatMap((st) => st.fixed.concat(st.sol).map((p) => p.t)));
     ["domino", "seesaw", "bucket"].forEach((t) => assert.ok(kinds.has(t), `${a + 1}〜${b} に ${t}`));
   });
-  assert.equal(new Set(STAGES.map((st) => st.name)).size, 30, "なまえが かぶらない");
+  assert.equal(new Set(STAGES.map((st) => st.name)).size, 50, "なまえが かぶらない");
+  // コースは すきまなく ぜんぶの ステージを わける
+  const seen = new Array(50).fill(0);
+  COURSES.forEach((c) => { for (let i = c.from; i < c.to; i++) seen[i]++; });
+  assert.ok(seen.every((v) => v === 1), "コースの わけかた");
+  assert.equal(COURSES[0].id, "easy");
+});
+
+test("やさしい コース: こたえの ぶひんを よこに ±20px ずらしても クリアできる", () => {
+  STAGES.slice(30).forEach((st, i) => {
+    st.sol.forEach((_, k) => {
+      [-20, 20].forEach((dx) => {
+        const sol = clone(st.sol); sol[k].x += dx;
+        const all = st.fixed.concat(sol);
+        if (!K.canPlace(all.filter((q) => q !== sol[k]), sol[k])) return;
+        assert.ok(K.simulate(clone(all), 25).cleared, `#${i + 31} ${sol[k].t} を ${dx}px ずらすと クリア できない`);
+      });
+    });
+  });
 });
 
 test("バケツの need: ゴムだま だけでは さがらず、てつだま なら さがる（#29）", () => {
@@ -83,7 +102,7 @@ test("#11 シーソーで カーン: ドミノを どこに おいても 2こめ
 });
 
 test("けっていてき: おなじ はいちなら まいかい おなじ けっか", () => {
-  [3, 12, 15, 23, 28, 30].forEach((n) => {
+  [3, 12, 15, 23, 28, 30, 35, 45].forEach((n) => {
     const st = STAGES[n - 1], l = st.fixed.concat(st.sol);
     const run = () => {
       const s = K.buildWorld(clone(l)), w = s.world;

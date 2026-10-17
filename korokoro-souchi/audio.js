@@ -1,6 +1,7 @@
 /* ============================================================
    ころころ そうち — こうかおん（WebAudio の ごうせいおん だけ）
    ころころ（はやさで おおきさが かわる）・カタン・ボヨン・チーン
+   ゴールの おとは えらべる（ニャーン・ケロケロ・ぷぅ〜 など）
    ============================================================ */
 (function (root) {
   "use strict";
@@ -45,6 +46,98 @@
     s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.05);
   }
 
+  /* ---------- ゴールの おと（えらべる）---------- */
+  // ひとつの おと: type, ふりはば, はじまり→おわりの たかさ, フィルター, ビブラート
+  function voice(o) {
+    var c = ac(); if (!c) return;
+    var t = c.currentTime + (o.at || 0), d = o.dur;
+    var osc = c.createOscillator(), g = c.createGain(), out = g;
+    osc.type = o.type || "sine";
+    osc.frequency.setValueAtTime(o.f[0], t);
+    for (var i = 1; i < o.f.length; i++) osc.frequency.exponentialRampToValueAtTime(o.f[i], t + d * i / (o.f.length - 1));
+    if (o.vib) {
+      var l = c.createOscillator(), lg = c.createGain();
+      l.frequency.value = o.vib[0]; lg.gain.setValueAtTime(o.vib[1], t);
+      if (o.vib[2] != null) lg.gain.linearRampToValueAtTime(o.vib[2], t + d);
+      l.connect(lg); lg.connect(osc.frequency); l.start(t); l.stop(t + d + 0.05);
+    }
+    var src = osc;
+    if (o.am) {   // ぶるぶる（ケロケロ など）
+      var amg = c.createGain(), al = c.createOscillator(), ald = c.createGain();
+      amg.gain.value = 0.5; al.type = "square"; al.frequency.value = o.am; ald.gain.value = 0.5;
+      al.connect(ald); ald.connect(amg.gain); osc.connect(amg); src = amg; al.start(t); al.stop(t + d + 0.05);
+    }
+    if (o.bp) { var f = c.createBiquadFilter(); f.type = o.bp[2] || "bandpass"; f.frequency.value = o.bp[0]; f.Q.value = o.bp[1]; src.connect(f); src = f; }
+    var a = o.atk || 0.01;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(o.vol, t + a);
+    if (o.hold) g.gain.setValueAtTime(o.vol, t + d * o.hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    src.connect(g); out.connect(master); osc.start(t); osc.stop(t + d + 0.05);
+  }
+  function noiseHit(at, freq, dur, vol) {
+    var c = ac(); if (!c) return;
+    var t = c.currentTime + at, s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+    s.buffer = noiseBuffer(c, dur + 0.05); f.type = "lowpass"; f.frequency.value = freq;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master); s.start(t); s.stop(t + dur + 0.05);
+  }
+
+  var GOALS = [
+    { id: "chiin", name: "チーン", e: "🔔" },
+    { id: "nyan", name: "ニャーン", e: "🐱" },
+    { id: "wan", name: "ワンワン", e: "🐶" },
+    { id: "kero", name: "ケロケロ", e: "🐸" },
+    { id: "piyo", name: "ピヨピヨ", e: "🐤" },
+    { id: "puu", name: "ぷぅ〜", e: "💨" },
+    { id: "boyoyon", name: "ボヨヨ〜ン", e: "🌀" },
+    { id: "robo", name: "ピポパポ", e: "🤖" },
+    { id: "don", name: "ドドーン", e: "🥁" },
+    { id: "pappa", name: "パッパカパーン", e: "🎺" },
+    { id: "random", name: "おまかせ", e: "🎲" }
+  ];
+  var goalIdx = 0;
+  var GOAL_PLAY = {
+    nyan: function () {
+      voice({ type: "sawtooth", f: [520, 860, 700, 560], dur: 0.75, vol: 0.32, atk: 0.05, hold: 0.5, vib: [6, 25], bp: [1300, 2.5] });
+      voice({ type: "sawtooth", f: [1040, 1720, 1400, 1120], dur: 0.75, vol: 0.08, atk: 0.05, hold: 0.5, bp: [2600, 3] });
+    },
+    wan: function () {
+      [0, 0.28].forEach(function (at) {
+        voice({ at: at, type: "square", f: [620, 330], dur: 0.17, vol: 0.3, atk: 0.01, bp: [850, 1.5] });
+        noiseHit(at, 1200, 0.06, 0.12);
+      });
+    },
+    kero: function () {
+      [0, 0.26, 0.6, 0.86].forEach(function (at, i) {
+        voice({ at: at, type: "sawtooth", f: [i % 2 ? 210 : 170, i % 2 ? 160 : 140], dur: 0.2, vol: 0.4, am: 34, bp: [700, 2] });
+      });
+    },
+    piyo: function () {
+      [0, 0.16, 0.32, 0.6, 0.76].forEach(function (at) { voice({ at: at, type: "sine", f: [2300, 3400, 2600], dur: 0.11, vol: 0.2, atk: 0.005 }); });
+    },
+    puu: function () {
+      voice({ type: "sawtooth", f: [120, 95, 75], dur: 0.9, vol: 0.38, atk: 0.03, hold: 0.6, vib: [26, 22, 6], bp: [420, 1, "lowpass"] });
+      voice({ at: 0.92, type: "sawtooth", f: [140, 90], dur: 0.12, vol: 0.25, vib: [30, 15], bp: [500, 1, "lowpass"] });
+    },
+    boyoyon: function () {
+      voice({ type: "sine", f: [320, 260, 200], dur: 1.3, vol: 0.4, atk: 0.02, hold: 0.3, vib: [7, 140, 0] });
+    },
+    robo: function () {
+      [880, 1320, 990, 1760, 1320, 2093].forEach(function (f, i) { voice({ at: i * 0.1, type: "square", f: [f, f], dur: 0.085, vol: 0.12, atk: 0.003, hold: 0.8 }); });
+    },
+    don: function () {
+      [0, 0.18, 0.5].forEach(function (at, i) {
+        voice({ at: at, type: "sine", f: [i === 2 ? 170 : 150, 45], dur: i === 2 ? 0.7 : 0.3, vol: i === 2 ? 0.7 : 0.5, atk: 0.003 });
+        noiseHit(at, 500, 0.08, i === 2 ? 0.35 : 0.2);
+      });
+    },
+    pappa: function () {
+      [[523, 0, 0.13], [523, 0.15, 0.09], [659, 0.26, 0.09], [784, 0.38, 0.6]].forEach(function (n) {
+        voice({ at: n[1], type: "sawtooth", f: [n[0], n[0]], dur: n[2], vol: 0.18, atk: 0.01, hold: 0.7, vib: n[2] > 0.3 ? [6, 8] : null, bp: [2200, 0.7, "lowpass"] });
+      });
+    }
+  };
+
   function throttle(key, ms) {
     var now = Date.now();
     if (last[key] && now - last[key] < ms) return false;
@@ -72,6 +165,17 @@
       g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
       g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
       o.connect(g); g.connect(master); o.start(t); lfo.start(t); o.stop(t + 0.5); lfo.stop(t + 0.5);
+    },
+    GOALS: GOALS,
+    setGoal: function (id) { for (var i = 0; i < GOALS.length; i++) if (GOALS[i].id === id) goalIdx = i; },
+    goalId: function () { return GOALS[goalIdx].id; },
+    // ゴールの おと を ならす。かえりちは ならした おとの { id, name, e }
+    goal: function (id) {
+      var g = GOALS[goalIdx];
+      if (id) for (var i = 0; i < GOALS.length; i++) if (GOALS[i].id === id) g = GOALS[i];
+      if (g.id === "random") g = GOALS[1 + Math.floor(Math.random() * (GOALS.length - 2))];
+      if (on && ac()) { if (g.id === "chiin") S.chiin(); else GOAL_PLAY[g.id](); }
+      return g;
     },
     chiin: function () {
       var c = ac(); if (!c) return;

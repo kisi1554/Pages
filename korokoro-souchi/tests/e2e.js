@@ -27,13 +27,14 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     };
 
     // ホーム
-    check((await page.locator(".stage-btn").count()) === 30, `${tag}: ステージが 30こ`);
-    check((await page.locator(".stage-btn.lock").count()) === 28, `${tag}: はじめは 1 と 16 だけ ひらいている`);
+    check((await page.locator(".stage-btn").count()) === 50, `${tag}: ステージが 50こ`);
+    check((await page.locator(".stage-btn.lock").count()) === 47, `${tag}: はじめは 3コースの 1ばんめ だけ ひらいている`);
+    check((await page.locator(".stage-btn").first().getAttribute("data-i")) === "30", `${tag}: やさしい コースが いちばん うえ`);
     await noHScroll("ホーム");
     await page.screenshot({ path: path.join(out, `${tag}-home.png`) });
 
     // ステージ 1: どうぐばこから てつだまを えらんで タップで おく
-    await page.locator(".stage-btn").first().click();
+    await page.locator('.stage-btn[data-i="0"]').click();
     await page.waitForTimeout(200);
     await inView("ステージ1", "#stageBox");
     await inView("ステージ1", "#goBtn");
@@ -71,7 +72,34 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     check(saved && saved[0] === true, `${tag}: しんちょくを ほぞん`);
     await page.click("#nextBtn");
     await page.waitForTimeout(200);
-    check((await page.locator("#stageNo").textContent()).startsWith("2"), `${tag}: つぎの ステージへ`);
+    check((await page.locator("#stageNo").textContent()).startsWith("コース1 2"), `${tag}: つぎの ステージへ`);
+
+    // やさしい コース 1: ゴールの おとを ニャーン に して、さかに てつだまを おく
+    await page.evaluate(() => window.KoroApp.showHome());
+    await page.click("#goalBtn");
+    await page.waitForTimeout(150);
+    check((await page.locator(".goal-opt").count()) >= 10, `${tag}: ゴールの おとが 10しゅるい いじょう`);
+    await page.screenshot({ path: path.join(out, `${tag}-goal-sounds.png`) });
+    await page.locator(".goal-opt", { hasText: "ニャーン" }).click();
+    await page.click("#goalClose");
+    check(await page.evaluate(() => JSON.parse(localStorage.getItem("korokoro-souchi-v1")).goal === "nyan"), `${tag}: ゴールの おとを ほぞん`);
+    await page.locator('.stage-btn[data-i="30"]').click();
+    await page.waitForTimeout(200);
+    await measure();
+    check((await page.locator("#stageNo").textContent()).startsWith("やさしい 1"), `${tag}: やさしい 1`);
+    await page.locator("#toolbox .tool").first().click();
+    await page.mouse.click(...at(300, 200));
+    await page.click("#goBtn");
+    await page.waitForFunction(() => window.KoroApp.bell(), null, { timeout: 8000 }).catch(() => {});
+    check(await page.evaluate(() => window.KoroApp.bell()), `${tag}: やさしい 1 ベルが なった`);
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: path.join(out, `${tag}-easy1-bell.png`) });
+    await page.waitForSelector("#clearBox:not([hidden])", { timeout: 4000 }).catch(() => {});
+    check((await page.locator("#clearIcon").textContent()) === "🐱", `${tag}: クリアがめんに ニャーンの えもじ`);
+    await page.click("#nextBtn");
+    await page.waitForTimeout(200);
+    check((await page.locator("#stageNo").textContent()).startsWith("やさしい 2"), `${tag}: やさしい コースの つぎへ`);
+    await page.screenshot({ path: path.join(out, `${tag}-easy2-edit.png`) });
 
     // ステージ 15 を こたえの はいちで うごかす（えの かくにん）
     await page.evaluate(() => { window.KoroApp.openStage(14); window.KoroApp.placeSolution(); });

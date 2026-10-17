@@ -322,7 +322,101 @@
     inv: {domino: 1, board_m: 1, rubber: 1},
     sol: [{t: "domino", x: 300, y: 215}, {t: "board_m", x: 456, y: 362, a: 15}, {t: "rubber", x: 1140, y: 668}] });
 
-  var api = { STAGES: STAGES };
+  /* ---------- 31〜50: やさしい コース（ぶひんを 1こ おけば クリア。19・20 だけ 2こ）----------
+     すこし ずれた ところに おいても クリア できる ように つくって ある（テストで たしかめる）。 */
+  function blk(x0, y0, x1, y1) { return { t: "block", x: (x0 + x1) / 2, y: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0, a: 0, f: 1 }; }
+  // 1 ボールを おいてね
+  (function () { var b = F("board_l", 400, 330, 20);
+    add({ name: "ボールを おいてね", hint: "さかの うえに てつだまを おいて ▶ を おそう",
+      fixed: [b, F("bell", 1000, 730)], inv: { steel: 1 }, sol: [S("steel", 260, onB(b, 260) - 20)] }); })();
+  // 2 ジグザグ
+  (function () { var b1 = F("board_l", 260, 170, 15), b2 = F("board_l", 560, 340, -15), b3 = F("board_l", 300, 560, 15);
+    add({ name: "ジグザグ ころころ", hint: "いちばん うえの いたに てつだまを のせよう",
+      fixed: [b1, b2, b3, F("bell", 950, 730)], inv: { steel: 1 }, sol: [S("steel", 120, onB(b1, 120) - 20)] }); })();
+  // 3 ひだりへ
+  (function () { var b = F("board_l", 800, 350, -20);
+    add({ name: "ひだりへ ころころ", hint: "こんどは ひだりに ころがるよ",
+      fixed: [b, F("bell", 200, 730)], inv: { steel: 1 }, sol: [S("steel", 930, onB(b, 930) - 20)] }); })();
+  // 4 はしを かけよう
+  (function () { var s = F("board_m", 150, 260, 6);
+    add({ name: "ながい はし", hint: "ながい いたを すきまに わたそう",
+      fixed: [s, ballOn("steel", s, 40), blk(600, 380, 1200, 770), F("bell", 760, 349)], inv: { board_l: 1 }, sol: [S("board_l", 450, 330, 10)] }); })();
+  // 5 すべりだい
+  (function () { var s = F("board_l", 220, 380, 10);
+    add({ name: "すべりだい", hint: "いたを ななめに して すべりだいに しよう",
+      fixed: [s, ballOn("steel", s, 50), blk(560, 520, 1200, 770), F("bell", 720, 489)], inv: { board_m: 1 }, sol: [S("board_m", 490, 470, 30)] }); })();
+  // 6 ばねで ぴょん
+  (function () { var s = F("board_m", 200, 420, 10);
+    add({ name: "ばねで ぴょん", hint: "ボールが おちる ところに ばねを おこう",
+      fixed: [s, ballOn("steel", s, 100), F("wall", 680, 680), F("bell", 950, 730)], inv: { spring: 1 }, sol: [S("spring", 495, 755)] }); })();
+  // 7 ばねで たかく
+  (function () { var s = F("board_m", 180, 250, 15);
+    add({ name: "ばねで たかく", hint: "ばねで はねて たかい ベルに とどけ！",
+      fixed: [s, ballOn("steel", s, 70), blk(800, 420, 1200, 770), F("bell", 900, 389)], inv: { spring: 1 }, sol: [S("spring", 560, 755)] }); })();
+  // 8 かべで とめよう
+  (function () { var a = F("board_l", 260, 200, 25);
+    add({ name: "かべで ストップ", hint: "とびすぎる ボールを かべで とめて あなに おとそう",
+      fixed: [a, ballOn("steel", a, 110), blk(560, 650, 600, 770), blk(690, 650, 730, 770), F("bell", 645, 735)], inv: { wall: 1 }, sol: [S("wall", 700, 470)] }); })();
+  // 9 ファンで ふー
+  (function () { var b = F("board_l", 300, 300, 0);
+    add({ name: "ファンで ふー", hint: "ファンの かぜで ゴムだまを おそう",
+      fixed: [b, ballOn("rubber", b, 300), F("board_l", 900, 540, -15), F("bell", 560, 730)], inv: { fan: 1 }, sol: [S("fan", 160, onB(b, 160, 34))] }); })();
+  // 10 かぜの みち
+  (function () {
+    add({ name: "かぜの みち", hint: "ゴムだまの うしろに ファンを おこう",
+      fixed: [F("rubber", 400, 745), F("bell", 1100, 730)], inv: { fan: 1 }, sol: [S("fan", 300, 735.5)] }); })();
+  // 11 ドミノ ばたばた
+  (function () { var b = F("board_l", 260, 380, 15), shelf = F("board_l", 800, 600, 0), d = [];
+    [620, 675, 730, 785, 840, 895, 950].forEach(function (x) { d.push(F("domino", x, onB(shelf, x, 40))); });
+    add({ name: "ドミノ ばたばた", hint: "さかに ゴムだまを おいて ドミノを たおそう",
+      fixed: [b, shelf].concat(d, [F("bell", 1040, 545)]), inv: { rubber: 1 }, sol: [S("rubber", 120, onB(b, 120) - 20)] }); })();
+  // 12 ドミノの かいだん
+  (function () { var b = F("board_l", 940, 330, -15), shelf = F("board_l", 400, 560, 0), d = [];
+    [580, 525, 470, 415, 360, 305, 250].forEach(function (x) { d.push(F("domino", x, onB(shelf, x, 40))); });
+    add({ name: "ドミノ ならび", hint: "ゴムだまで ドミノを ばたばた たおそう",
+      fixed: [b, shelf].concat(d, [F("bell", 160, 505)]), inv: { rubber: 1 }, sol: [S("rubber", 1080, onB(b, 1080) - 20)] }); })();
+  // 13 シーソーに おとそう
+  (function () {
+    add({ name: "シーソーに おとそう", hint: "シーソーの たかい ほうの うえに てつだまを おこう",
+      fixed: [F("seesaw", 600, 716, 15), F("bell", 745, 635)], inv: { steel: 1 }, sol: [S("steel", 490, 400)] }); })();
+  // 14 シーソーを おこう
+  (function () { var a = F("board_m", 160, 300, 15), shelf = F("board_m", 420, 360, 0);
+    add({ name: "シーソーを おこう", hint: "ボールが おちる ところに シーソーを おこう",
+      fixed: [a, ballOn("steel", a, 60), shelf, F("bell", 975, 635)], inv: { seesaw: 1 }, sol: [S("seesaw", 830, 716, 15)] }); })();
+  // 15 バケツに ポイ
+  (function () { var ramp = F("board_l", 760, 300, 10);
+    add({ name: "バケツに ポイ", hint: "バケツの うえに ボールを おこう。とびらが あくよ",
+      fixed: [F("bucket", 300, 560, 0, { gx: 400, gy: -369, gh: 120, d: 100 }), ramp, ballOn("steel", ramp, 666), F("bell", 1150, 730)],
+      inv: { steel: 1 }, sol: [S("steel", 300, 420)] }); })();
+  // 16 ばねで ぽーん
+  (function () { var s = F("board_m", 180, 300, 12);
+    add({ name: "ゴムだまで ぴょーん", hint: "ばねで かべを とびこえよう",
+      fixed: [s, ballOn("rubber", s, 80), F("wall", 720, 680), F("bell", 1000, 730)], inv: { spring: 1 }, sol: [S("spring", 520, 755)] }); })();
+  // 17 いたで うけとめ
+  (function () { var s = F("board_m", 160, 250, 8);
+    add({ name: "いたで うけとめ", hint: "おちる ボールを ながい いたで うけとめよう",
+      fixed: [s, ballOn("steel", s, 60), F("wall", 760, 680), F("bell", 1050, 730)], inv: { board_l: 1 }, sol: [S("board_l", 520, 420, 15)] }); })();
+  // 18 かべで はねかえす
+  (function () { var a = F("board_l", 300, 250, 20);
+    add({ name: "かべで くるっと", hint: "かべに あたった ボールが ベルへ おちるよ",
+      fixed: [a, ballOn("steel", a, 140), F("board_l", 560, 600, -12), F("bell", 330, 640)], inv: { wall: 1 }, sol: [S("wall", 720, 470)] }); })();
+  // 19 ボール と いた
+  (function () { var s = F("board_m", 150, 260, 6);
+    add({ name: "ボール と いた", hint: "ボールと いたを おいて ベルまで いこう",
+      fixed: [s, blk(600, 380, 1200, 770), F("bell", 760, 349)], inv: { steel: 1, board_l: 1 }, sol: [S("steel", 60, onB(s, 60) - 20), S("board_l", 450, 330, 10)] }); })();
+  // 20 ボール と シーソー
+  (function () {
+    add({ name: "ボール と シーソー", hint: "シーソーを おいて、うえから ボールを おとそう",
+      fixed: [F("bell", 745, 635)], inv: { steel: 1, seesaw: 1 }, sol: [S("seesaw", 600, 716, 15), S("steel", 490, 400)] }); })();
+
+  // ホームで ならべる じゅん（やさしい コースを いちばん うえに）
+  var COURSES = [
+    { id: "easy", name: "やさしい コース", from: 30, to: 50 },
+    { id: "c1", name: "コース 1", from: 0, to: 15 },
+    { id: "c2", name: "コース 2（もっと ステージ）", from: 15, to: 30 }
+  ];
+
+  var api = { STAGES: STAGES, COURSES: COURSES };
   root.KoroStages = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(typeof window !== "undefined" ? window : globalThis);
