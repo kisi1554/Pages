@@ -1,4 +1,4 @@
-// てつどう ちずちょう — いった えきを ぬりつぶす かんとうの てつどう ちず
+// てつどう ちずちょう — いった えきを ぬりつぶす かんとう・しずおかの てつどう ちず
 (function () {
   'use strict';
 
@@ -22,7 +22,7 @@
       L.adj.get(b).push(a);
     });
   });
-  const PREF_KANA = ['いばらきけん', 'とちぎけん', 'ぐんまけん', 'さいたまけん', 'ちばけん', 'とうきょうと', 'かながわけん'];
+  const PREF_KANA = ['いばらきけん', 'とちぎけん', 'ぐんまけん', 'さいたまけん', 'ちばけん', 'とうきょうと', 'かながわけん', 'しずおかけん'];
   const CATS = [
     ['shin', 'しんかんせん'], ['jr', 'JR'], ['metro', 'ちかてつ'], ['shitetsu', 'してつ'], ['other', 'そのほか'],
   ];
@@ -771,7 +771,7 @@
       }
       arr.sort((a, b) => a[1] - b[1]);
       const far = arr[0][1] > 30000;
-      gpsState = { status: 'ok', list: arr.slice(0, 6), msg: far ? 'かんとうの そとに いるみたい。いちばん ちかい えきは…' : '' };
+      gpsState = { status: 'ok', list: arr.slice(0, 6), msg: far ? 'ちずの そとに いるみたい。いちばん ちかい えきは…' : '' };
       const [x, y] = project(lon, lat);
       const d = 'M' + x + ' ' + y + 'h0.01';
       gpsOut.setAttribute('d', d);
