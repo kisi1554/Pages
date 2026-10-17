@@ -120,7 +120,7 @@
     { id: "jr", code: "=", kind: "rail", name: "JRせん", kanji: "JR{線|せん}",
       why: "JRの せんろは、しろと くろの「しましま」。",
       draw: function (conn) { return railJR(conn); } },
-    { id: "rail", code: "-", kind: "rail", name: "JRいがいの てつどう", short: "してつ", kanji: "JR{以外|いがい}の {鉄道|てつどう}",
+    { id: "rail", code: "-", kind: "rail", name: "JRいがいの てつどう", short: "JRいがい", kanji: "JR{以外|いがい}の {鉄道|てつどう}",
       why: "JRで ない てつどうは、せんに みじかい よこせんが ならぶ。せんろの まくらぎ みたいだね。",
       draw: function (conn) { return railOther(conn); } },
     { id: "station", code: "E", kind: "rail", name: "えき", kanji: "{駅|えき}",

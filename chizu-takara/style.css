@@ -46,9 +46,10 @@ svg { display: block; }
 .title {
   margin: 0; flex: 1 1 auto; min-width: 0;
   font-size: clamp(17px, 4.6vw, 24px); font-weight: 800; letter-spacing: .03em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  display: flex; align-items: center; gap: 6px;
+  overflow: hidden; display: flex; align-items: center; gap: 6px;
 }
+#titleText { line-height: 1.15; }
+@media (max-width: 480px) { .title { font-size: 17px; } }
 .pill {
   min-height: 44px; padding: 0 12px; border-radius: 999px;
   background: rgba(255, 255, 255, .22); border: 2px solid rgba(255, 255, 255, .55);
@@ -129,6 +130,15 @@ svg { display: block; }
 .choice.right { border-color: var(--ok); background: #e6f8ea; box-shadow: 0 4px 0 var(--ok); }
 .choice.wrong { border-color: var(--ng); background: #fff0e6; box-shadow: 0 4px 0 var(--ng); }
 .choice:disabled { cursor: default; color: inherit; }
+/* こたえた あとは もんだい・せんたくしを ちいさく（スクロール しなくても せつめいまで よめる） */
+.quiz.answered { gap: 8px; }
+.quiz.answered .qbox { padding: 6px 10px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.quiz.answered .qtext { font-size: 17px; margin: 0; }
+.quiz.answered .qname { font-size: 20px; }
+.quiz.answered .qsym { width: 64px; margin: 0; border-width: 2px; border-radius: 10px; }
+.quiz.answered .choices { gap: 8px; }
+.quiz.answered .choice { min-height: 50px; font-size: 17px; padding: 4px; }
+.quiz.answered .choices.syms .choice svg { width: 56px; }
 .feed { border-radius: 20px; padding: 12px 14px; background: #fff; border: 3px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .feed.ok { border-color: var(--ok); }
 .feed.ng { border-color: var(--ng); }
@@ -142,6 +152,7 @@ svg { display: block; }
 
 /* ---------- ステージ えらび ---------- */
 .stage-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .stage-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; } .stage-btn { min-height: 0 !important; padding: 5px 3px !important; } .sno { font-size: 22px !important; } .stitle { font-size: 13px !important; } .sstars { font-size: 16px !important; } }
 .stage-btn {
   min-height: 116px; border-radius: 18px; background: #fff; border: 3px solid #e2b96a; box-shadow: 0 5px 0 #e2b96a;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 8px;
@@ -157,9 +168,10 @@ svg { display: block; }
 
 /* ---------- たからさがし ・ ちずづくり ---------- */
 .hunt { height: 100%; display: flex; flex-direction: column; gap: 8px; max-width: 1100px; margin: 0 auto; }
-.map-col { flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; }
+.map-col { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; align-items: center; }
+.map-fit { flex: 1 1 0; min-height: 0; width: 100%; container-type: size; display: flex; justify-content: center; align-items: flex-start; }
 .map-north { font-size: 14px; font-weight: 900; color: #e03131; line-height: 1; margin-bottom: 3px; }
-.map-box { width: min(100%, calc(100dvh - var(--top-h) - 430px)); min-width: 260px; aspect-ratio: 1; touch-action: manipulation; }
+.map-box { width: min(100cqw, 100cqh); aspect-ratio: 1; touch-action: manipulation; }
 .map-box .map { width: 100%; height: 100%; }
 .hero { transition: transform .22s ease-out; }
 .hero .hero-body { animation: bob 1.4s ease-in-out infinite; }
@@ -171,8 +183,15 @@ svg { display: block; }
 .shake { animation: shake .35s; }
 @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
 
-.side { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
-.hints { flex: 1 1 auto; min-height: 70px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.side { flex: 0 0 auto; display: flex; flex-direction: column; gap: 6px; }
+.hint-bar { display: flex; align-items: center; gap: 4px; }
+.hb-label { font-size: 13px; font-weight: 900; color: var(--ink-soft); white-space: nowrap; }
+.hb-list { display: flex; gap: 4px; flex: 1 1 auto; min-width: 0; }
+.hb { width: 32px; height: 32px; flex: 0 0 32px; border-radius: 50%; border: 2px solid #e2b96a; background: #fff; font-weight: 900; font-size: 15px; color: #b8741a; }
+.hb.done { background: var(--ok); border-color: var(--ok); color: #fff; }
+.hb.now { background: #b8741a; border-color: #b8741a; color: #fff; }
+.hb:disabled { opacity: .45; cursor: default; }
+.hints { display: flex; flex-direction: column; }
 .hint { display: flex; gap: 8px; align-items: flex-start; padding: 8px 10px; border-radius: 14px; background: #fff; border: 2px solid var(--line); }
 .hint p { margin: 0; font-size: 18px; font-weight: 800; line-height: 1.9; }
 .hint.now { border: 3px solid #e2b96a; background: #fffaf0; }
@@ -207,38 +226,36 @@ svg { display: block; }
 .stepn.on { background: #b8741a; border-color: #8a5410; color: #fff; }
 .dig { background: #b8741a; box-shadow: 0 5px 0 #7a4a0c; min-height: 58px; }
 .dig.last { background: #c92a2a; box-shadow: 0 5px 0 #8a1c1c; }
-.msg { min-height: 2.6em; font-size: 15px; font-weight: 800; line-height: 1.4; color: var(--ink-soft); }
+.msg { min-height: 2.6em; font-size: 14px; font-weight: 800; line-height: 1.4; color: var(--ink-soft); }
 .msg.ok { color: var(--ok); }
 .msg.ng { color: var(--ng); }
-#retryBtn { align-self: flex-start; min-height: 40px; font-size: 14px; }
+#retryBtn { min-height: 38px; font-size: 13px; padding: 0 8px; flex: 0 0 auto; white-space: nowrap; }
+.toast-hint { font-size: 16px; line-height: 1.9; }
+.toast-hint .chip-svg { width: 26px; height: 26px; }
 
 /* ちず づくり */
 .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-.slot { min-height: 52px; border-radius: 14px; background: #fff; border: 2px solid var(--line); display: flex; align-items: center; gap: 6px; padding: 4px 8px; font-weight: 800; font-size: 16px; }
+.slot { min-height: 46px; border-radius: 14px; background: #fff; border: 2px solid var(--line); display: flex; align-items: center; gap: 6px; padding: 4px 8px; font-weight: 800; font-size: 16px; }
 .slot.on { border: 3px solid var(--accent); background: #eef5e0; }
 .slot small { font-size: 11px; color: var(--ink-soft); }
-.slot-map { width: 40px; height: 40px; flex: 0 0 40px; border-radius: 6px; background: #f1ecda; overflow: hidden; }
-.make-tip { margin: 0; font-size: 15px; font-weight: 800; line-height: 1.6; color: var(--ink-soft); }
-.palette { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(70px, 1fr)); gap: 6px; align-content: start; padding: 2px; }
-.pal { border-radius: 12px; background: #fff; border: 2px solid var(--line); padding: 4px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
-.pal svg { width: 44px; height: 44px; border-radius: 8px; border: 1.5px solid #c9bd98; }
-.pal .eraser { font-size: 34px; line-height: 44px; }
-.pal-name { font-size: 11px; font-weight: 800; line-height: 1.2; text-align: center; }
+.slot-map { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 6px; background: #f1ecda; overflow: hidden; }
+.make-tip { margin: 0; font-size: 14px; font-weight: 800; line-height: 1.6; color: var(--ink-soft); }
+.palette { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 2px; }
+.pal { border-radius: 10px; background: #fff; border: 2px solid var(--line); padding: 3px 1px; display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 54px; }
+.pal svg { width: 32px; height: 32px; border-radius: 6px; border: 1.5px solid #c9bd98; }
+.pal .eraser { font-size: 26px; line-height: 32px; }
+.pal-name { font-size: 10px; font-weight: 800; line-height: 1.15; text-align: center; }
 .pal.on { border: 3px solid var(--accent); background: #eef5e0; }
 .make-acts { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
 .saved { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
-.maker .map-box { width: min(100%, calc(100dvh - var(--top-h) - 330px)); touch-action: none; }
-
-/* たてもち: ちずを できるだけ おおきく */
-@media (orientation: portrait) {
-  .map-box { width: min(100%, calc(100dvh - var(--top-h) - 400px)); }
-}
+.maker .map-box { touch-action: none; }
 /* よこもち: ちず ひだり ／ ヒント みぎ */
 @media (orientation: landscape) and (min-width: 700px) {
   .hunt { flex-direction: row; gap: 14px; }
   .map-col { justify-content: center; }
-  .map-box, .maker .map-box { width: auto; height: calc(100dvh - var(--top-h) - 44px); min-width: 0; }
-  .side { flex: 1 1 320px; max-width: 440px; }
+  .map-col { flex: 1 1 0; min-width: 0; }
+  .side { flex: 0 1 400px; min-width: 300px; justify-content: center; }
+  .maker .side { justify-content: flex-start; }
   .pad { grid-template-columns: repeat(3, 70px); grid-template-rows: repeat(3, 70px); }
   .compass { width: 70px; height: 70px; }
   .controls { flex-direction: column; align-items: center; }
@@ -246,12 +263,19 @@ svg { display: block; }
 }
 
 /* ---------- ずかん ---------- */
-.zukan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-.zcard { display: flex; gap: 10px; align-items: flex-start; background: #fff; border: 2px solid var(--line); border-radius: 16px; padding: 10px; }
-.zcard.got { border-color: #e2b96a; background: #fffaf0; }
-.zsym { width: 70px; flex: 0 0 70px; border: 2px solid #c9bd98; border-radius: 12px; overflow: hidden; }
-.zname { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.8; }
-.zwhy { margin: 2px 0 0; font-size: 14px; font-weight: 700; line-height: 1.8; color: #4b5636; }
+#zukan .lead { margin-bottom: 8px; }
+.zdetail { display: flex; gap: 10px; align-items: flex-start; background: #fffaf0; border: 3px solid #e2b96a; border-radius: 16px; padding: 10px; margin-bottom: 10px; min-height: 150px; }
+.zsym { width: 76px; flex: 0 0 76px; border: 2px solid #c9bd98; border-radius: 12px; overflow: hidden; }
+.zname { margin: 0; font-size: 20px; font-weight: 900; line-height: 1.8; }
+.zwhy { margin: 2px 0 0; font-size: 15px; font-weight: 700; line-height: 1.8; color: #4b5636; }
+.zukan-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; }
+@media (max-width: 560px) { .zukan-grid { grid-template-columns: repeat(5, 1fr); } }
+.ztile { position: relative; background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.ztile svg { width: 40px; height: 40px; border: 1.5px solid #c9bd98; border-radius: 7px; }
+.zt-name { font-size: 11px; font-weight: 800; line-height: 1.15; text-align: center; }
+.ztile.got { border-color: #e2b96a; background: #fffaf0; }
+.ztile.on { border: 3px solid var(--accent); background: #eef5e0; }
+.ztile .zstar { position: absolute; top: -4px; right: -2px; font-size: 13px; }
 
 /* ---------- モーダル・トースト ---------- */
 .modal { position: fixed; inset: 0; z-index: 40; background: rgba(30, 40, 15, .45); display: grid; place-items: center; padding: 16px; }

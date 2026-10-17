@@ -14,21 +14,29 @@ const VIEWPORTS = [
 
 function assert(ok, msg) { if (!ok) throw new Error(msg); }
 
+// スクロール しなくても ぜんぶの もじが よめるか（がめんの そと・スクロールの なか・… で きれて いない）
 async function fits(page, label) {
   const r = await page.evaluate(() => {
     const vw = innerWidth, vh = innerHeight, bad = [];
+    const desc = (e) => e.tagName.toLowerCase() + (e.id ? "#" + e.id : "") + (e.className && typeof e.className === "string" ? "." + e.className.split(" ").join(".") : "");
     if (document.documentElement.scrollWidth > vw + 1) bad.push("よこスクロール " + document.documentElement.scrollWidth);
-    const v = document.querySelector(".view:not([hidden])");
-    for (const id of ["actBtn", "mapBox", "pad", "palette", "makeBox"]) {
-      const e = document.getElementById(id);
-      if (!e || !v.contains(e)) continue;
+    const roots = [...document.querySelectorAll(".top, .view:not([hidden]), .modal:not([hidden]) .modal-card")];
+    for (const root of roots) for (const e of [root, ...root.querySelectorAll("*")]) {
+      if (e.closest("[hidden], svg") || !e.getClientRects().length) continue;
+      const cs = getComputedStyle(e);
+      if (cs.visibility === "hidden") continue;
+      if (/(auto|scroll)/.test(cs.overflowY) && e.scrollHeight > e.clientHeight + 1) bad.push(desc(e) + " スクロールが いる " + e.scrollHeight + ">" + e.clientHeight);
+      const hasText = [...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!hasText) continue;
+      if (cs.overflowX === "hidden" && e.scrollWidth > e.clientWidth + 1) bad.push(desc(e) + " の もじが きれる「" + e.textContent.trim().slice(0, 20) + "」");
       const b = e.getBoundingClientRect();
-      if (b.right > vw + 1 || b.bottom > vh + 1 || b.left < -1) bad.push(id + " が はみでる " + JSON.stringify([b.left, b.top, b.right, b.bottom].map(Math.round)));
+      if (b.bottom > vh + 1 || b.right > vw + 1 || b.top < -1 || b.left < -1) bad.push(desc(e) + " の もじが がめんの そと「" + e.textContent.trim().slice(0, 20) + "」" + JSON.stringify([b.left, b.top, b.right, b.bottom].map(Math.round)));
     }
-    return bad;
+    return [...new Set(bad)];
   });
-  assert(!r.length, label + ": " + r.join(" / "));
+  r.forEach((x) => ISSUES.push(label + ": " + x));
 }
+const ISSUES = [];
 
 async function walkTo(page, target, dirs) {
   for (let guard = 0; guard < 40; guard++) {
@@ -60,7 +68,7 @@ async function walkTo(page, target, dirs) {
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
-  for (const vp of VIEWPORTS) {
+  for (const vp of VIEWPORTS.filter((v) => !process.env.ONLY || v.name === process.env.ONLY)) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: !!vp.isMobile, hasTouch: !!vp.hasTouch, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
     const errors = [];
@@ -72,15 +80,19 @@ async function walkTo(page, target, dirs) {
 
     // ---- きごう カード ----
     await page.click("#goCards");
+    await fits(page, vp.name + " card");
     await page.screenshot({ path: path.join(OUT, vp.name + "-2-card.png") });
     for (let i = 0; i < 40 && await page.isVisible("#cards"); i++) {
       if (await page.isVisible("#modal")) break;
       // 1もんめは わざと まちがえて「もういちど」を たしかめる
+      await fits(page, vp.name + " card " + (i + 1));
       await page.click("#choices .choice >> nth=" + (i === 0 ? 0 : 1));
+      await fits(page, vp.name + " card-feed " + (i + 1));
       if (i === 0) await page.screenshot({ path: path.join(OUT, vp.name + "-3-card-feed.png") });
       await page.click("#qNext");
     }
     assert(await page.isVisible("#modal"), "カードが おわらない");
+    await fits(page, vp.name + " card-result");
     await page.click("#modalBtns button >> nth=2"); // ホームへ
 
     // ---- たからさがし 15ステージ ----
@@ -88,7 +100,7 @@ async function walkTo(page, target, dirs) {
     const stages = await page.evaluate(() => window.CHIZU_STAGES.map((s) => ({ dirs: s.dirs, path: window.CHIZU_RULES.solve(s).path.map((p) => p.pos) })));
     for (let si = 0; si < stages.length; si++) {
       if (await page.isVisible("#stages")) {
-        if (si === 0) await page.screenshot({ path: path.join(OUT, vp.name + "-4-stages.png") });
+        if (si === 0) { await fits(page, vp.name + " stages"); await page.screenshot({ path: path.join(OUT, vp.name + "-4-stages.png") }); }
         await page.click(`.stage-btn[data-stage="${si + 1}"]`);
       }
       assert(await page.isVisible("#hunt"), "ステージ " + (si + 1) + " が ひらかない");
@@ -97,12 +109,15 @@ async function walkTo(page, target, dirs) {
         await page.click("#actBtn");
         const m = await page.textContent("#huntMsg");
         assert(m.includes("ここじゃ ない"), "まちがいの メッセージ: " + m);
+        await page.click("#actBtn");
+        await fits(page, vp.name + " hunt-miss");
+        await page.screenshot({ path: path.join(OUT, vp.name + "-5-hunt-miss.png") });
       }
       const st = stages[si];
       for (let h = 0; h < st.path.length; h++) {
         await walkTo(page, st.path[h], st.dirs);
+        await fits(page, vp.name + " hunt " + (si + 1) + "-" + (h + 1));
         if ((si === 0 || si === 12) && h === 1) {
-          await fits(page, vp.name + " hunt " + (si + 1));
           await page.screenshot({ path: path.join(OUT, vp.name + "-5-hunt-" + (si + 1) + ".png") });
         }
         await page.click("#actBtn");
@@ -110,6 +125,7 @@ async function walkTo(page, target, dirs) {
       }
       await page.waitForSelector("#modal:not([hidden])", { timeout: 4000 });
       await page.waitForTimeout(400);
+      await fits(page, vp.name + " treasure " + (si + 1));
       if (si === 0 || si === 14) await page.screenshot({ path: path.join(OUT, vp.name + "-6-treasure-" + (si + 1) + ".png") });
       if (si < stages.length - 1) await page.click("#nextStage");
       else await page.click("#modalBtns button >> nth=1"); // ステージ えらび
@@ -145,6 +161,7 @@ async function walkTo(page, target, dirs) {
 
     // ---- ずかん ----
     await page.click("#zukanBtn");
+    await fits(page, vp.name + " zukan");
     await page.screenshot({ path: path.join(OUT, vp.name + "-8-zukan.png") });
     await page.click("#backBtn");
     assert(await page.isVisible("#maker"), "ずかんから もどれない");
@@ -155,6 +172,7 @@ async function walkTo(page, target, dirs) {
     assert((await page.textContent("#soundBtn")).includes("🔇"), "おと オフ が ほぞん されない");
 
     assert(!errors.length, "エラー: " + errors.join(" / "));
+    assert(!ISSUES.length, "スクロールしないと よめない もじ:\n" + ISSUES.join("\n"));
     console.log(vp.name + ": ok");
     await ctx.close();
   }

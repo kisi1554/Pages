@@ -75,9 +75,9 @@
   $("soundBtn").addEventListener("click", function () { save.sound = !save.sound; store(); paintSound(); sound.tap(); });
 
   var toastTimer = 0;
-  function toast(html) {
+  function toast(html, ms) {
     var t = $("toast"); t.innerHTML = html; t.hidden = false;
-    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 1800);
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, ms || 1800);
   }
 
   // ---------------- ちずを かく（たからさがし・ちずづくり・ホーム で つかう） ----------------
@@ -213,6 +213,7 @@
     $("qNum").textContent = (quiz.i + 1) + " / " + quiz.list.length;
     $("qAgain").hidden = !q.again;
     $("qFeed").hidden = true;
+    document.querySelector(".quiz").classList.remove("answered");
     var box = $("qBox"), ch = $("choices");
     var opts = shuffle([q.id].concat(distractors(q.id)));
     ch.innerHTML = ""; ch.className = "choices " + (q.type === "sym" ? "names" : "syms");
@@ -248,6 +249,7 @@
     $("qFeedName").innerHTML = rb(s.kanji);
     $("qFeedWhy").innerHTML = "<b>なぜ この かたち？</b> " + rb(s.why);
     $("qFeed").hidden = false;
+    document.querySelector(".quiz").classList.add("answered"); // こたえたら もんだいを ちいさく して せつめいが はいるように
     $("learnCount").textContent = learnedCount();
     setTimeout(function () { $("qNext").focus({ preventScroll: true }); }, 0);
   }
@@ -269,17 +271,24 @@
   // ============================================================
   //  ずかん
   // ============================================================
+  // ずかん: きごうの タイルを ならべ、タップした きごうの「なぜ この かたち？」を うえに だす
   function openZukan(back) {
     show("zukan", "📖 きごう ずかん", back);
-    $("zukanLead").innerHTML = "おぼえた きごう <b>" + learnedCount() + " / " + S.SYMBOLS.length + "</b>　（カードで 2かい せいかい すると ⭐ が つくよ）";
+    $("zukanLead").innerHTML = "おぼえた きごう <b>" + learnedCount() + " / " + S.SYMBOLS.length + "</b>（カードで 2かい せいかいで ⭐）";
     var g = $("zukanGrid"); g.innerHTML = "";
-    S.SYMBOLS.forEach(function (s) {
-      var c = el("div", "zcard" + (learned(s.id) ? " got" : ""),
-        '<div class="zsym">' + S.svg(s.id) + "</div>" +
-        '<div class="ztext"><p class="zname">' + rb(s.kanji) + (learned(s.id) ? ' <span class="zstar">⭐</span>' : "") + "</p>" +
-        '<p class="zwhy">' + rb(s.why) + "</p></div>");
-      g.appendChild(c);
+    S.SYMBOLS.forEach(function (s, i) {
+      var b = el("button", "ztile" + (learned(s.id) ? " got" : ""), S.svg(s.id) + '<span class="zt-name">' + (s.short || s.name) + "</span>" + (learned(s.id) ? '<span class="zstar">⭐</span>' : ""));
+      b.dataset.id = s.id; b.setAttribute("aria-label", s.name);
+      b.addEventListener("click", function () { sound.tap(); zukanPick(s.id); });
+      g.appendChild(b);
     });
+    zukanPick(S.SYMBOLS[0].id);
+  }
+  function zukanPick(id) {
+    var s = S.BY_ID[id];
+    Array.prototype.forEach.call($("zukanGrid").children, function (b) { b.classList.toggle("on", b.dataset.id === id); });
+    $("zukanDetail").innerHTML = '<div class="zsym">' + S.svg(id) + '</div><div class="ztext"><p class="zname">' + rb(s.kanji) +
+      (learned(id) ? ' <span class="zstar">⭐</span>' : "") + '</p><p class="zwhy">' + rb(s.why) + "</p></div>";
   }
 
   // ============================================================
@@ -332,27 +341,36 @@
     $("mapBox").dataset.pos = hunt.pos.join(",");
   }
 
+  function hintHtml(i) {
+    var st = hunt.st, pos = i ? hunt.sol.path[i - 1].pos : st.start;
+    return R.hintParts(st, st.hints[i], i, pos, { showDir: st.showDir }).map(function (p) {
+      if (typeof p === "string") return rb(p);
+      if (p.sym) return symChip(p.sym, st.showName);
+      return '<b class="dir">' + R.DIRS[p.dir].name + "</b>";
+    }).join("");
+  }
+  // うえの バー: ヒントの ばんごう（✓ = おわった。タップで もういちど よめる）＋ さいしょから
+  // した: いまの ヒント だけ を おおきく（スクロール しなくても よめる）
   function renderHints() {
-    var st = hunt.st, box = $("hintList"); box.innerHTML = "";
-    var pos = st.start;
-    for (var i = 0; i <= Math.min(hunt.hint, st.hints.length - 1); i++) {
-      var parts = R.hintParts(st, st.hints[i], i, pos, { showDir: st.showDir });
-      var html = parts.map(function (p) {
-        if (typeof p === "string") return rb(p);
-        if (p.sym) return symChip(p.sym, st.showName);
-        return '<b class="dir">' + R.DIRS[p.dir].name + "</b>";
-      }).join("");
-      var done = i < hunt.hint;
-      var row = el("div", "hint" + (done ? " done" : " now"), '<span class="hno">' + (done ? "✓" : i + 1) + '</span><p>' + html + "</p>");
-      box.appendChild(row);
-      pos = hunt.sol.path[i].pos;
-    }
-    box.scrollTop = box.scrollHeight;
+    var st = hunt.st, bar = $("hbList"), now = Math.min(hunt.hint, st.hints.length - 1);
+    bar.innerHTML = "";
+    st.hints.forEach(function (h, i) {
+      var b = el("button", "hb" + (i < hunt.hint ? " done" : i === now ? " now" : ""), i < hunt.hint ? "✓" : String(i + 1));
+      b.dataset.i = i; b.disabled = i > now;
+      b.setAttribute("aria-label", "ヒント " + (i + 1));
+      bar.appendChild(b);
+    });
+    $("hintList").innerHTML = '<div class="hint now"><span class="hno">' + (now + 1) + "</span><p>" + hintHtml(now) + "</p></div>";
     var last = hunt.hint === st.hints.length - 1;
     $("actBtn").innerHTML = last ? "⛏️ ほる！" : "🚩 ここだ！";
     $("actBtn").classList.toggle("last", last);
     $("hunt").dataset.hint = hunt.hint;
   }
+  $("hintBar").addEventListener("click", function (ev) {
+    var b = ev.target.closest(".hb"); if (!b || !hunt) return;
+    sound.tap();
+    toast('<span class="toast-hint"><b>ヒント ' + (+b.dataset.i + 1) + "</b> " + hintHtml(+b.dataset.i) + "</span>", 3200);
+  });
   $("hintList").addEventListener("click", function (ev) {
     var c = ev.target.closest(".chip"); if (!c) return;
     var s = S.BY_CODE[c.dataset.code]; sound.tap();
@@ -512,7 +530,7 @@
       b.addEventListener("click", function () {
         sound.tap(); make.tool = s.code;
         Array.prototype.forEach.call(p.children, function (c) { c.classList.toggle("on", c.dataset.code === s.code); });
-        $("makeTip").innerHTML = s.code === "." ? "けしたい マスを タップ" : "<b>" + s.name + "</b> を おく マスを タップ（なぞっても OK）";
+        $("makeTip").innerHTML = s.code === "." ? "けしたい マスを タップ" : "<b>" + s.name + "</b> を おく マスを タップ";
       });
       p.appendChild(b);
     });
