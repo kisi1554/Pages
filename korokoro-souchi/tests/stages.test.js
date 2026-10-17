@@ -60,6 +60,28 @@ STAGES.forEach((st, i) => {
   });
 });
 
+test("1〜15: こたえの ぶひんを ±10px ずらしても クリアできる（ぎりぎりの そうちに しない）", () => {
+  STAGES.slice(0, 15).forEach((st, i) => {
+    st.sol.forEach((_, k) => {
+      [-10, -5, 5, 10].forEach((dx) => {
+        const sol = clone(st.sol); sol[k].x += dx;
+        const all = st.fixed.concat(sol);
+        if (!K.canPlace(all.filter((q) => q !== sol[k]), sol[k])) return;
+        assert.ok(K.simulate(clone(all), 25).cleared, `#${i + 1} ${sol[k].t} を ${dx}px ずらすと クリア できない`);
+      });
+    });
+  });
+});
+
+test("#11 シーソーで カーン: ドミノを どこに おいても 2こめの ボールが おちる", () => {
+  const st = STAGES[10], shelf = st.fixed[2];
+  for (let x = 470; x <= 530; x += 10) {
+    const sol = clone(st.sol); sol[0].x = x;
+    assert.ok(K.simulate(clone(st.fixed.concat(sol)), 25).cleared, `ドミノ x=${x}`);
+  }
+  assert.equal(shelf.t, "board_l");
+});
+
 test("けっていてき: おなじ はいちなら まいかい おなじ けっか", () => {
   [3, 12, 15, 23, 28, 30].forEach((n) => {
     const st = STAGES[n - 1], l = st.fixed.concat(st.sol);

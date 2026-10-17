@@ -85,7 +85,7 @@
   })();
   (function () {
     add({ name: "かぜで ジャンプ", hint: "ファンで おして、さかで とびあがろう",
-      fixed: [F("rubber", 220, 745), F("wall", 960, 730), F("bell", 1100, 730)],
+      fixed: [F("rubber", 220, 745), F("wall", 960, 765), F("bell", 1100, 730)],
       inv: { fan: 1, board_m: 1 },
       sol: [S("fan", 150, 735.5), S("board_m", 720, 720, -25)] });
   })();
@@ -100,23 +100,26 @@
 
   /* ---------- 11〜15: ドミノ・シーソー・バケツ を くみあわせる ---------- */
   (function () {
-    var a = F("board_m", 150, 200, 15), shelf = F("board_l", 560, 300, 0), d = [];
+    // 2こめの ゴムだまは たなの はし ぎりぎりに おく（ドミノが すこし おすだけで おちる）
+    var a = F("board_m", 150, 200, 15), shelf = F("board_l", 520, 300, 0), d = [];
     [390, 445, 555, 610].forEach(function (x) { d.push(F("domino", x, onB(shelf, x, 40))); });
     add({ name: "シーソーで カーン", hint: "おちてくる ボールで シーソーを ガタン！",
-      fixed: [a, ballOn("rubber", a, 60), shelf].concat(d, [ballOn("rubber", shelf, 690), F("bell", 1075, 635)]),
+      fixed: [a, ballOn("rubber", a, 60), shelf].concat(d, [ballOn("rubber", shelf, 705), F("bell", 1025, 635)]),
       inv: { domino: 1, seesaw: 1 },
-      sol: [S("domino", 500, onB(shelf, 500, 40)), S("seesaw", 930, 716, 15)] });
+      sol: [S("domino", 500, onB(shelf, 500, 40)), S("seesaw", 880, 716, 15)] });
   })();
 
   (function () {
-    var a = F("board_m", 150, 150, 20), flat = F("board_m", 420, 215, 0);
-    var ramp = F("board_s", 800, 290, 10), shelf = F("board_m", 1035, 306, 0), d = [];
-    [940, 995, 1105].forEach(function (x) { d.push(F("domino", x, onB(shelf, x, 40))); });
-    add({ name: "バケツで ひっぱれ", hint: "ゴムだまを はねかえして バケツに いれよう。ひもが とびらを あけるよ",
-      fixed: [a, ballOn("rubber", a, 60), flat, F("bucket", 640, 560, 0, { gx: 130, gy: -380, gh: 120, d: 100 }),
-              ramp, ballOn("steel", ramp, 737), shelf].concat(d, [F("bell", 1165, 250)]),
+    // うけざら（たての いた）で ゴムだまを かならず バケツへ おとす。こどもは みちの すきまを つなぐ
+    var a = F("board_m", 150, 150, 20);
+    var ramp = F("board_s", 840, 290, 10), shelf = F("board_m", 1060, 306, 0), d = [];
+    [950, 1000, 1100].forEach(function (x) { d.push(F("domino", x, onB(shelf, x, 40))); });
+    add({ name: "バケツで ひっぱれ", hint: "みちを つないで ゴムだまを バケツへ。ひもが とびらを あけるよ",
+      fixed: [a, ballOn("rubber", a, 60), F("board_s", 551, 215, 0), F("board_m", 700, 320, 90),
+              F("bucket", 680, 560, 0, { gx: 130, gy: -380, gh: 120, d: 100 }),
+              ramp, ballOn("steel", ramp, 777), shelf].concat(d, [F("bell", 1170, 250)]),
       inv: { board_s: 1, domino: 1 },
-      sol: [S("board_s", 725, 420, 90), S("domino", 1050, onB(shelf, 1050, 40))] });
+      sol: [S("board_s", 372, 215, 0), S("domino", 1050, onB(shelf, 1050, 40))] });
   })();
 
   (function () {
@@ -146,7 +149,7 @@
               F("bucket", 680, 560, 0, { gx: 130, gy: -380, gh: 120, d: 100 }),
               ramp, ballOn("steel", ramp, 777), F("bell", 790, 630)]),
       inv: { domino: 1, board_s: 1, seesaw: 1 },
-      sol: [S("domino", 440, onB(shelf, 440, 40)), S("board_s", 630, 300, 30), S("seesaw", 940, 716, -15)] });
+      sol: [S("domino", 440, onB(shelf, 440, 40)), S("board_s", 605, 330, 30), S("seesaw", 940, 716, -15)] });
   })();
 
   /* ---------- 16〜30: もっと ステージ（「ころころ そうち 2」から うつした もの） ----------
