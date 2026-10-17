@@ -38,7 +38,7 @@
   #title { min-height: 100%; padding: calc(14px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
   .wrap { max-width: 720px; margin: 0 auto; }
   .topbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .topbar .right { display: flex; gap: 8px; }
+  .topbar .right { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
   .back {
     text-decoration: none; color: var(--soft); font-size: 15px;
     padding: 10px 14px; border-radius: 99px; background: var(--card);
@@ -195,6 +195,7 @@
       <a class="back" href="../">← メニュー</a>
       <div class="right">
         <button class="toggle" id="calmBtn" type="button"></button>
+        <button class="toggle" id="voiceBtn" type="button"></button>
         <button class="toggle" id="soundBtn" type="button"></button>
       </div>
     </div>
@@ -227,7 +228,7 @@
     </div>
 
     <p class="stats" id="stats"></p>
-    <p class="note">おうちの方へ: 画面のゆれ・暗転・振動（対応端末）の演出があります。「ゆれ ひかえめ」で弱められます。<br>
+    <p class="note">おうちの方へ: 画面のゆれ・暗転・振動（対応端末）の演出があります。つくぼうの声は端末の読み上げ機能を使います（「こえ オフ」で吹き出しだけになります）。「ゆれ ひかえめ」で弱められます。<br>
       こわくなったら のっている あいだ いつでも「🛑 おりる」で ゆっくり おりられます。</p>
   </div>
 </section>
@@ -309,7 +310,7 @@ const LS_KEY = 'kyofu-elevator-v1';
 function defaults() {
   let calm = false;
   try { calm = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
-  return { sound: true, calm, avatar: '🐻', level: 'normal', rides: 0, best: { easy: 0, normal: 0, hard: 0 }, photos: [] };
+  return { sound: true, voice: true, calm, avatar: '🐻', level: 'normal', rides: 0, best: { easy: 0, normal: 0, hard: 0 }, photos: [] };
 }
 function load() {
   const d = defaults();
@@ -317,6 +318,7 @@ function load() {
     const s = JSON.parse(localStorage.getItem(LS_KEY));
     if (s && typeof s === 'object') {
       if (typeof s.sound === 'boolean') d.sound = s.sound;
+      if (typeof s.voice === 'boolean') d.voice = s.voice;
       if (typeof s.calm === 'boolean') d.calm = s.calm;
       if (AVATARS.includes(s.avatar)) d.avatar = s.avatar;
       if (LEVELS[s.level]) d.level = s.level;
@@ -434,6 +436,7 @@ const ITEMS = [
 
 function resetScene() {
   rideTok++;
+  VOICE.stop();
   if (motion) { const r = motion.res; motion = null; r(); }
   while (tweens.length) tweens.pop().res();
   Object.assign(S, {
@@ -477,7 +480,41 @@ function flicker(sec) { S.flickUntil = S.time + sec; SND.buzz(); }
 
 function narr(html) { $('#narr').innerHTML = html; }
 // つくぼうの ふきだし
-function tk(text, scared = false, sec = 2.8) { S.tkSay = text; S.tkScared = scared; S.tkUntil = S.time + sec; SND.tsuku(); }
+function tk(text, scared = false, sec = 0) {
+  S.tkSay = text; S.tkScared = scared;
+  S.tkUntil = S.time + Math.max(sec, 2.8, 1 + text.length * .2);
+  if (!VOICE.say(text, scared)) SND.tsuku();
+}
+
+/* ---------- つくぼうの こえ（よみあげ。つくぼうと おしゃべり と おなじ たかい こえ） ---------- */
+const VOICE = {
+  ja: null,
+  ok() { return save.voice && save.sound && 'speechSynthesis' in window && typeof SpeechSynthesisUtterance !== 'undefined'; },
+  pick() { try { this.ja = speechSynthesis.getVoices().find(v => /^ja/i.test(v.lang)) || null; } catch (e) {} },
+  // iOS は さいしょの よみあげを タップの なかで しないと なれない
+  unlock() {
+    if (!this.ok()) return;
+    try { const u = new SpeechSynthesisUtterance(' '); u.volume = 0; speechSynthesis.speak(u); } catch (e) {}
+  },
+  say(text, scared) {
+    if (!this.ok()) return false;
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text.replace(/[〜~]/g, 'ー').replace(/^…+/, '').replace(/…+(?=[！？!?]*$)/, '').replace(/…+/g, '、'));
+      u.lang = 'ja-JP';
+      if (this.ja) u.voice = this.ja;
+      u.pitch = scared ? 2 : 1.7;
+      u.rate = scared ? 1.25 : 1.08;
+      speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  },
+  stop() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} },
+};
+if ('speechSynthesis' in window) {
+  VOICE.pick();
+  try { speechSynthesis.addEventListener('voiceschanged', () => VOICE.pick()); } catch (e) {}
+}
 
 function setHands(on) {
   hands = on;
@@ -1274,6 +1311,7 @@ function renderTitle() {
   $('#soundBtn').textContent = soundLabel();
   $('#soundBtn2').textContent = soundLabel();
   $('#calmBtn').textContent = save.calm ? '🫨 ゆれ ひかえめ' : '🫨 ゆれ ふつう';
+  $('#voiceBtn').textContent = save.voice ? '🦗 こえ オン' : '🦗 こえ オフ';
   $('#stats').textContent = save.rides ? `のった かいすう: ${save.rides}かい` : '';
 }
 
@@ -1293,11 +1331,16 @@ function showAlbum() {
 
 function toggleSound() {
   save.sound = !save.sound; persist(); SND.init(); SND.setOn(save.sound);
+  if (!save.sound) VOICE.stop();
   $('#soundBtn').textContent = soundLabel(); $('#soundBtn2').textContent = soundLabel();
 }
 
-$('#goBtn').addEventListener('click', () => { SND.init(); ride(); });
-$('#againBtn').addEventListener('click', () => { SND.init(); ride(); });
+$('#goBtn').addEventListener('click', () => { SND.init(); VOICE.unlock(); ride(); });
+$('#againBtn').addEventListener('click', () => { SND.init(); VOICE.unlock(); ride(); });
+$('#voiceBtn').addEventListener('click', () => {
+  save.voice = !save.voice; persist(); renderTitle();
+  if (save.voice) { SND.init(); VOICE.say('ぼく つくぼう！ いっしょに のろうね〜'); } else VOICE.stop();
+});
 $('#menuBtn').addEventListener('click', goTitle);
 $('#stopBtn').addEventListener('click', stopRide);
 $('#soundBtn').addEventListener('click', toggleSound);
@@ -1320,6 +1363,7 @@ document.addEventListener('keydown', e => {
 document.addEventListener('keyup', e => { if (e.code === 'Space') setHands(false); });
 
 document.addEventListener('visibilitychange', () => {
+  if (document.hidden) VOICE.stop();
   if (!SND.ctx) return;
   if (document.hidden) SND.ctx.suspend().catch(() => {});
   else if (!$('#ride').hidden) SND.ctx.resume().catch(() => {});
