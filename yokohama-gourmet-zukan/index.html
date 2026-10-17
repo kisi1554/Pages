@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#b3261e">
+<meta name="robots" content="noindex">
+<title>横浜グルメ図鑑</title>
+<link rel="stylesheet" href="style.css?v=f6f3eff">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text y='52' font-size='52'>🍽️</text></svg>">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero__row">
+    <h1 class="brand"><span aria-hidden="true">🍽️</span> 横浜グルメ図鑑</h1>
+    <button type="button" class="pick" id="btnPick">🎲 きょうの一軒</button>
+  </div>
+  <p class="hero__lead" id="lead"></p>
+  <div class="progress" aria-live="polite">
+    <div class="progress__bar"><span id="progBar"></span></div>
+    <span class="progress__text" id="progText"></span>
+  </div>
+</header>
+
+<div class="controls">
+  <div class="controls__row">
+    <label class="search">
+      <span aria-hidden="true">🔍</span>
+      <input type="search" id="q" placeholder="店名・料理で検索" autocomplete="off">
+    </label>
+    <select id="sort" class="select" aria-label="並びかた">
+      <option value="score">おすすめ順</option>
+      <option value="rating">★が高い順</option>
+      <option value="count">口コミが多い順</option>
+      <option value="name">名前順</option>
+    </select>
+  </div>
+  <div class="chips chips--scroll" id="areaChips" role="group" aria-label="エリア"></div>
+  <div class="chips chips--scroll" id="genreChips" role="group" aria-label="ジャンル"></div>
+  <div class="chips" id="markChips" role="group" aria-label="記録でしぼりこみ"></div>
+</div>
+
+<main>
+  <p class="resultinfo" id="resultInfo"></p>
+  <ol class="grid" id="grid"></ol>
+  <p class="empty" id="empty" hidden>条件に合うお店がありません。</p>
+  <footer class="note">
+    <p>★と口コミ件数は Googleマップの値（<span id="fetched"></span> 時点）。<strong>★4.3以上・口コミ300件以上</strong>のお店だけを載せています。</p>
+    <p>「おすすめ順」は★と口コミ件数をあわせた点数の順です。口コミが少ない店の高い★は割り引いて考えます。</p>
+    <p>営業時間・定休日・予約の要否は載せていません。行く前に Googleマップで確かめてください。</p>
+  </footer>
+</main>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet__backdrop" data-close></div>
+  <article class="sheet__panel" role="dialog" aria-modal="true" aria-labelledby="dName">
+    <button type="button" class="sheet__close" data-close aria-label="とじる">×</button>
+    <div class="dhead">
+      <span class="dhead__emoji" id="dEmoji" aria-hidden="true"></span>
+      <div>
+        <p class="dhead__no" id="dNo"></p>
+        <h2 class="dhead__name" id="dName"></h2>
+        <p class="dhead__meta" id="dMeta"></p>
+      </div>
+    </div>
+    <div class="dscore">
+      <div><span class="dscore__big" id="dRating"></span><span class="stars" id="dStars"></span></div>
+      <div class="dscore__sub" id="dCount"></div>
+    </div>
+    <p class="dcats" id="dCats"></p>
+    <p class="daddr" id="dAddr"></p>
+    <div class="dlinks">
+      <a class="btn btn--primary" id="dMap" target="_blank" rel="noopener">📍 Googleマップで見る</a>
+      <a class="btn" id="dReviews" target="_blank" rel="noopener">💬 口コミを読む</a>
+    </div>
+    <div class="dmarks">
+      <button type="button" class="mark" data-mark="want">❤️ 行きたい</button>
+      <button type="button" class="mark" data-mark="went">✅ 行った</button>
+    </div>
+    <label class="dmemo">
+      <span>メモ（自分だけに保存）</span>
+      <textarea id="dMemo" rows="2" placeholder="食べたもの・感想など"></textarea>
+    </label>
+    <p class="dsave" id="dSave" aria-live="polite"></p>
+  </article>
+</div>
+
+<script src="data.js?v=f6f3eff"></script>
+<script src="app.js?v=f6f3eff"></script>
+</body>
+</html>
