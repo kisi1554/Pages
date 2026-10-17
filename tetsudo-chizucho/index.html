@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2f6fd6">
+<title>てつどう ちずちょう</title>
+<link rel="stylesheet" href="style.css?v=b2feb06">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+  <header id="top">
+    <a class="back" href="../" aria-label="メニューへ もどる">←</a>
+    <h1>🚃 てつどう ちずちょう</h1>
+    <span class="chip" id="countChip">🚉 0</span>
+    <button type="button" class="hbtn" id="kanaBtn" aria-label="えきめいの もじ">あ</button>
+    <button type="button" class="hbtn" id="soundBtn" aria-label="おと">🔊</button>
+  </header>
+
+  <main id="stage">
+    <svg id="map" aria-label="かんとうの てつどう ちず">
+      <rect id="sea" x="0" y="0" width="100%" height="100%"></rect>
+      <g id="world">
+        <g id="prefs"></g>
+        <g id="tracks"></g>
+        <g id="ridden"></g>
+        <g id="focusLine"></g>
+        <g id="dots"></g>
+        <g id="labels"></g>
+        <g id="marks"></g>
+      </g>
+    </svg>
+    <div class="mapBtns">
+      <button type="button" id="zoomIn" aria-label="おおきく">＋</button>
+      <button type="button" id="zoomOut" aria-label="ちいさく">－</button>
+      <button type="button" id="zoomAll" aria-label="ぜんたい">🗾</button>
+    </div>
+    <p class="hint" id="hint">えきの まるを タップしてね。いった えきを ぬりつぶそう！</p>
+
+    <!-- えきの シート -->
+    <section class="sheet" id="stSheet" hidden>
+      <button type="button" class="close" data-close aria-label="とじる">✕</button>
+      <div class="stHead">
+        <div class="stName" id="stName"></div>
+        <div class="stPref" id="stPref"></div>
+      </div>
+      <div class="stLines" id="stLines"></div>
+      <button type="button" class="bigBtn" id="visitBtn"></button>
+      <p class="stDate" id="stDate"></p>
+    </section>
+
+    <!-- パネル (ろせん・さがす・いまここ・きろく) -->
+    <section class="panel" id="panel" hidden>
+      <div class="panelHead">
+        <button type="button" class="pback" id="panelBack" aria-label="もどる" hidden>‹</button>
+        <h2 id="panelTitle"></h2>
+        <button type="button" class="close" data-close aria-label="とじる">✕</button>
+      </div>
+      <div class="panelBody" id="panelBody"></div>
+    </section>
+
+    <div class="toast" id="toast" hidden></div>
+  </main>
+
+  <nav id="tabs">
+    <button type="button" data-tab="map" class="on"><span>🗺️</span><b>ちず</b></button>
+    <button type="button" data-tab="lines"><span>🛤️</span><b>ろせん</b></button>
+    <button type="button" data-tab="search"><span>🔍</span><b>さがす</b></button>
+    <button type="button" data-tab="gps"><span>📍</span><b>いまここ</b></button>
+    <button type="button" data-tab="record"><span>🏅</span><b>きろく</b></button>
+  </nav>
+
+  <input type="file" id="importFile" accept="application/json,.json" hidden>
+  <script src="data.js?v=b2feb06"></script>
+  <script src="app.js?v=b2feb06"></script>
+</body>
+</html>
