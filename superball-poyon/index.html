@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ぽよよん スーパーボール</title>
+<meta name="description" content="スーパーボールが がめんじゅう はねまくる！ タップで ぽん、はじいて ぽよーん。スーパーボール すくいと ガチャで ボールを あつめよう。">
+<meta name="theme-color" content="#f03e3e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔴</text></svg>">
+<link rel="stylesheet" href="style.css?v=2a97ddf">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<canvas id="cv" aria-label="ボールで あそぶ ところ"></canvas>
+
+<!-- うえの バー -->
+<header class="bar" id="bar">
+  <button class="pill round" id="homeBtn" aria-label="ホームへ もどる" hidden>🏠</button>
+  <h1 class="title" id="title"><span aria-hidden="true">🔴</span> <span id="titleText">ぽよよん スーパーボール</span></h1>
+  <div class="counts" id="counts" hidden>
+    <span class="now"><small>こんかい</small><b id="cRun">0</b></span>
+    <span class="sub"><small>きょう</small><b id="cDay">0</b></span>
+    <span class="sub"><small>これまで</small><b id="cAll">0</b></span>
+  </div>
+  <span class="pill star" id="starPill" aria-label="ほし">⭐<b id="starN">0</b></span>
+  <button class="pill round" id="sndBtn" aria-label="おと">🔊</button>
+</header>
+
+<!-- ホーム -->
+<main class="screen" id="home">
+  <div class="home-inner">
+    <p class="logo" aria-hidden="true">🔴🟡🔵</p>
+    <h2 class="home-title">ぽよよん<br>スーパーボール</h2>
+    <p class="lead">タップで ぽん！ はじいて ぽよーん！</p>
+    <div class="menu" id="menu">
+      <button class="mode" data-go="free" style="--c:#f03e3e"><span class="ic">🔴</span><span><b>じゆう あそび</b><small>タップ・はじく・ながおしで ぷくー</small></span></button>
+      <button class="mode" data-go="sukui" style="--c:#1c7ed6"><span class="ic">🥣</span><span><b>スーパーボール すくい</b><small>ポイで すくって おわんへ</small></span></button>
+      <button class="mode" data-go="gacha" style="--c:#f59f00"><span class="ic">🎰</span><span><b>ガチャガチャ</b><small>⭐ 5こで 1かい まわせる</small></span></button>
+      <button class="mode" data-go="zukan" style="--c:#2f9e44"><span class="ic">📖</span><span><b>ボール ずかん</b><small id="zukanSub">あつめた ボールを みよう</small></span></button>
+    </div>
+    <p class="note">⭐ は ボールが 100かい はねる ごとに 1こ、すくった ボール 1こ に つき 1こ もらえるよ</p>
+  </div>
+</main>
+
+<!-- じゆう あそびの どうぐ -->
+<nav class="tools" id="freeTools" hidden aria-label="どうぐ">
+  <button class="tool" id="tPal"><span class="ic" id="palIc">🎲</span><span>えらぶ</span></button>
+  <button class="tool" id="tBoom"><span class="ic">💥</span><span>どかーん</span></button>
+  <button class="tool" id="tZero" aria-pressed="false"><span class="ic">🎈</span><span>むじゅうりょく</span></button>
+  <button class="tool" id="tClean"><span class="ic">🧹</span><span>おかたづけ</span></button>
+  <button class="tool" id="tNight" aria-pressed="false"><span class="ic">🌙</span><span>よる</span></button>
+  <button class="tool" id="tMusic" aria-pressed="false"><span class="ic">🎵</span><span>おんがく</span></button>
+  <button class="tool" id="tTilt" aria-pressed="false" hidden><span class="ic">📱</span><span>かたむき</span></button>
+</nav>
+
+<!-- すくいの じょうほう -->
+<nav class="tools hud" id="sukuiHud" hidden>
+  <div class="poi-left" aria-label="のこりの ポイ"><span id="poiIcons">🏓🏓🏓</span></div>
+  <div class="meter" aria-label="かみの つよさ"><small>かみの つよさ</small><div class="bar-out"><div class="bar-in" id="meterIn"></div></div></div>
+  <div class="caught"><span aria-hidden="true">🥣</span><b id="caughtN">0</b><small>こ</small></div>
+  <button class="tool" id="sukuiEnd"><span class="ic">🏁</span><span>おわり</span></button>
+</nav>
+
+<!-- ガチャの じょうほう -->
+<nav class="tools hud" id="gachaHud" hidden>
+  <div class="gacha-msg" id="gachaMsg">ハンドルを ぐるっと まわそう</div>
+  <button class="tool" id="toZukan"><span class="ic">📖</span><span>ずかん</span></button>
+</nav>
+
+<!-- ずかん -->
+<main class="screen scroll" id="zukan" hidden>
+  <div class="zukan-inner">
+    <h2 class="zukan-title">📖 ボール ずかん <span class="zk-count">あつめた かず <b id="zkN">0</b> / <span id="zkAll">0</span></span></h2>
+    <div class="zk-grid" id="zkGrid"></div>
+    <button class="big-btn" id="zkGacha">🎰 ガチャガチャへ</button>
+  </div>
+</main>
+
+<!-- パレット（じゆう あそびで だす ボール）-->
+<div class="sheet" id="palette" hidden>
+  <div class="sheet-card">
+    <h2>どの ボールを だす？</h2>
+    <div class="pal-grid" id="palGrid"></div>
+    <div class="row"><button class="pill wide" id="palClose">とじる</button></div>
+  </div>
+</div>
+
+<!-- ずかんの くわしく -->
+<div class="sheet" id="detail" hidden>
+  <div class="sheet-card center">
+    <canvas class="big-ball" id="dtCv"></canvas>
+    <p class="dt-no" id="dtNo"></p>
+    <h2 id="dtName"></h2>
+    <p class="dt-rar" id="dtRar"></p>
+    <p id="dtDesc"></p>
+    <dl class="dt-spec" id="dtSpec"></dl>
+    <div class="row">
+      <button class="pill wide" id="dtClose">とじる</button>
+      <button class="pill wide primary" id="dtUse">🔴 じゆう あそびで だす</button>
+    </div>
+  </div>
+</div>
+
+<!-- けっか（ガチャ・すくい）-->
+<div class="sheet" id="result" hidden>
+  <div class="sheet-card center">
+    <p class="res-badge" id="resBadge"></p>
+    <canvas class="big-ball" id="resCv"></canvas>
+    <div class="res-list" id="resList"></div>
+    <h2 id="resTitle"></h2>
+    <p id="resMsg"></p>
+    <div class="row" id="resBtns"></div>
+  </div>
+</div>
+
+<!-- おと -->
+<div class="pop" id="sndPop" hidden>
+  <button class="pill wide" id="sndToggle" aria-pressed="true">🔊 おと オン</button>
+  <label class="vol"><span>🔈</span><input type="range" id="sndVol" min="0" max="100" value="70" aria-label="おとの おおきさ"><span>🔊</span></label>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="physics.js?v=2a97ddf"></script>
+<script src="balls.js?v=2a97ddf"></script>
+<script src="audio.js?v=2a97ddf"></script>
+<script src="app.js?v=2a97ddf"></script>
+<script src="modes/free.js?v=2a97ddf"></script>
+<script src="modes/sukui.js?v=2a97ddf"></script>
+<script src="modes/gacha.js?v=2a97ddf"></script>
+<script>SB.start();</script>
+</body>
+</html>
