@@ -113,7 +113,7 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     await page.click("#againBtn").catch(() => {});
 
     // もっと ステージ: 26（シーソー）と 30（バケツ → とびら → シーソー）を こたえで うごかす
-    for (const n of [26, 30, 66, 70]) {
+    for (const n of [26, 30, 62, 65, 70]) {
       await page.evaluate((i) => { window.KoroApp.openStage(i); window.KoroApp.placeSolution(); }, n - 1);
       await page.waitForTimeout(200);
       await page.screenshot({ path: path.join(out, `${tag}-stage${n}-edit.png`) });

@@ -411,7 +411,7 @@
 
   /* ---------- 51〜70: コース 3（ステップアップ）----------
      だんだん むずかしく: 51〜55 は 1こ（むきが だいじな ものも）、56〜60 は 2こ、
-     61〜65 は コース1 の 11〜15 を ひだり みぎ はんてん した もの、66〜70 は ながい れんさ（3〜4こ）。 */
+     61〜65 は 2〜3こ の すこし むずかしい くみあわせ、66〜70 は ながい れんさ（3〜4こ）。 */
   function doms(shelf, xs) { return xs.map(function (x) { return F("domino", x, onB(shelf, x, 40)); }); }
   // 51 ななめの いた（まわさないと だめ）
   (function () { var s = F("board_m", 160, 250, 8);
@@ -462,20 +462,36 @@
       fixed: [a, ballOn("steel", a, 60), F("wall", 380, 680), F("bell", 1145, 635)], inv: { board_l: 1, seesaw: 1 },
       sol: [S("board_l", 520, 420, 15), S("seesaw", 995, 716, 15)] }); })();
 
-  // --- 61〜65: コース1 の 11〜15 を ひだり みぎ はんてん して すこし かえた もの ---
-  var C1 = STAGES;   // コース1（1〜15）を はんてん して つかう
-  function mir(p) {
-    var q = JSON.parse(JSON.stringify(p)); q.x = 1200 - q.x; q.a = -(q.a || 0);
-    if (q.t === "bucket") q.gx = -q.gx;
-    if (q.a === 0) q.a = 0;
-    return q;
-  }
-  function mirStage(i, name, hint) { var st = C1[i]; return { name: name, hint: hint, fixed: st.fixed.map(mir), inv: JSON.parse(JSON.stringify(st.inv)), sol: st.sol.map(mir) }; }
-  add(mirStage(10, "はんたい シーソー", "ドミノで ボールを おとして、シーソーで ベルを ならそう"));
-  add(mirStage(11, "はんたい バケツ", "みちを つないで バケツへ。とびらが あいたら ドミノ！"));
-  add(mirStage(12, "はんたい シーソーばし", "シーソーを はしに して ドミノへ"));
-  add(mirStage(13, "はんたい バケツシーソー", "バケツ → とびら → シーソー の じゅんばん"));
-  (function () { var st = mirStage(14, "はんたい だいさくせん", "ドミノ → バケツ → とびら → シーソー → ベル"); st.sol[1].x = 605; add(st); })();
+  // --- 61〜65: すこし むずかしい くみあわせ（ばね 2つ・ファンと ドミノ・かべと シーソー・むきの ある ばね・バケツと ばね）---
+  // 61 ばね 2かい: かべを 2まい とびこえる
+  (function () { var s = F("board_m", 200, 300, 12);
+    add({ name: "ばね 2かい", hint: "ばねを 2つ。ぴょーん、ぴょーんと かべを 2まい こえよう",
+      fixed: [s, ballOn("steel", s, 90), F("wall", 720, 680), F("wall", 1060, 680), F("bell", 1150, 730)],
+      inv: { spring: 2 }, sol: [S("spring", 565, 755), S("spring", 890, 755)] }); })();
+  // 62 ファンで ドミノ: ファンで とばした ゴムだまで、したの たなの ドミノを たおす（すきま 2つ）
+  (function () { var t = F("board_m", 300, 260, 0), b = F("board_l", 850, 400, 0);
+    add({ name: "ファンで ドミノ", hint: "ファンで ゴムだまを とばして ドミノに ぶつけよう。ドミノの すきまは 2つ",
+      fixed: [t, ballOn("rubber", t, 380), b].concat(doms(b, [680, 735, 845, 900, 1010]), [F("bell", 1095, 360)]),
+      inv: { fan: 1, domino: 2 }, sol: [S("fan", 230, onB(t, 230, 34)), S("domino", 790, onB(b, 790, 40)), S("domino", 955, onB(b, 955, 40))] }); })();
+  // 63 かべ と シーソー: とぶ ボールを かべで とめて シーソーへ
+  (function () { var a = F("board_l", 260, 200, 25);
+    add({ name: "かべ と シーソー", hint: "とんでいく ボールを かべで とめて、シーソーの うえに おとそう",
+      fixed: [a, ballOn("steel", a, 110), F("bell", 815, 635)],
+      inv: { wall: 1, seesaw: 1 }, sol: [S("wall", 640, 370), S("seesaw", 670, 716, 15)] }); })();
+  // 64 みぎへ ばね: ドミノで おとした ゴムだまを、みぎに かたむけた ばねで たかい ベルへ
+  (function () { var a = F("board_m", 150, 200, 15), shelf = F("board_l", 520, 300, 0);
+    add({ name: "みぎへ ばね", hint: "ばねを みぎに かたむけると、たかい ベルまで とぶよ",
+      fixed: [a, ballOn("rubber", a, 60), shelf].concat(doms(shelf, [390, 445, 555, 610]), [ballOn("rubber", shelf, 705),
+        blk(1080, 520, 1200, 770), F("bell", 1140, 489)]),
+      inv: { domino: 1, spring: 1 }, sol: [S("domino", 500, onB(shelf, 500, 40)), S("spring", 815, 755, 15)] }); })();
+  // 65 バケツ と ばね: ドミノ → (ドミノ) → (いた) → バケツ → とびら → てつだま → (ばね) → たかい ベル
+  (function () { var a = F("board_m", 150, 200, 15), shelf = F("board_l", 520, 300, 0), ramp = F("board_m", 660, 462, -10);
+    add({ name: "バケツ と ばね", hint: "ゴムだまを バケツへ。でてきた てつだまを ばねで はねあげて たかい ベルへ",
+      fixed: [a, ballOn("rubber", a, 60), shelf].concat(doms(shelf, [390, 445, 555, 610]), [ballOn("rubber", shelf, 705),
+        F("bucket", 940, 600, 0, { gx: -200, gy: -228, gh: 120, d: 100 }), ramp, ballOn("steel", ramp, 776), F("board_m", 1015, 420, 90),
+        blk(555, 640, 580, 770), blk(0, 560, 230, 770), F("bell", 150, 529)]),
+      inv: { domino: 1, board_s: 1, spring: 1 },
+      sol: [S("domino", 500, onB(shelf, 500, 40)), S("board_s", 845, 370, 30), S("spring", 365, 755)] }); })();
 
   // --- 66〜70: ながい れんさ（ぶひんの むきも だいじ）---
   // 66 ばねの むき: ドミノで おとした ゴムだまを、ななめの ばねで ひだりへ もどす
