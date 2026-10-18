@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>シャワーで あらいっこ</title>
+<meta name="description" content="どろんこの でんしゃや どうぶつを シャワーで ぴかぴかに しよう。みずで ながして、あわあわ して、すすいで おしまい！">
+<meta name="theme-color" content="#22b8cf">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚿</text></svg>">
+<link rel="stylesheet" href="style.css?v=c0c8553">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ===== メニュー（ずかん） ===== -->
+<section id="menu" class="screen">
+  <header class="mtop">
+    <h1><span aria-hidden="true">🚿</span> シャワーで あらいっこ</h1>
+    <button type="button" class="snd" id="sndM" aria-label="おと オン/オフ">🔊</button>
+  </header>
+  <p class="lead">どろんこを シャワーで ぴかぴかに しよう！</p>
+  <div class="zukan">✨ ぴかぴか ずかん <b id="zcount">0</b> / <span id="ztotal">0</span></div>
+  <div id="stageGrid" class="grid"></div>
+  <details class="howto">
+    <summary>あそびかた</summary>
+    <ol>
+      <li>がめんを なぞると シャワーが でるよ。ゆびを はなすと とまるよ。</li>
+      <li>① <b>みず</b>で どろを ながす → ② <b>🧴 あわ</b>で ごしごし → ③ <b>すすぎ</b>で あわを ながす。</li>
+      <li>🌡️ ダイヤルで おゆの おんどを かえられるよ。どうぶつに よって すきな おんどが ちがうよ。</li>
+      <li>みずの だしっぱなしは もったいない。よごれに あてると ★ が へらないよ。</li>
+    </ol>
+  </details>
+</section>
+
+<!-- ===== あそぶ がめん ===== -->
+<section id="game" class="screen" hidden>
+  <header class="gtop">
+    <button type="button" id="back" class="back" aria-label="メニューへ もどる">⬅ もどる</button>
+    <div id="stTitle" class="sttitle"></div>
+    <button type="button" class="snd" id="sndG" aria-label="おと オン/オフ">🔊</button>
+  </header>
+
+  <div id="stageWrap">
+    <canvas id="cv"></canvas>
+    <div class="hud hud-l"><span id="hudIcon">✨</span><div class="bar"><i id="cleanBar"></i></div><b id="cleanPct">0%</b></div>
+    <div class="hud hud-r" title="みずの つかいかた"><span>💧</span><div class="tank"><i id="tankLv"></i></div><b id="ecoStars" class="stars">★★★</b></div>
+    <div id="partInfo" class="partinfo" hidden></div>
+    <div id="bubble" class="bubble" aria-live="polite"></div>
+  </div>
+
+  <div class="panel">
+    <ol id="steps" class="steps">
+      <li data-s="1"><b>①</b> みずで ながす</li>
+      <li data-s="2"><b>②</b> 🧴 あわあわ</li>
+      <li data-s="3"><b>③</b> すすぎ</li>
+    </ol>
+    <div id="goal" class="goal" hidden></div>
+    <div class="row2">
+      <div class="tools">
+        <button type="button" id="tWater" class="tool on"><span class="ic">💧</span><span id="tWaterLabel">みず</span></button>
+        <button type="button" id="tSoap" class="tool"><span class="ic">🧴</span><span>あわ</span></button>
+      </div>
+      <div class="dial" id="dial" role="group" aria-label="おんど ダイヤル">
+        <div class="knob" id="knob" aria-hidden="true"><i></i></div>
+        <button type="button" data-t="0"><span class="ic">🧊</span><span>つめたい</span></button>
+        <button type="button" data-t="1" class="on"><span class="ic">🙂</span><span>ちょうど<br>いい</span></button>
+        <button type="button" data-t="2"><span class="ic">♨️</span><span>あつい</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div id="result" class="overlay" hidden>
+    <div class="rcard">
+      <div class="rtitle">ぴかぴか！</div>
+      <div id="rEmoji" class="remoji"></div>
+      <div id="rStars" class="rstars"></div>
+      <p id="rEco" class="reco"></p>
+      <p id="rDone" class="rdone"></p>
+      <p class="rzukan">✨ ずかんに のったよ</p>
+      <div class="rbtns">
+        <button type="button" id="rAgain" class="rbtn sub">🔁 もういちど</button>
+        <button type="button" id="rNext" class="rbtn">つぎへ ▶</button>
+      </div>
+      <button type="button" id="rMenu" class="rbtn sub wide">📖 ずかん（メニュー）</button>
+    </div>
+  </div>
+</section>
+
+<script src="app.js?v=c0c8553"></script>
+</body>
+</html>
