@@ -34,14 +34,13 @@
 
   // ---- ほぞん -----------------------------------------------------------
   const visited = new Map();   // 駅番号 -> 'YYYY-MM-DD'
-  const settings = { sound: true, kana: true, view: null };
+  const settings = { sound: true, view: null };
 
   function load() {
     let raw = null;
     try { raw = JSON.parse(localStorage.getItem(STORE) || 'null'); } catch (e) { raw = null; }
     if (!raw) return;
     if (typeof raw.sound === 'boolean') settings.sound = raw.sound;
-    if (typeof raw.kana === 'boolean') settings.kana = raw.kana;
     if (raw.view && isFinite(raw.view.s)) settings.view = raw.view;
     mergeVisits(raw.visits || []);
   }
@@ -49,7 +48,7 @@
     const visits = [];
     visited.forEach((d, i) => visits.push([ST[i][0], ST[i][2], ST[i][3], d]));
     try {
-      localStorage.setItem(STORE, JSON.stringify({ v: 1, sound: settings.sound, kana: settings.kana, view: view, visits }));
+      localStorage.setItem(STORE, JSON.stringify({ v: 1, sound: settings.sound, view: view, visits }));
     } catch (e) { /* ほぞん できなくても あそべる */ }
   }
   // [なまえ, x, y, ひづけ] の リストを とりこむ (データが かわっても なまえと ばしょで さがす)
@@ -115,7 +114,8 @@
     return m ? ruby(m[1], L.k) + '<small>' + esc(m[2]) + '</small>' : ruby(L.n, L.k);
   }
   function opRuby(op) { return ruby(op, OP_KANA[op]); }
-  function label(i) { return settings.kana && ST[i][1] ? ST[i][1] : ST[i][0]; }
+  // ちずの えきめいは かんじ (ふりがな なし)
+  function label(i) { return ST[i][0]; }
   function lineDone(L) { let n = 0; L.s.forEach((i) => { if (visited.has(i)) n++; }); return n; }
 
   // ---- ちず -----------------------------------------------------------
@@ -162,7 +162,6 @@
       if (p.k && big) {
         const t = el('text', { x: Math.round(big[0]), y: Math.round(big[1]), class: 'prefName' }, g);
         t.textContent = p.n;
-        t.dataset.kana = PREF_KANA[PREF_NAMES.indexOf(p.n)] || p.n;
       }
     });
   })();
@@ -239,7 +238,6 @@
     pg.style.display = '';
     pg.querySelectorAll('text').forEach((t) => {
       t.style.display = s < 0.12 ? '' : 'none';
-      t.textContent = settings.kana ? t.dataset.kana : PREF_NAMES[PREF_KANA.indexOf(t.dataset.kana)];
     });
   }
   function applyView() {
@@ -865,14 +863,8 @@
   function updateHeader() {
     $('soundBtn').textContent = settings.sound ? '🔊' : '🔇';
     $('soundBtn').setAttribute('aria-pressed', String(settings.sound));
-    $('kanaBtn').textContent = settings.kana ? 'あ' : '漢';
   }
   $('soundBtn').onclick = () => { settings.sound = !settings.sound; updateHeader(); save(); sound('tap'); };
-  $('kanaBtn').onclick = () => {
-    settings.kana = !settings.kana;
-    updateHeader(); save(); sizes(); drawLabels(); sound('tap');
-    toast(settings.kana ? 'あ' : '漢', settings.kana ? 'ちずの えきめいを ひらがなで' : 'ちずの えきめいを かんじで');
-  };
 
   // ---- はじめる ----------------------------------------------------------
   load();
