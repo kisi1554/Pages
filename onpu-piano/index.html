@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>おんぷ ピアノ</title>
+<meta name="description" content="がくふの おんぷを よんで けんばんを ひこう。リズム あそび、どうようの れんしゅう、ろくおん も できるよ。">
+<meta name="theme-color" content="#862e9c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎹</text></svg>">
+<link rel="stylesheet" href="style.css?v=5be31be">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button class="pill back" id="backBtn" type="button" hidden aria-label="もどる">◀ <span class="long">もどる</span></button>
+  <h1 class="title" id="title">🎹 おんぷ ピアノ</h1>
+  <button class="pill" id="doremiBtn" type="button" aria-pressed="true" title="けんばんの ドレミ">ドレミ</button>
+  <button class="pill round" id="soundBtn" type="button" aria-pressed="true" aria-label="おと">🔊</button>
+</header>
+
+<main class="stage" id="stage">
+
+  <!-- ホーム -->
+  <section class="screen" id="home">
+    <p class="lead">あそびかた を えらんでね</p>
+    <div class="modes">
+      <button class="mode" type="button" data-go="yomiMenu" style="--c:#862e9c">
+        <span class="m-emo">🎼</span><span class="m-name">おんぷ よみ</span>
+        <span class="m-lv">★</span><span class="m-sub" id="subYomi"></span>
+      </button>
+      <button class="mode" type="button" data-go="rhythmMenu" style="--c:#d9480f">
+        <span class="m-emo">🥁</span><span class="m-name">リズム</span>
+        <span class="m-lv">★★</span><span class="m-sub" id="subRhythm"></span>
+      </button>
+      <button class="mode" type="button" data-go="songMenu" style="--c:#2b8a3e">
+        <span class="m-emo">🎶</span><span class="m-name">きょく れんしゅう</span>
+        <span class="m-lv">★〜★★</span><span class="m-sub" id="subSong"></span>
+      </button>
+      <button class="mode" type="button" data-go="free" style="--c:#1971c2">
+        <span class="m-emo">🎙️</span><span class="m-name">じゆう えんそう</span>
+        <span class="m-lv">ろくおん</span><span class="m-sub">すきに ひこう</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- おんぷ よみ：えらぶ -->
+  <section class="screen" id="yomiMenu" hidden>
+    <p class="lead">ごせんふ の おんぷ を みて、おなじ けんばん を おしてね</p>
+    <div class="choices">
+      <button class="choice" type="button" data-yomi="easy">
+        <span class="c-emo">🌱</span><span class="c-name">やさしい</span>
+        <span class="c-desc">ド〜ド（1オクターブ）・ドレミ あり ・10もん</span><span class="c-star" id="starYomiEasy"></span>
+      </button>
+      <button class="choice" type="button" data-yomi="hard">
+        <span class="c-emo">🔥</span><span class="c-name">じょうきゅう</span>
+        <span class="c-desc">ド〜ド（2オクターブ）・ドレミ なし ・10もん</span><span class="c-star" id="starYomiHard"></span>
+      </button>
+      <button class="choice" type="button" data-yomi="mato">
+        <span class="c-emo">🎯</span><span class="c-name">まとあて</span>
+        <span class="c-desc">みぎから ながれて くる おんぷ を どんどん うとう</span><span class="c-star" id="bestMato"></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- おんぷ よみ -->
+  <section class="screen play" id="yomi" hidden>
+    <div class="hud"><span id="yomiCount">1 / 10</span><span class="msg" id="yomiMsg">この おんぷ は どれ？</span><span id="yomiMiss"></span></div>
+    <div class="staff-box"><svg id="yomiSvg" class="staff-svg" viewBox="-6 -44 132 128" role="img" aria-label="ごせんふ"></svg></div>
+  </section>
+
+  <!-- まとあて -->
+  <section class="screen play" id="mato" hidden>
+    <div class="hud"><span>🎯 <b id="matoScore">0</b></span><span class="msg" id="matoMsg">いちばん ひだり の おんぷ を ねらおう</span><span id="matoLife">❤️❤️❤️</span></div>
+    <div class="staff-box"><svg id="matoSvg" class="staff-svg wide" viewBox="-6 -44 420 128" role="img" aria-label="ながれる おんぷ"></svg></div>
+    <button class="big-btn" id="matoStart" type="button">▶ スタート</button>
+  </section>
+
+  <!-- リズム：えらぶ -->
+  <section class="screen" id="rhythmMenu" hidden>
+    <p class="lead">メトロノーム に あわせて タップ しよう</p>
+    <div class="tempo" data-tempo-group>
+      <span>はやさ</span>
+      <button type="button" data-tempo="0">🐢 ゆっくり</button>
+      <button type="button" data-tempo="1">🚶 ふつう</button>
+      <button type="button" data-tempo="2">🐇 はやい</button>
+    </div>
+    <div class="rgrid" id="rhythmList"></div>
+    <details class="howto">
+      <summary>おんぷ と きゅうふ の ながさ</summary>
+      <div class="legend" id="legend"></div>
+    </details>
+  </section>
+
+  <!-- リズム -->
+  <section class="screen play" id="rhythm" hidden>
+    <div class="hud"><span id="rhythmNo">1</span><span class="msg" id="rhythmMsg">スタート を おしてね</span><span id="rhythmStar"></span></div>
+    <div class="staff-box"><svg id="rhythmSvg" class="staff-svg wide" viewBox="-10 -40 420 110" role="img" aria-label="リズム"></svg></div>
+    <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+    <div class="row">
+      <button class="big-btn" id="rhythmStart" type="button">▶ スタート</button>
+      <button class="big-btn sub" id="rhythmDemo" type="button">👂 おてほん</button>
+      <button class="big-btn sub" id="rhythmNext" type="button" hidden>つぎ ▶</button>
+    </div>
+  </section>
+
+  <!-- きょく：えらぶ -->
+  <section class="screen" id="songMenu" hidden>
+    <p class="lead">ひかる けんばん を じゅんばんに おそう</p>
+    <div class="tempo" data-tempo-group>
+      <span>おてほん の はやさ</span>
+      <button type="button" data-tempo="0">🐢 ゆっくり</button>
+      <button type="button" data-tempo="1">🚶 ふつう</button>
+      <button type="button" data-tempo="2">🐇 はやい</button>
+    </div>
+    <div class="songs" id="songList"></div>
+  </section>
+
+  <!-- きょく れんしゅう -->
+  <section class="screen play" id="song" hidden>
+    <div class="hud"><span id="songName"></span><span class="msg" id="songMsg">ひかって いる けんばん を おしてね</span><span id="songPos"></span></div>
+    <div class="scroll-staff" id="songStaff">
+      <svg class="clef-svg" viewBox="-4 -44 40 128" aria-hidden="true" id="songClef"></svg>
+      <div class="scroll-view"><svg id="songSvg" class="song-svg" role="img" aria-label="がくふ"></svg></div>
+    </div>
+    <div class="row">
+      <button class="big-btn sub" id="songDemo" type="button">👂 おてほん<span class="long"> を きく</span></button>
+      <button class="big-btn sub" id="songRestart" type="button">↺ はじめ<span class="long">から</span></button>
+    </div>
+  </section>
+
+  <!-- じゆう えんそう -->
+  <section class="screen play" id="free" hidden>
+    <div class="rec-bar">
+      <button class="big-btn rec" id="recBtn" type="button">● ろくおん</button>
+      <button class="big-btn sub" id="recPlay" type="button" disabled>▶ さいせい</button>
+      <button class="big-btn sub" id="recSave" type="button" disabled>💾 ほぞん</button>
+    </div>
+    <p class="msg free-msg" id="freeMsg">すきな ように ひいてね。● で ろくおん できるよ</p>
+    <div class="slots" id="slots"></div>
+  </section>
+
+  <!-- けっか -->
+  <div class="result" id="result" hidden>
+    <div class="result-card">
+      <div class="result-stars" id="resultStars">★★★</div>
+      <p class="result-text" id="resultText">よく できました！</p>
+      <div class="row">
+        <button class="big-btn" id="resultAgain" type="button">↺ もういちど</button>
+        <button class="big-btn sub" id="resultBack" type="button">◀ もどる</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- けんばん -->
+<footer class="keys-area" id="keysArea" hidden>
+  <div class="oct-bar" id="octBar">
+    <button class="oct-btn" id="octDown" type="button" aria-label="ひくい ほう">◀ ひくい</button>
+    <span class="oct-label" id="octLabel">まんなか の ド から</span>
+    <button class="oct-btn" id="octUp" type="button" aria-label="たかい ほう">たかい ▶</button>
+  </div>
+  <div class="kb" id="kb" aria-label="けんばん"></div>
+  <button class="tap-pad" id="tapPad" type="button" hidden>👏 タン！</button>
+</footer>
+
+<script src="music.js?v=5be31be"></script>
+<script src="staff.js?v=5be31be"></script>
+<script src="audio.js?v=5be31be"></script>
+<script src="app.js?v=5be31be"></script>
+</body>
+</html>
