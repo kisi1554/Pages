@@ -68,6 +68,8 @@ async function playScene(page, opt, shots) {
       if (el) await el.dispatchEvent("pointerdown");
       await page.waitForTimeout(150);
     }
+  } else if (type === "absorb" && opt.quick) {
+    await page.click("#poopBtn");   // みずを すいとらずに だす → やわらか うんち
   } else if (type === "absorb") {
     for (const el of await page.$$("[data-drop]")) { await el.dispatchEvent("pointerdown"); await page.waitForTimeout(120); }
   } else if (type === "breathe") {
@@ -126,6 +128,11 @@ async function playCourse(page, ci, opt, shots) {
   for (const vp of VIEWPORTS) {
     const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height }, isMobile: !!vp.isMobile, hasTouch: !!vp.hasTouch, deviceScaleFactor: 1 });
     const page = await ctx.newPage();
+    // よみあげを ぬすみぎき（ほんとうの こえは ださない）
+    await page.addInitScript(() => {
+      window.__said = [];
+      if (window.speechSynthesis) window.speechSynthesis.speak = (u) => { if (u.volume !== 0) window.__said.push(u.text); };
+    });
     page.on("pageerror", (e) => errors.push(vp.name + ": " + e.message));
     page.on("console", (m) => { if (m.type() === "error") errors.push(vp.name + ": " + m.text()); });
     await page.goto(URL);
@@ -138,10 +145,26 @@ async function playCourse(page, ci, opt, shots) {
       await page.click("#mHome");
     }
     // ぶんき: よく かまない＋みず なし
-    const log = await playCourse(page, 0, { quick: true }, null);
+    const log = await playCourse(page, 0, { quick: true }, path.join(OUT, vp.name + "-q"));
+    await page.screenshot({ path: path.join(OUT, vp.name + "-q-clear.png") });
     const end = await page.textContent("#mBody .end-title");
-    console.log(vp.name, "ぶんき（かまない・みず なし）:", end);
+    console.log(vp.name, "ぶんき（かまない・みず なし・すいとらない）:", end);
+    if (end.indexOf("やわらか") < 0) errors.push(vp.name + ": すいとらないのに やわらか うんちに ならない");
+    const said = await page.evaluate(() => window.__said);
+    const bad = said.filter((t) => /[\u4e00-\u9fff]|[\u{1F300}-\u{1FAFF}]/u.test(t));
+    console.log(vp.name, "よみあげ", said.length, "かい。れい:", said.slice(0, 3).join(" ／ ").slice(0, 160));
+    if (said.length < 10) errors.push(vp.name + ": よみあげが すくない");
+    if (bad.length) errors.push(vp.name + ": よみあげに 漢字・えもじ: " + bad[0]);
     await page.click("#mHome");
+    // よみあげ オフ → よまない
+    await page.click('.course[data-course="1"]'); await page.waitForTimeout(1600);
+    await page.waitForSelector("#travel", { state: "hidden", timeout: 10000 });
+    await page.click("#voiceBtn");
+    const n0 = await page.evaluate(() => window.__said.length);
+    await page.click("#replayBtn");   // 「よむ」を おすと オンに もどって よむ
+    const n1 = await page.evaluate(() => window.__said.length);
+    if (n1 !== n0 + 1) errors.push(vp.name + ": もういちど よむ が うごかない");
+    await page.click("#backBtn");
     await page.screenshot({ path: path.join(OUT, vp.name + "-home-after.png") });
     await page.click("#zukanBtn");
     await page.screenshot({ path: path.join(OUT, vp.name + "-zukan.png"), fullPage: true });

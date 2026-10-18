@@ -248,6 +248,13 @@ var KaradaArt = (function () {
   /* ---------- うんち ---------- */
   function poop(kind) {
     var f = '<g><circle cx="-9" cy="-2" r="2.6" fill="#3b2314"/><circle cx="9" cy="-2" r="2.6" fill="#3b2314"/><path d="M-6 6 Q0 11 6 6" stroke="#3b2314" stroke-width="2" fill="none" stroke-linecap="round"/></g>';
+    if (kind === "soft") {
+      // みずっぽい やわらか うんち（ぺたっと ひろがる）
+      return '<path d="M-50 14 Q-56 4 -42 0 Q-36 -14 -18 -12 Q-8 -24 10 -16 Q28 -20 34 -6 Q52 -4 50 10 Q54 20 36 20 Q20 26 0 22 Q-20 26 -36 21 Q-52 22 -50 14Z" fill="#c48a5c" stroke="#8a5a3c" stroke-width="2.5"/>' +
+        '<g fill="#a5d8ff" opacity=".85"><ellipse cx="-44" cy="24" rx="7" ry="3"/><ellipse cx="44" cy="24" rx="8" ry="3"/><ellipse cx="-58" cy="18" rx="4" ry="2"/></g>' +
+        '<path d="M-30 6 Q-10 0 14 4" stroke="#d9a777" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+        '<g transform="translate(0 4)"><circle cx="-9" cy="-2" r="2.6" fill="#3b2314"/><circle cx="9" cy="-2" r="2.6" fill="#3b2314"/><path d="M-6 7 Q0 4 6 7" stroke="#3b2314" stroke-width="2" fill="none" stroke-linecap="round"/></g>';
+    }
     if (kind === "koro") {
       return '<g fill="#8a5a3c" stroke="#5c3a24" stroke-width="2"><circle cx="-26" cy="8" r="11"/><circle cx="-6" cy="12" r="10"/><circle cx="14" cy="8" r="11"/><circle cx="32" cy="12" r="9"/><circle cx="4" cy="-8" r="14"/></g>' +
         '<g transform="translate(4 -9) scale(.8)">' + f + "</g>";

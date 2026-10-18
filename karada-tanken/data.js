@@ -96,18 +96,25 @@ var KaradaData = (function () {
           words: ["shocho", "jumo", "eiyo"] },
         { id: "daicho", org: "daicho", icon: "💩", place: "{大腸|だいちょう}", map: [74, 232], art: "colon",
           game: { type: "absorb", drops: 6, dropsDry: 3 },
-          intro: "{大腸|だいちょう}では みずを すいとるよ。みずの つぶ 💧 を タップして、からだに もどそう。",
-          done: { text: "うんちが できた！ さいごは おしりから「ぷっ」……？" },
-          facts: ["{大腸|だいちょう}の ながさは およそ 1.5m。のこった ものから みずを すいとって うんちに するよ。", "おならは のみこんだ くうきや、{大腸|だいちょう}に すむ ちいさな いきもの（さいきん）が つくる ガスだよ。"],
+          intro: "{大腸|だいちょう}では みずを すいとるよ。みずの つぶ 💧 を タップして、からだに もどそう。すいとらずに「うんちを だす」と どう なるかな？",
+          done: {
+            banana: "ちょうど よく みずを すいとって、うんちが できた！ さいごは おしりから「ぷっ」……？",
+            koro: "おみずが すくなくて、かたい うんちに なっちゃった。さいごは おしりから「ぷっ」……？",
+            soft: "みずを あまり すいとらなかったから、やわらかい うんちに なったよ。さいごは おしりから「ぷっ」……？"
+          },
+          facts: ["{大腸|だいちょう}の ながさは およそ 1.5m。のこった ものから みずを すいとって うんちに するよ。", "みずを すいとらないと やわらかい うんちに、すいとりすぎたり おみずが たりなかったり すると かたい うんちに なるよ。", "おならは のみこんだ くうきや、{大腸|だいちょう}に すむ ちいさな いきもの（さいきん）が つくる ガスだよ。"],
           words: ["daicho", "unchi", "shoka"] }
       ],
-      /* さいごの けっか（flags: well = よく かんだ / water = みずを のんだ） */
-      endings: [
-        { well: true,  water: true,  poop: "banana", title: "バナナ うんち！", text: "よく かんで、おみずも のんだから、つかえずに すすんで すっきり バナナ うんち。だいせいこう！" },
-        { well: true,  water: false, poop: "koro",   title: "コロコロ うんち", text: "よく かめたけど、おみずが たりなくて うんちが かたく なっちゃった。でにくい ときは おみずを のもう。" },
-        { well: false, water: true,  poop: "banana", title: "ゆっくり すすんだ たび", text: "おみずの おかげで うんちは でたけど、よく かまなかったから {食道|しょくどう}で つかえそうに なったり、{胃|い}で じかんが かかったり したね。" },
-        { well: false, water: false, poop: "koro",   title: "たいへんな たび", text: "かまずに のみこんで、おみずも なし……。つかえそうに なって、うんちも コロコロ。つぎは よく かんで、おみずも のもうね。" }
-      ]
+      /* さいごの けっか。うんちの かたさ（flags.poop）＋ よく かんだか（flags.well） */
+      endings: {
+        banana: { title: "バナナ うんち！", text: "{大腸|だいちょう}で みずを ちょうど よく すいとれたから、ほどよい かたさの バナナ うんち。だいせいこう！" },
+        koro:   { title: "コロコロ うんち", text: "おみずが たりないと、{大腸|だいちょう}で みずを とられて うんちが かたく なるよ。でにくい ときは おみずを のもう。" },
+        soft:   { title: "やわらか うんち", text: "{大腸|だいちょう}で みずを あまり すいとらなかったから、みずっぽい やわらかい うんちに なったよ。おなかを こわした ときの「げり」も、みずが すいとられない ことで おきるんだ。" }
+      },
+      chewNote: {
+        well: "よく かめたので、{食道|しょくどう}も {胃|い}も するする すすんだね。",
+        quick: "よく かまなかったので、{食道|しょくどう}で つかえそうに なったり、{胃|い}で じかんが かかったり したね。"
+      }
     },
     {
       id: "shinzo", emoji: "❤️", name: "しんぞう と はい", sub: "{血液|けつえき}の じゅんかん", color: "#c92a2a", tint: "#ffe3e3",
@@ -215,16 +222,19 @@ var KaradaData = (function () {
 
   var GAME_TYPES = ["chew", "choice", "push", "stir", "nutrient", "absorb", "breathe", "beat", "explore", "bones", "muscle"];
 
+  /* だいちょうで すいとった みずの わりあい → うんちの かたさ */
+  function poopKind(got, need, water) {
+    if (got < need / 2) return "soft";
+    return water === false ? "koro" : "banana";
+  }
   function ending(flags) {
     var c = COURSES[0];
-    for (var i = 0; i < c.endings.length; i++) {
-      var e = c.endings[i];
-      if (e.well === !!flags.well && e.water === !!flags.water) return e;
-    }
-    return c.endings[0];
+    var poop = flags.poop || (flags.water === false ? "koro" : "banana");
+    var e = c.endings[poop];
+    return { poop: poop, title: e.title, text: e.text + " " + c.chewNote[flags.well === false ? "quick" : "well"] };
   }
 
-  return { WORDS: WORDS, COURSES: COURSES, BONES: BONES, GAME_TYPES: GAME_TYPES, ending: ending };
+  return { WORDS: WORDS, COURSES: COURSES, BONES: BONES, GAME_TYPES: GAME_TYPES, ending: ending, poopKind: poopKind };
 })();
 
 if (typeof module !== "undefined" && module.exports) module.exports = KaradaData;

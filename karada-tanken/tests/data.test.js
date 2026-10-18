@@ -62,8 +62,19 @@ test("コース1: しょうかの じゅんばん と ぶんき", () => {
   assert.ok(flags.has("water"), "みずの ぶんき");
   for (const well of [true, false]) for (const water of [true, false]) {
     const e = D.ending({ well, water });
-    assert.equal(e.well, well); assert.equal(e.water, water);
+    assert.equal(e.poop, water ? "banana" : "koro");
+    assert.ok(e.title && e.text);
   }
+  // だいちょうで みずを すいとらないと やわらかい うんち
+  assert.equal(D.poopKind(0, 6, true), "soft");
+  assert.equal(D.poopKind(2, 6, true), "soft");
+  assert.equal(D.poopKind(3, 6, true), "banana");
+  assert.equal(D.poopKind(6, 6, true), "banana");
+  assert.equal(D.poopKind(3, 3, false), "koro");
+  assert.equal(D.poopKind(1, 3, false), "soft");
+  assert.equal(D.ending({ well: true, water: true, poop: "soft" }).title, "やわらか うんち");
+  const daicho = D.COURSES[0].scenes.find((s) => s.id === "daicho");
+  for (const k of ["banana", "koro", "soft"]) assert.ok(daicho.done[k], "だいちょうの done." + k);
 });
 
 test("すうじは りかの はんいで「およそ」", () => {

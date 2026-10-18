@@ -12,7 +12,7 @@
   var NS = "http://www.w3.org/2000/svg";
 
   /* ---------- ほぞん ---------- */
-  var save = { sound: true, fart: true, badges: {}, words: {}, clears: {} };
+  var save = { sound: true, fart: true, voice: true, badges: {}, words: {}, clears: {} };
   try {
     var raw = localStorage.getItem(SKEY);
     if (raw) {
@@ -20,6 +20,7 @@
       if (p && typeof p === "object") {
         save.sound = p.sound !== false;
         save.fart = p.fart !== false;
+        save.voice = p.voice !== false;
         if (p.badges && typeof p.badges === "object") save.badges = p.badges;
         if (p.words && typeof p.words === "object") save.words = p.words;
         if (p.clears && typeof p.clears === "object") save.clears = p.clears;
@@ -82,6 +83,7 @@
       push: function () { tone(190, 110, .22, "sine", .45); noise(.12, 400, .15); },
       slosh: function () { noise(.28, 500, .35, 0, "lowpass"); },
       pop: function () { tone(700, 1500, .09, "sine", .25); },
+      squish: function () { noise(.35, 260, .35, 0, "lowpass"); tone(160, 90, .3, "sine", .2, .05); },
       drop: function () { tone(1300, 480, .16, "sine", .28); },
       dokun: function (v) {
         v = v || 1;
@@ -110,6 +112,45 @@
     };
   })();
 
+  /* ---------- よみあげ（ブラウザの おんせいごうせい。おんせいファイルは つかわない） ----------
+     ふりがなの ところは「よみ」だけを よむ（plain()）。えもじは よまない。 */
+  var Voice = (function () {
+    var synth = window.speechSynthesis, ja = null, unlocked = false;
+    function pick() {
+      if (!synth) return;
+      var vs = synth.getVoices() || [];
+      ja = vs.filter(function (v) { return v.lang === "ja-JP" && /Kyoko|O-ren|Google/i.test(v.name); })[0] ||
+        vs.filter(function (v) { return v.lang === "ja-JP"; })[0] ||
+        vs.filter(function (v) { return (v.lang || "").indexOf("ja") === 0; })[0] || null;
+    }
+    if (synth) { pick(); synth.onvoiceschanged = pick; }
+    function clean(t) {
+      return plain(t)
+        .replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, " ")
+        .replace(/[「」『』（）()…・]/g, " ").replace(/〜/g, "ー")
+        .replace(/\s+/g, " ").trim();
+    }
+    function on() { return !!synth && save.sound && save.voice; }
+    function stop() { if (synth) synth.cancel(); }
+    function say(text, queue) {
+      if (!on()) return;
+      var t = clean(text); if (!t) return;
+      if (!queue) synth.cancel();
+      var u = new SpeechSynthesisUtterance(t);
+      u.lang = "ja-JP"; if (ja) u.voice = ja;
+      u.rate = .95; u.pitch = 1.15;
+      synth.speak(u);
+    }
+    // iOS は さいしょの よみあげを タップの なかで しないと ならない
+    function unlock() {
+      if (unlocked || !synth) return; unlocked = true;
+      try { var u = new SpeechSynthesisUtterance(" "); u.volume = 0; synth.speak(u); } catch (e) {}
+    }
+    return { say: say, stop: stop, unlock: unlock, on: on, supported: !!synth };
+  })();
+  var lastSay = "";
+  function sayScene(text, queue) { lastSay = text; Voice.say(text, queue); }
+
   /* ---------- ヘッダー・がめん ---------- */
   var view = "home", run = null;
   var VIEWS = ["home", "course", "zukan"];
@@ -129,20 +170,40 @@
     $("soundBtn").setAttribute("aria-pressed", save.sound ? "true" : "false");
   }
   $("soundBtn").addEventListener("click", function () {
-    save.sound = !save.sound; persist(); updateSoundBtn();
-    if (save.sound) { Sound.unlock(); Sound.tap(); }
+    save.sound = !save.sound; persist(); updateSoundBtn(); updateVoiceBtn();
+    if (save.sound) { Sound.unlock(); Sound.tap(); } else Voice.stop();
   });
   $("backBtn").addEventListener("click", function () {
-    Sound.tap();
+    Sound.tap(); Voice.stop();
     if (view === "course") stopGame();
     renderHome(); show("home");
   });
   $("zukanBtn").addEventListener("click", function () {
-    Sound.tap();
+    Sound.tap(); Voice.stop();
     if (view === "course") stopGame();
     renderZukan(); show("zukan");
   });
-  document.addEventListener("pointerdown", function () { if (save.sound) Sound.unlock(); }, { once: true });
+  document.addEventListener("pointerdown", function () { if (save.sound) Sound.unlock(); Voice.unlock(); }, { once: true });
+  function updateVoiceBtn() {
+    var b = $("voiceBtn"); if (!b) return;
+    b.hidden = !Voice.supported;
+    b.textContent = save.voice ? "🗣️ オン" : "🤐 オフ";
+    b.setAttribute("aria-label", save.voice ? "よみあげ オン" : "よみあげ オフ");
+    b.setAttribute("aria-pressed", save.voice ? "true" : "false");
+    b.classList.toggle("off", !save.voice || !save.sound);
+    $("replayBtn").hidden = !Voice.supported;
+  }
+  $("voiceBtn").addEventListener("click", function () {
+    save.voice = !save.voice; persist(); updateVoiceBtn();
+    if (save.voice) { Voice.unlock(); if (!save.sound) toast("🔇 おとが オフだよ。みぎうえの 🔇 を おしてね"); else Voice.say(lastSay || "よみあげ オン"); }
+    else Voice.stop();
+  });
+  $("replayBtn").addEventListener("click", function () {
+    Voice.unlock();
+    if (!save.sound) { toast("🔇 おとが オフだよ。みぎうえの 🔇 を おしてね"); return; }
+    if (!save.voice) { save.voice = true; persist(); updateVoiceBtn(); }
+    Voice.say(lastSay);
+  });
 
   var toastTimer = 0;
   function toast(html) {
@@ -245,6 +306,7 @@
     if (!run || travelDone) return;
     Sound.tap();
     var c = D.COURSES[run.ci];
+    Voice.say("いま ここ。" + c.scenes[run.si].place);
     showTravel(mapSvg(c, run.si, { kid: 22 }), "📍 いま ここ： " + c.scenes[run.si].place, 2500, null);
   });
 
@@ -286,11 +348,19 @@
     stage.setAttribute("data-hit", "0");
     var ctx = makeCtx(sc, art);
     run.game = ctx;
-    function go() { if (run && run.game === ctx) GAMES[sc.game.type](ctx); }
+    var intro = sc.place + "。" + sc.intro + (sc.game.question ? "　" + sc.game.question : "");
+    function go() {
+      if (!(run && run.game === ctx)) return;
+      GAMES[sc.game.type](ctx);
+      sayScene(intro, true);
+    }
+    lastSay = intro;
     if (!opt.travel) { go(); return; }
     var same = prev && prev.org === sc.org;
     var cap = !prev ? "たんけん スタート！ まずは " + sc.place + " から" :
       same ? sc.place + " で つぎの ミッション！" : "つぎは " + sc.place + " へ！";
+    Voice.stop();
+    if (!opt.delay) Voice.say(cap); else setTimeout(function () { if (run && run.game === ctx) Voice.say(cap, true); }, opt.delay * 1000);
     showTravel(mapSvg(c, si, { from: prev && !same ? prev.map : null, kid: 26, begin: opt.delay || 0 }), cap,
       (opt.delay || 0) * 1000 + (same ? 1300 : 1900), go);
   }
@@ -328,6 +398,7 @@
         stage.setAttribute("data-done", "1");
         var txt = html || (sc.done && (sc.done[variant] || sc.done.text)) || "";
         if (txt) { $("result").innerHTML = rb(txt); $("result").hidden = false; }
+        sayScene([txt].concat(sc.facts || []).join("　"));
         if (sc.facts && sc.facts.length) {
           $("facts").innerHTML = sc.facts.map(function (f) { return "<li>" + rb(f) + "</li>"; }).join("");
           $("facts").hidden = false;
@@ -390,6 +461,10 @@
     var all = D.COURSES.every(function (x) { return save.badges[x.id]; });
     body += "<p>ずかんの ことば：<b>" + wordCount() + "</b> / " + Object.keys(D.WORDS).length + "</p>";
     if (all) body += '<p class="end-title">🎓 バッジが 3つ そろった！ きみは からだ はかせ！</p>';
+    var sp = (first ? "からだ はかせ バッジ ゲット！ " : "コース クリア！ ") + c.badge.name + "。";
+    if (run.ci === 0) { var en = D.ending(run.flags); sp += en.title + "。" + en.text; }
+    if (all) sp += "　バッジが 3つ そろった！ きみは からだ はかせ！";
+    setTimeout(function () { sayScene(sp); }, 900);
     openModal(first ? "からだ はかせ バッジ ゲット！" : "コース クリア！", body, [
       { label: "🏠 メニューへ", id: "mHome", fn: function () { renderHome(); show("home"); } },
       { label: "📖 ずかん", id: "mZukan", sub: true, fn: function () { renderZukan(); show("zukan"); } }
@@ -514,6 +589,7 @@
             b.classList.add("ng"); b.disabled = true;
             Sound.miss();
             $("result").innerHTML = rb(o.reply); $("result").hidden = false;
+            sayScene(o.reply);
           }
         } else {
           for (var k in o.set) ctx.flags[k] = o.set[k];
@@ -727,7 +803,11 @@
     var g = ctx.g, f = ctx.flags, path = ctx.$("colonPath"), L = path.getTotalLength();
     var need = f.water === false ? g.dropsDry : g.drops, got = 0;
     var drops = ctx.$("drops"), mass = ctx.$("mass"), poopG = ctx.$("poop");
-    ctx.ctl.innerHTML = '<span class="counter">すいとった みず <b id="dropN">0</b> / ' + need + '</span><button class="big-btn sub" id="fartBtn" aria-pressed="' + save.fart + '">💨 おならの おと ' + (save.fart ? "オン" : "オフ") + "</button>";
+    var made = false;
+    ctx.ctl.innerHTML = '<span class="counter">すいとった みず <b id="dropN">0</b> / ' + need + '</span>' +
+      '<button class="big-btn sm" id="poopBtn">💩 うんちを だす</button>';
+    $("stageSvg").insertAdjacentHTML("beforeend", '<button class="corner-btn" id="fartBtn" aria-pressed="' + save.fart + '">💨 おならの おと ' + (save.fart ? "オン" : "オフ") + "</button>");
+    ctx.on($("poopBtn"), "click", function () { if (!made) makePoop(); });
     ctx.on($("fartBtn"), "click", function () {
       save.fart = !save.fart; persist();
       this.textContent = "💨 おならの おと " + (save.fart ? "オン" : "オフ"); this.setAttribute("aria-pressed", save.fart);
@@ -745,7 +825,7 @@
       (function (el, x, y, nx, ny) {
         ctx.on(el, "pointerdown", function (e) {
           e.preventDefault(); e.stopPropagation();
-          if (el.getAttribute("data-drop") === null) return;
+          if (el.getAttribute("data-drop") === null || made) return;
           el.removeAttribute("data-drop");
           Sound.drop(); got++; $("dropN").textContent = got;
           el.style.transition = "transform .7s ease-in, opacity .7s";
@@ -770,20 +850,26 @@
       });
     });
     function makePoop() {
+      if (made) return; made = true;
+      f.poop = D.poopKind(got, need, f.water);
+      f.absorbed = got;
       var e = D.ending(f);
+      $("poopBtn").disabled = true;
+      Array.prototype.forEach.call(drops.querySelectorAll("[data-drop]"), function (d) { d.removeAttribute("data-drop"); d.style.transition = "opacity .5s"; d.style.opacity = .25; });
       mass.setAttribute("opacity", .25);
       poopG.innerHTML = '<g transform="translate(200 150) scale(1.4)"><g class="bounce">' + A.poop(e.poop) + "</g></g>";
       var b = poopG.querySelector(".bounce");
       b.animate([{ transform: "translateY(-60px) scale(.3)" }, { transform: "translateY(6px) scale(1.1)" }, { transform: "none" }], { duration: 600, easing: "ease-out" });
       Sound.pop();
-      ctx.bubble(e.poop === "koro" ? "コロコロ うんち……" : "バナナ うんち！", 1200);
+      ctx.bubble(e.poop === "koro" ? "コロコロ うんち……" : e.poop === "soft" ? "やわらか うんち……" : "バナナ うんち！", 1200);
+      if (e.poop === "soft") Sound.squish();
       ctx.after(1100, function () {
         Sound.fart();
         var puff = mk("g", { transform: "translate(204 268)" }, poopG);
         puff.innerHTML = '<circle r="16" fill="#d8f5a2" opacity=".8"/><circle cx="16" cy="-6" r="11" fill="#d8f5a2" opacity=".8"/><circle cx="-14" cy="-8" r="10" fill="#d8f5a2" opacity=".8"/>' +
           '<text x="34" y="-14" font-size="24" font-weight="800" fill="#5c940d">ぷっ</text>';
         puff.animate([{ opacity: 0, transform: "translate(204px,268px) scale(.3)" }, { opacity: 1, transform: "translate(204px,262px) scale(1)" }], { duration: 400, fill: "forwards" });
-        ctx.after(500, function () { ctx.finish(); });
+        ctx.after(500, function () { ctx.finish(f.poop); });
       });
     }
   };
@@ -924,6 +1010,7 @@
         Sound.tap();
         $("result").innerHTML = "<b>" + rb(s.label) + "</b>：" + rb(s.text); $("result").hidden = false;
         learn(s.word);
+        sayScene(s.label + "。" + s.text);
         if (el.classList.contains("seen")) return;
         el.classList.add("seen"); seen++;
         el.querySelector(".mark").setAttribute("fill", "#40c057");
@@ -1061,32 +1148,9 @@
     });
   };
 
-  /* ---------- いとしない ズームを ふせぐ ----------
-     iOS Safari は user-scalable=no を むしするので、ピンチ・ダブルタップ・Ctrl+ホイールを とめる */
-  (function () {
-    function stop(e) { e.preventDefault(); }
-    ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) { document.addEventListener(ev, stop, { passive: false }); });
-    document.addEventListener("touchmove", function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
-    var lastEnd = 0;
-    document.addEventListener("touchend", function (e) {
-      var t = Date.now();
-      // すばやい 2かいめの タップ（ダブルタップ）は ズームに ならない ように する。ボタンなどの クリックは そのまま いかす
-      if (t - lastEnd < 350 && e.cancelable) {
-        var el = e.target, tap = el.closest && el.closest("button, input, a, [data-np], [data-drop], [data-spot], [data-piece], .slot, .hot");
-        e.preventDefault();
-        if (tap && tap.tagName === "BUTTON" && !tap.disabled) tap.click();
-      }
-      lastEnd = t;
-    }, { passive: false });
-    document.addEventListener("dblclick", stop, { passive: false });
-    window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
-    document.addEventListener("keydown", function (e) {
-      if ((e.ctrlKey || e.metaKey) && ["+", "-", "=", "0", ";"].indexOf(e.key) >= 0) e.preventDefault();
-    });
-  })();
-
   /* ---------- はじめ ---------- */
   updateSoundBtn();
+  updateVoiceBtn();
   renderHome();
   show("home");
 })();
