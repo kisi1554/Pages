@@ -194,6 +194,8 @@
   });
 
   $('fetched').textContent = FETCHED.replace(/-/g, '/');
+  $('criteria').textContent = `★${CRITERIA.rating}以上・口コミ${CRITERIA.count}件以上` +
+    Object.entries(CRITERIA.areaCount).map(([a, n]) => `（${areaOf[a].name}は小さい店が多いので${n}件以上）`).join('');
   $('lead').textContent = `Googleの口コミで評価が高い横浜のお店 ${SPOTS.length}軒。★と口コミ件数からおすすめ順に並べました。`;
   render();
 })();
