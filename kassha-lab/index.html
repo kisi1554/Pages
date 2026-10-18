@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>かっしゃ ラボ</title>
+<meta name="description" content="かっしゃで おもいものを かるく もちあげよう。ちからと ながさの ひみつ。たいけん・くみたて パズル・中学受験の もんだい。">
+<meta name="theme-color" content="#364fc7">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏗️</text></svg>">
+<link rel="stylesheet" href="style.css?v=d806f01">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <h1>🏗️ かっしゃ ラボ</h1>
+  <button type="button" class="iconbtn" id="soundBtn" aria-label="おと オン/オフ">🔊</button>
+</header>
+
+<div class="tabs" role="tablist">
+  <button type="button" class="tab" role="tab" data-tab="taiken" aria-selected="true"><span class="em">✊</span>たいけん</button>
+  <button type="button" class="tab" role="tab" data-tab="puzzle" aria-selected="false"><span class="em">🧩</span>くみたて</button>
+  <button type="button" class="tab" role="tab" data-tab="mondai" aria-selected="false"><span class="em">✏️</span>もんだい</button>
+</div>
+
+<main>
+  <!-- たいけん -->
+  <section id="pTaiken" class="panel">
+    <div class="chips" id="tkChips"></div>
+    <div class="stage">
+      <div class="boardcol">
+        <svg id="tkSvg" class="board drag" viewBox="0 0 360 500" aria-label="かっしゃの じっけん"></svg>
+        <p class="dragtip" id="tkTip">✊ を <b>した</b>に ドラッグ して ひもを ひこう</p>
+      </div>
+      <div class="side">
+        <div class="meters">
+          <div class="meter force"><span class="ml">ちから</span><span class="mv" id="tkF">0</span><span class="mu">g</span></div>
+          <div class="meter pull"><span class="ml">ひいた ながさ</span><span class="mv" id="tkL">0</span><span class="mu">cm</span></div>
+          <div class="meter lift"><span class="ml">あがった たかさ</span><span class="mv" id="tkH">0</span><span class="mu">cm</span></div>
+        </div>
+        <div class="row">
+          <span class="rowlab">おもり</span>
+          <div class="seg" id="tkW"></div>
+        </div>
+        <div class="say" id="tkSay"></div>
+        <div class="row">
+          <button type="button" class="btn sub" id="tkReset">↩ もどす</button>
+          <button type="button" class="btn" id="tkNext" hidden>つぎの しくみへ ▶</button>
+        </div>
+        <div class="card sum" id="tkSum" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- くみたて パズル -->
+  <section id="pPuzzle" class="panel" hidden>
+    <div class="stagebtns" id="pzList"></div>
+    <div class="stage pz">
+      <div class="card mission" id="pzMission"></div>
+      <div class="boardcol">
+        <svg id="pzSvg" class="board" viewBox="0 0 360 520" aria-label="くみたての ばん"></svg>
+      </div>
+      <div class="side">
+        <div class="dock">
+          <div class="tools" id="pzTools">
+            <button type="button" class="tool" data-tool="fixed"><span class="tico">⊙</span><span class="tname"><ruby>定滑車<rt>ていかっしゃ</rt></ruby></span><span class="tcnt" id="cntF"></span></button>
+            <button type="button" class="tool" data-tool="move"><span class="tico">◎</span><span class="tname"><ruby>動滑車<rt>どうかっしゃ</rt></ruby></span><span class="tcnt" id="cntM"></span></button>
+            <button type="button" class="tool" data-tool="rope"><span class="tico">〰️</span><span class="tname">ひも</span><span class="tcnt" id="cntR"></span></button>
+            <button type="button" class="tool hand" id="pzHand"><span class="tico">✊</span><span class="tname">て で もつ</span></button>
+            <button type="button" class="tool go" id="pzGo"><span class="tico">▶</span><span class="tname">ためす</span></button>
+          </div>
+          <div class="say" id="pzSay"></div>
+        </div>
+        <div class="row">
+          <button type="button" class="btn sub" id="pzUndo">↩ ひとつ もどす</button>
+          <button type="button" class="btn sub" id="pzClear">🗑 ぜんぶ けす</button>
+        </div>
+        <button type="button" class="btn" id="pzNext" hidden>つぎの ステージ ▶</button>
+        <details class="hint"><summary>💡 ヒント</summary><p id="pzHint"></p></details>
+      </div>
+    </div>
+  </section>
+
+  <!-- もんだい モード -->
+  <section id="pMondai" class="panel" hidden>
+    <div id="mqListView">
+      <p class="lead"><ruby>中学受験<rt>ちゅうがくじゅけん</rt></ruby>の <ruby>滑車<rt>かっしゃ</rt></ruby>の もんだい。<ruby>図<rt>ず</rt></ruby>を <ruby>見<rt>み</rt></ruby>て □ に はいる <ruby>数<rt>かず</rt></ruby>を こたえよう。</p>
+      <div class="stagebtns mq" id="mqList"></div>
+    </div>
+    <div id="mqView" hidden>
+      <div class="row top">
+        <button type="button" class="btn sub" id="mqBack">◀ いちらん</button>
+        <span class="mqno" id="mqNo"></span>
+      </div>
+      <div class="stage">
+        <div class="boardcol">
+          <svg id="mqSvg" class="board fig" viewBox="0 0 360 360" aria-label="もんだいの ず"></svg>
+        </div>
+        <div class="side">
+          <div class="card qtext" id="mqText"></div>
+          <div class="answer">
+            <span class="abox" id="mqAns">□</span><span class="aunit" id="mqUnit">g</span>
+          </div>
+          <div class="keypad" id="mqPad"></div>
+          <div class="say" id="mqSay"></div>
+          <div class="row">
+            <button type="button" class="btn sub" id="mqHintBtn">💡 ヒント</button>
+            <button type="button" class="btn" id="mqNext" hidden>つぎの もんだい ▶</button>
+          </div>
+          <ol class="hints" id="mqHints"></ol>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="solver.js?v=d806f01"></script>
+<script src="draw.js?v=d806f01"></script>
+<script src="levels.js?v=d806f01"></script>
+<script src="problems.js?v=d806f01"></script>
+<script src="audio.js?v=d806f01"></script>
+<script src="app.js?v=d806f01"></script>
+</body>
+</html>
