@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>でんちゃんと おしゃべり ｜ でんえんとしせんの でんしゃ</title>
+<meta name="description" content="でんえんとしせんの でんしゃ「でんちゃん」と、こえで おしゃべり・ふみきり・えきめぐりが できる アプリ。">
+<meta name="theme-color" content="#1f9a4a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚃</text></svg>">
+<link rel="stylesheet" href="style.css?v=10c6ecf">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<header class="topbar">
+  <h1>でんちゃんと おしゃべり</h1>
+  <button id="soundBtn" class="icon-btn" type="button" aria-label="おとの オン・オフ">🔊</button>
+</header>
+
+<main class="app">
+
+  <!-- はじめの がめん -->
+  <section id="startScreen" class="screen start">
+    <div class="start-face" id="startFace"></div>
+    <h2 class="start-title"><ruby>田園都市線<rt>でんえんとしせん</rt></ruby>の<br><span class="big">でんちゃん</span></h2>
+    <p class="start-lead">しぶや から ちゅうおうりんかん まで<br>まいにち はしっている でんしゃだよ。<br>こえで おはなし しよう！</p>
+    <label class="name-row">
+      <span>きみの なまえ</span>
+      <input id="nameInput" type="text" maxlength="8" autocomplete="off" placeholder="なまえ">
+    </label>
+    <button id="startBtn" class="big-btn" type="button">🚃 おはなし する</button>
+  </section>
+
+  <!-- おしゃべり がめん -->
+  <section id="talkScreen" class="screen talk" hidden>
+    <div class="stage">
+      <div class="scene-wrap">
+        <div id="ekiSign" class="eki-sign" hidden>
+          <div class="eki-main"><span id="ekiYomi"></span><small id="ekiKanji"></small></div>
+          <div class="eki-sub"><span id="ekiPrev"></span><span id="ekiNext"></span></div>
+        </div>
+        <svg id="scene" class="scene" viewBox="0 0 400 260" role="img" aria-label="でんちゃんと ふみきり">
+          <defs>
+            <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#cdeeff"/>
+              <stop offset="1" stop-color="#f4fbff"/>
+            </linearGradient>
+            <pattern id="tora" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="16" height="16" fill="#ffd60a"/>
+              <rect width="8" height="16" fill="#222"/>
+            </pattern>
+          </defs>
+          <rect width="400" height="260" fill="url(#sky)"/>
+          <!-- けしき（はしると うごく） -->
+          <g id="scenery" class="scenery">
+            <g class="far">
+              <path d="M0 200 Q40 170 80 200 T160 200 T240 200 T320 200 T400 200 T480 200 T560 200 T640 200 T720 200 T800 200 V215 H0Z" fill="#bfe3b0"/>
+              <g fill="#e9e2d0" stroke="#c9bfa6" stroke-width="1.5">
+                <rect x="20" y="178" width="22" height="26"/><rect x="250" y="172" width="30" height="32"/>
+                <rect x="420" y="178" width="22" height="26"/><rect x="650" y="172" width="30" height="32"/>
+              </g>
+              <g fill="#7cc46b">
+                <circle cx="120" cy="190" r="14"/><circle cx="330" cy="188" r="16"/>
+                <circle cx="520" cy="190" r="14"/><circle cx="730" cy="188" r="16"/>
+              </g>
+            </g>
+          </g>
+          <rect x="0" y="212" width="400" height="48" fill="#cbb89a"/>
+          <!-- せんろ -->
+          <g id="track" class="track">
+            <g fill="#8a6a4a">
+              <rect x="0" y="236" width="10" height="10"/><rect x="25" y="236" width="10" height="10"/><rect x="50" y="236" width="10" height="10"/><rect x="75" y="236" width="10" height="10"/>
+              <rect x="100" y="236" width="10" height="10"/><rect x="125" y="236" width="10" height="10"/><rect x="150" y="236" width="10" height="10"/><rect x="175" y="236" width="10" height="10"/>
+              <rect x="200" y="236" width="10" height="10"/><rect x="225" y="236" width="10" height="10"/><rect x="250" y="236" width="10" height="10"/><rect x="275" y="236" width="10" height="10"/>
+              <rect x="300" y="236" width="10" height="10"/><rect x="325" y="236" width="10" height="10"/><rect x="350" y="236" width="10" height="10"/><rect x="375" y="236" width="10" height="10"/>
+              <rect x="400" y="236" width="10" height="10"/>
+            </g>
+          </g>
+          <rect x="0" y="232" width="400" height="4" fill="#666"/>
+
+          <!-- でんちゃん -->
+          <g id="train" class="train">
+            <g class="bob">
+              <!-- パンタグラフ -->
+              <g stroke="#333" stroke-width="3" fill="none" stroke-linecap="round">
+                <path d="M235 40 L255 22 L275 40"/><path d="M245 14 H285"/><path d="M255 22 L265 14"/>
+              </g>
+              <rect id="body" x="150" y="40" width="220" height="176" rx="20" fill="#ffffff" stroke="#1f9a4a" stroke-width="6"/>
+              <!-- まど（えの とおり ひだりうえ） -->
+              <rect x="172" y="60" width="78" height="54" rx="7" fill="#cfeaf8" stroke="#1f9a4a" stroke-width="4"/>
+              <path d="M182 70 l14 0 M182 78 l8 0" stroke="#fff" stroke-width="4" stroke-linecap="round"/>
+              <!-- いきさき ひょうじ -->
+              <rect x="262" y="60" width="88" height="24" rx="4" fill="#222"/>
+              <text id="destText" x="306" y="77" text-anchor="middle" font-size="11" fill="#ffb020" font-weight="700" textLength="80" lengthAdjust="spacingAndGlyphs">ちゅうおうりんかん</text>
+              <!-- まゆ・め -->
+              <g class="brows" stroke="#222" stroke-width="4" stroke-linecap="round">
+                <path class="brow-l" d="M206 112 q14 -8 28 0"/>
+                <path class="brow-r" d="M282 106 q16 -6 34 -2"/>
+              </g>
+              <g class="eyes eyes-normal" fill="#222">
+                <ellipse cx="220" cy="138" rx="11" ry="14"/><ellipse cx="298" cy="134" rx="11" ry="14"/>
+                <circle cx="224" cy="132" r="3.5" fill="#fff"/><circle cx="302" cy="128" r="3.5" fill="#fff"/>
+              </g>
+              <g class="eyes eyes-happy" stroke="#222" stroke-width="5" fill="none" stroke-linecap="round">
+                <path d="M208 140 q12 -16 24 0"/><path d="M286 136 q12 -16 24 0"/>
+              </g>
+              <g class="eyes eyes-wow" fill="#222">
+                <circle cx="220" cy="136" r="15"/><circle cx="298" cy="132" r="15"/>
+                <circle cx="225" cy="130" r="5" fill="#fff"/><circle cx="303" cy="126" r="5" fill="#fff"/>
+              </g>
+              <g class="eyes eyes-think" stroke="#222" stroke-width="5" fill="none" stroke-linecap="round">
+                <path d="M209 138 h22"/><ellipse cx="298" cy="134" rx="10" ry="13" fill="#222" stroke="none"/>
+              </g>
+              <g class="eyes eyes-sleep" stroke="#222" stroke-width="5" fill="none" stroke-linecap="round">
+                <path d="M208 136 q12 10 24 0"/><path d="M286 132 q12 10 24 0"/>
+              </g>
+              <!-- ほっぺ -->
+              <ellipse cx="196" cy="160" rx="12" ry="7" fill="#ffb3b3" opacity=".75"/>
+              <ellipse cx="330" cy="156" rx="12" ry="7" fill="#ffb3b3" opacity=".75"/>
+              <!-- くち -->
+              <path class="mouth mouth-close" d="M236 166 q28 20 52 -4" stroke="#222" stroke-width="5" fill="none" stroke-linecap="round"/>
+              <path class="mouth mouth-open" d="M238 164 q24 34 48 -4 q-24 6 -48 4Z" fill="#7a1f1f" stroke="#222" stroke-width="4" stroke-linejoin="round"/>
+              <!-- みどりの おび・ライト -->
+              <rect x="153" y="184" width="214" height="9" fill="#1f9a4a"/>
+              <rect x="168" y="198" width="26" height="9" rx="4" fill="#fff6b0" stroke="#999" stroke-width="1.5"/>
+              <rect x="326" y="198" width="26" height="9" rx="4" fill="#fff6b0" stroke="#999" stroke-width="1.5"/>
+              <!-- だいしゃ -->
+              <rect x="166" y="214" width="188" height="12" rx="3" fill="#444"/>
+              <circle cx="190" cy="228" r="8" fill="#333"/><circle cx="222" cy="228" r="8" fill="#333"/>
+              <circle cx="298" cy="228" r="8" fill="#333"/><circle cx="330" cy="228" r="8" fill="#333"/>
+            </g>
+          </g>
+
+          <!-- ふみきり -->
+          <g id="crossing" class="crossing" role="button" aria-label="ふみきり">
+            <rect x="10" y="10" width="110" height="240" fill="transparent"/>
+            <rect x="58" y="40" width="9" height="196" fill="#222"/>
+            <rect x="58" y="60" width="9" height="176" fill="url(#tora)"/>
+            <!-- バッテン（ふみきり けいひょう） -->
+            <g transform="translate(62 38)">
+              <rect x="-34" y="-6" width="68" height="12" rx="2" fill="url(#tora)" stroke="#222" stroke-width="1.5" transform="rotate(30)"/>
+              <rect x="-34" y="-6" width="68" height="12" rx="2" fill="url(#tora)" stroke="#222" stroke-width="1.5" transform="rotate(-30)"/>
+            </g>
+            <!-- けいほうとう -->
+            <rect x="34" y="88" width="56" height="7" fill="#222"/>
+            <circle cx="30" cy="92" r="19" fill="#222"/>
+            <circle cx="94" cy="92" r="19" fill="#222"/>
+            <circle id="lampL" class="lamp" cx="30" cy="92" r="13"/>
+            <circle id="lampR" class="lamp" cx="94" cy="92" r="13"/>
+            <!-- ほうこう しじき -->
+            <rect x="36" y="150" width="52" height="26" rx="4" fill="#222" stroke="#ffd60a" stroke-width="3"/>
+            <path id="arrowL" class="arrow" d="M44 163 l10 -8 v16Z"/>
+            <path id="arrowR" class="arrow" d="M80 163 l-10 -8 v16Z"/>
+            <rect x="52" y="161" width="20" height="4" fill="#555"/>
+            <!-- しゃだんき の はこ -->
+            <rect x="48" y="186" width="30" height="22" rx="3" fill="#ffd60a" stroke="#222" stroke-width="2"/>
+          </g>
+          <!-- しゃだんかん -->
+          <g id="arm" class="arm">
+            <rect x="63" y="192" width="334" height="9" rx="4" fill="url(#tora)" stroke="#222" stroke-width="1"/>
+            <g stroke="#ffd60a" stroke-width="2">
+              <path d="M110 201 v10 M135 201 v10 M160 201 v10 M185 201 v10 M210 201 v10 M235 201 v10 M260 201 v10 M285 201 v10 M310 201 v10 M335 201 v10 M360 201 v10 M385 201 v10"/>
+            </g>
+            <rect x="212" y="200" width="44" height="16" fill="#fff" stroke="#e0b400" stroke-width="2"/>
+            <text x="234" y="212" text-anchor="middle" font-size="11" font-weight="700" fill="#222">2020</text>
+          </g>
+          <circle cx="63" cy="197" r="6" fill="#222"/>
+          <!-- ひじょう ボタン -->
+          <g id="ebtn" class="ebtn" role="button" aria-label="ひじょうボタン">
+            <rect x="44" y="214" width="34" height="34" fill="transparent"/>
+            <rect x="48" y="218" width="26" height="24" rx="3" fill="#fff8c4" stroke="#e0b400" stroke-width="3"/>
+            <circle cx="61" cy="230" r="8" fill="#e5231b" stroke="#8a1010" stroke-width="2"/>
+          </g>
+        </svg>
+        <div id="stars" class="stars" aria-label="クイズの ほし">⭐ 0</div>
+      </div>
+      <div class="bubble" id="bubble" aria-live="polite"></div>
+    </div>
+
+    <div class="controls">
+      <div class="chips" id="chips"></div>
+      <form class="input-bar" id="inputBar" autocomplete="off">
+        <button id="micBtn" class="mic-btn" type="button" aria-label="こえで はなす">🎤<span>はなす</span></button>
+        <input id="textInput" type="text" placeholder="もじでも いいよ" enterkeyhint="send">
+        <button class="send-btn" type="submit">おくる</button>
+      </form>
+      <p id="youSaid" class="you-said"></p>
+    </div>
+  </section>
+</main>
+
+<script src="app.js?v=10c6ecf"></script>
+</body>
+</html>
