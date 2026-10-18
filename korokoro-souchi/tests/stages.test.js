@@ -8,11 +8,15 @@ const { STAGES, COURSES } = require("../stages.js");
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const count = (arr) => arr.reduce((m, p) => ((m[p.t] = (m[p.t] || 0) + 1), m), {});
 
-test("ステージは 50こ。1〜15・16〜30 の 2コースと 31〜50 の やさしい コース", () => {
-  assert.equal(STAGES.length, 50);
+test("ステージは 70こ。1〜15・16〜30・31〜50（やさしい）・51〜70（コース3）", () => {
+  assert.equal(STAGES.length, 70);
   STAGES.forEach((st, i) => {
     const n = Object.values(st.inv).reduce((a, b) => a + b, 0), j = i % 15;
-    if (i >= 30) assert.ok(i < 48 ? n === 1 : n === 2, `#${i + 1} やさしい コースは 1こ（さいごの 2つは 2こ）`);
+    if (i >= 50) {
+      // コース3 は だんだん ふえる: 1こ → 2こ → 2〜3こ → 2〜4こ
+      const k = i - 50, min = [1, 2, 2, 2][Math.floor(k / 5)], max = [1, 2, 3, 4][Math.floor(k / 5)];
+      assert.ok(n >= min && n <= max, `#${i + 1} コース3 の ぶひんの かず ${n}`);
+    } else if (i >= 30) assert.ok(i < 48 ? n === 1 : n === 2, `#${i + 1} やさしい コースは 1こ（さいごの 2つは 2こ）`);
     else if (j < 5) assert.equal(n, 1, `#${i + 1}`);
     else if (j < 10) assert.ok(n >= 2 && n <= 3, `#${i + 1}`);
     else assert.ok(n >= (i < 15 ? 2 : 1), `#${i + 1}`);
@@ -25,16 +29,16 @@ test("ステージは 50こ。1〜15・16〜30 の 2コースと 31〜50 の や
     const kinds = new Set(STAGES.slice(a, b).flatMap((st) => st.fixed.concat(st.sol).map((p) => p.t)));
     ["domino", "seesaw", "bucket"].forEach((t) => assert.ok(kinds.has(t), `${a + 1}〜${b} に ${t}`));
   });
-  assert.equal(new Set(STAGES.map((st) => st.name)).size, 50, "なまえが かぶらない");
+  assert.equal(new Set(STAGES.map((st) => st.name)).size, 70, "なまえが かぶらない");
   // コースは すきまなく ぜんぶの ステージを わける
-  const seen = new Array(50).fill(0);
+  const seen = new Array(70).fill(0);
   COURSES.forEach((c) => { for (let i = c.from; i < c.to; i++) seen[i]++; });
   assert.ok(seen.every((v) => v === 1), "コースの わけかた");
   assert.equal(COURSES[0].id, "easy");
 });
 
 test("やさしい コース: こたえの ぶひんを よこに ±20px ずらしても クリアできる", () => {
-  STAGES.slice(30).forEach((st, i) => {
+  STAGES.slice(30, 50).forEach((st, i) => {
     st.sol.forEach((_, k) => {
       [-20, 20].forEach((dx) => {
         const sol = clone(st.sol); sol[k].x += dx;
@@ -101,8 +105,30 @@ test("#11 シーソーで カーン: ドミノを どこに おいても 2こめ
   assert.equal(shelf.t, "board_l");
 });
 
+test("コース3: こたえの ぶひんを ±10px ずらしても クリアできる", () => {
+  STAGES.slice(50, 70).forEach((st, i) => {
+    st.sol.forEach((_, k) => {
+      [-10, -5, 5, 10].forEach((dx) => {
+        const sol = clone(st.sol); sol[k].x += dx;
+        const all = st.fixed.concat(sol);
+        if (!K.canPlace(all.filter((q) => q !== sol[k]), sol[k])) return;
+        assert.ok(K.simulate(clone(all), 25).cleared, `#${i + 51} ${sol[k].t} を ${dx}px ずらすと クリア できない`);
+      });
+    });
+  });
+});
+
+test("コース3: ぶひんの かずが だんだん ふえる", () => {
+  const n = STAGES.slice(50, 70).map((st) => Object.values(st.inv).reduce((a, b) => a + b, 0));
+  for (let g = 1; g < 4; g++) {
+    const avg = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+    assert.ok(avg(n.slice(g * 5, g * 5 + 5)) >= avg(n.slice(g * 5 - 5, g * 5)), `グループ ${g + 1}`);
+  }
+  assert.equal(Math.max(...n), n[19], "さいごが いちばん おおい");
+});
+
 test("けっていてき: おなじ はいちなら まいかい おなじ けっか", () => {
-  [3, 12, 15, 23, 28, 30, 35, 45].forEach((n) => {
+  [3, 12, 15, 23, 28, 30, 35, 45, 67, 70].forEach((n) => {
     const st = STAGES[n - 1], l = st.fixed.concat(st.sol);
     const run = () => {
       const s = K.buildWorld(clone(l)), w = s.world;

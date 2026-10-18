@@ -409,11 +409,119 @@
     add({ name: "ボール と シーソー", hint: "シーソーを おいて、うえから ボールを おとそう",
       fixed: [F("bell", 745, 635)], inv: { steel: 1, seesaw: 1 }, sol: [S("seesaw", 600, 716, 15), S("steel", 490, 400)] }); })();
 
+  /* ---------- 51〜70: コース 3（ステップアップ）----------
+     だんだん むずかしく: 51〜55 は 1こ（むきが だいじな ものも）、56〜60 は 2こ、
+     61〜65 は コース1 の 11〜15 を ひだり みぎ はんてん した もの、66〜70 は ながい れんさ（3〜4こ）。 */
+  function doms(shelf, xs) { return xs.map(function (x) { return F("domino", x, onB(shelf, x, 40)); }); }
+  // 51 ななめの いた（まわさないと だめ）
+  (function () { var s = F("board_m", 160, 250, 8);
+    add({ name: "ななめの いた", hint: "いたを タップして まわそう。ボールを ひだりへ はこぶよ",
+      fixed: [s, ballOn("steel", s, 60), F("bell", 90, 730)], inv: { board_l: 1 }, sol: [S("board_l", 330, 500, -20)] }); })();
+  // 52 ばねで たなへ
+  (function () { var s = F("board_m", 200, 300, 12);
+    add({ name: "ばねで たなへ", hint: "ばねで はねて たかい たなの ベルへ",
+      fixed: [s, ballOn("steel", s, 90), blk(820, 520, 1200, 770), F("bell", 905, 489)], inv: { spring: 1 }, sol: [S("spring", 565, 755)] }); })();
+  // 53 ドミノの すきま 2（みぎから）
+  (function () { var b = F("board_l", 940, 380, -15), shelf = F("board_l", 400, 600, 0);
+    add({ name: "ドミノの あな", hint: "ドミノの ならびの あいている ところを さがそう",
+      fixed: [b, ballOn("rubber", b, 1100), shelf].concat(doms(shelf, [580, 525, 470, 360, 305, 250]), [F("bell", 160, 545)]),
+      inv: { domino: 1 }, sol: [S("domino", 415, onB(shelf, 415, 40))] }); })();
+  // 54 シーソーを おこう（みぎから）
+  (function () { var a = F("board_m", 1040, 300, -15), shelf = F("board_m", 780, 360, 0);
+    add({ name: "シーソー はんたい", hint: "ボールが おちる ところに シーソーを。むきに きを つけて",
+      fixed: [a, ballOn("steel", a, 1140), shelf, F("bell", 225, 635)], inv: { seesaw: 1 }, sol: [S("seesaw", 370, 716, -15)] }); })();
+  // 55 バケツの みち
+  (function () { var a = F("board_m", 150, 150, 20), ramp = F("board_s", 840, 290, 10);
+    add({ name: "バケツの みち", hint: "ゴムだまが バケツに はいれば とびらが あくよ",
+      fixed: [a, ballOn("rubber", a, 60), F("board_s", 551, 215, 0), F("board_m", 700, 320, 90),
+        F("bucket", 680, 560, 0, { gx: 130, gy: -380, gh: 120, d: 100 }), ramp, ballOn("steel", ramp, 777), F("bell", 1100, 730)],
+      inv: { board_s: 1 }, sol: [S("board_s", 372, 215, 0)] }); })();
+  // 56 2つの はし
+  (function () { var a = F("board_m", 150, 200, 6), b = F("board_s", 600, 300, 6), c = blk(950, 420, 1200, 770);
+    add({ name: "2つの はし", hint: "すきまが 2つ。どちらにも いたを わたそう",
+      fixed: [a, ballOn("steel", a, 40), b, c, F("bell", 1050, 389)], inv: { board_m: 1, board_s: 1 },
+      sol: [S("board_m", 410, 260, 10), S("board_s", 810, 360, 25)] }); })();
+  // 57 ばね と かべ
+  (function () { var s = F("board_m", 200, 300, 12);
+    add({ name: "ばね と かべ", hint: "ばねで とんだ ボールを かべで とめて おとそう",
+      fixed: [s, ballOn("steel", s, 90), blk(640, 650, 680, 770), blk(770, 650, 810, 770), F("bell", 725, 735)],
+      inv: { spring: 1, wall: 1 }, sol: [S("spring", 565, 755), S("wall", 790, 420)] }); })();
+  // 58 ファン と いた（ながい さかで かべごえ）
+  (function () {
+    add({ name: "ファン と さか", hint: "ファンで おして、ながい さかで かべを とびこえよう",
+      fixed: [F("rubber", 300, 745), F("wall", 1000, 740), F("bell", 1130, 730)], inv: { fan: 1, board_l: 1 },
+      sol: [S("fan", 230, 735.5), S("board_l", 700, 712, -20)] }); })();
+  // 59 ドミノ 2こ
+  (function () { var b = F("board_l", 260, 380, 15), shelf = F("board_l", 800, 600, 0);
+    add({ name: "ドミノ ふたつ", hint: "あいている ところが 2つ あるよ",
+      fixed: [b, ballOn("rubber", b, 100), shelf].concat(doms(shelf, [620, 730, 785, 895, 950]), [F("bell", 1040, 545)]),
+      inv: { domino: 2 }, sol: [S("domino", 675, onB(shelf, 675, 40)), S("domino", 840, onB(shelf, 840, 40))] }); })();
+  // 60 いた と シーソー
+  (function () { var a = F("board_m", 160, 200, 12);
+    add({ name: "いた と シーソー", hint: "ボールを いたで シーソーまで はこぼう",
+      fixed: [a, ballOn("steel", a, 60), F("wall", 380, 680), F("bell", 1145, 635)], inv: { board_l: 1, seesaw: 1 },
+      sol: [S("board_l", 520, 420, 15), S("seesaw", 995, 716, 15)] }); })();
+
+  // --- 61〜65: コース1 の 11〜15 を ひだり みぎ はんてん して すこし かえた もの ---
+  var C1 = STAGES;   // コース1（1〜15）を はんてん して つかう
+  function mir(p) {
+    var q = JSON.parse(JSON.stringify(p)); q.x = 1200 - q.x; q.a = -(q.a || 0);
+    if (q.t === "bucket") q.gx = -q.gx;
+    if (q.a === 0) q.a = 0;
+    return q;
+  }
+  function mirStage(i, name, hint) { var st = C1[i]; return { name: name, hint: hint, fixed: st.fixed.map(mir), inv: JSON.parse(JSON.stringify(st.inv)), sol: st.sol.map(mir) }; }
+  add(mirStage(10, "はんたい シーソー", "ドミノで ボールを おとして、シーソーで ベルを ならそう"));
+  add(mirStage(11, "はんたい バケツ", "みちを つないで バケツへ。とびらが あいたら ドミノ！"));
+  add(mirStage(12, "はんたい シーソーばし", "シーソーを はしに して ドミノへ"));
+  add(mirStage(13, "はんたい バケツシーソー", "バケツ → とびら → シーソー の じゅんばん"));
+  (function () { var st = mirStage(14, "はんたい だいさくせん", "ドミノ → バケツ → とびら → シーソー → ベル"); st.sol[1].x = 605; add(st); })();
+
+  // --- 66〜70: ながい れんさ（ぶひんの むきも だいじ）---
+  // 66 ばねの むき: ドミノで おとした ゴムだまを、ななめの ばねで ひだりへ もどす
+  (function () { var a = F("board_m", 150, 200, 15), shelf = F("board_l", 520, 300, 0);
+    add({ name: "ばねの むき", hint: "ばねを まわすと はねる むきが かわるよ。ベルは ひだりの した",
+      fixed: [a, ballOn("rubber", a, 60), shelf].concat(doms(shelf, [390, 445, 555, 610]), [ballOn("rubber", shelf, 705), F("bell", 420, 660)]),
+      inv: { domino: 1, spring: 1 }, sol: [S("domino", 500, onB(shelf, 500, 40)), S("spring", 830, 755, -15)] }); })();
+
+  // 67 3だん れんさ: ドミノ → (いた) → バケツ → とびら → てつだま → (シーソー) → ベル
+  (function () { var a = F("board_m", 150, 200, 15), shelf = F("board_l", 520, 300, 0), ramp = F("board_m", 660, 462, -10);
+    add({ name: "3だん れんさ", hint: "ゴムだまを バケツへ。とびらが あいたら てつだまが ひだりへ ころがるよ",
+      fixed: [a, ballOn("rubber", a, 60), shelf].concat(doms(shelf, [390, 445, 555, 610]), [ballOn("rubber", shelf, 705),
+        F("board_m", 190, 420, -15),
+        F("bucket", 940, 600, 0, { gx: -200, gy: -228, gh: 120, d: 100 }), ramp, ballOn("steel", ramp, 776), F("board_m", 1015, 420, 90), blk(555, 640, 580, 770), F("bell", 225, 635)]),
+      inv: { domino: 1, board_s: 1, seesaw: 1 },
+      sol: [S("domino", 500, onB(shelf, 500, 40)), S("board_s", 845, 370, 30), S("seesaw", 360, 716, -15)] }); })();
+
+  // 68 2だん ドミノ: うえの たなから したの たなへ ドミノが つづく。すきまが 3つ
+  (function () { var a = F("board_m", 150, 200, 15), s1 = F("board_l", 540, 300, 0), s2 = F("board_l", 945, 330, 0);
+    add({ name: "2だん ドミノ", hint: "ドミノが たりない ところが 3つ。うえの たなから したの たなへ つなげよう",
+      fixed: [a, ballOn("rubber", a, 60), s1, s2].concat(doms(s1, [410, 520, 630, 685]), doms(s2, [760, 870, 925, 980, 1035, 1090]), [F("bell", 1168, 275)]),
+      inv: { domino: 3 },
+      sol: [S("domino", 465, onB(s1, 465, 40)), S("domino", 575, onB(s1, 575, 40)), S("domino", 815, onB(s2, 815, 40))] }); })();
+
+  // 69・70 ファンで はじめる 3だん れんさ
+  function fanChain(name, hint, gap) {
+    var top = F("board_m", 150, 262, 0), shelf = F("board_l", 520, 300, 0), ramp = F("board_m", 660, 462, -10);
+    var dx = gap ? [390, 445, 555, 610] : [390, 445, 500, 555, 610];
+    var sol = [S("fan", 70, onB(top, 70, 34)), S("board_s", 845, 370, 30), S("seesaw", 360, 716, -15)];
+    if (gap) sol.splice(1, 0, S("domino", 500, onB(shelf, 500, 40)));
+    var inv = { fan: 1, board_s: 1, seesaw: 1 }; if (gap) inv.domino = 1;
+    return { name: name, hint: hint,
+      fixed: [top, ballOn("rubber", top, 180), shelf].concat(doms(shelf, dx), [ballOn("rubber", shelf, 705),
+        F("board_m", 190, 420, -15),
+        F("bucket", 940, 600, 0, { gx: -200, gy: -228, gh: 120, d: 100 }), ramp, ballOn("steel", ramp, 776), F("board_m", 1015, 420, 90), blk(555, 640, 580, 770), F("bell", 225, 635)]),
+      inv: inv, sol: sol };
+  }
+  add(fanChain("ファンで スタート", "さいしょの ゴムだまは ファンで おそう。そのあとは 3だん れんさ", false));
+  add(fanChain("さいごの からくり", "ファン → ドミノ → バケツ → とびら → シーソー → ベル！ 4つの ぶひんで ぜんぶ つなげよう", true));
+
   // ホームで ならべる じゅん（やさしい コースを いちばん うえに）
   var COURSES = [
     { id: "easy", name: "やさしい コース", from: 30, to: 50 },
     { id: "c1", name: "コース 1", from: 0, to: 15 },
-    { id: "c2", name: "コース 2（もっと ステージ）", from: 15, to: 30 }
+    { id: "c2", name: "コース 2（もっと ステージ）", from: 15, to: 30 },
+    { id: "c3", name: "コース 3（ステップアップ）", from: 50, to: 70 }
   ];
 
   var api = { STAGES: STAGES, COURSES: COURSES };
