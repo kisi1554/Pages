@@ -89,7 +89,7 @@
         var b = document.createElement("button");
         b.className = "stage-btn" + (c.id === "easy" ? " easy" : "") + (store.cleared[i] ? " done" : "") + (unlocked(i) ? "" : " lock");
         b.setAttribute("data-i", i);
-        var lv = c.id === "easy" ? "♪" : c.id === "c4" ? "🔥🔥🔥".slice(0, 2 * (Math.floor(k / 10) + 1)) : "★★★★".slice(0, Math.min(4, Math.floor(k / 5) + 1));
+        var lv = c.id === "easy" ? "♪" : c.id === "c4" ? "🔥🔥🔥".slice(0, 2 * (Math.floor(k / 10) + 1)) : c.id === "c5" ? "👑" : "★★★★".slice(0, Math.min(4, Math.floor(k / 5) + 1));
         b.innerHTML = '<span class="lv">' + lv + '</span><span class="n">' + (k + 1) + '</span><span class="nm">' + st.name + "</span>";
         b.setAttribute("aria-label", c.name + " " + (k + 1) + " " + st.name + (store.cleared[i] ? " クリアずみ" : ""));
         b.addEventListener("click", function () {
@@ -135,7 +135,7 @@
     inv = st.inv;
     layout = clone(st.fixed).concat(clone(placedMemo[i] || []));
     var c = courseOf(i);
-    var short = { easy: "やさしい ", c1: "コース1 ", c2: "コース2 ", c3: "コース3 ", c4: "コース4 " }[c.id] || "";
+    var short = { easy: "やさしい ", c1: "コース1 ", c2: "コース2 ", c3: "コース3 ", c4: "コース4 ", c5: "コース5 " }[c.id] || "";
     $("stageNo").textContent = short + (i - c.from + 1) + " / " + (c.to - c.from);
     $("hintText").textContent = st.hint;
     $("hintBtn").hidden = false; $("slotBtn").hidden = true;
@@ -232,6 +232,18 @@
   }
 
   /* ---------- おく・うごかす・まわす・けす ---------- */
+  // いまの ステージの「ボールを おく わく」（じゆう モードは なし）
+  var flashZone = 0;
+  function zones() { return mode === "stage" ? (STAGES[stageIdx].ballZones || null) : null; }
+  function zoneMsg(p) {
+    if (!K.inBallZone(zones(), p)) { toast("ボールは みどりの わくの なかに おいてね"); flashZone = performance.now(); return true; }
+    if (mode === "stage" && (p.t === "steel" || p.t === "rubber" || p.t === "domino" || p.t === "seesaw") && K.touchesBell(layout, p, layout.indexOf(p))) {
+      toast("ベルに くっつけては おけないよ"); return true;
+    }
+    if (mode === "stage" && p.t === "domino" && !K.standsStill(layout, p, layout.indexOf(p))) { toast("ドミノは たなや ゆかの うえに たててね"); return true; }
+    return false;
+  }
+
   function newPart(t, x, y) {
     var p = { t: t, x: snap(x), y: snap(y), a: 0 };
     if (t === "bucket") K.bucketDefaults(p);
@@ -241,7 +253,8 @@
   function tryPlace(t, x, y) {
     if (remaining(t) <= 0) { toast("もう ないよ"); SND.ng(); return false; }
     var p = newPart(t, x, y);
-    if (!K.canPlace(layout, p)) { toast("ここには おけないよ"); SND.ng(); return false; }
+    if (!K.inBallZone(zones(), p)) { toast("ボールは みどりの わくの なかに おいてね"); SND.ng(); flashZone = performance.now(); return false; }
+    if (!K.canPlace(layout, p, -1, zones(), mode === "stage")) { if (!zoneMsg(p)) toast("ここには おけないよ"); SND.ng(); return false; }
     layout.push(p); sel = layout.length - 1;
     if (remaining(t) <= 0) tool = null;
     SND.pop(); changed();
@@ -254,7 +267,7 @@
     if (r === "step") p.a = norm((p.a || 0) + 15 * dir);
     else if (r === "seesaw") { var seq = [-15, 0, 15], k = seq.indexOf(p.a || 0); p.a = seq[((k < 0 ? 1 : k) + dir + 3) % 3]; }
     else if (r === "flip") { K.bucketDefaults(p); p.gx = -p.gx; }
-    if (!K.canPlace(layout, p, i)) {
+    if (!K.canPlace(layout, p, i, zones(), mode === "stage")) {
       layout[i] = before; toast("ぶつかるので まわせないよ"); SND.ng();
     } else SND.click();
     changed();
@@ -294,7 +307,7 @@
     var w = toWorld(e), p = layout[drag.i];
     p.x = snap(drag.ox + w.x - drag.wx); p.y = snap(drag.oy + w.y - drag.wy);
     drag.trash = overTrash(e);
-    drag.valid = !drag.trash && K.canPlace(layout, p, drag.i);
+    drag.valid = !drag.trash && K.canPlace(layout, p, drag.i, zones(), mode === "stage");
     $("trashBtn").classList.toggle("hot", drag.trash);
     rebuild();
   });
@@ -306,7 +319,7 @@
     if (!d.moved) { rotatePart(d.i, 1); return; }
     if (overTrash(e)) { removePart(d.i); return; }
     var p = layout[d.i];
-    if (!d.valid) { p.x = d.ox; p.y = d.oy; toast("ここには おけないよ"); SND.ng(); }
+    if (!d.valid) { var zp = { t: p.t, x: p.x, y: p.y, a: p.a }; p.x = d.ox; p.y = d.oy; if (!zoneMsg(zp)) toast("ここには おけないよ"); SND.ng(); }
     else SND.click();
     changed();
   }
@@ -329,7 +342,7 @@
       if (inCanvas(ev)) {
         var w = toWorld(ev);
         drag.ghost = newPart(t, w.x, w.y);
-        drag.valid = remaining(t) > 0 && K.canPlace(layout, drag.ghost);
+        drag.valid = remaining(t) > 0 && K.canPlace(layout, drag.ghost, -1, zones(), mode === "stage");
       } else drag.ghost = null;
     };
     var up = function (ev) {
@@ -345,7 +358,7 @@
       }
       if (d.ghost && ev.type === "pointerup") {
         if (remaining(t) <= 0) { toast("もう ないよ"); SND.ng(); }
-        else if (!d.valid) { toast("ここには おけないよ"); SND.ng(); }
+        else if (!d.valid) { if (!zoneMsg(d.ghost)) toast("ここには おけないよ"); SND.ng(); }
         else { layout.push(d.ghost); sel = layout.length - 1; SND.pop(); changed(); }
       }
     };
@@ -566,6 +579,25 @@
         K.draw(ctx, drag.ghost, K.build(drag.ghost, -1), { idx: 0 });
         ctx.restore();
         outline(drag.ghost, drag.valid ? "#7048e8" : "#e03131", drag.valid ? [10, 8] : []);
+      }
+      var zs = zones();
+      if (zs) {
+        // ボールを おく わく。ボールを もっている ときと、わくの そとに おこうと した ときは こく
+        var holding = tool === "steel" || tool === "rubber" || (drag && ((drag.kind === "new" && (drag.t === "steel" || drag.t === "rubber")) ||
+          (drag.kind === "move" && layout[drag.i] && (layout[drag.i].t === "steel" || layout[drag.i].t === "rubber"))));
+        var fl = now - flashZone < 900;
+        zs.forEach(function (z) {
+          var left = zs.length && remaining(z.t) > 0;
+          if (!left && !holding && !fl) return;
+          ctx.save();
+          ctx.fillStyle = fl ? "rgba(47,158,68,.28)" : holding ? "rgba(47,158,68,.16)" : "rgba(47,158,68,.08)";
+          ctx.fillRect(z.x0, z.y0, z.x1 - z.x0, z.y1 - z.y0);
+          ctx.strokeStyle = "#2f9e44"; ctx.lineWidth = fl ? 5 : 3; ctx.setLineDash([10, 7]);
+          ctx.strokeRect(z.x0, z.y0, z.x1 - z.x0, z.y1 - z.y0);
+          ctx.setLineDash([]); ctx.fillStyle = "#2b8a3e"; ctx.font = "bold 20px sans-serif"; ctx.textAlign = "center";
+          ctx.fillText((z.t === "steel" ? "てつだま" : "ゴムだま") + "は ここ", (z.x0 + z.x1) / 2, z.y0 > 30 ? z.y0 - 8 : z.y1 + 22);
+          ctx.restore();
+        });
       }
       if (hint) {
         var age = (now - hint.t) / 1000;

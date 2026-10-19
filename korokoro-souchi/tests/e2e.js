@@ -27,8 +27,8 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     };
 
     // ホーム
-    check((await page.locator(".stage-btn").count()) === 100, `${tag}: ステージが 100こ`);
-    check((await page.locator(".stage-btn.lock").count()) === 95, `${tag}: はじめは 5コースの 1ばんめ だけ ひらいている`);
+    check((await page.locator(".stage-btn").count()) === 110, `${tag}: ステージが 110こ`);
+    check((await page.locator(".stage-btn.lock").count()) === 104, `${tag}: はじめは 6コースの 1ばんめ だけ ひらいている`);
     check((await page.locator(".stage-btn").first().getAttribute("data-i")) === "30", `${tag}: やさしい コースが いちばん うえ`);
     await noHScroll("ホーム");
     await page.screenshot({ path: path.join(out, `${tag}-home.png`) });
@@ -113,7 +113,22 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     await page.click("#againBtn").catch(() => {});
 
     // もっと ステージ: 26（シーソー）と 30（バケツ → とびら → シーソー）を こたえで うごかす
-    for (const n of [26, 30, 62, 65, 70, 85, 100]) {
+    // ボールの わく: わくの そとには おけない、なかには おける（ステージ 71）
+    await page.evaluate(() => window.KoroApp.openStage(70));
+    await page.waitForTimeout(200);
+    await measure();
+    const z = await page.evaluate(() => window.KoroStages.STAGES[70].ballZones[0]);
+    const ballTool = page.locator("#toolbox .tool").filter({ hasText: z.t === "steel" ? "てつだま" : "ゴムだま" });
+    await ballTool.click();
+    await page.mouse.click(...at(600, 100));
+    let placed = await page.evaluate(() => window.KoroApp.getLayout().filter((p) => !p.f && (p.t === "steel" || p.t === "rubber")).length);
+    check(placed === 0, `${tag}: わくの そとには ボールを おけない`);
+    await page.screenshot({ path: path.join(out, `${tag}-zone.png`) });
+    await page.mouse.click(...at((z.x0 + z.x1) / 2, (z.y0 + z.y1) / 2));
+    placed = await page.evaluate(() => window.KoroApp.getLayout().filter((p) => !p.f && (p.t === "steel" || p.t === "rubber")).length);
+    check(placed === 1, `${tag}: わくの なかには ボールを おける`);
+
+    for (const n of [26, 30, 65, 85, 100, 105, 110]) {
       await page.evaluate((i) => { window.KoroApp.openStage(i); window.KoroApp.placeSolution(); }, n - 1);
       await page.waitForTimeout(200);
       await page.screenshot({ path: path.join(out, `${tag}-stage${n}-edit.png`) });

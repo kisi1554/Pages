@@ -183,7 +183,45 @@
   }
   // p を おいて いいか（うごく ものが めりこまない・そとに でない）
   // うごかない もの どうし（いた と かべ、いた と ゆか など）は かさなって よい
-  function canPlace(layout, p, skip) {
+  // zones: ステージの「ボールを おく わく」[{ t, x0, y0, x1, y1 }]。こどもが おく ボールは おなじ しゅるいの わくの なかだけ
+  function inBallZone(zones, p) {
+    if (!zones || !zones.length || p.f || (p.t !== "steel" && p.t !== "rubber")) return true;
+    for (var i = 0; i < zones.length; i++) {
+      var z = zones[i];
+      if (z.t === p.t && p.x >= z.x0 && p.x <= z.x1 && p.y >= z.y0 && p.y <= z.y1) return true;
+    }
+    return false;
+  }
+  // ステージの きまり（strict）: こどもが おく ドミノは たなや ゆかの うえに たてる（そらから おとせない）。
+  // こどもが おく ボール・ドミノ・シーソーは ベルに くっつけて おけない。
+  function standsStill(layout, p, skip) {
+    var w = new P.World();
+    w.add(new B({ shape: "b", hw: 800, hh: 40, x: W / 2, y: FLOOR + 40, e: 0.2, mu: 0.6 }));
+    for (var j = 0; j < layout.length; j++) {
+      if (j === skip) continue;
+      var bs = build(layout[j], j);
+      for (var k = 0; k < bs.length; k++) if (bs[k].mode !== DYN) w.add(bs[k]);
+    }
+    var d = build(p, -1)[0], x0 = d.x, y0 = d.y, a0 = d.a;
+    w.add(d);
+    for (var i = 0; i < 36; i++) w.step();
+    return Math.abs(d.x - x0) < 3 && Math.abs(d.y - y0) < 3 && Math.abs(d.a - a0) < 0.05;
+  }
+  function touchesBell(layout, p, skip) {
+    var mine = build(p, -1);
+    for (var j = 0; j < layout.length; j++) {
+      if (j === skip || layout[j].t !== "bell") continue;
+      var b = layout[j], big = new B({ shape: "c", r: 30 + 6, x: b.x, y: b.y });
+      for (var i = 0; i < mine.length; i++) if (P.overlap(mine[i], big, 0)) return true;
+    }
+    return false;
+  }
+  function canPlace(layout, p, skip, zones, strict) {
+    if (!inBallZone(zones, p)) return false;
+    if (strict && !p.f && (p.t === "steel" || p.t === "rubber" || p.t === "domino" || p.t === "seesaw")) {
+      if (touchesBell(layout, p, skip)) return false;
+      if (p.t === "domino" && !standsStill(layout, p, skip)) return false;
+    }
     var r = partBox(p);
     if (r[0] < 0 || r[2] > W || r[1] < 0 || r[1] > FLOOR - 6) return false;
     var mine = build(p, -1), floor = new B({ shape: "b", hw: 800, hh: 40, x: W / 2, y: FLOOR + 40 });
@@ -486,7 +524,7 @@
 
   var api = {
     W: W, H: H, FLOOR: FLOOR, BALL_R: BALL_R, TYPES: TYPES, ORDER: ORDER, DEG: DEG,
-    build: build, buildWorld: buildWorld, simulate: simulate, canPlace: canPlace, pick: pick,
+    build: build, buildWorld: buildWorld, simulate: simulate, canPlace: canPlace, inBallZone: inBallZone, standsStill: standsStill, touchesBell: touchesBell, pick: pick,
     rotateStep: rotateStep, bucketDefaults: bucketDefaults, draw: draw, icon: icon, partBox: partBox
   };
   root.KoroParts = api;
