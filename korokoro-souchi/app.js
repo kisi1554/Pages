@@ -252,7 +252,7 @@
 
   function tryPlace(t, x, y) {
     if (remaining(t) <= 0) { toast("もう ないよ"); SND.ng(); return false; }
-    var p = newPart(t, x, y);
+    var p = K.seatDomino(layout, newPart(t, x, y), -1);
     if (!K.inBallZone(zones(), p)) { toast("ボールは みどりの わくの なかに おいてね"); SND.ng(); flashZone = performance.now(); return false; }
     if (!K.canPlace(layout, p, -1, zones(), mode === "stage")) { if (!zoneMsg(p)) toast("ここには おけないよ"); SND.ng(); return false; }
     layout.push(p); sel = layout.length - 1;
@@ -285,6 +285,7 @@
     var i = K.pick(layout, w.x, w.y, tol);
     if (i >= 0) {
       if (layout[i].f) {
+        if (tool) { tryPlace(tool, w.x, w.y); return; }
         toast("グレーの ぶひんは うごかせないよ"); SND.ng();
         flash = { i: i, t: performance.now() };
         if (tool) tryPlace(tool, w.x, w.y);
@@ -306,6 +307,7 @@
     drag.moved = true;
     var w = toWorld(e), p = layout[drag.i];
     p.x = snap(drag.ox + w.x - drag.wx); p.y = snap(drag.oy + w.y - drag.wy);
+    if (p.t === "domino") p.y = K.seatDomino(layout, p, drag.i).y;
     drag.trash = overTrash(e);
     drag.valid = !drag.trash && K.canPlace(layout, p, drag.i, zones(), mode === "stage");
     $("trashBtn").classList.toggle("hot", drag.trash);
@@ -341,7 +343,7 @@
       drag.moved = true;
       if (inCanvas(ev)) {
         var w = toWorld(ev);
-        drag.ghost = newPart(t, w.x, w.y);
+        drag.ghost = K.seatDomino(layout, newPart(t, w.x, w.y), -1);
         drag.valid = remaining(t) > 0 && K.canPlace(layout, drag.ghost, -1, zones(), mode === "stage");
       } else drag.ghost = null;
     };

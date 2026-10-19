@@ -207,6 +207,25 @@
     for (var i = 0; i < 36; i++) w.step();
     return Math.abs(d.x - x0) < 3 && Math.abs(d.y - y0) < 3 && Math.abs(d.a - a0) < 0.05;
   }
+  // ドミノを したの めんに すとんと のせる（5px スナップでも たなの うえに たてられるように）
+  function seatDomino(layout, p, skip) {
+    if (p.t !== "domino") return p;
+    var w = new P.World();
+    w.add(new B({ shape: "b", hw: 800, hh: 40, x: W / 2, y: FLOOR + 40, e: 0.2, mu: 0.6 }));
+    for (var j = 0; j < layout.length; j++) {
+      if (j === skip) continue;
+      var bs = build(layout[j], j);
+      for (var k = 0; k < bs.length; k++) if (bs[k].mode !== DYN) w.add(bs[k]);
+    }
+    var d = build(p, -1)[0], y0 = d.y, a0 = d.a;
+    w.add(d);
+    for (var i = 0; i < 48; i++) w.step();
+    var dy = d.y - y0;
+    if (Math.abs(d.x - p.x) > 2 || Math.abs(d.a - a0) > 0.05 || dy < -6 || dy > 14) return p;
+    var q = {}; for (var key in p) q[key] = p[key];
+    q.y = Math.round(d.y * 10) / 10;
+    return standsStill(layout, q, skip) ? q : p;
+  }
   function touchesBell(layout, p, skip) {
     var mine = build(p, -1);
     for (var j = 0; j < layout.length; j++) {
@@ -524,7 +543,7 @@
 
   var api = {
     W: W, H: H, FLOOR: FLOOR, BALL_R: BALL_R, TYPES: TYPES, ORDER: ORDER, DEG: DEG,
-    build: build, buildWorld: buildWorld, simulate: simulate, canPlace: canPlace, inBallZone: inBallZone, standsStill: standsStill, touchesBell: touchesBell, pick: pick,
+    build: build, buildWorld: buildWorld, simulate: simulate, canPlace: canPlace, inBallZone: inBallZone, seatDomino: seatDomino, standsStill: standsStill, touchesBell: touchesBell, pick: pick,
     rotateStep: rotateStep, bucketDefaults: bucketDefaults, draw: draw, icon: icon, partBox: partBox
   };
   root.KoroParts = api;

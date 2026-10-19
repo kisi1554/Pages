@@ -128,6 +128,17 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     placed = await page.evaluate(() => window.KoroApp.getLayout().filter((p) => !p.f && (p.t === "steel" || p.t === "rubber")).length);
     check(placed === 1, `${tag}: わくの なかには ボールを おける`);
 
+    // ドミノ: たなの うえを タップすると すとんと のる（ステージ 79 ひもを ひっぱれ）
+    await page.evaluate(() => window.KoroApp.openStage(78));
+    await page.waitForTimeout(200);
+    await measure();
+    await page.locator("#toolbox .tool").filter({ hasText: "ドミノ" }).click();
+    await page.mouse.click(...at(1050, 250));
+    await page.mouse.click(...at(1100, 262));
+    const doms = await page.evaluate(() => window.KoroApp.getLayout().filter((p) => !p.f && p.t === "domino").length);
+    check(doms === 2, `${tag}: ステージ79 たなに ドミノを 2こ おける`);
+    await page.screenshot({ path: path.join(out, `${tag}-stage79-domino.png`) });
+
     for (const n of [26, 30, 65, 85, 100, 105, 110]) {
       await page.evaluate((i) => { window.KoroApp.openStage(i); window.KoroApp.placeSolution(); }, n - 1);
       await page.waitForTimeout(200);

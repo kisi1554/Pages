@@ -161,6 +161,22 @@ test("ステージの きまり: ドミノは そらに おけない・ボール
   assert.ok(!K.canPlace(st.fixed, { t: "steel", x: bell.x, y: bell.y - 56, a: 0 }, -1, null, true), "ベルの うえの ボール");
 });
 
+test("ドミノ: 5px スナップの いちでも、たなに すとんと のって おける（#79 ひもを ひっぱれ）", () => {
+  const snap = (v) => Math.round(v / 5) * 5;
+  STAGES.forEach((st, i) => {
+    const lay = st.fixed.slice();
+    for (const q of st.sol) {
+      if (q.t === "domino") {
+        for (const dy of [-5, 0, 5]) {
+          const p = K.seatDomino(lay, { ...q, x: snap(q.x), y: snap(q.y) + dy }, -1);
+          assert.ok(K.canPlace(lay, p, -1, st.ballZones, true), `#${i + 1} ${st.name}: ドミノ (${snap(q.x)}, ${snap(q.y) + dy}) が おけない`);
+        }
+      }
+      lay.push(q);
+    }
+  });
+});
+
 test("コース5: ボール（わくの なか）・ドミノ・シーソーを 1こ おくだけでは クリア できない", () => {
   STAGES.slice(100, 110).forEach((st, i) => {
     for (const t of Object.keys(st.inv)) {
