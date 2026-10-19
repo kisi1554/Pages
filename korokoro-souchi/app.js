@@ -89,7 +89,7 @@
         var b = document.createElement("button");
         b.className = "stage-btn" + (c.id === "easy" ? " easy" : "") + (store.cleared[i] ? " done" : "") + (unlocked(i) ? "" : " lock");
         b.setAttribute("data-i", i);
-        var lv = c.id === "easy" ? "♪" : "★★★★".slice(0, Math.min(4, Math.floor(k / 5) + 1));
+        var lv = c.id === "easy" ? "♪" : c.id === "c4" ? "🔥🔥🔥".slice(0, 2 * (Math.floor(k / 10) + 1)) : "★★★★".slice(0, Math.min(4, Math.floor(k / 5) + 1));
         b.innerHTML = '<span class="lv">' + lv + '</span><span class="n">' + (k + 1) + '</span><span class="nm">' + st.name + "</span>";
         b.setAttribute("aria-label", c.name + " " + (k + 1) + " " + st.name + (store.cleared[i] ? " クリアずみ" : ""));
         b.addEventListener("click", function () {
@@ -135,7 +135,7 @@
     inv = st.inv;
     layout = clone(st.fixed).concat(clone(placedMemo[i] || []));
     var c = courseOf(i);
-    var short = { easy: "やさしい ", c1: "コース1 ", c2: "コース2 ", c3: "コース3 " }[c.id] || "";
+    var short = { easy: "やさしい ", c1: "コース1 ", c2: "コース2 ", c3: "コース3 ", c4: "コース4 " }[c.id] || "";
     $("stageNo").textContent = short + (i - c.from + 1) + " / " + (c.to - c.from);
     $("hintText").textContent = st.hint;
     $("hintBtn").hidden = false; $("slotBtn").hidden = true;

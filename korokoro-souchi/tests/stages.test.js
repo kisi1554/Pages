@@ -8,11 +8,14 @@ const { STAGES, COURSES } = require("../stages.js");
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const count = (arr) => arr.reduce((m, p) => ((m[p.t] = (m[p.t] || 0) + 1), m), {});
 
-test("ステージは 70こ。1〜15・16〜30・31〜50（やさしい）・51〜70（コース3）", () => {
-  assert.equal(STAGES.length, 70);
+test("ステージは 100こ。1〜15・16〜30・31〜50（やさしい）・51〜70（コース3）・71〜100（コース4）", () => {
+  assert.equal(STAGES.length, 100);
   STAGES.forEach((st, i) => {
     const n = Object.values(st.inv).reduce((a, b) => a + b, 0), j = i % 15;
-    if (i >= 50) {
+    if (i >= 70) {
+      const g = Math.floor((i - 70) / 10);
+      assert.ok(n >= 3 + g && n <= 4 + g, `#${i + 1} コース4 の ぶひんの かず ${n}`);
+    } else if (i >= 50) {
       // コース3 は だんだん ふえる: 1こ → 2こ → 2〜3こ → 2〜4こ
       const k = i - 50, min = [1, 2, 2, 2][Math.floor(k / 5)], max = [1, 2, 3, 4][Math.floor(k / 5)];
       assert.ok(n >= min && n <= max, `#${i + 1} コース3 の ぶひんの かず ${n}`);
@@ -29,9 +32,9 @@ test("ステージは 70こ。1〜15・16〜30・31〜50（やさしい）・51�
     const kinds = new Set(STAGES.slice(a, b).flatMap((st) => st.fixed.concat(st.sol).map((p) => p.t)));
     ["domino", "seesaw", "bucket"].forEach((t) => assert.ok(kinds.has(t), `${a + 1}〜${b} に ${t}`));
   });
-  assert.equal(new Set(STAGES.map((st) => st.name)).size, 70, "なまえが かぶらない");
+  assert.equal(new Set(STAGES.map((st) => st.name)).size, 100, "なまえが かぶらない");
   // コースは すきまなく ぜんぶの ステージを わける
-  const seen = new Array(70).fill(0);
+  const seen = new Array(100).fill(0);
   COURSES.forEach((c) => { for (let i = c.from; i < c.to; i++) seen[i]++; });
   assert.ok(seen.every((v) => v === 1), "コースの わけかた");
   assert.equal(COURSES[0].id, "easy");
@@ -105,8 +108,8 @@ test("#11 シーソーで カーン: ドミノを どこに おいても 2こめ
   assert.equal(shelf.t, "board_l");
 });
 
-test("コース3: こたえの ぶひんを ±10px ずらしても クリアできる", () => {
-  STAGES.slice(50, 70).forEach((st, i) => {
+test("コース3・4: こたえの ぶひんを ±10px ずらしても クリアできる", () => {
+  STAGES.slice(50, 100).forEach((st, i) => {
     st.sol.forEach((_, k) => {
       [-10, -5, 5, 10].forEach((dx) => {
         const sol = clone(st.sol); sol[k].x += dx;
