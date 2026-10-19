@@ -217,10 +217,10 @@
   }
 
   /* ---------- がめん きりかえ ---------- */
-  var TITLES = { home: "ぽよよん スーパーボール", free: "じゆう あそび", sukui: "スーパーボール すくい", gacha: "ガチャガチャ", zukan: "ボール ずかん" };
+  var TITLES = { home: "ぽよよん スーパーボール", free: "じゆう あそび", sukui: "スーパーボール すくい", gacha: "ガチャガチャ", zukan: "ボール ずかん", nerai: "ねらって ぽよん", hazumu: "どれが いちばん はねる？" };
   SB.go = function (id, arg) {
     if (SB.cur && SB.cur.exit) SB.cur.exit();
-    ["home", "zukan", "freeTools", "sukuiHud", "gachaHud", "palette", "detail", "result", "counts", "sndPop"].forEach(function (x) { $(x).hidden = true; });
+    ["home", "zukan", "freeTools", "sukuiHud", "gachaHud", "neraiSel", "neraiHud", "hazumuHud", "hzExplain", "palette", "detail", "result", "counts", "sndPop"].forEach(function (x) { $(x).hidden = true; });
     document.body.className = "mode-" + id;
     $("homeBtn").hidden = id === "home";
     $("titleText").textContent = TITLES[id] || SB.modes[id].title || "";
