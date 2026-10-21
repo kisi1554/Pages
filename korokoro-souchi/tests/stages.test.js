@@ -8,11 +8,14 @@ const { STAGES, COURSES } = require("../stages.js");
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const count = (arr) => arr.reduce((m, p) => ((m[p.t] = (m[p.t] || 0) + 1), m), {});
 
-test("ステージは 110こ。1〜15・16〜30・31〜50（やさしい）・51〜70（コース3）・71〜100（コース4）・101〜110（コース5）", () => {
-  assert.equal(STAGES.length, 110);
+test("ステージは 160こ。1〜15・16〜30・31〜50（やさしい）・51〜70（コース3）・71〜100（コース4）・101〜110（コース5）・111〜160（コース6）", () => {
+  assert.equal(STAGES.length, 160);
   STAGES.forEach((st, i) => {
     const n = Object.values(st.inv).reduce((a, b) => a + b, 0), j = i % 15;
-    if (i >= 100) {
+    if (i >= 110) {
+      assert.ok(n >= 4 && n <= 8, `#${i + 1} コース6 の ぶひんの かず ${n}`);
+      if (i > 110) assert.ok(n >= Object.values(STAGES[i - 1].inv).reduce((a, b) => a + b, 0), `#${i + 1} コース6 は だんだん ふえる`);
+    } else if (i >= 100) {
       assert.ok(n >= 6 && n <= 8, `#${i + 1} コース5 の ぶひんの かず ${n}`);
     } else if (i >= 70) {
       const g = Math.floor((i - 70) / 10);
@@ -34,9 +37,9 @@ test("ステージは 110こ。1〜15・16〜30・31〜50（やさしい）・51
     const kinds = new Set(STAGES.slice(a, b).flatMap((st) => st.fixed.concat(st.sol).map((p) => p.t)));
     ["domino", "seesaw", "bucket"].forEach((t) => assert.ok(kinds.has(t), `${a + 1}〜${b} に ${t}`));
   });
-  assert.equal(new Set(STAGES.map((st) => st.name)).size, 110, "なまえが かぶらない");
+  assert.equal(new Set(STAGES.map((st) => st.name)).size, 160, "なまえが かぶらない");
   // コースは すきまなく ぜんぶの ステージを わける
-  const seen = new Array(110).fill(0);
+  const seen = new Array(160).fill(0);
   COURSES.forEach((c) => { for (let i = c.from; i < c.to; i++) seen[i]++; });
   assert.ok(seen.every((v) => v === 1), "コースの わけかた");
   assert.equal(COURSES[0].id, "easy");
@@ -110,8 +113,8 @@ test("#11 シーソーで カーン: ドミノを どこに おいても 2こめ
   assert.equal(shelf.t, "board_l");
 });
 
-test("コース3・4・5: こたえの ぶひんを ±10px ずらしても クリアできる", () => {
-  STAGES.slice(50, 110).forEach((st, i) => {
+test("コース3・4・5・6: こたえの ぶひんを ±10px ずらしても クリアできる", () => {
+  STAGES.slice(50, 160).forEach((st, i) => {
     st.sol.forEach((_, k) => {
       [-10, -5, 5, 10].forEach((dx) => {
         const sol = clone(st.sol); sol[k].x += dx;
@@ -177,14 +180,14 @@ test("ドミノ: 5px スナップの いちでも、たなに すとんと の�
   });
 });
 
-test("コース5: ボール（わくの なか）・ドミノ・シーソーを 1こ おくだけでは クリア できない", () => {
-  STAGES.slice(100, 110).forEach((st, i) => {
+test("コース5・6: ボール（わくの なか）・ドミノ・シーソーを 1こ おくだけでは クリア できない", () => {
+  STAGES.slice(100, 160).forEach((st, i) => {
     for (const t of Object.keys(st.inv)) {
       if (t === "steel" || t === "rubber") continue;   // ボールは「ボールの わく」の テストで しらべる
       if (t !== "domino" && t !== "seesaw") continue;
       const angs = t === "seesaw" ? [0, 15, -15] : [0];
       for (let x = 30; x <= 1170; x += 30) for (let y = 30; y <= 750; y += t === "domino" ? 60 : 30) for (const a of angs) {
-        const p = { t, x, y, a };
+        const p = K.seatDomino(st.fixed, { t, x, y, a }, -1);
         if (!K.canPlace(st.fixed, p, -1, st.ballZones, true)) continue;
         assert.ok(!K.simulate(clone(st.fixed.concat([p])), 12).cleared, `#${i + 101} ${t} を (${x},${y},${a}) に おくだけで クリア`);
       }

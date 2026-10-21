@@ -27,8 +27,8 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     };
 
     // ホーム
-    check((await page.locator(".stage-btn").count()) === 110, `${tag}: ステージが 110こ`);
-    check((await page.locator(".stage-btn.lock").count()) === 104, `${tag}: はじめは 6コースの 1ばんめ だけ ひらいている`);
+    check((await page.locator(".stage-btn").count()) === 160, `${tag}: ステージが 160こ`);
+    check((await page.locator(".stage-btn.lock").count()) === 153, `${tag}: はじめは 7コースの 1ばんめ だけ ひらいている`);
     check((await page.locator(".stage-btn").first().getAttribute("data-i")) === "30", `${tag}: やさしい コースが いちばん うえ`);
     await noHScroll("ホーム");
     await page.screenshot({ path: path.join(out, `${tag}-home.png`) });
@@ -139,7 +139,7 @@ const url = "file://" + path.resolve(__dirname, "../index.html");
     check(doms === 2, `${tag}: ステージ79 たなに ドミノを 2こ おける`);
     await page.screenshot({ path: path.join(out, `${tag}-stage79-domino.png`) });
 
-    for (const n of [26, 30, 65, 85, 100, 105, 110]) {
+    for (const n of [26, 30, 65, 85, 100, 105, 110, 120, 145, 160]) {
       await page.evaluate((i) => { window.KoroApp.openStage(i); window.KoroApp.placeSolution(); }, n - 1);
       await page.waitForTimeout(200);
       await page.screenshot({ path: path.join(out, `${tag}-stage${n}-edit.png`) });
