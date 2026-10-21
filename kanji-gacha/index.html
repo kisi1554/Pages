@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>かんじ ガチャ おもちゃばこ</title>
+<meta name="theme-color" content="#f59f00">
+<link rel="stylesheet" href="style.css?v=7765000">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button class="logo" id="homeBtn" aria-label="ホームへ">🎁 <span>かんじ ガチャ</span></button>
+  <div class="coins" id="coinPill" aria-label="コイン"><span class="coin">か</span><b id="coinN">0</b></div>
+  <button class="icon" id="sndBtn" aria-label="おと オン/オフ">🔊</button>
+  <button class="icon" id="setBtn" aria-label="せってい">⚙️</button>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section class="view" id="v-home">
+    <h1 class="title"><span>かんじ ガチャ</span><span>おもちゃばこ</span></h1>
+    <p class="lead">かんじクイズで コインを あつめて、ガチャを まわそう！</p>
+    <div class="tiles">
+      <button class="tile t-quiz" id="goQuiz">
+        <span class="tile-ico">📝</span>
+        <span class="tile-name">クイズで コイン</span>
+        <span class="tile-sub">5もん で 1セット。せいかいで コイン 1まい</span>
+      </button>
+      <button class="tile t-gacha" id="goGacha">
+        <span class="tile-ico">🎰</span>
+        <span class="tile-name">ガチャを まわす</span>
+        <span class="tile-sub">コイン 3まいで 1かい</span>
+      </button>
+      <button class="tile t-shelf" id="goShelf">
+        <span class="tile-ico">🧸</span>
+        <span class="tile-name">おもちゃばこ</span>
+        <span class="tile-sub" id="shelfSub">0 / 0</span>
+      </button>
+    </div>
+    <p class="home-grade" id="homeGrade"></p>
+  </section>
+
+  <!-- クイズ -->
+  <section class="view" id="v-quiz" hidden>
+    <div class="quiz-head">
+      <div class="dots" id="qDots"></div>
+      <span class="qtype" id="qType">よみ</span>
+    </div>
+    <div class="qcard">
+      <p class="qask" id="qAsk"></p>
+      <div class="qpic" id="qPicWrap" hidden><canvas id="qPic" width="160" height="160"></canvas></div>
+      <div class="qbig" id="qBig"></div>
+      <p class="qhint" id="qHint"></p>
+    </div>
+    <div class="choices" id="qChoices"></div>
+    <div class="qfeed" id="qFeed" hidden>
+      <p class="qres" id="qRes"></p>
+      <p class="qexp" id="qExp"></p>
+      <button class="btn big" id="qNext">つぎへ ▶</button>
+    </div>
+    <div class="qend" id="qEnd" hidden>
+      <p class="qend-title" id="qEndTitle"></p>
+      <div class="qend-coins" id="qEndCoins"></div>
+      <div class="row">
+        <button class="btn big accent" id="qToGacha">ガチャへ 🎰</button>
+        <button class="btn big" id="qAgain">もう 1セット</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ガチャ -->
+  <section class="view" id="v-gacha" hidden>
+    <p class="gacha-msg" id="gMsg">ハンドルを ぐるっと まわしてね</p>
+    <div class="stage" id="stage">
+      <svg class="machine" id="machine" viewBox="0 0 300 420" aria-label="ガチャガチャ">
+        <defs>
+          <clipPath id="domeClip"><circle cx="150" cy="128" r="104"/></clipPath>
+          <radialGradient id="glass" cx="35%" cy="30%" r="80%">
+            <stop offset="0" stop-color="#ffffff" stop-opacity=".9"/>
+            <stop offset=".5" stop-color="#e7f5ff" stop-opacity=".55"/>
+            <stop offset="1" stop-color="#a5d8ff" stop-opacity=".6"/>
+          </radialGradient>
+        </defs>
+        <rect x="118" y="216" width="64" height="20" fill="#adb5bd" stroke="#4a3728" stroke-width="5"/>
+        <circle cx="150" cy="128" r="108" fill="url(#glass)"/>
+        <g id="caps" clip-path="url(#domeClip)"></g>
+        <circle cx="150" cy="128" r="108" fill="none" stroke="#4a3728" stroke-width="6"/>
+        <path d="M80 70 Q100 40 140 34" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" opacity=".8"/>
+        <rect x="34" y="226" width="232" height="184" rx="26" fill="#f59f00" stroke="#4a3728" stroke-width="6"/>
+        <rect x="58" y="240" width="184" height="40" rx="12" fill="#fff" stroke="#4a3728" stroke-width="4"/>
+        <text x="150" y="268" text-anchor="middle" font-size="22" font-weight="900" fill="#4a3728">かんじ ガチャ</text>
+        <rect x="200" y="292" width="46" height="62" rx="10" fill="#fff4db" stroke="#4a3728" stroke-width="4"/>
+        <rect x="219" y="300" width="8" height="28" rx="4" fill="#4a3728"/>
+        <text x="223" y="346" text-anchor="middle" font-size="12" font-weight="900" fill="#4a3728">3まい</text>
+        <rect x="104" y="366" width="92" height="34" rx="14" fill="#343a40" stroke="#4a3728" stroke-width="4"/>
+        <g id="handle" transform="translate(122 316)">
+          <g id="handleRot">
+            <circle r="40" fill="#ffd43b" stroke="#4a3728" stroke-width="5"/>
+            <rect x="-36" y="-10" width="72" height="20" rx="10" fill="#fff" stroke="#4a3728" stroke-width="4"/>
+            <circle cx="0" cy="0" r="6" fill="#4a3728"/>
+          </g>
+        </g>
+      </svg>
+      <div class="hand-hint" id="handHint">👆 ぐるっ</div>
+      <button class="capsule" id="capsule" hidden aria-label="カプセルを あける">
+        <span class="cap-top"></span><span class="cap-bot"></span>
+      </button>
+    </div>
+    <div class="row center">
+      <button class="btn" id="gToQuiz">📝 クイズで コインを ためる</button>
+      <button class="btn" id="gToShelf">🧸 おもちゃばこ</button>
+    </div>
+  </section>
+
+  <!-- おもちゃばこ -->
+  <section class="view" id="v-shelf" hidden>
+    <h2 class="shelf-title">おもちゃばこ <span id="shelfCount"></span></h2>
+    <p class="shelf-sub">タップすると あそべるよ。おなじ ものが でたら コイン 1まい もどってくる</p>
+    <div class="shelf" id="shelf"></div>
+  </section>
+</main>
+
+<!-- でてきた おもちゃ / おもちゃの しょうかい -->
+<div class="modal" id="reveal" hidden>
+  <div class="sheet reveal">
+    <div class="rare-band" id="rvRare"></div>
+    <div class="rv-pic"><div class="rv-burst"></div><canvas id="rvCanvas" width="220" height="220"></canvas></div>
+    <p class="rv-name" id="rvName"></p>
+    <p class="rv-note" id="rvNote"></p>
+    <ul class="rv-kanji" id="rvKanji"></ul>
+    <div class="row center">
+      <button class="btn big accent" id="rvPlay">あそぶ ▶</button>
+      <button class="btn big" id="rvMore">もう 1かい</button>
+      <button class="btn big" id="rvClose">とじる</button>
+    </div>
+  </div>
+</div>
+
+<!-- あそぶ -->
+<div class="modal" id="play" hidden>
+  <div class="sheet play">
+    <p class="pl-name" id="plName"></p>
+    <canvas id="plCanvas" class="pl-canvas" width="360" height="360"></canvas>
+    <p class="pl-msg" id="plMsg"></p>
+    <div class="row center">
+      <button class="btn" id="plReset">↺ もういちど</button>
+      <button class="btn accent" id="plClose">とじる</button>
+    </div>
+  </div>
+</div>
+
+<!-- せってい -->
+<div class="modal" id="settings" hidden>
+  <div class="sheet">
+    <h2>せってい</h2>
+    <p class="set-label">クイズに でる かんじ</p>
+    <div class="grade-btns" id="gradeBtns"></div>
+    <p class="set-note" id="gradeNote"></p>
+    <p class="set-label">おと</p>
+    <div class="row"><button class="btn" id="setSnd"></button></div>
+    <p class="set-label">まちがえた かんじ（また でるよ）</p>
+    <p class="miss-list" id="missList"></p>
+    <div class="row center">
+      <button class="btn accent big" id="setClose">とじる</button>
+    </div>
+    <div class="row center"><button class="btn small danger" id="setReset">さいしょから やりなおす</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="data.js?v=7765000"></script>
+<script src="sound.js?v=7765000"></script>
+<script src="art.js?v=7765000"></script>
+<script src="play.js?v=7765000"></script>
+<script src="app.js?v=7765000"></script>
+</body>
+</html>
