@@ -263,7 +263,7 @@
     def.vx = dir * mv.kb;
     if (!def.onG) def.vy = Math.min(def.vy, -4);
     def.sp += dmg; att.sp += dmg * 1.2;
-    ev(m, "hit", def.x, def.y - def.C.h * 0.6, { who: def.idx, dmg: dmg, iai: !!mv.iai, shot: !!shot, by: att.ch });
+    ev(m, "hit", def.x, def.y - def.C.h * 0.6, { who: def.idx, dmg: dmg, iai: !!mv.iai, shot: !!shot, by: att.ch, combo: def.combo, air: !def.onG });
     m.hitstop = Math.max(m.hitstop, dmg >= 12 ? 8 : 4);
     return "hit";
   }

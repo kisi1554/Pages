@@ -10,7 +10,7 @@
 
   // ---------- セーブ ----------
   var KEY = "samurai-ninja-v1";
-  var save = { story: { samurai: 0, ninja: 0 }, cards: [], snd: true, bgm: true, pick: {} };
+  var save = { story: { samurai: 0, ninja: 0 }, cards: [], snd: true, bgm: true, voice: true, pick: {} };
   try {
     var raw = localStorage.getItem(KEY);
     if (raw) {
@@ -20,12 +20,13 @@
         if (Array.isArray(o.cards)) save.cards = o.cards.filter(function (c) { return typeof c === "string"; });
         if (typeof o.snd === "boolean") save.snd = o.snd;
         if (typeof o.bgm === "boolean") save.bgm = o.bgm;
+        if (typeof o.voice === "boolean") save.voice = o.voice;
         if (o.pick && typeof o.pick === "object") save.pick = o.pick;
       }
     }
   } catch (e) { /* よめなくても あそべる */ }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) { /* むし */ } }
-  A.setOn(save.snd); A.setBgm(save.bgm);
+  A.setOn(save.snd); A.setBgm(save.bgm); A.setVoice(save.voice);
 
   // {漢字|かんじ} → <ruby>
   function rb(s) {
@@ -59,7 +60,7 @@
     b.addEventListener("click", function () {
       save[k] = !save[k]; persist();
       b.setAttribute("aria-pressed", String(save[k]));
-      if (k === "snd") A.setOn(save.snd); else A.setBgm(save.bgm);
+      if (k === "snd") A.setOn(save.snd); else if (k === "voice") A.setVoice(save.voice); else A.setBgm(save.bgm);
       A.unlock(); A.play("tap");
     });
   });
@@ -388,7 +389,10 @@
     B = {
       cfg: cfg, m: m, phase: "intro", pt: 0, t: 0,
       cpu: cfg.mode === "vs" ? null : new AI.CPU(1, cfg.lv, (Date.now() & 0xffff) + 1),
-      fx: new D.Effects(), cam: 700 - view.w / 2, shake: 0, banner: ""
+      fx: new D.Effects(), cam: 700 - view.w / 2, shake: 0, banner: "",
+      // はでな えんしゅつ
+      slow: 0, flash: 0, flashCol: "#fff", zoom: 1, zoomTo: 1, zoomT: 0, focus: { x: 700, y: 300 },
+      cutin: null, speed: 0, combo: null, trails: [[], []], vcool: {}
     };
     m.fighters.forEach(function (f) { f.pose = "idle"; f.bowK = 0; });
     buildPads(cfg);
@@ -433,7 +437,7 @@
     raf = requestAnimationFrame(loop);
     var dt = Math.min(0.1, (now - last) / 1000); last = now;
     if (!paused) {
-      acc += dt;
+      acc += dt * (B && B.slow > 0 ? 0.3 : 1);
       var n = 0;
       while (acc >= 1 / 60 && n < 5) { tick(); acc -= 1 / 60; n++; }
       if (n === 5) acc = 0;
@@ -450,9 +454,22 @@
 
   function tick() {
     var m = B.m, F = m.fighters, cfg = B.cfg;
-    B.t++; B.pt++;
+    B.t++;
+    if (B.slow > 0) B.slow--;
+    B.flash *= 0.86;
+    if (B.speed > 0) B.speed--;
+    if (B.combo && ++B.combo.t > 70) B.combo = null;
+    if (B.zoomT > 0) { if (--B.zoomT === 0) B.zoomTo = 1; }
+    B.zoom += (B.zoomTo - B.zoom) * 0.18;
+    // ひっさつの カットイン の あいだは じかんが とまる
+    if (B.cutin) {
+      if (++B.cutin.t >= B.cutin.len) B.cutin = null;
+      return;
+    }
+    B.pt++;
     B.fx.update();
     if (B.shake > 0) B.shake *= 0.85;
+    recordTrails(F);
     if (B.phase === "intro") {
       var talk = cfg.say ? 110 : 0, pt = B.pt;
       var bowA = talk + 10, bowB = talk + 90;
@@ -460,9 +477,14 @@
         f.pose = pt >= bowA && pt < bowB ? "bow" : "idle";
         f.bowK = pt < bowA ? 0 : pt < bowA + 20 ? (pt - bowA) / 20 : pt < bowB - 20 ? 1 : Math.max(0, (bowB - pt) / 20);
       });
-      if (pt === bowA + 4) { setBanner("れい！"); A.play("don"); }
+      if (pt === 2 && cfg.say) A.say(cfg.say, cfg.p2, 2);
+      if (pt === bowA + 4) { setBanner("れい！"); A.play("don"); A.say("れい", "ref", 3); }
       if (pt === bowB) setBanner("");
-      if (pt === bowB + 10) { setBanner("はじめ！"); A.play("hajime"); }
+      if (pt === bowB - 14) A.play("roll");
+      if (pt === bowB + 10) {
+        setBanner("はじめ！"); A.play("hajime"); A.say("はじめ！", "ref", 3);
+        B.speed = 24; B.flash = 0.35; B.flashCol = "#fff";
+      }
       if (pt >= bowB + 40) { setBanner(""); B.phase = "fight"; B.pt = 0; F.forEach(function (f) { f.pose = null; }); }
     } else if (B.phase === "fight") {
       var in0 = readInput(0), in1 = B.cpu ? B.cpu.input(m) : readInput(1);
@@ -472,13 +494,26 @@
         if (f.st === "atk" && f.sf === 1 && before[i] !== "atk:" + f.mvName) A.play("slash");
       });
       m.events.forEach(onEvent);
-      if (m.over) { B.phase = "ko"; B.pt = 0; }
+      if (m.over) {
+        B.phase = "ko"; B.pt = 0;
+        // しょうぶ あり: スローで ズーム、まっしろに ひかる
+        var L = m.winner >= 0 ? F[1 - m.winner] : F[0];
+        B.slow = 50; B.flash = 1; B.flashCol = "#fff"; B.shake = 16;
+        zoomAt(L.x, L.y - 80, 1.35, 80);
+        A.play("gong"); A.play("roll");
+      }
     } else if (B.phase === "ko") {
       SN.step(m, [{}, {}]);
       var w = m.winner;
       F.forEach(function (f, i) { f.pose = (w === -1 || i !== w) ? "kneel" : "idle"; f.vx = 0; });
-      if (B.pt === 1) setBanner(m.reason === "time" ? "そこまで！" : "");
-      if (B.pt === 60) setBanner("");
+      if (B.pt === 1) {
+        setBanner(m.reason === "time" ? "そこまで！" : "しょうぶ あり！");
+        A.say(m.reason === "time" ? "そこまで！" : "しょうぶ あり！", "ref", 4);
+      }
+      if (B.pt === 40 && w >= 0) A.say("まいった！", F[1 - w].ch, 4);
+      if (B.pt === 40 && w < 0) A.say("ひきわけ！", "ref", 4);
+      if (B.pt === 50) B.fx.petals(B.cam - 40, view.w + 80, 70, -20);
+      if (B.pt === 70) setBanner("");
       if (B.pt >= 150) {
         B.phase = "rei"; B.pt = 0;
         var c = (F[0].x + F[1].x) / 2;
@@ -498,7 +533,7 @@
         if (p < 40) { f.pose = Math.abs(B.reiTo[i] - B.reiFrom[i]) > 8 ? "walk" : "idle"; f.bowK = 0; }
         else { f.pose = "bow"; f.bowK = p < 60 ? (p - 40) / 20 : p < 110 ? 1 : Math.max(0, (130 - p) / 20); }
       });
-      if (p === 44) { setBanner("れい！"); A.play("don"); }
+      if (p === 44) { setBanner("れい！"); A.play("don"); A.say("れい", "ref", 3); }
       if (p === 120) setBanner("");
       if (p >= 140) { B.phase = "result"; showResult(); }
     }
@@ -508,27 +543,100 @@
     updateHud();
   }
 
+  function zoomAt(x, y, z, frames) { B.focus = { x: x, y: y }; B.zoomTo = z; B.zoomT = frames; }
+  // おなじ セリフを つづけて いわない（frames の あいだ）
+  function sayCool(key, text, who, pri, frames) {
+    if (B.vcool[key] && B.t < B.vcool[key]) return;
+    B.vcool[key] = B.t + frames;
+    A.say(text, who, pri);
+  }
+  function startCutin(f, text, sub, len) {
+    var C = D.PAL[f.idx ? B.cfg.pal2 : B.cfg.pal1] || {};
+    var col = f.ch === "samurai" ? (C.hakama || "#34407a") : (C.body || "#3b3266");
+    B.cutin = { t: 0, len: len || 44, info: { ch: f.ch, pal: f.idx ? B.cfg.pal2 : B.cfg.pal1, side: f.x < B.cam + view.w / 2 ? 1 : -1,
+      st: f.ch === "samurai" ? "charge" : "kawa", text: text, sub: sub, col: col, col2: "#a61e4d" } };
+    A.play("cutin");
+  }
+  // ざんぞう: はやく うごく ときだけ すがたを のこす
+  function recordTrails(F) {
+    F.forEach(function (f, i) {
+      var fast = (f.st === "iai" && f.sf <= SN.IAI.dash) || (f.st === "air" && f.jumps === 2 && f.sf < 22) || (f.ch === "ninja" && f.st === "walk") || f.inv > 18;
+      var tr = B.trails[i];
+      if (fast && B.t % 2 === 0) {
+        tr.push({ ch: f.ch, x: f.x, y: f.y, face: f.face, st: f.st, sf: f.sf, mv: f.mv, mvName: f.mvName, pose: f.pose, onG: f.onG, jumps: f.jumps, smoke: 0, inv: 0, idx: f.idx, charge: f.charge, life: 12 });
+        if (tr.length > 6) tr.shift();
+      }
+      tr.forEach(function (g) { g.life--; });
+      B.trails[i] = tr.filter(function (g) { return g.life > 0; });
+    });
+  }
+
   function onEvent(e) {
-    var fx = B.fx;
+    var fx = B.fx, F = B.m.fighters;
     switch (e.t) {
       case "hit":
-        fx.burst(e.x, e.y, e.dmg >= 12 ? 14 : 7, e.iai ? "#fff3bf" : "#ffd43b", e.dmg >= 12 ? 7 : 4.5);
-        fx.text(e.x, e.y - 40, e.iai ? "ズバッ！" : e.shot ? "カッ！" : e.dmg >= 12 ? "ドカッ！" : "ポカッ", e.iai ? "#ffe066" : "#fff", e.iai ? 46 : e.dmg >= 12 ? 40 : 30);
-        A.play("hit", e.dmg >= 12);
-        if (e.dmg >= 12) B.shake = 10;
+        var big = e.dmg >= 12;
+        fx.burst(e.x, e.y, big ? 18 : 8, e.iai ? "#fff3bf" : "#ffd43b", big ? 8 : 5);
+        fx.lines(e.x, e.y, big ? 18 : 9, e.iai ? "#ffe066" : "#fff", big ? 120 : 70);
+        fx.text(e.x, e.y - 40, e.iai ? "ズバッ！" : e.shot ? "カッ！" : big ? "ドカッ！" : "ポカッ", e.iai ? "#ffe066" : "#fff", e.iai ? 56 : big ? 44 : 30);
+        A.play("hit", big);
+        if (e.iai) {
+          // いあい: がめんを よこぎる いっせん＋スロー＋ズーム
+          fx.slash(e.x, e.y, -0.18 * F[1 - e.who].face, 1100);
+          B.flash = 0.85; B.flashCol = "#fff"; B.slow = 28; B.shake = 14;
+          zoomAt(e.x, e.y, 1.28, 40);
+          A.play("boom");
+          if (e.air) fx.text(e.x, e.y - 100, "くうちゅう 1.3ばい！", "#ffd43b", 30);
+        } else if (big) {
+          B.shake = 12; B.flash = 0.25; B.flashCol = "#fff"; B.slow = 8;
+          zoomAt(e.x, e.y, 1.12, 18);
+          A.play("boom");
+          sayCool("ouch" + e.who, "うわっ！", F[e.who].ch, 1, 240);
+        }
+        if (e.combo >= 2) {
+          B.combo = { n: e.combo, who: 1 - e.who, t: 0 };
+          A.play("combo", e.combo);
+          if (e.combo === 4) sayCool("combo" + (1 - e.who), F[1 - e.who].ch === "ninja" ? "それそれっ！" : "てやーっ！", F[1 - e.who].ch, 1, 300);
+        }
         break;
       case "kin": fx.burst(e.x, e.y, 5, "#fff", 4); fx.text(e.x, e.y - 30, "キン！", "#e7f5ff", 34); A.play("kin"); break;
-      case "parry": fx.ring(e.x, e.y, "#ffe066"); fx.burst(e.x, e.y, 10, "#ffe066", 6); fx.text(e.x, e.y - 40, "はじいた！", "#ffe066", 40); A.play("parry"); break;
+      case "parry":
+        fx.ring(e.x, e.y, "#ffe066"); fx.burst(e.x, e.y, 14, "#ffe066", 7); fx.lines(e.x, e.y, 16, "#ffe066", 110);
+        fx.text(e.x, e.y - 40, "はじいた！", "#ffe066", 46); A.play("parry");
+        B.flash = 0.5; B.flashCol = "#ffe066"; B.slow = 18; zoomAt(e.x, e.y, 1.18, 28);
+        sayCool("parry", "みきった！", F[e.who].ch, 2, 120);
+        break;
       case "reflect": fx.text(e.x, e.y - 30, "はねかえした！", "#ffe066", 34); break;
-      case "break": fx.burst(e.x, e.y, 10, "#adb5bd", 5); fx.text(e.x, e.y - 30, "かまえが くずれた！", "#ffc9c9", 30); A.play("brk"); break;
+      case "break":
+        fx.burst(e.x, e.y, 14, "#adb5bd", 6); fx.lines(e.x, e.y, 12, "#ffc9c9", 90); fx.text(e.x, e.y - 30, "かまえが くずれた！", "#ffc9c9", 34); A.play("brk");
+        B.shake = 10; sayCool("brk", "しまった！", F[e.who].ch, 2, 120);
+        break;
       case "throw": A.play("shu"); fx.text(e.x, e.y - 30, "シュッ", "#e9ecef", 24); break;
-      case "doron": fx.smoke(e.x, e.y, 16, 26); fx.text(e.x, e.y - 60, "ドロン！", "#d0bfff", 42); A.play("doron"); break;
-      case "smoke": fx.smoke(e.x, e.y, 22, 30); fx.text(e.x, e.y - 60, "ドロン", "#e9ecef", 34); A.play("doron"); break;
-      case "jump": if (e.n === 2) { fx.ring(e.x, e.y, "rgba(255,255,255,0.7)"); } A.play("jump"); break;
+      case "doron":
+        fx.smoke(e.x, e.y, 24, 30); fx.text(e.x, e.y - 60, "ドロン！", "#d0bfff", 50); A.play("doron"); A.play("whoosh");
+        B.flash = 0.3; B.flashCol = "#d0bfff"; B.slow = 14;
+        sayCool("doron", "ドロン！ こっち だよ", F[e.who].ch, 3, 60);
+        break;
+      case "smoke":
+        fx.smoke(e.x, e.y, 30, 34); fx.text(e.x, e.y - 60, "ドロン", "#e9ecef", 40); A.play("doron");
+        startCutin(F[e.who], "けむりだま！", "すがたが きえる…", 34);
+        sayCool("smoke", "けむりだま！", "ninja", 3, 60);
+        break;
+      case "jump":
+        if (e.n === 2) { fx.ring(e.x, e.y, "rgba(255,255,255,0.7)"); A.play("whoosh"); sayCool("jump" + e.who, "とうっ！", F[e.who].ch, 1, 360); }
+        A.play("jump"); break;
       case "land": fx.dust(e.x, e.y); break;
-      case "charge": fx.text(e.x, e.y - 70, "いあい…", "#ffe066", 30); A.play("charge"); break;
-      case "iai": A.play("zuba"); B.shake = 6; break;
-      case "kawaReady": fx.text(e.x, e.y - 70, "かわりみ の じゅつ！", "#b2f2bb", 28); A.play("seal"); break;
+      case "charge":
+        A.play("charge");
+        startCutin(F[e.who], "いあい ぎり！", "ためて… はなせ！", 44);
+        sayCool("iai", "いあい ぎり！", F[e.who].ch, 3, 60);
+        break;
+      case "iai": A.play("zuba"); A.play("whoosh"); B.shake = 8; B.speed = 16; break;
+      case "kawaReady":
+        A.play("seal");
+        startCutin(F[e.who], "かわりみの じゅつ！", "こうげきを まるたで うける", 40);
+        sayCool("kawa", "かわりみの じゅつ！", F[e.who].ch, 3, 60);
+        break;
       case "ko": A.play("don"); B.shake = 12; break;
     }
   }
@@ -561,13 +669,23 @@
     ctx.setTransform(view.scale, 0, 0, view.scale, 0, 0);
     var sx = B.shake > 0.5 ? (Math.random() - 0.5) * B.shake : 0, sy = B.shake > 0.5 ? (Math.random() - 0.5) * B.shake : 0;
     ctx.save();
-    ctx.translate(-B.cam + sx, sy);
+    // ズーム（ちゅうもく する ところへ よる）
+    var z = B.zoom, cx = B.cam + view.w / 2, cy = 250;
+    var k = Math.min(1, (z - 1) * 4);
+    var ex = cx + (B.focus.x - cx) * k, ey = cy + (B.focus.y - cy) * k;
+    var hw = view.w / (2 * z), hh = 250 / z;
+    ex = Math.max(B.cam + hw, Math.min(B.cam + view.w - hw, ex)); ey = Math.max(hh, Math.min(500 - hh, ey));
+    ctx.translate(view.w / 2 + sx, 250 + sy); ctx.scale(z, z); ctx.translate(-ex, -ey);
     D.drawStage(ctx, B.cfg.stage, B.cam, view.w, t);
     m.logs.forEach(function (l) { D.drawLog(ctx, l); });
     B.fx.draw(ctx, false);
     // こうげき している ほうを てまえに
     var order = (F[0].st === "atk" || F[0].st === "iai") && !(F[1].st === "atk" || F[1].st === "iai") ? [1, 0] : [0, 1];
-    order.forEach(function (i) { D.drawFighter(ctx, F[i], t, i ? B.cfg.pal2 : B.cfg.pal1); });
+    order.forEach(function (i) {
+      var pal = i ? B.cfg.pal2 : B.cfg.pal1;
+      B.trails[i].forEach(function (g) { D.drawFighter(ctx, g, t, pal, g.life / 12 * 0.4); });
+      D.drawFighter(ctx, F[i], t, pal);
+    });
     m.shots.forEach(function (p) { D.drawShuriken(ctx, p.x, p.y, p.rot, 1.2); });
     B.fx.draw(ctx, true);
     // ふきだし
@@ -576,6 +694,29 @@
       F.forEach(function (f, i) { if (f.pose === "kneel") D.bubble(ctx, f.x, f.y - 150, "まいった！"); });
     }
     ctx.restore();
+
+    // ---- がめん ぜんたい の えんしゅつ ----
+    var W = view.w, H = 500;
+    var dashing = F.some(function (f) { return f.st === "iai" && f.sf <= SN.IAI.dash; });
+    if (B.speed > 0 || dashing) D.drawSpeedLines(ctx, W, H, t, dashing ? 0.55 : B.speed / 24 * 0.5);
+    if (B.phase === "fight") F.forEach(function (f, i) {
+      if (f.hp / f.C.hp < 0.3) D.drawDanger(ctx, W, H, f.x < B.cam + W / 2 ? -1 : 1, 0.18 + 0.14 * Math.sin(t * 8));
+    });
+    if (B.combo && B.combo.n >= 2) {
+      var ck = B.combo.t, cs = ck < 8 ? 1.6 - ck / 8 * 0.6 : 1, side = F[B.combo.who].x < B.cam + W / 2 ? 1 : -1;
+      ctx.save();
+      ctx.globalAlpha = ck > 50 ? (70 - ck) / 20 : 1;
+      ctx.translate(side > 0 ? 130 : W - 130, 120); ctx.scale(cs, cs); ctx.rotate(-0.08 * side);
+      ctx.font = "900 56px 'Hiragino Maru Gothic ProN','Rounded Mplus 1c','Kosugi Maru',sans-serif";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+      ctx.lineWidth = 10; ctx.strokeStyle = "#1a1020"; ctx.strokeText(B.combo.n, 0, 0);
+      ctx.fillStyle = B.combo.n >= 4 ? "#ff6b6b" : "#ffd43b"; ctx.fillText(B.combo.n, 0, 0);
+      ctx.font = "900 26px 'Hiragino Maru Gothic ProN','Rounded Mplus 1c','Kosugi Maru',sans-serif";
+      ctx.lineWidth = 7; ctx.strokeText("れんげき！", 0, 44); ctx.fillStyle = "#fff"; ctx.fillText("れんげき！", 0, 44);
+      ctx.restore();
+    }
+    if (B.flash > 0.02) { ctx.save(); ctx.globalAlpha = Math.min(1, B.flash); ctx.fillStyle = B.flashCol; ctx.fillRect(0, 0, W, H); ctx.restore(); }
+    if (B.cutin) D.drawCutin(ctx, W, H, B.cutin.t / B.cutin.len, B.cutin.info, t + B.cutin.t / 60);
   }
 
   // ---------- けっか ----------
@@ -617,7 +758,21 @@
       if (cfg.mode === "vs" || youWin) A.play("win"); else A.play("lose");
     }
     A.stopBgm();
+    if (w >= 0) setTimeout(function () { A.say(w === 0 || cfg.mode === "vs" ? "いい しょうぶ だった！" : "まだまだ しゅぎょう が たりぬ！", w === 0 ? cfg.p1 : cfg.p2, 2); }, 900);
     modal(btns);
+    burstPetals();
+  }
+  // けっかの うえに さくらふぶき（DOM）
+  function burstPetals() {
+    var box = $("#modal");
+    for (var i = 0; i < 26; i++) {
+      var p = document.createElement("i"); p.className = "petal";
+      p.style.left = (Math.random() * 100) + "%";
+      p.style.animationDelay = (Math.random() * 1.2) + "s";
+      p.style.animationDuration = (2.6 + Math.random() * 2) + "s";
+      box.appendChild(p);
+      setTimeout(function (el) { return function () { el.remove(); }; }(p), 5200);
+    }
   }
 
   // ---------- ちょっと まって ----------
@@ -629,6 +784,7 @@
       $("#modal-body").innerHTML = '<h3>ちょっと まって</h3><p class="center">' + (save.snd ? "🔊 おと オン" : "🔇 おと オフ") + "</p>";
       modal([["つづける", true, function () { paused = false; last = performance.now(); A.startBgm(B.song); }],
         [save.snd ? "🔇 おとを けす" : "🔊 おとを だす", false, function () { save.snd = !save.snd; persist(); A.setOn(save.snd); syncTogs(); paused = false; togglePause(); }],
+        [save.voice ? "🤐 こえを けす" : "🗣️ こえを だす", false, function () { save.voice = !save.voice; persist(); A.setVoice(save.voice); syncTogs(); paused = false; togglePause(); }],
         ["やめる", false, function () { paused = false; B = null; show("title"); }]]);
     }
   }

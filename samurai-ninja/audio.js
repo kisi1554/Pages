@@ -3,6 +3,7 @@
    こうかおん: キン！（かたな）・シュッ（しゅりけん）・ドロン（かわりみ／けむり）・ぽこっ（あたり）
               ・たいこ（どん！）・かち の じんぎ
    BGM: わふうの ペンタトニック（よなぬき: ド レ ミ ソ ラ）の ループ。こと っぽい おと＋たいこ
+   こえ: ブラウザの よみあげ（speechSynthesis）。さむらいは ひくめ、にんじゃは たかめ。おとの ファイルは つかわない
    ============================================================ */
 (function (root) {
   "use strict";
@@ -87,6 +88,34 @@
       taiko(t + 0.6, 0.9); taiko(t + 0.8, 0.9); koto(1047, t + 0.8, 0.3); koto(1319, t + 0.8, 0.2);
     },
     lose: function () { var c = ac(); if (!c) return; var t = c.currentTime; [659, 587, 523, 440].forEach(function (f, i) { koto(f, t + i * 0.18, 0.2); }); },
+    // ひっさつの カットイン（シャキーン）
+    cutin: function () {
+      var c = ac(); if (!c) return; var t = c.currentTime;
+      hiss(0.5, 0.4, "bandpass", 800, 9000, 2, t);
+      [1047, 1319, 1568, 2093, 2637].forEach(function (f, i) { tone("sine", f, f * 1.01, 0.7, 0.09, t + 0.04 + i * 0.03); });
+      tone("sawtooth", 110, 55, 0.5, 0.12, t);
+    },
+    // おもい いちげき（ドーン）
+    boom: function () {
+      var c = ac(); if (!c) return; var t = c.currentTime;
+      tone("sine", 120, 30, 0.9, 0.9, t); tone("triangle", 240, 60, 0.4, 0.3, t);
+      hiss(0.5, 0.5, "lowpass", 3000, 150, 1, t);
+    },
+    // れんげき（あたる たびに すこし たかく）
+    combo: function (n) { var f = 520 * Math.pow(1.122, Math.min(10, n || 1)); tone("square", f, f * 1.5, 0.08, 0.06); tone("sine", f * 2, 0, 0.12, 0.08); },
+    // たいこの れんうち（ドドドド…ドン！）
+    roll: function () {
+      var c = ac(); if (!c) return; var t = c.currentTime;
+      for (var i = 0; i < 10; i++) taiko(t + i * 0.055, 0.25 + i * 0.05);
+      taiko(t + 0.65, 1); taiko(t + 0.68, 0.8);
+    },
+    // ドラ（しょうぶ あり）
+    gong: function () {
+      var c = ac(); if (!c) return; var t = c.currentTime;
+      [110, 165.5, 221, 293, 371].forEach(function (f, i) { tone("sine", f, f * 0.98, 2.4, 0.22 / (i + 1), t); });
+      hiss(1.2, 0.18, "bandpass", 900, 400, 1, t);
+    },
+    whoosh: function () { hiss(0.35, 0.3, "bandpass", 300, 2500, 1.2); },
     card: function () { var c = ac(); if (!c) return; var t = c.currentTime; [1047, 1319, 1568, 2093].forEach(function (f, i) { tone("sine", f, 0, 0.4, 0.15, t + i * 0.07); }); }
   };
 
@@ -141,7 +170,44 @@
   }
   function stopBgm() { bgm.playing = false; clearInterval(bgm.timer); }
 
+  // ---------- こえ（よみあげ） ----------
+  var voiceOn = true, jaVoice = null, speakPri = 0, speakEnd = 0;
+  var VOICE = {
+    samurai: { pitch: 0.75, rate: 1.0 },
+    ninja: { pitch: 1.55, rate: 1.2 },
+    ref: { pitch: 1.0, rate: 0.95 }      // ぎょうじ（れい・はじめ・しょうぶあり）
+  };
+  function pickVoice() {
+    try {
+      var vs = root.speechSynthesis.getVoices() || [];
+      jaVoice = vs.filter(function (v) { return /^ja/i.test(v.lang); })[0] || null;
+    } catch (e) { jaVoice = null; }
+  }
+  try {
+    if (root.speechSynthesis) { pickVoice(); root.speechSynthesis.onvoiceschanged = pickVoice; }
+  } catch (e) { /* むし */ }
+  // pri が たかい セリフは ひくい セリフを とめて しゃべる。ひくい セリフは しゃべっている あいだ は がまん
+  function say(text, who, pri) {
+    if (!voiceOn || !on || !text || !root.speechSynthesis) return;
+    pri = pri || 1;
+    var now = Date.now();
+    try {
+      if (now < speakEnd && pri < speakPri) return;
+      root.speechSynthesis.cancel();
+      var u = new root.SpeechSynthesisUtterance(text);
+      var V = VOICE[who] || VOICE.ref;
+      u.lang = "ja-JP"; if (jaVoice) u.voice = jaVoice;
+      u.pitch = V.pitch; u.rate = V.rate; u.volume = 1;
+      speakPri = pri; speakEnd = now + 400 + text.length * 160;
+      u.onend = function () { speakEnd = 0; };
+      root.speechSynthesis.speak(u);
+    } catch (e) { /* むし */ }
+  }
+
   root.SNAudio = {
+    say: say,
+    setVoice: function (v) { voiceOn = !!v; if (!voiceOn) { try { root.speechSynthesis && root.speechSynthesis.cancel(); } catch (e) { /* むし */ } } },
+    isVoice: function () { return voiceOn; },
     play: function (k, a) { if (!on) return; try { if (SFX[k]) SFX[k](a); } catch (e) { /* むし */ } },
     unlock: function () { ac(); },
     setOn: function (v) { on = !!v; if (master) master.gain.value = on ? 0.8 : 0; },

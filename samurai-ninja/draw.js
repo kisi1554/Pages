@@ -142,16 +142,19 @@
   // ============================================================
   //  キャラを かく（あしもと が (0,0)、みぎむき で かいて scale で むきを かえる）
   // ============================================================
-  function drawFighter(ctx, f, t, palKey) {
+  // ghost: ざんぞう の こさ（0〜1）。ざんぞう は かげ・オーラ を かかない
+  function drawFighter(ctx, f, t, palKey, ghost) {
     var sam = f.ch === "samurai";
     var C = PAL[palKey] || PAL[f.ch];
     var P = sam ? samuraiPose(f, t) : ninjaPose(f, t);
     var Lg = sam ? 24 : 23, T = sam ? 44 : 40, HR = sam ? 27 : 25;
     var alpha = f.smoke > 0 ? 0.28 + 0.12 * Math.sin(t * 20) : 1;
     if (f.inv > 0 && (f.inv >> 2) % 2) alpha *= 0.5;
+    if (ghost) alpha *= ghost;
 
     // かげ
     ctx.save();
+    if (ghost) ctx.globalAlpha = 0;
     var gh = SN.GROUND - f.y;
     ellipse(ctx, f.x, SN.GROUND + 2, Math.max(16, 34 - gh * 0.06), 7, "rgba(0,0,0,0.22)");
     ctx.restore();
@@ -286,6 +289,7 @@
 
     ctx.restore();
 
+    if (ghost) return;
     // ため（いあい）
     if (f.st === "charge") {
       ctx.save();
@@ -414,12 +418,24 @@
     for (var i = 0; i < 5; i++) this.add({ k: "smoke", x: x + (i - 2) * 8, y: y - 4, vx: (i - 2) * 0.8, vy: -0.5, life: 20, r: 8, dust: true });
   };
   Effects.prototype.ring = function (x, y, c) { this.add({ k: "ring", x: x, y: y, c: c || "#fff", life: 18 }); };
+  // しゅうちゅうせん（あたった ところから ほうしゃじょうに のびる せん）
+  Effects.prototype.lines = function (x, y, n, c, len) {
+    var a0 = Math.random() * TAU;
+    for (var i = 0; i < n; i++) this.add({ k: "line", x: x, y: y, a: a0 + i * TAU / n + (Math.random() - 0.5) * 0.3, c: c || "#fff", life: 12, len: (len || 90) * (0.7 + Math.random() * 0.6) });
+  };
+  // さくらの はなびら（ふわふわ おちる）
+  Effects.prototype.petals = function (x0, w, n, y0) {
+    for (var i = 0; i < n; i++) this.add({ k: "petal", x: x0 + Math.random() * w, y: (y0 || 0) - Math.random() * 200, vx: (Math.random() - 0.3) * 2.4, vy: 1 + Math.random() * 2, rot: Math.random() * 6, life: 150 + Math.random() * 90, r: 5 + Math.random() * 4, ph: Math.random() * 6 });
+  };
+  // いっせん（がめんを よこぎる おおきな きりつけ）
+  Effects.prototype.slash = function (x, y, ang, len) { this.add({ k: "slash", x: x, y: y, a: ang, len: len || 900, life: 22 }); };
   Effects.prototype.update = function () {
     this.list.forEach(function (e) {
       e.t++;
       if (e.k === "star") { e.x += e.vx; e.y += e.vy; e.vy += 0.25; e.rot += 0.2; }
       if (e.k === "smoke") { e.x += e.vx; e.y += e.vy; e.vx *= 0.95; e.vy *= 0.95; }
       if (e.k === "text") e.y -= 0.8;
+      if (e.k === "petal") { e.x += e.vx + Math.sin(e.t * 0.08 + e.ph) * 0.8; e.y += e.vy; e.rot += 0.07; }
     });
     this.list = this.list.filter(function (e) { return e.t < e.life; });
   };
@@ -436,6 +452,23 @@
       } else if (e.k === "smoke") {
         ctx.globalAlpha = (1 - k) * (e.dust ? 0.5 : 0.85);
         circle(ctx, e.x, e.y, e.r * (1 + k * 0.8), e.dust ? "#c8b59a" : "#e9ecef");
+      } else if (e.k === "line") {
+        var r0 = 20 + k * e.len, r1 = r0 + e.len * (1 - k) * 0.9;
+        ctx.globalAlpha = 1 - k; ctx.strokeStyle = e.c; ctx.lineWidth = 5 * (1 - k) + 1; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(e.x + Math.cos(e.a) * r0, e.y + Math.sin(e.a) * r0); ctx.lineTo(e.x + Math.cos(e.a) * r1, e.y + Math.sin(e.a) * r1); ctx.stroke();
+      } else if (e.k === "petal") {
+        ctx.globalAlpha = Math.min(1, (e.life - e.t) / 30);
+        ctx.translate(e.x, e.y); ctx.rotate(e.rot); ctx.scale(1, 0.55 + 0.45 * Math.sin(e.t * 0.15 + e.ph));
+        ctx.fillStyle = "#ffb3c7"; ctx.beginPath(); ctx.ellipse(0, 0, e.r, e.r * 0.62, 0, 0, TAU); ctx.fill();
+        ctx.fillStyle = "#ff8fab"; ctx.beginPath(); ctx.ellipse(e.r * 0.3, 0, e.r * 0.35, e.r * 0.2, 0, 0, TAU); ctx.fill();
+      } else if (e.k === "slash") {
+        var w = k < 0.25 ? k / 0.25 : 1, fade = k < 0.4 ? 1 : 1 - (k - 0.4) / 0.6;
+        ctx.globalAlpha = fade; ctx.translate(e.x, e.y); ctx.rotate(e.a);
+        var L = e.len * w;
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.moveTo(-e.len / 2, 0); ctx.quadraticCurveTo(-e.len / 2 + L / 2, -14 * (1 - k), -e.len / 2 + L, 0); ctx.quadraticCurveTo(-e.len / 2 + L / 2, 5, -e.len / 2, 0); ctx.fill();
+        ctx.globalAlpha = fade * 0.5; ctx.fillStyle = "#ffe066";
+        ctx.fillRect(-e.len / 2, -2, L, 4);
       } else if (e.k === "ring") {
         ctx.globalAlpha = 1 - k; ctx.strokeStyle = e.c; ctx.lineWidth = 6 * (1 - k) + 1;
         ctx.beginPath(); ctx.arc(e.x, e.y, 10 + k * 70, 0, TAU); ctx.stroke();
@@ -675,7 +708,79 @@
     ctx.restore();
   }
 
+  // ============================================================
+  //  がめん ぜんたいの えんしゅつ（W×H は がめんの ろんり サイズ）
+  // ============================================================
+  // ひっさつの カットイン。k = 0→1 の すすみ
+  function drawCutin(ctx, W, H, k, info, t) {
+    var inK = ease(Math.min(1, k / 0.18)), outK = k > 0.8 ? ease((k - 0.8) / 0.2) : 0;
+    ctx.save();
+    ctx.globalAlpha = 0.55 * (1 - outK);
+    ctx.fillStyle = "#000"; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    var dir = info.side > 0 ? 1 : -1;
+    var bandH = H * 0.42, cy = H * 0.5;
+    var slide = (1 - inK) * W * dir * -1 + outK * W * dir;
+    ctx.translate(slide, 0);
+    // ななめの おび
+    ctx.save();
+    ctx.translate(W / 2, cy); ctx.rotate(-0.12 * dir);
+    var g = ctx.createLinearGradient(-W, 0, W, 0);
+    g.addColorStop(0, info.col2); g.addColorStop(0.5, info.col); g.addColorStop(1, info.col2);
+    ctx.fillStyle = g; ctx.fillRect(-W, -bandH / 2, W * 2, bandH);
+    // はしる せん
+    ctx.strokeStyle = "rgba(255,255,255,0.45)"; ctx.lineWidth = 3;
+    for (var i = 0; i < 26; i++) {
+      var yy = (hash(i) - 0.5) * bandH, xx = ((hash(i + 50) * W * 2 + t * 2400 * -dir) % (W * 2) + W * 2) % (W * 2) - W;
+      ctx.beginPath(); ctx.moveTo(xx, yy); ctx.lineTo(xx + 160 * dir, yy); ctx.stroke();
+    }
+    ctx.fillStyle = "#ffd43b"; ctx.fillRect(-W, -bandH / 2, W * 2, 6); ctx.fillRect(-W, bandH / 2 - 6, W * 2, 6);
+    ctx.restore();
+    // キャラ（おおきく）
+    ctx.save();
+    var px = dir > 0 ? W * 0.24 : W * 0.76;
+    ctx.beginPath(); ctx.rect(0, cy - bandH / 2 - 60, W, bandH + 120); ctx.clip();
+    ctx.translate(px, cy + bandH * 0.62); ctx.scale(2.3, 2.3); ctx.translate(0, -SN.GROUND);
+    drawFighter(ctx, { ch: info.ch, x: 0, y: SN.GROUND, face: dir, st: info.st, sf: info.sf || 0, mv: null, smoke: 0, inv: 0, idx: 0, onG: true, jumps: 0, charge: 30 }, t, info.pal);
+    ctx.restore();
+    // もじ
+    ctx.save();
+    var tx = dir > 0 ? W * 0.66 : W * 0.34, ty = cy;
+    var sc = 1 + (1 - ease(Math.min(1, k / 0.25))) * 0.8;
+    ctx.translate(tx, ty); ctx.rotate(-0.12 * dir); ctx.scale(sc, sc);
+    ctx.font = "900 " + Math.round(H * 0.13) + "px 'Hiragino Maru Gothic ProN','Rounded Mplus 1c','Kosugi Maru',sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.lineJoin = "round";
+    ctx.lineWidth = 14; ctx.strokeStyle = "#1a1020"; ctx.strokeText(info.text, 0, 0);
+    ctx.fillStyle = "#fff"; ctx.fillText(info.text, 0, 0);
+    ctx.font = "900 " + Math.round(H * 0.05) + "px 'Hiragino Maru Gothic ProN','Rounded Mplus 1c','Kosugi Maru',sans-serif";
+    ctx.lineWidth = 8; ctx.strokeText(info.sub, 0, H * 0.1); ctx.fillStyle = "#ffd43b"; ctx.fillText(info.sub, 0, H * 0.1);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  // スピードせん（いあい の ダッシュ など）
+  function drawSpeedLines(ctx, W, H, t, a) {
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = "#fff"; ctx.lineCap = "round";
+    for (var i = 0; i < 40; i++) {
+      var ang = hash(i) * TAU, r0 = Math.min(W, H) * (0.45 + 0.1 * Math.sin(t * 40 + i)), r1 = Math.max(W, H);
+      ctx.lineWidth = 1 + hash(i + 9) * 4;
+      ctx.beginPath(); ctx.moveTo(W / 2 + Math.cos(ang) * r0, H / 2 + Math.sin(ang) * r0); ctx.lineTo(W / 2 + Math.cos(ang) * r1, H / 2 + Math.sin(ang) * r1); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // たいりょくが すくない ほうの はしを あかく どきどき
+  function drawDanger(ctx, W, H, side, a) {
+    ctx.save();
+    var x0 = side < 0 ? 0 : W;
+    var g = ctx.createLinearGradient(x0, 0, x0 - side * W * 0.22, 0);
+    g.addColorStop(0, "rgba(255,40,60," + a + ")"); g.addColorStop(1, "rgba(255,40,60,0)");
+    ctx.fillStyle = g; ctx.fillRect(side < 0 ? 0 : W * 0.78, 0, W * 0.22, H);
+    ctx.restore();
+  }
+
   root.SNDraw = {
+    drawCutin: drawCutin, drawSpeedLines: drawSpeedLines, drawDanger: drawDanger,
     PAL: PAL, STAGES: STAGES, drawFighter: drawFighter, drawShuriken: drawShuriken, drawLog: drawLog,
     drawStage: drawStage, Effects: Effects, bubble: bubble, portrait: portrait
   };
