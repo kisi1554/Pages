@@ -16,7 +16,7 @@
   // ===== ほぞん =====
   function fresh() {
     return { year: 1, season: 0, used: 0, food: 0, raw: 0, soft: 0, doki: 0, houses: 1,
-      bag: {}, kaizuka: {}, zukan: {}, isekiIdx: 0, digging: false, se: true, bgm: false, seenIntro: false, clears: 0 };
+      bag: {}, kaizuka: {}, zukan: {}, isekiIdx: 0, digging: false, se: true, bgm: false, voice: true, seenIntro: false, clears: 0 };
   }
   var st = fresh();
   function load() {
@@ -59,6 +59,7 @@
     $('btnNext').textContent = st.season === 3 ? 'ふゆを こす ▶' : 'つぎの きせつへ ▶';
     $('btnSe').classList.toggle('off', !st.se);
     $('btnBgm').classList.toggle('off', !st.bgm);
+    $('btnVoice').classList.toggle('off', !st.voice);
     drawScene();
   }
 
@@ -141,8 +142,8 @@
   }
 
   // ===== ダイアログ =====
-  function dialog(html, btns) {
-    $('dialogBody').innerHTML = html;
+  function dialog(html, btns, sp) {
+    $('dialogBody').innerHTML = (sp ? guideBox(sp[0], sp[1]) : '') + html;
     var box = $('dialogBtns'); box.innerHTML = '';
     (btns || [{ label: 'OK' }]).forEach(function (b) {
       var el = document.createElement('button');
@@ -152,8 +153,60 @@
       box.appendChild(el);
     });
     $('dialog').hidden = false;
+    if (sp) talk(sp[0], sp[1]);
   }
   function say(t) { $('msg').innerHTML = t; }
+
+  // ===== あんないやく（キャラクター） =====
+  var curChar = 'dogu', talkTimer = null, talkGen = 0;
+  function faceBtn(id, cls) {
+    return '<button class="face ' + (cls || '') + '" data-char="' + id + '" aria-label="' + CHARS[id].name + '" style="--gc:' + CHARS[id].color + '">' + FACE[id] + '</button>';
+  }
+  function guideBox(id, text) {
+    return '<div class="miniGuide" style="--gc:' + CHARS[id].color + '">' + faceBtn(id) + '<div class="bubble"><b>' + CHARS[id].name + '</b>' + R(text) + '</div></div>';
+  }
+  function setTalking(id, on) {
+    var els = document.querySelectorAll('.face[data-char="' + id + '"], #guideFace');
+    for (var i = 0; i < els.length; i++) els[i].classList.toggle('talking', on && (els[i].id !== 'guideFace' || curChar === id));
+  }
+  // id の キャラが text を しゃべる（あんないバーを かえて、こえを だす）
+  function talk(id, text, done) {
+    if (!CHARS[id]) return;
+    talkGen++;
+    var prev = curChar; curChar = id;
+    if (prev !== id) setTalking(prev, false);
+    var g = $('guide');
+    g.style.setProperty('--gc', CHARS[id].color);
+    $('guideFace').innerHTML = FACE[id]; $('guideFace').setAttribute('data-who', id);
+    $('guideName').textContent = CHARS[id].name;
+    $('guideText').innerHTML = R(text);
+    $('guideText').classList.remove('pop'); void $('guideText').offsetWidth; $('guideText').classList.add('pop');
+    clearTimeout(talkTimer);
+    setTalking(id, true);
+    var myGen = talkGen;
+    var stop = function () {
+      if (myGen === talkGen) { clearTimeout(talkTimer); setTalking(id, false); }
+      if (done) { var d = done; done = null; d(); }
+    };
+    talkTimer = setTimeout(stop, 1500 + VOICE.plain(text).length * 160);
+    VOICE.speak(id, text, stop);
+  }
+  function talkSeq(list) {
+    if (!list.length) return;
+    var x = list[0];
+    var gen;
+    talk(x[0], x[1], function () {
+      // とちゅうで べつの キャラが しゃべったら つづきは いわない
+      setTimeout(function () { if (gen === talkGen) talkSeq(list.slice(1)); }, 250);
+    });
+    gen = talkGen;
+  }
+  // ミニゲームの なかで しゃべる
+  function playTalk(id, text) {
+    var pg = $('playGuide');
+    pg.innerHTML = guideBox(id, text); pg.hidden = false;
+    talk(id, text);
+  }
 
   // ===== ミニゲームの わく =====
   var alive = false, timers = [];
@@ -171,6 +224,7 @@
     var stg = $('stage');
     stg.innerHTML = ''; stg.className = 'stage'; stg.style.minHeight = ''; stg.onclick = null;
     $('playFoot').innerHTML = '';
+    $('playGuide').hidden = true;
     $('play').hidden = false;
     return $('stage');
   }
@@ -218,7 +272,9 @@
     if (tcount) h += '<p>🗑️ ごみが ' + tcount + 'こ でた。<b>かいづか</b>に すてよう。</p>';
     newCards.forEach(function (id) { h += '<p>📖 ずかんに とうろく！ <b>' + R(CARD[id].name) + '</b></p>'; });
     if (newCards.length) SND.play('win'); else SND.play('ok');
-    dialog(h);
+    var who = (LINES.job[job.id] || ['dogu'])[0];
+    var good = (r.food || 0) > 0 || r.doki || r.houses || r.soft || newCards.length;
+    dialog(h, null, [who, pick(LINES[good ? 'good' : 'bad'][who])]);
     var left = 3 - st.used;
     say(left > 0 ? 'のこり ' + left + 'かい しごとが できるよ。' : 'この きせつの しごとは おしまい。「' + $('btnNext').textContent.replace(' ▶', '') + '」を おそう。');
   }
@@ -608,7 +664,7 @@
         });
         h += '</div><p class="layers">かいづかの ごみ: ' + countObj(st.kaizuka) + 'こ</p>';
         stage.innerHTML = h;
-        if (!keys.length) { clearFoot(); later(function () { closePlay(); save(); render(); dialog('<h3>🗑️ すっきり！</h3><p>かいづかに すてた ものは、なんぜんねんも のこるんだ。<br>1ねんが おわったら ほって みよう。</p>'); }, 400); }
+        if (!keys.length) { clearFoot(); later(function () { closePlay(); save(); render(); dialog('<h3>🗑️ すっきり！</h3><p>かいづかに すてた ものは、なんぜんねんも のこるんだ。<br>1ねんが おわったら ほって みよう。</p>', null, ['dogu', 'すっきり！ かいづかが また ちょっと たかく なったね。']); }, 400); }
       }
       stage.onclick = function (e) {
         var b = e.target.closest('[data-t]'); if (!b) return;
@@ -647,7 +703,7 @@
     h += '<p>さあ、こんどは <b>いまの じだい</b>から、きみの むらの かいづかを ほって みよう！</p>';
     st.digging = true;
     save(); render();
-    dialog(h, [{ label: '⛏️ はっくつ モードへ', fn: excavate }]);
+    dialog(h, [{ label: '⛏️ はっくつ モードへ', fn: excavate }], ok ? LINES.winterOk : LINES.winterNg);
   }
 
   function seasonIntro() {
@@ -655,12 +711,15 @@
     var t = { haru: 'はるだ！ もりで さんさい、うみで かいを とろう。', natsu: 'なつだ！ まるきぶねで りょうに でよう。',
       aki: 'あきだ！ きのみを ひろって、あくぬきを して、ふゆに そなえよう。', fuyu: 'ふゆだ！ ゆみやや おとしあなで かりを しよう。たくわえは たりるかな？' };
     say(se.emoji + ' ' + t[se.id]);
+    var L = LINES.season[se.id];
+    talk(L[0], L[1]);
   }
 
   // ===== はっくつ モード =====
   function excavate() {
     var stage = openPlay('⛏️ はっくつ モード', 'ここは いまの じだい。むかしの むらの かいづかを ほって みよう。つちを 2かい タップすると なにか でて くるかも。');
     $('playClose').hidden = true;
+    playTalk(LINES.dig[0], LINES.dig[1]);
     var items = [];
     Object.keys(st.kaizuka).forEach(function (k) {
       var n = Math.min(2, st.kaizuka[k]);
@@ -689,6 +748,7 @@
         found.push(it);
         if (register(it.card)) newCards.push(it.card);
         SND.play(it.treasure ? 'win' : 'ok');
+        if (it.treasure) playTalk('hakase', 'わあ！ ' + CARD[it.card].name + 'だ！ ' + pick(LINES.good.hakase));
         $('df').innerHTML = found.map(function (f) { return '<span>' + f.emoji + ' ' + f.name + '</span>'; }).join('');
         if (found.length === need) later(done, 800);
       };
@@ -715,7 +775,7 @@
       if (newCards.length) h += '<p>📖 ずかんに あたらしく ' + newCards.length + 'まい とうろく！（' + zukanCount() + '/' + COUNTED.length + '）</p>';
       st.year++; st.season = 0; st.used = 0; st.kaizuka = {}; st.digging = false;
       save(); render(); seasonIntro();
-      dialog(h, [{ label: (st.year) + 'ねんめを はじめる', cls: 'green' }, { label: '📖 ずかんを みる', cls: 'sub', fn: openZukan }]);
+      dialog(h, [{ label: (st.year) + 'ねんめを はじめる', cls: 'green' }, { label: '📖 ずかんを みる', cls: 'sub', fn: openZukan }], LINES.digEnd);
     }
   }
 
@@ -757,14 +817,17 @@
       'ふゆが おわるまでに たくわえを <b>' + NEED + '</b> あつめよう。</p>' +
       '<p style="text-align:left">🏺 どきが あると にて たくさん たべられる。🛖 いえを ふやすと なかまが てつだって くれる。' +
       '🗑️ ごみは かいづかへ。1ねんが おわったら ほって みよう！</p>' +
+      '<div class="cast">' + Object.keys(CHARS).map(function (id) {
+        return '<div class="castRow">' + faceBtn(id) + '<div><b>' + CHARS[id].name + '</b><br><small>' + CHARS[id].role + '</small></div></div>';
+      }).join('') + '</div><p style="font-size:13px">キャラを タップすると まめちしきを はなすよ。</p>' +
       '<p class="parent">おうちの かたへ: 小6 社会「縄文のむらから古墳のくにへ」の よしゅう・ふくしゅう用です。' +
       'いね・きんぞくの どうぐ・たかゆかそうこ は やよいじだいの ものなので むらには でません（ずかんの「つぎの じだい」で くらべられます）。' +
-      'ねんだいの くわしい せつめいと 出典は README.md に あります。</p>',
+      'ねんだいの くわしい せつめいと 出典は README.md に あります。こえは ブラウザの よみあげきのうを つかいます（🗣️ で オン/オフ）。</p>',
       [{ label: 'あそぶ' }, { label: '🔄 さいしょから', cls: 'sub', fn: resetAsk }]);
   }
   function resetAsk() {
     dialog('<p>むらを さいしょから やりなおす？<br>（ずかんは のこるよ）</p>', [
-      { label: 'やりなおす', fn: function () { var z = st.zukan, i = st.isekiIdx, se = st.se, bg = st.bgm; st = fresh(); st.zukan = z; st.isekiIdx = i; st.se = se; st.bgm = bg; st.seenIntro = true; save(); render(); seasonIntro(); } },
+      { label: 'やりなおす', fn: function () { var z = st.zukan, i = st.isekiIdx, se = st.se, bg = st.bgm, vo = st.voice; st = fresh(); st.zukan = z; st.isekiIdx = i; st.se = se; st.bgm = bg; st.voice = vo; st.seenIntro = true; save(); render(); seasonIntro(); } },
       { label: 'やめる', cls: 'sub' }]);
   }
 
@@ -773,6 +836,8 @@
     var j = JOB[id]; if (!j || jobBlocked(j)) return;
     SND.unlock(); SND.play('tap');
     GAMES[id](j);
+    var L = LINES.job[id];
+    if (L && !$('play').hidden) playTalk(L[0], L[1]);
   }
   $('jobs').addEventListener('click', function (e) { var b = e.target.closest('[data-job]'); if (b && !b.disabled) startJob(b.getAttribute('data-job')); });
   $('scene').addEventListener('click', function (e) {
@@ -783,7 +848,9 @@
     if (selPlace === 'umi') SND.play('wave');
     renderJobs();
     var list = JOBS.filter(function (j) { return j.place === selPlace && (!j.season || j.season === SEASONS[st.season].id); });
-    say('📍 <b>' + PLACES[selPlace] + '</b>: ' + (list.length ? list.map(function (j) { return j.emoji + ' ' + j.name; }).join('、') + ' が できるよ。' : 'いまの きせつは ここで できる しごとが ないよ。'));
+    var where = PLACES[selPlace] + 'では、' + (list.length ? list.map(function (j) { return j.name; }).join('、') + 'が できるよ！' : 'いまの きせつは できる しごとが ないよ。');
+    say('📍 ' + where);
+    talk('dogu', where);
     var first = document.querySelector('.job.glow');
     if (first && window.innerWidth < 900) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
@@ -796,13 +863,27 @@
   $('btnSe').onclick = function () { st.se = !st.se; SND.setSe(st.se); SND.unlock(); SND.play('tap'); save(); render(); };
   $('btnBgm').onclick = function () { st.bgm = !st.bgm; SND.unlock(); SND.setBgm(st.bgm); save(); render(); };
   $('btnHelp').onclick = help;
+  $('btnVoice').onclick = function () { st.voice = !st.voice; VOICE.set(st.voice); SND.unlock(); save(); render(); if (st.voice) talk(curChar, 'こえを だすよ！'); };
+  // キャラを タップすると まめちしき
+  document.addEventListener('click', function (e) {
+    var f = e.target.closest('.face[data-char], #guideFace');
+    if (!f) return;
+    var id = f.getAttribute('data-char') || f.getAttribute('data-who') || curChar;
+    SND.unlock();
+    var hello = LINES.hello.filter(function (x) { return x[0] === id; })[0];
+    var text = f.closest('.cast') && hello ? hello[1] : pick(TIPS[id]);
+    if (!$('play').hidden && !$('playGuide').hidden && !f.closest('#dialog')) playTalk(id, text);
+    else talk(id, text);
+  });
   // オーディオは さいしょの タップで はじめる（ブラウザの きまり）
   document.addEventListener('pointerdown', function first() { SND.unlock(); document.removeEventListener('pointerdown', first); });
 
   // ===== はじめ =====
   load();
   SND.setSe(st.se);
+  VOICE.set(st.voice);
   if (st.bgm) SND.setBgm(true);
+  $('guideCast').innerHTML = Object.keys(CHARS).map(function (id) { return faceBtn(id, 'small'); }).join('');
   render();
   seasonIntro();
   if (st.digging) {
@@ -812,7 +893,11 @@
     dialog('<h3>🏺 じょうもん むらへ ようこそ</h3>' +
       '<p>ずっと むかし、<b>およそ 1まんねん いじょう</b> つづいた じょうもんじだい。</p>' +
       '<p>ひとびとは たてあなじゅうきょに すみ、かりや りょう、きのみ あつめを して くらして いた。どきを つくって にたきも したよ。</p>' +
-      '<p>きみも むらで 1ねん くらして、ふゆを こせるだけの たべものを あつめよう！</p>',
-      [{ label: 'はじめる', cls: 'green' }, { label: '❓ あそびかた', cls: 'sub', fn: help }]);
+      '<p>きみも むらで 1ねん くらして、ふゆを こせるだけの たべものを あつめよう！</p>' +
+      '<div class="cast">' + LINES.hello.map(function (x) {
+        return '<div class="castRow">' + faceBtn(x[0]) + '<div><b>' + CHARS[x[0]].name + '</b><br><small>' + R(x[1]) + '</small></div></div>';
+      }).join('') + '</div>',
+      [{ label: 'はじめる', cls: 'green', fn: function () { talkSeq([LINES.hello[0], LINES.season[SEASONS[st.season].id]]); } },
+       { label: '❓ あそびかた', cls: 'sub', fn: help }]);
   }
 })();

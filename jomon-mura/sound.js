@@ -119,7 +119,18 @@ var SND = (function () {
   }
   function stopBgm() { clearInterval(bgmTimer); bgmTimer = null; }
 
+  // キャラの なきごえ: みじかい「ぽぽぽ」。bark は いぬ
+  function chirp(base, kind, n) {
+    var c = ac(); if (!c || !se) return;
+    for (var i = 0; i < n; i++) {
+      var t = c.currentTime + i * 0.09, f = base * (1 + (Math.random() - 0.5) * 0.3);
+      if (kind === 'bark') { tone(f * 0.5, 0.08, 'square', 0.06, t, f * 0.3); noise(0.05, 'bandpass', f, 0.08, t); }
+      else tone(f, 0.07, 'sine', 0.12, t, f * 1.15);
+    }
+  }
+
   return {
+    chirp: function (b, k, n) { try { chirp(b, k, n); } catch (e) {} },
     play: function (name) { if (se && fx[name]) { try { fx[name](); } catch (e) {} } },
     setSe: function (on) { se = on; },
     setBgm: function (on) { bgm = on; if (on) startBgm(); else stopBgm(); },
