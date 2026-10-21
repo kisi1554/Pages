@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>さむらい vs にんじゃ</title>
+<meta name="description" content="さむらいと にんじゃ、どっちが つよい？ よこから みた 1たい1 の たいけつ。CPU とも 2人 でも あそべる。ずかん で ほんとうの はなしも わかるよ。">
+<meta name="theme-color" content="#a61e4d">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚔️</text></svg>">
+<link rel="stylesheet" href="style.css?v=7b36f2f">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== タイトル ===== -->
+  <section class="screen" id="scr-title">
+    <div class="title-box">
+      <canvas id="title-cv" width="720" height="300" aria-hidden="true"></canvas>
+      <h1>さむらい <span class="vs">vs</span> にんじゃ</h1>
+      <p class="lead">どっちが つよい？ れい に はじまり れい に おわる たいけつ！</p>
+    </div>
+    <div class="menu">
+      <button class="big" data-go="story"><span class="ic">📜</span>ストーリー</button>
+      <button class="big" data-go="cpu"><span class="ic">🤖</span>CPU と たいせん</button>
+      <button class="big" data-go="vs"><span class="ic">👫</span>2人 たいせん</button>
+      <button class="big" data-go="zukan"><span class="ic">📚</span>ずかん <small id="zukan-count"></small></button>
+    </div>
+    <div class="row-small">
+      <button class="tog" data-tog="snd" aria-pressed="true">🔊 おと</button>
+      <button class="tog" data-tog="bgm" aria-pressed="true">🎵 BGM</button>
+      <button class="tog" data-go="help">❓ あそびかた</button>
+    </div>
+    <a class="home" href="../">🏠 あそびメニュー</a>
+  </section>
+
+  <!-- ===== えらぶ（CPU・2人） ===== -->
+  <section class="screen" id="scr-pick" hidden>
+    <header class="bar"><button class="back" data-go="title">← もどる</button><h2 id="pick-title">CPU と たいせん</h2></header>
+    <div class="pick-body" id="pick-body"></div>
+    <button class="big go" id="pick-go">⚔️ はじめる！</button>
+  </section>
+
+  <!-- ===== ストーリー ===== -->
+  <section class="screen" id="scr-story" hidden>
+    <header class="bar"><button class="back" data-go="title">← もどる</button><h2>ストーリー</h2></header>
+    <div class="tabs" role="tablist">
+      <button class="tab" data-side="samurai" role="tab">さむらい の みち</button>
+      <button class="tab" data-side="ninja" role="tab">しのび の にんむ</button>
+    </div>
+    <ol class="story-list" id="story-list"></ol>
+  </section>
+
+  <!-- ===== ずかん ===== -->
+  <section class="screen" id="scr-zukan" hidden>
+    <header class="bar"><button class="back" data-go="title">← もどる</button><h2>ずかん <small id="zukan-count2"></small></h2></header>
+    <p class="note">ストーリーで かつと カードが もらえるよ。「おはなし の なか」と「ほんとう」の ちがいを みてみよう。</p>
+    <div class="cards" id="cards"></div>
+  </section>
+
+  <!-- ===== たたかい ===== -->
+  <section class="screen" id="scr-battle" hidden>
+    <div class="hud">
+      <div class="who p1" id="hud0">
+        <div class="nm"></div>
+        <div class="gauge hp"><i></i></div>
+        <div class="gauge sp"><i></i><b>ひっさつ</b></div>
+        <div class="sub"></div>
+      </div>
+      <div class="mid">
+        <div class="timer" id="timer">60</div>
+        <button class="pause" id="pause-btn" aria-label="ちょっと まって">⏸</button>
+      </div>
+      <div class="who p2" id="hud1">
+        <div class="nm"></div>
+        <div class="gauge hp"><i></i></div>
+        <div class="gauge sp"><i></i><b>ひっさつ</b></div>
+        <div class="sub"></div>
+      </div>
+    </div>
+    <div class="stage-wrap" id="stage-wrap">
+      <canvas id="cv"></canvas>
+      <div class="banner" id="banner"></div>
+      <div class="hint" id="hint"></div>
+    </div>
+    <div class="pads" id="pads"></div>
+  </section>
+
+  <!-- ===== ダイアログ ===== -->
+  <div class="modal" id="modal" hidden>
+    <div class="sheet" role="dialog" aria-modal="true">
+      <div class="sheet-body" id="modal-body"></div>
+      <div class="sheet-btns" id="modal-btns"></div>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js?v=7b36f2f"></script>
+<script src="ai.js?v=7b36f2f"></script>
+<script src="data.js?v=7b36f2f"></script>
+<script src="draw.js?v=7b36f2f"></script>
+<script src="audio.js?v=7b36f2f"></script>
+<script src="game.js?v=7b36f2f"></script>
+</body>
+</html>
