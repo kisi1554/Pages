@@ -12,55 +12,93 @@ var CHARS = {
     pitch: 1.25, rate: 1.0, chirp: 620 }
 };
 
-/* キャラの かお（SVG） */
-var FACE = {
-  // しゃこうきどぐう ふうの おおきな め
-  dogu: '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-    '<circle cx="50" cy="54" r="40" fill="#e8b98a" stroke="#8a5a2b" stroke-width="3"/>' +
-    '<path d="M22 30 Q50 4 78 30" fill="#c98a57" stroke="#8a5a2b" stroke-width="3"/>' +
-    '<circle cx="34" cy="16" r="6" fill="#c98a57" stroke="#8a5a2b" stroke-width="2"/><circle cx="66" cy="16" r="6" fill="#c98a57" stroke="#8a5a2b" stroke-width="2"/>' +
-    '<ellipse cx="34" cy="50" rx="13" ry="10" fill="#fff" stroke="#8a5a2b" stroke-width="3"/><ellipse cx="66" cy="50" rx="13" ry="10" fill="#fff" stroke="#8a5a2b" stroke-width="3"/>' +
-    '<path d="M24 50 L44 50 M56 50 L76 50" stroke="#8a5a2b" stroke-width="3" stroke-linecap="round"/>' +
-    '<circle cx="34" cy="53" r="3" fill="#3b2a1a"/><circle cx="66" cy="53" r="3" fill="#3b2a1a"/>' +
-    '<ellipse cx="22" cy="68" rx="7" ry="4" fill="#f4a3a3" opacity=".8"/><ellipse cx="78" cy="68" rx="7" ry="4" fill="#f4a3a3" opacity=".8"/>' +
-    '<path class="mouth" d="M42 72 Q50 80 58 72" stroke="#8a5a2b" stroke-width="3" fill="#c0392b"/>' +
-    '<path d="M26 84 l4 4 M36 88 l4 4 M60 88 l4 4 M70 84 l4 4" stroke="#8a5a2b" stroke-width="2"/></svg>',
-  // しろい ひげの おじいさん。じょうもんの はちまき
-  jiji: '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-    '<circle cx="50" cy="48" r="34" fill="#f2c9a0" stroke="#8a5a2b" stroke-width="3"/>' +
-    '<rect x="16" y="24" width="68" height="11" rx="5" fill="#7a8f3a" stroke="#4a5a22" stroke-width="2"/>' +
-    '<path d="M22 26 l4 7 M32 26 l4 7 M42 26 l4 7 M52 26 l4 7 M62 26 l4 7 M72 26 l4 7" stroke="#d9e8a8" stroke-width="2"/>' +
-    '<path d="M28 44 Q34 40 40 44 M60 44 Q66 40 72 44" stroke="#3b2a1a" stroke-width="3" fill="none" stroke-linecap="round"/>' +
-    '<path d="M28 38 Q34 34 40 37 M60 37 Q66 34 72 38" stroke="#fff" stroke-width="4" stroke-linecap="round"/>' +
-    '<path d="M18 56 Q22 96 50 98 Q78 96 82 56 Q72 66 50 64 Q28 66 18 56Z" fill="#fff" stroke="#c8c8c8" stroke-width="2"/>' +
-    '<path class="mouth" d="M42 66 Q50 72 58 66" stroke="#8a5a2b" stroke-width="3" fill="none"/>' +
-    '<ellipse cx="50" cy="54" rx="6" ry="5" fill="#e8a882"/>' +
-    '<ellipse cx="26" cy="54" rx="5" ry="3" fill="#f4a3a3" opacity=".7"/><ellipse cx="74" cy="54" rx="5" ry="3" fill="#f4a3a3" opacity=".7"/></svg>',
-  // しばいぬ ふう
-  koro: '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-    '<path d="M18 40 L24 8 L44 28Z M82 40 L76 8 L56 28Z" fill="#d9893b" stroke="#8a4a1a" stroke-width="3" stroke-linejoin="round"/>' +
-    '<path d="M24 16 L28 30 L36 26Z M76 16 L72 30 L64 26Z" fill="#f4c7a0"/>' +
-    '<ellipse cx="50" cy="54" rx="36" ry="32" fill="#d9893b" stroke="#8a4a1a" stroke-width="3"/>' +
-    '<path d="M24 62 Q30 86 50 88 Q70 86 76 62 Q64 70 50 58 Q36 70 24 62Z" fill="#fff4e6"/>' +
-    '<circle cx="36" cy="48" r="5" fill="#2b1a0d"/><circle cx="64" cy="48" r="5" fill="#2b1a0d"/>' +
-    '<circle cx="37.5" cy="46.5" r="1.6" fill="#fff"/><circle cx="65.5" cy="46.5" r="1.6" fill="#fff"/>' +
-    '<ellipse cx="50" cy="62" rx="7" ry="5" fill="#2b1a0d"/>' +
-    '<path class="mouth" d="M42 70 Q46 76 50 70 Q54 76 58 70" stroke="#2b1a0d" stroke-width="2.5" fill="none"/>' +
-    '<path d="M47 74 Q50 84 53 74Z" fill="#f08080"/>' +
-    '<ellipse cx="26" cy="62" rx="5" ry="3" fill="#f4a3a3" opacity=".8"/><ellipse cx="74" cy="62" rx="5" ry="3" fill="#f4a3a3" opacity=".8"/></svg>',
-  // ヘルメットと めがねの はかせ
-  hakase: '<svg viewBox="0 0 100 100" aria-hidden="true">' +
-    '<path d="M16 52 Q14 86 34 92 L66 92 Q86 86 84 52Z" fill="#4a3426"/>' +
-    '<circle cx="50" cy="56" r="30" fill="#f6d3b3" stroke="#8a5a2b" stroke-width="3"/>' +
-    '<path d="M14 42 Q16 10 50 10 Q84 10 86 42Z" fill="#ffd54f" stroke="#c49000" stroke-width="3"/>' +
-    '<rect x="10" y="40" width="80" height="7" rx="3" fill="#ffca28" stroke="#c49000" stroke-width="2"/>' +
-    '<path d="M50 12 L50 40" stroke="#c49000" stroke-width="3"/>' +
-    '<circle cx="38" cy="58" r="9" fill="#fff" fill-opacity=".5" stroke="#3a7bd5" stroke-width="3"/><circle cx="62" cy="58" r="9" fill="#fff" fill-opacity=".5" stroke="#3a7bd5" stroke-width="3"/>' +
-    '<path d="M47 58 L53 58" stroke="#3a7bd5" stroke-width="3"/>' +
-    '<circle cx="38" cy="59" r="3" fill="#3b2a1a"/><circle cx="62" cy="59" r="3" fill="#3b2a1a"/>' +
-    '<ellipse cx="28" cy="72" rx="5" ry="3" fill="#f4a3a3" opacity=".8"/><ellipse cx="72" cy="72" rx="5" ry="3" fill="#f4a3a3" opacity=".8"/>' +
-    '<path class="mouth" d="M43 74 Q50 81 57 74" stroke="#8a5a2b" stroke-width="3" fill="#c0392b"/></svg>'
+/* キャラの かお（SVG）。おおきな きらきらの め・ほっぺ・ちいさな くちの ちびキャラ ふう
+ * class="mouth" は しゃべる ときに うごく */
+var FACE = (function () {
+function eye(x, y, rx, ry, col) {
+  return '<ellipse cx="' + x + '" cy="' + y + '" rx="' + rx + '" ry="' + ry + '" fill="' + (col || '#3b2416') + '"/>' +
+    '<ellipse cx="' + x + '" cy="' + (y + ry * 0.45) + '" rx="' + rx * 0.7 + '" ry="' + ry * 0.35 + '" fill="#7a4a2a" opacity=".55"/>' +
+    '<circle cx="' + (x + rx * 0.35) + '" cy="' + (y - ry * 0.4) + '" r="' + rx * 0.42 + '" fill="#fff"/>' +
+    '<circle cx="' + (x - rx * 0.4) + '" cy="' + (y + ry * 0.3) + '" r="' + rx * 0.2 + '" fill="#fff"/>';
+}
+function blush(x, y) {
+  return '<ellipse cx="' + x + '" cy="' + y + '" rx="7" ry="4" fill="#ff8e8e" opacity=".55"/>' +
+    '<path d="M' + (x - 3) + ' ' + (y - 1) + ' l-1.5 2 M' + x + ' ' + (y - 1) + ' l-1.5 2 M' + (x + 3) + ' ' + (y - 1) + ' l-1.5 2" stroke="#ff6b6b" stroke-width="1" opacity=".7"/>';
+}
+var SVG0 = '<svg viewBox="0 0 100 100" aria-hidden="true">';
+return {
+  // どぐちゃん: しゃこうきどぐう ふうの ゴーグルの め。あたまに じょうもんの うずまき
+  dogu: SVG0 +
+    '<circle cx="28" cy="28" r="10" fill="#e39b63" stroke="#a8643a" stroke-width="2.5"/>' +
+    '<circle cx="72" cy="28" r="10" fill="#e39b63" stroke="#a8643a" stroke-width="2.5"/>' +
+    '<circle cx="50" cy="17" r="12" fill="#e39b63" stroke="#a8643a" stroke-width="2.5"/>' +
+    '<path d="M50 17 m0 -1 a2.5 2.5 0 1 1 -2.5 2.5 a5 5 0 0 1 5 -5 a7 7 0 0 1 4 9" stroke="#a8643a" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+    '<path d="M24 28 a3 3 0 1 1 3 3 M76 28 a3 3 0 1 0 -3 3" stroke="#a8643a" stroke-width="1.8" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="50" cy="59" rx="41" ry="36" fill="#f6c597" stroke="#a8643a" stroke-width="2.5"/>' +
+    '<path d="M30 34 Q50 26 70 34" stroke="#d98d55" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-dasharray="0.5 6"/>' +
+    '<ellipse cx="33" cy="58" rx="14" ry="12.5" fill="#fff8ee" stroke="#a8643a" stroke-width="2.5"/>' +
+    '<ellipse cx="67" cy="58" rx="14" ry="12.5" fill="#fff8ee" stroke="#a8643a" stroke-width="2.5"/>' +
+    eye(34, 59, 7, 8.5) + eye(66, 59, 7, 8.5) +
+    '<path d="M21 46 Q26 42 31 44 M79 46 Q74 42 69 44" stroke="#a8643a" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+    blush(18, 75) + blush(82, 75) +
+    '<path class="mouth" d="M44 78 Q47 82.5 50 78 Q53 82.5 56 78" stroke="#8a4a22" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+    '</svg>',
+  // おさじい: にこにこ とじた め、ふわふわの ひげ、はちまきと はね
+  jiji: SVG0 +
+    '<path d="M76 38 Q92 22 84 8 Q76 22 72 36Z" fill="#ef8a7a" stroke="#b5574a" stroke-width="1.8" stroke-linejoin="round"/>' +
+    '<path d="M83 12 Q78 24 74 34" stroke="#b5574a" stroke-width="1.2" fill="none"/>' +
+    '<ellipse cx="50" cy="54" rx="36" ry="35" fill="#fbd7b2" stroke="#b07a4a" stroke-width="2.5"/>' +
+    '<ellipse cx="38" cy="27" rx="9" ry="4" fill="#fff" opacity=".7" transform="rotate(-15 38 27)"/>' +
+    '<path d="M15 44 Q50 32 85 44 L85 51 Q50 39 15 51Z" fill="#9cc25a" stroke="#5f7a2a" stroke-width="2" stroke-linejoin="round"/>' +
+    '<path d="M22 46 l4 -4 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4 l4 4 l4 -4" stroke="#f3ffd8" stroke-width="1.6" fill="none" transform="translate(-2 0)"/>' +
+    '<path d="M22 55 Q30 49 40 54" stroke="#d6d6d6" stroke-width="7" fill="none" stroke-linecap="round"/>' +
+    '<path d="M60 54 Q70 49 78 55" stroke="#d6d6d6" stroke-width="7" fill="none" stroke-linecap="round"/>' +
+    '<path d="M22 55 Q30 49 40 54" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '<path d="M60 54 Q70 49 78 55" stroke="#fff" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+    '<path d="M27 63 Q32.5 57 38 63 M62 63 Q67.5 57 73 63" stroke="#5a3a22" stroke-width="3" fill="none" stroke-linecap="round"/>' +
+    blush(22, 70) + blush(78, 70) +
+    '<path d="M20 70 Q16 84 27 88 Q28 98 41 96 Q50 103 59 96 Q72 98 73 88 Q84 84 80 70 Q72 78 62 76 Q50 82 38 76 Q28 78 20 70Z" fill="#fff" stroke="#d0d0d0" stroke-width="2" stroke-linejoin="round"/>' +
+    '<ellipse cx="50" cy="66" rx="6" ry="5" fill="#f0b088" stroke="#b07a4a" stroke-width="1.5"/>' +
+    '<circle cx="48" cy="64.5" r="1.6" fill="#fff" opacity=".8"/>' +
+    '<path d="M35 74 Q43 67 50 72 Q57 67 65 74 Q57 78 50 75 Q43 78 35 74Z" fill="#fff" stroke="#d0d0d0" stroke-width="1.6" stroke-linejoin="round"/>' +
+    '<path class="mouth" d="M46 79 Q50 84 54 79Z" fill="#e57a7a" stroke="#b35555" stroke-width="1.4" stroke-linejoin="round"/>' +
+    '</svg>',
+  // コロ: しばいぬ ふう。まろまゆ、きらきらの め、ちょこっと べろ
+  koro: SVG0 +
+    '<path d="M15 50 Q11 16 28 9 Q40 18 43 33Z" fill="#e8964a" stroke="#a85f22" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="M85 50 Q89 16 72 9 Q60 18 57 33Z" fill="#e8964a" stroke="#a85f22" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="M21 42 Q20 22 28 16 Q36 24 37 33Z M79 42 Q80 22 72 16 Q64 24 63 33Z" fill="#ffcfae"/>' +
+    '<ellipse cx="50" cy="59" rx="39" ry="34" fill="#e8964a" stroke="#a85f22" stroke-width="2.5"/>' +
+    '<path d="M16 64 Q20 92 50 92 Q80 92 84 64 Q72 72 63 63 Q57 57 50 61 Q43 57 37 63 Q28 72 16 64Z" fill="#fff5e6"/>' +
+    '<path d="M44 30 Q50 26 56 30" stroke="#c97a35" stroke-width="2.5" fill="none" stroke-linecap="round"/>' +
+    '<ellipse cx="34" cy="45" rx="4.5" ry="3" fill="#fff5e6"/><ellipse cx="66" cy="45" rx="4.5" ry="3" fill="#fff5e6"/>' +
+    eye(34, 56, 6.5, 7.5, '#2b1a0d') + eye(66, 56, 6.5, 7.5, '#2b1a0d') +
+    blush(22, 70) + blush(78, 70) +
+    '<path d="M44 66 Q50 61 56 66 Q50 72 44 66Z" fill="#2b1a0d"/>' +
+    '<ellipse cx="48" cy="64.5" rx="2" ry="1" fill="#fff" opacity=".8"/>' +
+    '<path d="M47.5 76 Q50 85 52.5 76Z" fill="#ff7a8a" stroke="#d9506a" stroke-width="1"/>' +
+    '<path class="mouth" d="M42 73 Q46 78 50 73 Q54 78 58 73" stroke="#2b1a0d" stroke-width="2.3" fill="none" stroke-linecap="round"/>' +
+    '</svg>',
+  // ホリーはかせ: きいろい ヘルメット、まるい めがね、ボブの かみ
+  hakase: SVG0 +
+    '<path d="M14 56 Q10 92 30 94 L70 94 Q90 92 86 56Z" fill="#7a4f34"/>' +
+    '<ellipse cx="50" cy="61" rx="31" ry="29" fill="#ffe2c8" stroke="#b07a4a" stroke-width="2.5"/>' +
+    '<path d="M19 55 Q22 38 50 39 Q78 38 81 55 Q72 47 64 52 Q58 44 50 51 Q42 44 35 52 Q27 47 19 55Z" fill="#7a4f34"/>' +
+    '<path d="M14 47 Q13 9 50 9 Q87 9 86 47Z" fill="#ffd54f" stroke="#d4a017" stroke-width="2.5" stroke-linejoin="round"/>' +
+    '<path d="M50 10 L50 44" stroke="#f2b500" stroke-width="5"/>' +
+    '<path d="M24 32 Q28 18 40 14" stroke="#fff" stroke-width="3.5" opacity=".75" fill="none" stroke-linecap="round"/>' +
+    '<path d="M70 21 l2.4 5 5.4 .6 -4 3.7 1.1 5.3 -4.9 -2.7 -4.9 2.7 1.1 -5.3 -4 -3.7 5.4 -.6Z" fill="#ff8a65" stroke="#e0603a" stroke-width="1"/>' +
+    '<rect x="8" y="43" width="84" height="9" rx="4.5" fill="#ffca28" stroke="#d4a017" stroke-width="2"/>' +
+    '<circle cx="38" cy="64" r="11" fill="#fff" stroke="#e2604f" stroke-width="2.5"/>' +
+    '<circle cx="62" cy="64" r="11" fill="#fff" stroke="#e2604f" stroke-width="2.5"/>' +
+    eye(38, 65, 6, 7) + eye(62, 65, 6, 7) +
+    '<path d="M48.5 63 Q50 61 51.5 63" stroke="#e2604f" stroke-width="2.5" fill="none"/>' +
+    '<path d="M31 58 l3 -3" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".8"/>' +
+    blush(24, 76) + blush(76, 76) +
+    '<path class="mouth" d="M44 78 Q50 86 56 78Z" fill="#e8605a" stroke="#b53e3a" stroke-width="1.5" stroke-linejoin="round"/>' +
+    '</svg>'
 };
+})();
 
 /* ばめんごとの せりふ（{} は ふりがな） */
 var LINES = {
