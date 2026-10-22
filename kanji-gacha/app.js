@@ -267,8 +267,8 @@ const KG = (() => {
       }
       g.innerHTML = h;
       const ring = $('hRing');
-      for (let i = 0; i < FULL / NOTCH; i++) {
-        const a = (i + 1) * NOTCH * Math.PI / 180 - Math.PI / 2;
+      for (let i = 0; i < LAMPS; i++) {
+        const a = (i + 1) * 2 * Math.PI / LAMPS - Math.PI / 2;
         ring.insertAdjacentHTML('beforeend', `<circle cx="${(Math.cos(a) * 47).toFixed(1)}" cy="${(Math.sin(a) * 47).toFixed(1)}" r="4"/>`);
       }
     }
@@ -276,7 +276,7 @@ const KG = (() => {
     gMsg();
   }
   function gMsg() {
-    $('gMsg').innerHTML = S.coins >= 3 ? (G.rot ? 'つづきから まわしてね' : 'ハンドルを ぐるっと まわしてね（コイン 3まい）') : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
+    $('gMsg').innerHTML = S.coins >= 3 ? (G.rot ? 'つづきから まわしてね' : 'ハンドルを 3かい ぐるぐる まわしてね（コイン 3まい）') : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
     $('handHint').hidden = S.coins < 3 || G.busy;
   }
   function weightOf(t) {
@@ -294,8 +294,8 @@ const KG = (() => {
     const cx = r.left + r.width * 122 / 300, cy = r.top + r.height * 316 / 420;
     return Math.atan2(e.clientY - cy, e.clientX - cx);
   }
-  /* ハンドルは 30ど ごとに カチッと とまる（ラチェット）。1しゅう（360ど）で ガチャン */
-  const NOTCH = 30, FULL = 360;
+  /* ハンドルは 30ど ごとに カチッと とまる（ラチェット）。3しゅう（1080ど）で ガチャン */
+  const NOTCH = 30, TURNS = 3, FULL = 360 * TURNS, LAMPS = 12;
   let capBase = null;
   function setHandle(deg) { $('handleRot').setAttribute('transform', `rotate(${deg})`); }
   function setRot(rot) {
@@ -303,7 +303,7 @@ const KG = (() => {
     // ノッチの あいだは おもくて ゆっくり、こえる しゅんかんに カチッと すすむ
     setHandle(rot >= FULL ? FULL : n * NOTCH + NOTCH * 0.75 * f * f);
     const ring = $('hRing');
-    if (ring) [...ring.children].forEach((d, i) => d.classList.toggle('on', i < n));
+    if (ring) [...ring.children].forEach((d, i) => d.classList.toggle('on', i < Math.floor(rot * LAMPS / FULL)));
     stirCaps(rot);
   }
   function stirCaps(rot) {
@@ -349,11 +349,12 @@ const KG = (() => {
     let d = a - G.lastA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
     G.lastA = a;
     const t = performance.now(), dt = Math.max(8, t - G.lastT); G.lastT = t;
+    G.moved += Math.abs(d);                              // うごかした りょう（タップかどうかの はんてい）
     if (d > 0) {
-      G.moved += d; G.back = 0;
+      G.back = 0;
       const deg = Math.min(d * 180 / Math.PI, 40);       // いっきに まわしすぎない
       advance(G.rot + deg, Math.min(1, deg / dt / 0.6));
-      if (!G.busy) $('gMsg').textContent = G.rot < FULL / 2 ? 'ガリガリ… そのまま まわして！' : 'もうすこし！';
+      if (!G.busy) $('gMsg').textContent = G.rot < FULL - 360 ? `ガリガリ… あと ${TURNS - Math.floor(G.rot / 360)}かい まわして！` : 'もうすこし！ あと 1かい！';
     } else if (d < 0) {
       // ぎゃくには まわらない（ガッと とまる）
       G.back += -d;
@@ -376,7 +377,7 @@ const KG = (() => {
     let last = performance.now();
     const step = t => {
       const dt = Math.min(50, Math.max(0, t - last)); last = t;
-      advance(G.rot + dt * 0.45, 0.6);                    // 1しゅう やく 0.8びょう
+      advance(G.rot + dt * 0.75, 0.7);                    // 3しゅう やく 1.4びょう
       if (G.rot < FULL) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
