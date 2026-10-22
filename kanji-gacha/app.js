@@ -266,11 +266,17 @@ const KG = (() => {
         h += `<g class="cap" style="--d:${(i % 5) * 0.05}s" transform="translate(${x} ${y}) rotate(${(i * 47) % 360})"><circle r="15" fill="#fff" stroke="#4a3728" stroke-width="3"/><path d="M-15 0 A15 15 0 0 1 15 0 Z" fill="${col}" stroke="#4a3728" stroke-width="3"/></g>`;
       }
       g.innerHTML = h;
+      const ring = $('hRing');
+      for (let i = 0; i < FULL / NOTCH; i++) {
+        const a = (i + 1) * NOTCH * Math.PI / 180 - Math.PI / 2;
+        ring.insertAdjacentHTML('beforeend', `<circle cx="${(Math.cos(a) * 47).toFixed(1)}" cy="${(Math.sin(a) * 47).toFixed(1)}" r="4"/>`);
+      }
     }
+    if (!G.busy) setRot(G.rot);
     gMsg();
   }
   function gMsg() {
-    $('gMsg').innerHTML = S.coins >= 3 ? 'ハンドルを ぐるっと まわしてね（コイン 3まい）' : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
+    $('gMsg').innerHTML = S.coins >= 3 ? (G.rot ? 'つづきから まわしてね' : 'ハンドルを ぐるっと まわしてね（コイン 3まい）') : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
     $('handHint').hidden = S.coins < 3 || G.busy;
   }
   function weightOf(t) {
@@ -288,13 +294,53 @@ const KG = (() => {
     const cx = r.left + r.width * 122 / 300, cy = r.top + r.height * 316 / 420;
     return Math.atan2(e.clientY - cy, e.clientX - cx);
   }
+  /* ハンドルは 30ど ごとに カチッと とまる（ラチェット）。1しゅう（360ど）で ガチャン */
+  const NOTCH = 30, FULL = 360;
+  let capBase = null;
   function setHandle(deg) { $('handleRot').setAttribute('transform', `rotate(${deg})`); }
+  function setRot(rot) {
+    const n = Math.floor(rot / NOTCH), f = rot / NOTCH - n;
+    // ノッチの あいだは おもくて ゆっくり、こえる しゅんかんに カチッと すすむ
+    setHandle(rot >= FULL ? FULL : n * NOTCH + NOTCH * 0.75 * f * f);
+    const ring = $('hRing');
+    if (ring) [...ring.children].forEach((d, i) => d.classList.toggle('on', i < n));
+    stirCaps(rot);
+  }
+  function stirCaps(rot) {
+    const caps = $('caps').children;
+    if (!capBase) capBase = [...caps].map(c => c.getAttribute('transform'));
+    const a = rot * Math.PI / 180;
+    for (let i = 0; i < caps.length; i++) {
+      const k = 1 + (i % 4) * 0.5, ph = i * 1.7, amp = rot ? 4 + (i % 3) * 3 : 0;
+      const dx = Math.sin(a * k + ph) * amp, dy = (Math.cos(a * k + ph) - 1) * amp * 0.8;
+      caps[i].setAttribute('transform', `translate(${dx.toFixed(1)} ${dy.toFixed(1)}) ${capBase[i]} rotate(${(rot * (i % 2 ? 0.5 : -0.4)).toFixed(0)})`);
+    }
+  }
+  function kick(n) {               // カチッ ごとに きかいが すこし ゆれる
+    const m = $('machine');
+    m.style.transform = `rotate(${n % 2 ? 0.7 : -0.7}deg)`;
+    setTimeout(() => { m.style.transform = ''; }, 70);
+    try { if (navigator.vibrate) navigator.vibrate(n >= FULL / NOTCH - 3 ? 18 : 8); } catch (err) { /* なくても よい */ }
+  }
+  /* rot を すすめる。ノッチを こえたら 音と ゆれ。1しゅう したら ガチャン */
+  function advance(rot, speed) {
+    const before = Math.floor(G.rot / NOTCH);
+    G.rot = Math.min(rot, FULL);
+    const now = Math.floor(G.rot / NOTCH);
+    for (let n = before + 1; n <= now; n++) {
+      Snd.ratchet(n, FULL / NOTCH, speed);
+      kick(n);
+    }
+    setRot(G.rot);
+    if (G.rot >= FULL) { G.lastA = null; turn(); }
+  }
   function hDown(e) {
     Snd.unlock();
     if (G.busy) return;
     if (S.coins < 3) { Snd.ng(); setCoins(true); gMsg(); return; }
     e.preventDefault();
-    G.lastA = handleAngle(e); G.moved = 0; G.rot = 0;
+    G.lastA = handleAngle(e); G.moved = 0; G.lastT = performance.now(); G.back = 0;
+    $('handle').classList.add('grab');
     try { e.target.setPointerCapture(e.pointerId); } catch (err) { /* なくても よい */ }
   }
   function hMove(e) {
@@ -302,46 +348,53 @@ const KG = (() => {
     const a = handleAngle(e);
     let d = a - G.lastA; if (d > Math.PI) d -= 2 * Math.PI; if (d < -Math.PI) d += 2 * Math.PI;
     G.lastA = a;
+    const t = performance.now(), dt = Math.max(8, t - G.lastT); G.lastT = t;
     if (d > 0) {
-      const before = Math.floor(G.rot / 45);
-      G.rot += d * 180 / Math.PI; G.moved += Math.abs(d);
-      if (Math.floor(G.rot / 45) > before) Snd.click();
-      setHandle(G.rot);
-      if (G.rot >= 330) { G.lastA = null; turn(); }
+      G.moved += d; G.back = 0;
+      const deg = Math.min(d * 180 / Math.PI, 40);       // いっきに まわしすぎない
+      advance(G.rot + deg, Math.min(1, deg / dt / 0.6));
+      if (!G.busy) $('gMsg').textContent = G.rot < FULL / 2 ? 'ガリガリ… そのまま まわして！' : 'もうすこし！';
+    } else if (d < 0) {
+      // ぎゃくには まわらない（ガッと とまる）
+      G.back += -d;
+      if (G.back > 0.35) {
+        G.back = 0; Snd.stuck();
+        const h = $('handleRot'); h.classList.remove('nope'); void h.getBBox(); h.classList.add('nope');
+        $('gMsg').textContent = 'とけいと おなじ むきに まわしてね ↻';
+      }
     }
   }
   function hUp() {
     if (G.lastA == null) return;
     G.lastA = null;
-    if (!G.busy && G.rot < 330) {
-      if (G.moved < 0.3) autoTurn();     // タップだけでも まわる
-      else { setHandle(0); G.rot = 0; $('gMsg').textContent = 'もっと ぐるっと まわしてね'; }
-    }
+    $('handle').classList.remove('grab');
+    if (!G.busy && G.rot < FULL && G.moved < 0.3) autoTurn();     // タップだけでも まわる
+    // とちゅうで はなしても ハンドルは そこで とまる（つぎは つづきから）
   }
   function autoTurn() {
-    let deg = 0; G.busy = true;
-    const step = () => {
-      deg += 18; setHandle(deg);
-      if (deg % 90 === 0) Snd.click();
-      if (deg < 360) requestAnimationFrame(step); else { G.busy = false; turn(); }
+    G.busy = true;
+    let last = performance.now();
+    const step = t => {
+      const dt = Math.min(50, Math.max(0, t - last)); last = t;
+      advance(G.rot + dt * 0.45, 0.6);                    // 1しゅう やく 0.8びょう
+      if (G.rot < FULL) requestAnimationFrame(step);
     };
-    step();
+    requestAnimationFrame(step);
   }
   function turn() {
-    if (S.coins < 3) return;
+    if (S.coins < 3) { G.rot = 0; setRot(0); G.busy = false; return; }
     G.busy = true;
     S.coins -= 3; S.pulls++; setCoins(true);
-    Snd.coin();
     G.toy = drawToyPick();
     save();
-    setHandle(360);
+    setHandle(FULL);
     $('handHint').hidden = true;
-    $('gMsg').textContent = 'ガラガラ ガラガラ…';
+    $('gMsg').textContent = 'ガチャン！';
+    Snd.clunk();
     $('machine').classList.add('shake');
-    Snd.rattle();
     setTimeout(() => {
       $('machine').classList.remove('shake');
-      setHandle(0);
+      G.rot = 0; setRot(0);
       const cap = $('capsule');
       const col = G.toy.rare === 3 ? 'gold' : G.toy.rare === 2 ? 'silver' : '';
       cap.className = 'capsule ' + col;
@@ -351,7 +404,7 @@ const KG = (() => {
       cap.classList.add('drop');
       Snd.roll();
       $('gMsg').textContent = G.toy.rare === 3 ? 'きんいろの カプセル！？ タップで あけよう！' : G.toy.rare === 2 ? 'ぎんいろの カプセル！ タップで あけよう！' : 'カプセルを タップして あけよう！';
-    }, 1150);
+    }, 650);
   }
   function openCapsule() {
     const cap = $('capsule');

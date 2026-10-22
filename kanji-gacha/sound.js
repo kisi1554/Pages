@@ -89,6 +89,23 @@ const Snd = (() => {
       }
     },
     click() { noise(0.03, { freq: 2500, q: 4, vol: 0.25 }); tone(800, 0.03, { type: 'square', vol: 0.06 }); },
+    ratchet(n, total, speed) {       // ハンドルの カチッ ＋ なかで カプセルが ゴロゴロ
+      const heavy = n > total - 3;
+      noise(0.025, { freq: heavy ? 1800 : 2600 + n * 40, q: 5, vol: heavy ? 0.32 : 0.24 });
+      tone(heavy ? 420 : 700 + (n % 2) * 60, 0.035, { type: 'square', vol: 0.06 });
+      const k = 1 + Math.round((speed || 0.5) * 3);
+      for (let i = 0; i < k; i++) {
+        tone(380 + Math.random() * 520, 0.045, { type: 'triangle', vol: 0.05 + (speed || 0.5) * 0.06, at: 0.02 + Math.random() * 0.09 });
+      }
+    },
+    stuck() { noise(0.05, { freq: 500, q: 2, vol: 0.3 }); tone(160, 0.06, { type: 'square', vol: 0.06 }); },
+    clunk() {                        // ガチャン
+      noise(0.08, { freq: 700, q: 1.5, vol: 0.45 });
+      tone(150, 0.22, { type: 'triangle', vol: 0.35, slide: 70 });
+      tone(1900, 0.12, { type: 'square', vol: 0.05, at: 0.02, slide: 1500 });
+      for (let i = 0; i < 6; i++) noise(0.05, { freq: 900 + Math.random() * 1400, q: 6, vol: 0.22, at: 0.1 + i * 0.06 });
+      tone(110, 0.15, { type: 'sine', vol: 0.35, at: 0.42, slide: 60 });   // ゴトン
+    },
     roll() {                         // ころころ
       for (let i = 0; i < 6; i++) tone(500 - i * 40, 0.06, { type: 'triangle', vol: 0.12, at: i * 0.12 });
     },
