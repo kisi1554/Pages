@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>しきの ことば</title>
+<meta name="theme-color" content="#c2185b">
+<link rel="stylesheet" href="style.css?v=18031c8">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="bar">
+  <button type="button" class="back" id="back" hidden aria-label="もどる">◀ もどる</button>
+  <h1 id="title">しきの ことば</h1>
+  <button type="button" class="snd" id="snd" aria-pressed="true" aria-label="おと">🔊</button>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section id="home" class="screen">
+    <div class="hero">
+      <div class="hero-emoji" aria-hidden="true"><span>🌸</span><span>🌻</span><span>🍁</span><span>⛄</span></div>
+      <p class="lead">はる なつ あき ふゆ の ことばを あつめよう。<br><ruby>季語<rt>きご</rt></ruby>（きせつの ことば）で はいくも つくれるよ。</p>
+    </div>
+    <div class="modes">
+      <button type="button" class="mode" data-go="hako" style="--c:#ec407a">
+        <span class="m-emoji">📦</span><span class="m-name">きせつの はこ</span><span class="m-star">★</span>
+        <span class="m-desc">ことばを はる・なつ・あき・ふゆ の はこに いれよう</span>
+      </button>
+      <button type="button" class="mode" data-go="karuta" style="--c:#e65100">
+        <span class="m-emoji">🎴</span><span class="m-name">きせつ カルタ</span><span class="m-star">★</span>
+        <span class="m-desc">よみふだを きいて えふだを とろう。CPU と きょうそう も</span>
+      </button>
+      <button type="button" class="mode" data-go="quiz" style="--c:#2e7d32">
+        <span class="m-emoji">📜</span><span class="m-name">はいくの きせつ</span><span class="m-star">★★</span>
+        <span class="m-desc">くらしでは なつ。でも はいくでは？ むかしの こよみ クイズ</span>
+      </button>
+      <button type="button" class="mode" data-go="haiku" style="--c:#5e35b1">
+        <span class="m-emoji">🖌️</span><span class="m-name">はいくを つくろう</span><span class="m-star">★★</span>
+        <span class="m-desc">5・7・5 の わくに ことばの ピースを はめよう</span>
+      </button>
+      <button type="button" class="mode mzk" data-go="zukan" style="--c:#c2185b">
+        <span class="m-emoji">📖</span><span class="m-name">ことば ずかん</span>
+        <span class="m-desc" id="zkCount">であった ことばが たまるよ</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- きせつの はこ -->
+  <section id="hako" class="screen" hidden>
+    <div class="setup" id="hakoSetup">
+      <h2>どの きせつ かな？</h2>
+      <p>ことばの カードを、はる・なつ・あき・ふゆ の はこに いれよう。<br>カードを はこへ ひっぱるか、はこを タップ してね。</p>
+      <div class="choices">
+        <button type="button" class="big" data-rule="life">🏠 くらしの きせつ で あそぶ<small>★ はじめての ひと むけ</small></button>
+        <button type="button" class="big alt" data-rule="kigo">📜 はいくの きせつ で あそぶ<small>★★ <ruby>季語<rt>きご</rt></ruby>の きせつ（ずれる ことばに ちゅうい）</small></button>
+      </div>
+      <p class="best" id="hakoBest"></p>
+    </div>
+    <div class="play" id="hakoPlay" hidden>
+      <div class="status"><span id="hakoRule"></span><span id="hakoProg"></span></div>
+      <div class="stage">
+        <div class="cardslot"><div class="wcard" id="hakoCard"></div></div>
+        <p class="msg" id="hakoMsg">はこに いれてね</p>
+      </div>
+      <div class="boxes" id="boxes"></div>
+    </div>
+  </section>
+
+  <!-- カルタ -->
+  <section id="karuta" class="screen" hidden>
+    <div class="setup" id="karutaSetup">
+      <h2>きせつ カルタ</h2>
+      <p>よみふだを きいて、あう えふだを はやく タップ！ まちがえると「おてつき」で すこし おやすみ。</p>
+      <div class="opt"><span>きせつ</span><div class="seg" id="kSeason"></div></div>
+      <div class="opt"><span>あいて</span><div class="seg" id="kFoe"></div></div>
+      <button type="button" class="big go" id="kStart">🎴 はじめる</button>
+      <p class="best" id="karutaBest"></p>
+    </div>
+    <div class="play" id="karutaPlay" hidden>
+      <div class="score">
+        <div class="you">🧒 あなた <b id="kYou">0</b></div>
+        <button type="button" class="again" id="kAgain">🔁 もういちど きく</button>
+        <div class="cpu" id="kCpuBox">🤖 CPU <b id="kCpu">0</b></div>
+      </div>
+      <div class="yomi" id="kYomi" aria-live="polite"></div>
+      <div class="board" id="kBoard"></div>
+    </div>
+  </section>
+
+  <!-- はいくの きせつ -->
+  <section id="quiz" class="screen" hidden>
+    <div class="setup" id="quizSetup">
+      <h2>はいくの きせつ</h2>
+      <p>はいくの きせつ（<ruby>季語<rt>きご</rt></ruby>の きせつ）は、むかしの こよみ が もと。<br>だから いまの くらしと ずれる ことばが あるよ。</p>
+      <div class="cal" id="calIntro"></div>
+      <button type="button" class="big go" id="qStart">📜 クイズ を はじめる</button>
+      <p class="best" id="quizBest"></p>
+    </div>
+    <div class="play" id="quizPlay" hidden>
+      <div class="status"><span>はいくの きせつ</span><span id="qProg"></span></div>
+      <div class="qcard"><div class="wcard" id="qCard"></div></div>
+      <p class="qtext" id="qText"></p>
+      <div class="qbtns" id="qBtns"></div>
+      <div class="explain" id="qExplain" hidden></div>
+    </div>
+  </section>
+
+  <!-- はいくを つくろう -->
+  <section id="haiku" class="screen" hidden>
+    <div class="hk">
+      <div class="hk-lines" id="hkLines"></div>
+      <p class="hk-msg" id="hkMsg"></p>
+      <div class="hk-tools">
+        <button type="button" id="hkUndo">↩ ひとつ けす</button>
+        <button type="button" id="hkClear">🧹 ぜんぶ けす</button>
+        <button type="button" id="hkRead">🔊 よむ</button>
+        <button type="button" class="save" id="hkSave">💾 ほぞん</button>
+      </div>
+      <div class="hk-pal">
+        <div class="tabs" id="hkTabs"></div>
+        <div class="pieces" id="hkPieces"></div>
+      </div>
+      <h3 class="hk-h">ほぞんした はいく <small id="hkSavedN"></small></h3>
+      <ol class="hk-saved" id="hkSaved"></ol>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section id="zukan" class="screen" hidden>
+    <div class="tabs" id="zkTabs"></div>
+    <p class="zk-n" id="zkN"></p>
+    <div class="zk-grid" id="zkGrid"></div>
+  </section>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="sheet" role="dialog" aria-modal="true">
+    <button type="button" class="close" id="modalClose" aria-label="とじる">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="words.js?v=18031c8"></script>
+<script src="mora.js?v=18031c8"></script>
+<script src="app.js?v=18031c8"></script>
+</body>
+</html>
