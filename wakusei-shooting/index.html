@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>わくせい シューティング</title>
+<meta name="description" content="ロケットで たいようけいを すすんで わくせいカードを あつめよう。すいせいから かいおうせいまで 8つの わくせいと かくし ステージ。">
+<meta name="theme-color" content="#1c2c6b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<link rel="stylesheet" href="style.css">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <header class="bar">
+    <a class="barbtn" id="homeBtn" href="../" aria-label="あそびメニューへ">🏠</a>
+    <button class="barbtn" id="pauseBtn" type="button" aria-label="ちょっと やすむ" hidden>⏸</button>
+    <div class="bartitle">わくせい シューティング</div>
+    <button class="barbtn" id="soundBtn" type="button" aria-label="おと オン/オフ">🔊</button>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+
+    <button class="bomb" id="bombBtn" type="button" hidden aria-label="ボム">
+      <span class="ic">💥</span><span class="tx">ボム</span><b id="bombNum">2</b>
+    </button>
+
+    <!-- タイトル -->
+    <section class="panel" id="titleP">
+      <div class="card">
+        <h1 class="logo"><span class="l1">わくせい</span><span class="l2">シューティング 🚀</span></h1>
+        <p class="sub">ロケットで たいようけいを すすもう！</p>
+        <div class="stages" id="stageList"></div>
+        <div class="row">
+          <span class="lab">むずかしさ</span>
+          <div class="seg" id="levelSeg">
+            <button type="button" data-lv="easy">やさしい</button>
+            <button type="button" data-lv="normal">ふつう</button>
+          </div>
+        </div>
+        <button class="big zukan" id="zukanBtn" type="button">📖 わくせい ずかん <small id="cardCount">0/9</small></button>
+        <p class="hi">ハイスコア <b id="hiScore">0</b></p>
+        <details class="howto">
+          <summary>あそびかた</summary>
+          <ul>
+            <li>がめんを <b>ゆびで なぞる</b> と ロケットが うごく。ロケットは <b>ゆびの すこし うえ</b> に いるよ。</li>
+            <li>たまは <b>じどうで でる</b>。<b>💥 ボム</b> で てきの たまを ぜんぶ けせる（1ステージ 2かい）。</li>
+            <li>パワーアップ: <b class="i s">3</b> 3ウェイ　<b class="i l">L</b> レーザー　<b class="i b">B</b> バリア　<b class="i c">C</b> ちびロケット　<b class="i h">♥</b> ハート</li>
+            <li>あたりは ロケットの <b>まんなかの しろい てん</b> だけ。</li>
+            <li>ボスを たおすと <b>わくせいカード</b> が もらえるよ。</li>
+            <li><b>やさしい</b> は ハート 6つ ＋ たまが おそい。やられても その ステージから つづけられるよ。</li>
+            <li>キーボード: やじるしで うごく、X か スペースで ボム、P で ひとやすみ。</li>
+          </ul>
+        </details>
+      </div>
+    </section>
+
+    <!-- ポーズ -->
+    <section class="panel" id="pauseP" hidden>
+      <div class="card small">
+        <h2>ちょっと ひとやすみ</h2>
+        <button class="big go" id="resumeBtn" type="button">つづける ▶</button>
+        <button class="big" id="retryBtn2" type="button">この ステージを さいしょから</button>
+        <button class="big" id="retireBtn" type="button">タイトルへ もどる</button>
+      </div>
+    </section>
+
+    <!-- わくせい カード -->
+    <section class="panel" id="cardP" hidden>
+      <div class="card">
+        <h2 class="win" id="cardHead"></h2>
+        <div id="cardBody"></div>
+        <div id="cardExtra"></div>
+        <button class="big go" id="cardNext" type="button">つぎの わくせいへ ▶</button>
+        <button class="big go" id="cardEnd" type="button">ゴール！ ▶</button>
+        <button class="big" id="cardTitle" type="button">タイトルへ</button>
+        <button class="big" id="cardBack" type="button">ずかんに もどる</button>
+      </div>
+    </section>
+
+    <!-- ゲームオーバー -->
+    <section class="panel" id="overP" hidden>
+      <div class="card small">
+        <h2 class="lose">ざんねん…</h2>
+        <p>だいじょうぶ！ この ステージから また はじめられるよ。</p>
+        <button class="big go" id="contBtn" type="button">この ステージから つづける</button>
+        <button class="big" id="overTitleBtn" type="button">タイトルへ</button>
+      </div>
+    </section>
+
+    <!-- エンディング -->
+    <section class="panel" id="endP" hidden>
+      <div class="card small">
+        <h2 class="win">たいようけい だいぼうけん クリア！</h2>
+        <p class="big-ic">🚀☀️🪐</p>
+        <p>すいせいから かいおうせい、そして <ruby>太陽<rt>たいよう</rt></ruby>まで ぜんぶ まわったよ。<br>ずかんで わくせいの <ruby>大<rt>おお</rt></ruby>きさを くらべてみよう！</p>
+        <p class="score">スコア <b id="endScore">0</b></p>
+        <button class="big go" id="endZukanBtn" type="button">📖 おおきさ くらべを みる</button>
+        <button class="big" id="endTitleBtn" type="button">タイトルへ</button>
+      </div>
+    </section>
+
+    <!-- ずかん -->
+    <section class="panel" id="zukanP" hidden>
+      <div class="card wide">
+        <h2>📖 わくせい ずかん <small id="zkCount"></small></h2>
+        <div class="seg tabs">
+          <button type="button" id="zkTabCards">カード</button>
+          <button type="button" id="zkTabSize">おおきさ くらべ</button>
+        </div>
+        <div class="zkgrid" id="zkCards"></div>
+        <div id="zkSize" hidden>
+          <div class="seg" id="sizeSeg">
+            <button type="button" data-m="sun">たいようと くらべる</button>
+            <button type="button" data-m="planets">わくせい だけ</button>
+          </div>
+          <div class="sizewrap"><canvas id="sizeCv"></canvas></div>
+          <p class="note">よこに スクロール できるよ。カードを もっていない わくせいは てんせんの まる。</p>
+        </div>
+        <button class="big" id="zkBack" type="button">タイトルへ</button>
+      </div>
+    </section>
+  </div>
+</div>
+<script src="data.js"></script>
+<script src="audio.js"></script>
+<script src="render.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
