@@ -1,25 +1,34 @@
-// はいくの 音（拍・モーラ）を かぞえる。
-//   ・ちいさい「ゃゅょぁぃぅぇぉゎ」は まえの 字と あわせて 1つ（「ちょ」で 1）
-//   ・ちいさい「っ」、のばす「ー」、「ん」は それぞれ 1つ
-//   ・くうはく や 「、。・！？」 は かぞえない
-(function (root) {
-  var SMALL = "ゃゅょぁぃぅぇぉゎャュョァィゥェォヮ";
-  var SKIP = /[\s、。，．・･！？!?「」『』（）()〜～…]/;
+"use strict";
 
-  // "ちょっと" → ["ちょ", "っ", "と"]
-  function split(text) {
-    var out = [];
-    for (var i = 0; i < (text || "").length; i++) {
-      var c = text[i];
-      if (SKIP.test(c)) continue;
-      if (SMALL.indexOf(c) >= 0 && out.length) out[out.length - 1] += c;
+/* はいくの 音（拍・モーラ）を かぞえる。
+ *
+ *   ちいさい ゃゅょ・ぁぃぅぇぉ・ゎ … まえの 字と あわせて 1つ（きゃ = 1）
+ *   ちいさい っ（つまる音）          … 1つ（きって = き・っ・て = 3）
+ *   のばす ー                        … 1つ（らーめん = ら・ー・め・ん = 4）
+ *   ん                               … 1つ
+ *   カタカナ は ひらがな と おなじ。くうはく・てん・まる などは かぞえない。
+ */
+const Mora = (() => {
+  const SMALL = 'ゃゅょぁぃぅぇぉゎ';      // まえの 字に くっつく ちいさい 字
+
+  function toHira(s) {
+    return String(s).replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  }
+  function isKana(c) { return (c >= 'ぁ' && c <= 'ゖ') || c === 'ー'; }
+
+  /* 音 ごと に わけた 配列。「ちょっと」→ ['ちょ', 'っ', 'と'] */
+  function split(s) {
+    const out = [];
+    for (const c of toHira(s)) {
+      if (!isKana(c)) continue;
+      if (SMALL.includes(c) && out.length) out[out.length - 1] += c;
       else out.push(c);
     }
     return out;
   }
-  function count(text) { return split(text).length; }
+  function count(s) { return split(s).length; }
 
-  var api = { split: split, count: count };
-  if (typeof module === "object" && module.exports) module.exports = api;
-  else root.SK_MORA = api;
-})(this);
+  return { split, count, toHira };
+})();
+
+if (typeof module !== 'undefined' && module.exports) module.exports = Mora;

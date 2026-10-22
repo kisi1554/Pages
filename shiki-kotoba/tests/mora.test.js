@@ -1,41 +1,21 @@
 // node --test shiki-kotoba/tests/*.test.js
+// （node が ない ときは python tools/check-shiki-kotoba.py が おなじ ケースを Chromium で ためす）
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const M = require("../mora.js");
+const Mora = require("../mora.js");
+const CASES = require("./mora-cases.js");
+const { WORDS, PIECES } = require("../data.js");
 
-test("ふつうの かな は 1字 1拍", () => {
-  assert.equal(M.count("さくら"), 3);
-  assert.equal(M.count("ふるいけや"), 5);
-  assert.equal(M.count("かわずとびこむ"), 7);
-  assert.equal(M.count("みずのおと"), 5);
+test("音の かず と わけかた", () => {
+  for (const [s, n, parts] of CASES) {
+    assert.equal(Mora.count(s), n, `「${s}」は ${n}おん`);
+    if (parts) assert.equal(Mora.split(s).join("・"), parts, `「${s}」の わけかた`);
+  }
 });
 
-test("ちいさい ゃゅょ は まえの 字と あわせて 1拍", () => {
-  assert.deepEqual(M.split("ちょっと"), ["ちょ", "っ", "と"]);
-  assert.equal(M.count("きゅうしゅう"), 4);
-  assert.equal(M.count("おたまじゃくし"), 6);
-  assert.equal(M.count("しゃぼんだま"), 5);
-  assert.equal(M.count("ファ"), 1);
-});
-
-test("ちいさい っ・のばす ー・ん は 1拍", () => {
-  assert.equal(M.count("きって"), 3);
-  assert.equal(M.count("ラーメン"), 4);
-  assert.deepEqual(M.split("チューリップ"), ["チュ", "ー", "リ", "ッ", "プ"]);
-  assert.equal(M.count("しんぶんし"), 5);
-  assert.equal(M.count("きゃっきゃ"), 3);
-  assert.equal(M.count("おかあさん"), 5);
-  assert.equal(M.count("がっこう"), 4);
-});
-
-test("くうはく・くとうてん は かぞえない", () => {
-  assert.equal(M.count("さくら さく"), 5);
-  assert.equal(M.count("あ、い。う！"), 3);
-  assert.equal(M.count(""), 0);
-  assert.equal(M.count(undefined), 0);
-});
-
-test("ゆうめいな はいく が 5・7・5 に なる", () => {
-  const ku = [["かきくえば", "かねがなるなり", "ほうりゅうじ"], ["やせがえる", "まけるないっさ", "これにあり"]];
-  for (const k of ku) assert.deepEqual(k.map(M.count), [5, 7, 5]);
+test("データの ことば は ぜんぶ かぞえられる（かな だけ）", () => {
+  for (const w of [...WORDS.map((w) => w.kana), ...PIECES]) {
+    assert.match(w, /^[ぁ-ゖー]+$/, `「${w}」に かな いがいが ある`);
+    assert.ok(Mora.count(w) >= 1);
+  }
 });
