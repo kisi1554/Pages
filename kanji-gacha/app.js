@@ -186,7 +186,7 @@ const KG = (() => {
   }
 
   function startQuiz() {
-    Q = { qs: makeSet(), i: 0, right: 0, done: false };
+    Q = { qs: makeSet(), i: 0, right: 0, done: false, streak: 0, earned: 0 };
     show('quiz');
     $('qEnd').hidden = true;
     renderQ();
@@ -220,11 +220,15 @@ const KG = (() => {
       else if (j === i) b.classList.add('wrong');
     });
     if (ok) {
-      Q.right++; S.right++; S.coins++;
+      // 3もん れんぞくで せいかいすると コインが 2まいに なる
+      Q.right++; S.right++; Q.streak++;
+      const got = Q.streak >= 3 ? 2 : 1;
+      S.coins += got; Q.earned += got;
       if (S.miss[q.c]) { S.miss[q.c]--; if (S.miss[q.c] <= 0) delete S.miss[q.c]; }
-      Snd.ok(); Snd.coin(0.15); setCoins(true);
-      $('qRes').innerHTML = '⭕ せいかい！ <span class="plus">コイン +1</span>';
+      Snd.ok(); Snd.coin(0.15); if (got > 1) Snd.coin(0.32); setCoins(true);
+      $('qRes').innerHTML = got > 1 ? `⭕ ${Q.streak}もん れんぞく！ <span class="plus">コイン +2</span>` : '⭕ せいかい！ <span class="plus">コイン +1</span>';
     } else {
+      Q.streak = 0;
       S.miss[q.c] = Math.min(3, (S.miss[q.c] || 0) + 1);
       Snd.ng();
       $('qRes').innerHTML = '❌ ざんねん。あとで もういちど でるよ';
@@ -241,15 +245,20 @@ const KG = (() => {
   function nextQ() {
     Q.i++;
     if (Q.i < Q.qs.length) { renderQ(); return; }
-    S.sets++; save();
+    // さいごまで やったら +1、ぜんもん せいかいなら さらに +2
+    const bonus = 1 + (Q.right === Q.qs.length ? 2 : 0);
+    S.coins += bonus; Q.earned += bonus;
+    S.sets++; save(); setCoins(true);
     $('qChoices').hidden = true; $('qFeed').hidden = true;
     $('qDots').innerHTML = Q.qs.map(x => `<span class="dot ${x.res ? 'ok' : 'ng'}"></span>`).join('');
     $('qAsk').textContent = ''; $('qBig').innerHTML = ''; $('qHint').textContent = ''; $('qPicWrap').hidden = true;
     $('qEnd').hidden = false;
     $('qEndTitle').textContent = Q.right === 5 ? 'ぜんもん せいかい！ すごい！' : `${Q.right}もん せいかい！`;
-    $('qEndCoins').innerHTML = Q.right ? Array.from({ length: Q.right }, (_, i) => `<span class="coin big" style="animation-delay:${i * 0.15}s">か</span>`).join('') + `<span class="plus">+${Q.right}</span>` : 'つぎは がんばろう！';
+    $('qEndCoins').innerHTML = Array.from({ length: Q.earned }, (_, i) => `<span class="coin big" style="animation-delay:${i * 0.12}s">か</span>`).join('') + `<span class="plus">+${Q.earned}</span>` +
+      `<span class="bonus">さいごまで できた ボーナス +1${bonus > 1 ? '<br>ぜんもん せいかい ボーナス +2' : ''}</span>`;
+    Snd.coin(0.2);
     $('qToGacha').disabled = S.coins < 3;
-    $('qToGacha').textContent = S.coins >= 3 ? 'ガチャへ 🎰' : `あと ${3 - S.coins}まいで ガチャ`;
+    $('qToGacha').textContent = S.coins >= 3 ? `ガチャへ 🎰（${Math.floor(S.coins / 3)}かい）` : `あと ${3 - S.coins}まいで ガチャ`;
     if (Q.right >= 4) Snd.fanfare();
   }
 
@@ -585,5 +594,5 @@ const KG = (() => {
   }
 
   document.addEventListener('DOMContentLoaded', init);
-  return { selfTest, TOYS, GRADE, kinfo, get state() { return S; }, showToy: (id, m) => showToy(TOY[id], m || 'shelf'), playToy: id => playToy(TOY[id]), show };
+  return { selfTest, TOYS, GRADE, kinfo, get state() { return S; }, showToy: (id, m) => showToy(TOY[id], m || 'shelf'), playToy: id => playToy(TOY[id]), show, rightIndex: () => Q && Q.qs[Q.i] ? Q.qs[Q.i].choices.findIndex(c => c.ok) : -1 };
 })();
