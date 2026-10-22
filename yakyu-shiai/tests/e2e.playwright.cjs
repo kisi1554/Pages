@@ -74,6 +74,9 @@ async function fits(page, label, sel) {
     await page.waitForFunction(() => window.__yakyu.view.kind === "play", null, { timeout: 60000 });
     await page.waitForTimeout(250);
     await shot("06-play");
+    // バッターが はしりだしたら 1るいの カメラに かわる
+    const cut = await page.waitForFunction(() => { const v = window.__yakyu.view; return v.kind === "play" && v.switchT != null && v.t > v.switchT + 0.6; }, null, { timeout: 60000 }).catch(() => null);
+    if (cut) await shot("06b-first-cam");
     const thr = await page.waitForSelector("#throwPick:not([hidden])", { timeout: 90000 }).catch(() => null);
     if (thr) await shot("07-throw-pick");
     await page.waitForSelector("#change.show", { timeout: 120000 });

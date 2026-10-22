@@ -135,17 +135,23 @@
     YR.clear();
     if (view.kind === "pitch") YR.drawPitchScene(Object.assign({}, view, { time: n }));
     else if (view.kind === "play") {
-      if (!view.paused) view.t += dt * SPEED * (view.ff ? 3 : 1);
-      YR.drawPlay(view);
-    } else if (view.def) YR.drawPlay(view);
+      if (!view.paused) view.t = Math.min(view.t + dt * SPEED * (view.ff ? 3 : 1), view.tEnd || 1e9);
+      view.time = n;
+      YR.drawPlay3D(view);
+    } else YR.drawIdle();
     YR.drawFx(dt);
-    if (bigText && n - bigText.t0 < bigText.dur) YR.big(bigText.text, bigText.color, n - bigText.t0);
+    if (bigText && n - bigText.t0 < bigText.dur) YR.big(bigText.text, bigText.color, n - bigText.t0, bigText.sub);
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
   window.addEventListener("resize", () => { YR.resize(); placeThrowPick(); });
   new ResizeObserver(() => YR.resize()).observe($("stage"));
-  function showBig(text, color, dur) { bigText = { text, color, t0: NOW(), dur: dur || 1.6 }; }
+  function showBig(text, color, dur, sub) { bigText = { text, color, sub, t0: NOW(), dur: dur || 1.6 }; }
+  // バッティングセンターと おなじ ひとこと
+  function timingWord(dtn) {
+    if (Math.abs(dtn) <= YS.WIN.just * 0.6) return "ぴったり！";
+    return dtn < 0 ? "ちょっと はやい" : "ちょっと おそい";
+  }
 
   // ===== しあいの じょうたい =====
   let G = null;
@@ -384,6 +390,7 @@
     view = {
       kind: "pitch", fieldTeam: defT, batTeam: batT, pitcher, batter, pitch: null, pitchT0: null, windupT0: null,
       swingT0: null, showZone: false, target: null, ring: isHuman(g, bt), bunt: false,
+      def, bat, bases: st.bases.slice(),
     };
     $("aimGuide").classList.toggle("show", isHuman(g, bt));
     const newPA = st.balls === 0 && st.strikes === 0;
@@ -441,6 +448,7 @@
     // おけいこ: タイミングが だいたい あえば きまった だきゅうに する
     if (L && L.forceBall && swing) c = Math.abs(swing.dtn || 0) < 0.2 ? { kind: "inplay", ball: L.forceBall, q: 0.8, just: true } : { kind: "miss" };
     $("aimGuide").classList.remove("show");
+    const word = isHuman(g, bt) && swing && !swing.bunt && swing.dtn != null ? timingWord(swing.dtn) : null;
 
     if (!c || c.kind !== "inplay") {
       // ボールが キャッチャーへ
@@ -456,7 +464,9 @@
         foul: c && c.bunt ? "バントは ファウル" : "ファウル！", walk: ev.pushIn ? "フォアボール！ おしだしで 1てん！" : "フォアボール！ 1るいへ",
         strikeout: ev.bunt ? "スリーバント しっぱい… さんしん！" : ev.swing ? "からぶり さんしん！" : "みのがし さんしん！",
       }[ev.ev];
-      if (ev.ev === "strikeout") { sfx.out(); showBig("さんしん！", "#ff6b6b", 1.2); }
+      if (word && c.kind === "miss") showBig("からぶり", "#fff", 1.2, word);
+      if (word && c.kind === "foul") showBig("ファウル", "#fff", 1.2, word);
+      if (ev.ev === "strikeout") { sfx.out(); showBig("さんしん！", "#ff6b6b", 1.4, word || undefined); }
       if (ev.ev === "walk") showBig("フォアボール", "#74c0fc", 1.2);
       // とうるい
       if (steal != null && ev.ev !== "walk" && !st.over && st.half === half && st.inning === inn && st.bases[steal] && !st.bases[steal + 1]) {
@@ -475,7 +485,8 @@
 
     // ===== インプレー =====
     if (c.bunt) sfx.bunt(); else sfx.crack(c.just);
-    if (c.just && !c.bunt) showBig("カキーン！", "#ffd43b", 0.8);
+    if (word) showBig(c.just ? "カキーン！" : "カキン！", "#ffd43b", 0.9, word);
+    else if (c.just && !c.bunt) showBig("カキーン！", "#ffd43b", 0.8);
     await sleep(260);
     const pb = YS.prepBall(c.ball);
     const fe = YS.fieldBall(pb, YS.fielders(def));
@@ -483,25 +494,27 @@
     const err = L ? 0 : isHuman(g, ft) ? 0.02 : YA.LEVELS[g.level].err;
     const opts = { choice: "auto", seed, err, def, bat, bunt: !!c.bunt };
     let res = YS.resolvePlay(st, pb, fe, opts);
-    view = { kind: "play", play: res, t: 0, def, bat, fieldTeam: defT, batTeam: batT, paused: false, ff: false };
+    // だせきの めせんで おいかけ、バッターが はしりだしたら 1るいの カメラへ
+    const switchT = fe.hr || res.kind === "foul" ? null : Math.max(1.4, fe.t + (fe.air ? 0.9 : 0.4));
+    const endOf = (r) => fe.hr ? Math.max(r.anim.end, pb.T + 1.6) : switchT != null ? Math.max(r.anim.end, switchT + 1.8) : r.anim.end + 0.4;
+    view = { kind: "play", play: res, t: 0, tEnd: endOf(res), switchT, def, bat, fieldTeam: defT, batTeam: batT, paused: false, ff: false };
     if (res.kind !== "foul") talk(fe.hr ? "うったー！ おおきい！" : c.bunt ? "バント！ ころがした！" : "うったー！", { say: !fe.hr });
     if (fe.hr) speak("うったー！ おおきい！");
     // にんげんが まもる ときは なげる るいを えらぶ
     const movers = res.anim.runners.some((r) => r.s != null && r.target > r.base);
     if (isHuman(g, ft) && !save.autoField && !fe.hr && !(fe.foul) && !(res.kind === "fly" || res.kind === "pop" || res.kind === "liner" || res.kind === "foulfly" || res.kind === "sf") && movers && !L) {
       while (view.t < fe.t + 0.15) await raf();
-      view.paused = true;
+      view.paused = true; view.overhead = true;
       sfx.mitt();
       const ch = await pickThrow();
       if (ch !== "auto") res = YS.resolvePlay(st, pb, fe, Object.assign({}, opts, { choice: ch }));
-      view.play = res; view.paused = false; view.ff = false;
+      view.play = res; view.tEnd = endOf(res); view.paused = false; view.overhead = false; view.ff = false;
     }
     let caughtSaid = false;
-    while (view.t < res.anim.end) {
+    while (view.t < view.tEnd) {
       if (!caughtSaid && view.t >= fe.t && !fe.hr) { caughtSaid = true; if (fe.air || res.throws.length) sfx.mitt(); }
       await raf();
     }
-    const half = st.half;
     const ev = YS.applyPlay(st, res);
     const msg = playWords(res, ev.scored || 0, st);
     if (res.kind === "hr" || res.kind === "inside") { sfx.fanfare(); sfx.cheer(2.2); YR.confetti(140); showBig("ホームラン！", "#ff6b6b", 2); }
@@ -513,8 +526,6 @@
     if (st.over && st.walkoff) { sfx.fanfare(); sfx.cheer(2.8); YR.confetti(160); showBig("サヨナラ！", "#ffd43b", 2.4); }
     talk(msg, { hot: res.hit || (ev.scored || 0) > 0 });
     updHud();
-    // しあいの ようすを うえから みせた まま
-    view = { kind: "idle", def, bat, fieldTeam: defT, batTeam: batT, bases: half === st.half ? st.bases : [null, null, null] };
     await sleep(1500);
     return { ev, res, c };
   }
