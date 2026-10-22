@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>やきゅう しあい</title>
+<link rel="stylesheet" href="style.css?v=fba7003">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <!-- うえの スコア -->
+  <header id="top">
+    <div class="sb" id="sbMini">
+      <div class="tm" id="sbAway"><span class="em"></span><b class="r">0</b></div>
+      <div class="inn" id="sbInn">1かい<br>おもて</div>
+      <div class="tm" id="sbHome"><span class="em"></span><b class="r">0</b></div>
+    </div>
+    <div class="bso" aria-label="カウント">
+      <div><span class="k">B</span><i></i><i></i><i></i></div>
+      <div><span class="k">S</span><i></i><i></i></div>
+      <div><span class="k">O</span><i></i><i></i></div>
+    </div>
+    <div class="dia" id="dia" aria-label="ランナー"><i class="b2"></i><i class="b3"></i><i class="b1"></i></div>
+    <div class="tools">
+      <button class="round" id="bBoard" aria-label="スコアボード">📋</button>
+      <button class="round" id="bSound" aria-label="おと">🔊</button>
+      <button class="round" id="bVoice" aria-label="じっきょうの こえ">🗣️</button>
+      <button class="round" id="bQuit" aria-label="やめる">✕</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="who"></div>
+    <div id="throwPick" hidden>
+      <p class="q">どこに なげる？</p>
+      <button class="base" data-b="1">1るい</button>
+      <button class="base" data-b="2">2るい</button>
+      <button class="base" data-b="3">3るい</button>
+      <button class="base" data-b="4">ホーム</button>
+      <button class="base auto" data-b="auto">おまかせ</button>
+    </div>
+    <div id="aimGuide"><span>← ひだりへ</span><span>みぎへ →</span></div>
+  </main>
+
+  <div id="talk"><span id="talkText">プレイボール！</span></div>
+
+  <section id="panel">
+    <!-- こうげき -->
+    <div class="pane" id="pBat" hidden>
+      <p class="hint" id="batHint">ボールが きたら がめんを タップ！</p>
+      <div class="row">
+        <button class="btn big" id="bBunt">🫳 バント</button>
+        <button class="btn big" id="bSteal">💨 とうるい</button>
+      </div>
+    </div>
+    <!-- しゅび -->
+    <div class="pane" id="pPitch" hidden>
+      <p class="hint" id="pitchHint">たまを えらんで、なげる ところを タップ！</p>
+      <div class="pitchbox">
+        <div class="types">
+          <button class="ptype on" data-t="fast">まっすぐ<small>はやい</small></button>
+          <button class="ptype" data-t="curve">カーブ<small>まがる</small></button>
+          <button class="ptype" data-t="slow">スロー<small>ゆっくり</small></button>
+        </div>
+        <div class="grid" id="grid"></div>
+      </div>
+      <label class="auto"><input type="checkbox" id="cAutoField"> しゅびの なげる ところも おまかせ</label>
+    </div>
+    <div class="pane" id="pWait" hidden><p class="hint" id="waitHint">…</p></div>
+  </section>
+</div>
+
+<!-- タイトル -->
+<div class="overlay show" id="menu">
+  <div class="box">
+    <h1><span class="ball">⚾</span> やきゅう しあい</h1>
+    <p class="lead">うって なげて まもって、しあいに かとう！</p>
+    <div class="modes">
+      <button class="mode" data-mode="cpu" style="--tint:#e6f4e8; --sh:#8fc79b;"><span class="em">🤖</span><span>1にん<small>CPU と しあい</small></span></button>
+      <button class="mode" data-mode="two" style="--tint:#fff0c2; --sh:#e0b54a;"><span class="em">👫</span><span>2にん<small>タブレットで こうたい</small></span></button>
+      <button class="mode" data-mode="lesson" style="--tint:#e7f5ff; --sh:#8cc0ea;"><span class="em">📖</span><span>おけいこ<small>ルールを おぼえよう</small></span></button>
+    </div>
+    <div class="row">
+      <button class="btn" id="mRecords">🏆 せいせき</button>
+      <button class="btn" id="mSound">🔊 おと オン</button>
+      <button class="btn" id="mVoice">🗣️ こえ オン</button>
+    </div>
+  </div>
+</div>
+
+<!-- しあいの じゅんび -->
+<div class="overlay" id="setup">
+  <div class="box">
+    <h2 id="setupTitle">チームを えらぼう</h2>
+    <p class="pick" id="pick1Label">きみの チーム</p>
+    <div class="teams" id="teams1"></div>
+    <p class="pick" id="pick2Label">あいての チーム</p>
+    <div class="teams" id="teams2"></div>
+    <div id="cpuOpts">
+      <p class="pick">きみは</p>
+      <div class="seg" id="segOrder">
+        <button data-v="0" class="on">さきに うつ<small>（<ruby>先攻<rt>せんこう</rt></ruby>）</small></button>
+        <button data-v="1">あとで うつ<small>（<ruby>後攻<rt>こうこう</rt></ruby>）</small></button>
+      </div>
+      <p class="pick">CPU の つよさ</p>
+      <div class="seg" id="segLevel">
+        <button data-v="0">🐣 よわい</button>
+        <button data-v="1" class="on">🐥 ふつう</button>
+        <button data-v="2">🦅 つよい</button>
+      </div>
+    </div>
+    <p class="pick">なんかい まで？</p>
+    <div class="seg" id="segInn">
+      <button data-v="3" class="on">3かい</button>
+      <button data-v="6">6かい</button>
+      <button data-v="9">9かい</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="sBack">もどる</button>
+      <button class="btn red" id="sGo">⚾ プレイボール！</button>
+    </div>
+  </div>
+</div>
+
+<!-- せんしゅ しょうかい（チームの なかみ） -->
+<div class="overlay" id="roster">
+  <div class="box wide">
+    <h2 id="rosterTitle"></h2>
+    <div class="tablewrap"><table class="tbl" id="rosterTbl"></table></div>
+    <div class="row"><button class="btn" id="rosterClose">とじる</button></div>
+  </div>
+</div>
+
+<!-- こうたい -->
+<div class="overlay" id="change">
+  <div class="box">
+    <div class="rot" id="chRot">🔄</div>
+    <h2 id="chTitle">チェンジ！</h2>
+    <p class="lead" id="chText"></p>
+    <div class="row"><button class="btn red big" id="chGo">はじめる！</button></div>
+  </div>
+</div>
+
+<!-- スコアボード -->
+<div class="overlay" id="board">
+  <div class="box wide">
+    <h2>スコアボード</h2>
+    <div class="tablewrap"><table class="tbl score" id="boardTbl"></table></div>
+    <div class="row"><button class="btn" id="boardClose">とじる</button></div>
+  </div>
+</div>
+
+<!-- しあい おわり -->
+<div class="overlay" id="result">
+  <div class="box wide">
+    <h2 id="rTitle">しあい しゅうりょう！</h2>
+    <p class="lead" id="rMsg"></p>
+    <div class="tablewrap"><table class="tbl score" id="rBoard"></table></div>
+    <div class="seg" id="rTabs"></div>
+    <div class="tablewrap"><table class="tbl" id="rStats"></table></div>
+    <div class="row">
+      <button class="btn" id="rMenu">メニューへ</button>
+      <button class="btn red" id="rAgain">もういちど</button>
+    </div>
+  </div>
+</div>
+
+<!-- せいせき・つうさん -->
+<div class="overlay" id="records">
+  <div class="box wide">
+    <h2>🏆 せいせき（つうさん）</h2>
+    <div id="recBody"></div>
+    <div class="row"><button class="btn" id="recClose">とじる</button></div>
+  </div>
+</div>
+
+<!-- おけいこ -->
+<div class="overlay" id="lesson">
+  <div class="box">
+    <p class="step" id="lStep"></p>
+    <h2 id="lTitle"></h2>
+    <p class="lead" id="lText"></p>
+    <div class="row">
+      <button class="btn" id="lQuit">やめる</button>
+      <button class="btn" id="lRetry" hidden>もういちど</button>
+      <button class="btn red big" id="lGo">やってみる！</button>
+    </div>
+  </div>
+</div>
+
+<!-- やめる？ -->
+<div class="overlay" id="quit">
+  <div class="box">
+    <h2>しあいを やめる？</h2>
+    <div class="row">
+      <button class="btn" id="qNo">つづける</button>
+      <button class="btn red" id="qYes">やめる</button>
+    </div>
+  </div>
+</div>
+
+<script src="teams.js?v=fba7003"></script>
+<script src="sim.js?v=fba7003"></script>
+<script src="ai.js?v=fba7003"></script>
+<script src="render.js?v=fba7003"></script>
+<script src="game.js?v=fba7003"></script>
+</body>
+</html>
