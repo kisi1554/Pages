@@ -2,7 +2,7 @@
 (function () {
   "use strict";
   const { TEAMS } = window.YT;
-  const YS = window.YS, YA = window.YA, YR = window.YR;
+  const YS = window.YS, YA = window.YA, YR = window.YR, YC = window.YC;
   const $ = (id) => document.getElementById(id);
   const qs = new URLSearchParams(location.search);
   const AUTO = qs.get("auto") === "1";          // テスト用: にんげんの ぶんも じどうで うごく
@@ -467,6 +467,9 @@
       if (word && c.kind === "miss") showBig("からぶり", "#fff", 1.2, word);
       if (word && c.kind === "foul") showBig("ファウル", "#fff", 1.2, word);
       if (ev.ev === "strikeout") { sfx.out(); showBig("さんしん！", "#ff6b6b", 1.4, word || undefined); }
+      // バッターの かお（batting-center と おなじ ひょうじょう）
+      const mood = { strikeout: "sad", walk: "joy", foul: "oops", strike: ev.swing ? "sad" : "oops" }[ev.ev];
+      if (mood) view.mood = { type: mood, t0: NOW() };
       if (ev.ev === "walk") showBig("フォアボール", "#74c0fc", 1.2);
       // とうるい
       if (steal != null && ev.ev !== "walk" && !st.over && st.half === half && st.inning === inn && st.bases[steal] && !st.bases[steal + 1]) {
@@ -683,7 +686,7 @@
       const b = document.createElement("button");
       b.className = "team" + (save[key] === i ? " on" : "");
       b.style.setProperty("--c", t.color); b.style.setProperty("--c2", t.color2);
-      b.innerHTML = "<span class=\"em\">" + t.emoji + "</span>" + t.short + "<span class=\"info\" role=\"button\" aria-label=\"せんしゅ\">i</span>";
+      b.innerHTML = "<canvas class=\"pv\"></canvas>" + t.short + "<span class=\"info\" role=\"button\" aria-label=\"せんしゅ\">i</span>";
       b.onclick = (e) => {
         if (e.target.classList.contains("info")) { showRoster(t); return; }
         save[key] = i;
@@ -691,17 +694,19 @@
         store(); renderSetup(); sfx.beep();
       };
       el.appendChild(b);
+      YC.preview(b.querySelector("canvas"), t, t.players[3], save[key] === i ? "joy" : "normal");
     });
   }
   function showRoster(t) {
     $("rosterTitle").textContent = t.emoji + " " + t.name;
     let h = "<tr><th></th><th>せんしゅ</th><th>まもり</th><th>だりょく</th><th>ミート</th><th>あし</th><th>かた</th></tr>";
     t.players.forEach((p, i) => {
-      h += "<tr><td>" + (i + 1) + "</td><td class=\"name\">" + p.emoji + " " + p.name + "</td><td>" + YS.POS_NAME[p.pos] + "</td>" +
+      h += "<tr><td>" + (i + 1) + "</td><td class=\"name\"><canvas class=\"pv sm\" data-i=\"" + i + "\"></canvas>" + p.name + "</td><td>" + YS.POS_NAME[p.pos] + "</td>" +
         ["pow", "meet", "spd", "arm"].map((k) => "<td class=\"stars\">" + stars(p[k]) + "</td>").join("") + "</tr>";
     });
     $("rosterTbl").innerHTML = h;
     $("roster").classList.add("show");
+    $("rosterTbl").querySelectorAll("canvas").forEach((c) => YC.preview(c, t, t.players[+c.dataset.i]));
   }
   $("rosterClose").onclick = () => $("roster").classList.remove("show");
   function segInit(id, key, conv) {

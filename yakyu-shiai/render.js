@@ -1,7 +1,7 @@
 // やきゅう しあい — Canvas で えがく（だせきの 3D がめん・1るいの カメラ・うえから みた きゅうじょう）
 (function (root) {
   "use strict";
-  const YS = root.YS;
+  const YS = root.YS, YC = root.YC;
   let cv, ctx, W = 0, H = 0, dpr = 1;
 
   function init(canvas) { cv = canvas; ctx = cv.getContext("2d"); resize(); }
@@ -24,11 +24,6 @@
     ctx.beginPath(); ctx.arc(x, y, Math.max(0.1, r), 0, Math.PI * 2);
     if (fill) { ctx.fillStyle = fill; ctx.fill(); }
     if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw || 1; ctx.stroke(); }
-  }
-  function emoji(e, x, y, px) {
-    ctx.font = Math.round(px) + "px \"Apple Color Emoji\",\"Segoe UI Emoji\",\"Noto Color Emoji\",sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(e, x, y + px * 0.05);
   }
   function label(text, x, y, px, color, stroke) {
     ctx.font = "900 " + Math.round(px) + "px \"Hiragino Maru Gothic ProN\",\"BIZ UDPGothic\",\"Meiryo\",sans-serif";
@@ -183,17 +178,14 @@
   function person3D(x, y, team, pl, opt) {
     const p = proj(x, y, 0);
     if (!p || p.x < -60 || p.x > W + 60) return null;
-    const s = Math.max(p.s * 1.15, 5.5);
-    const bob = opt && opt.moving ? Math.abs(Math.sin((opt.time || 0) * 14)) * s * 0.12 : 0;
-    ctx.globalAlpha = opt && opt.alpha != null ? opt.alpha : 1;
-    const b = body(p.x, p.y - bob, s, team, pl, opt || {});
-    if (opt && opt.helmet) {
-      ctx.fillStyle = team.cap || team.color;
-      ctx.beginPath(); ctx.arc(b.hx, b.hy - b.hr * 0.55, b.hr * 0.85, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
-    }
-    if (opt && opt.glove) circle(p.x - b.w * 0.7, b.sh + s * 0.3 - bob, s * 0.13, "#8a4b16");
+    const o = opt || {};
+    const s = Math.max(p.s * 1.2, 6);
+    ctx.globalAlpha = o.alpha != null ? o.alpha : 1;
+    YC.drawChara(ctx, p.x, p.y, s, team, pl, {
+      glove: !!o.glove, mood: o.mood, run: o.moving ? ((o.time || 0) * 2.4) % 1 : null,
+    }, o.time || 0);
     ctx.globalAlpha = 1;
-    return { p, s, b };
+    return { p, s };
   }
   function ball3D(b, trail) {
     const g = proj(b.x, b.y, 0), q = proj(b.x, b.y, b.z);
@@ -242,17 +234,17 @@
       // しゅびに ついて いる せんしゅ（キャッチャーは カメラの まえなので かかない）
       YS.FIELD_POS.forEach((fp, i) => {
         if (i <= 1) return;
-        objs.push({ d: camSpace(fp.x, fp.y, 0).d, draw: () => person3D(fp.x, fp.y, v.fieldTeam, def[i], { glove: true }) });
+        objs.push({ d: camSpace(fp.x, fp.y, 0).d, draw: () => person3D(fp.x, fp.y, v.fieldTeam, def[i], { glove: true, time: t }) });
       });
     }
     if (v.bases && v.bat) v.bases.forEach((rn, i) => {
       if (!rn) return;
       const p = pathPos(i + 1, 2.5);
-      objs.push({ d: camSpace(p.x, p.y, 0).d, draw: () => person3D(p.x, p.y, v.batTeam, v.bat[rn.p], { helmet: true }) });
+      objs.push({ d: camSpace(p.x, p.y, 0).d, draw: () => person3D(p.x, p.y, v.batTeam, v.bat[rn.p], { time: t }) });
     });
     const pu = v.pitch && v.pitchT0 != null ? (t - v.pitchT0) / v.pitch.time : -1;
     const windup = v.windupT0 != null ? Math.min(1, (t - v.windupT0) / 0.8) : 0;
-    objs.push({ d: camSpace(0, 18.4, 0).d, draw: () => { const m = proj(0, 18.4, 0); if (m) drawPitcher(m.x, m.y, m.s, v.fieldTeam, v.pitcher, windup, pu); } });
+    objs.push({ d: camSpace(0, 18.4, 0).d, draw: () => { const m = proj(0, 18.4, 0); if (m) drawPitcher(m.x, m.y, Math.max(m.s * 1.2, 6), v.fieldTeam, v.pitcher, windup, pu, t); } });
     objs.sort((a, b) => b.d - a.d).forEach((o) => o.draw());
 
     // ゾーン（てんせん）
@@ -274,7 +266,8 @@
 
     // バッター
     const bp = P(-0.85, 0, 0);
-    drawChara(bp.x, bp.y, bp.s, v.batTeam, v.batter, v.swingT0 != null ? (t - v.swingT0) / SWING_DUR : -1, v.bunt);
+    const mood = v.mood && t - v.mood.t0 < 1.8 ? v.mood.type : "normal";
+    drawChara(bp.x, bp.y, bp.s, v.batTeam, v.batter, v.swingT0 != null ? (t - v.swingT0) / SWING_DUR : -1, v.bunt, mood, t);
 
     // タイミングの わ（バッティングセンターと おなじ: のこり 0.8びょうから ちぢむ）
     const swung = v.swingT0 != null && v.pitchT0 != null && v.swingT0 >= v.pitchT0;
@@ -299,73 +292,10 @@
     }
   }
 
-  // バットの かまえ・スイング（batting-center と おなじ うごき）
-  function batPose(u) {
-    let ang = -2.2, len = 0.85;
-    const cu = YS.LEAD / SWING_DUR;
-    if (u >= 0 && u < 1) {
-      if (u < cu) {
-        ang = -2.2 + (-2 * Math.PI + 2.2) * (u / cu);
-        len = 0.85 * (0.55 + 0.45 * Math.abs(Math.cos(ang)));
-      } else {
-        const v = (u - cu) / (1 - cu);
-        ang = -2.6 * v;
-        len = 0.85 * (1 - 0.6 * Math.sin(Math.PI * v));
-      }
-    }
-    return { ang, len };
-  }
-  function helmetCap(color, hy) {
-    ctx.fillStyle = color;
-    ctx.beginPath(); ctx.arc(0, hy - 0.06, 0.27, Math.PI * 1.06, Math.PI * 1.94); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "rgba(0,0,0,.18)";
-    ctx.beginPath(); ctx.ellipse(0.14, hy - 0.03, 0.17, 0.035, -0.08, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,.35)";
-    ctx.beginPath(); ctx.ellipse(-0.08, hy - 0.2, 0.07, 0.03, -0.4, 0, Math.PI * 2); ctx.fill();
-  }
-  // バッター（1 = 1m、げんてんは あしもと）。かおは せんしゅの えもじ。
-  function drawChara(px, py, s, team, pl, u, bunt) {
+  // バッター（batting-center の キャラと おなじ かきかた: chara.js）
+  function drawChara(px, py, s, team, pl, u, bunt, mood, time) {
     if (!team) return;
-    const hy = -1.18;
-    ctx.save();
-    ctx.translate(px, py); ctx.scale(s, s);
-    ctx.lineCap = "round"; ctx.lineJoin = "round";
-    ctx.fillStyle = "rgba(0,0,0,.25)";
-    ctx.beginPath(); ctx.ellipse(0, 0, 0.42, 0.08, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.strokeStyle = "#f1f3f5"; ctx.lineWidth = 0.17;
-    ctx.beginPath(); ctx.moveTo(-0.16, -0.06); ctx.lineTo(-0.12, -0.45); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(0.18, -0.06); ctx.lineTo(0.12, -0.45); ctx.stroke();
-    ctx.fillStyle = "#222";
-    ctx.beginPath(); ctx.ellipse(-0.18, -0.04, 0.13, 0.06, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(0.21, -0.04, 0.13, 0.06, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = team.color2 || "#fff";
-    rr(-0.27, -0.94, 0.54, 0.54, 0.16); ctx.fill();
-    ctx.strokeStyle = team.color; ctx.lineWidth = 0.03; ctx.stroke();
-    ctx.fillStyle = team.color; ctx.fillRect(-0.27, -0.5, 0.54, 0.06);
-    // バットと うで
-    const hands = bunt ? { x: 0.05, y: -0.86 } : { x: 0.28, y: -0.82 };
-    const bp = bunt ? { ang: -0.12, len: 0.8 } : batPose(u);
-    ctx.strokeStyle = "#fff3e0"; ctx.lineWidth = 0.1;
-    ctx.beginPath(); ctx.moveTo(0.12, -0.84); ctx.lineTo(hands.x, hands.y); ctx.stroke();
-    ctx.save();
-    ctx.translate(hands.x, hands.y); ctx.rotate(bp.ang);
-    const bg = ctx.createLinearGradient(0, -0.04, 0, 0.04);
-    bg.addColorStop(0, "#f3d39a"); bg.addColorStop(1, "#b98a43");
-    ctx.fillStyle = bg;
-    ctx.beginPath();
-    ctx.moveTo(-0.05, -0.018); ctx.lineTo(bp.len, -0.042); ctx.arc(bp.len, 0, 0.042, -Math.PI / 2, Math.PI / 2); ctx.lineTo(-0.05, 0.018); ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = "#333"; ctx.fillRect(-0.06, -0.022, 0.1, 0.044);
-    ctx.restore();
-    ctx.fillStyle = "#fff3e0";
-    ctx.beginPath(); ctx.arc(hands.x, hands.y, 0.06, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(0, hy, 0.27, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-    emoji(pl ? pl.emoji : "⚾", px + 0.02 * s, py + (hy + 0.07) * s, 0.36 * s);
-    ctx.save();
-    ctx.translate(px, py); ctx.scale(s, s);
-    helmetCap(team.cap || team.color, hy);
-    ctx.restore();
+    YC.drawChara(ctx, px, py, s, team, pl, { bat: !bunt, bunt, u, mood }, time);
   }
   // ===================== ひと・ボール =====================
   function drawBall2(x, y, r) {
@@ -377,47 +307,16 @@
     }
   }
 
-  // ひと（からだ・うで・ぼうし）。かおは せんしゅの えもじ。
-  function body(x, y, s, team, pl, opt) {
-    const h = 1.75 * s, w = 0.55 * s;
-    ctx.fillStyle = "rgba(0,0,0,.22)";
-    ctx.beginPath(); ctx.ellipse(x, y, w * 0.9, w * 0.25, 0, 0, Math.PI * 2); ctx.fill();
-    // あし
-    ctx.fillStyle = "#f1f3f5";
-    rr(x - w * 0.42, y - h * 0.42, w * 0.36, h * 0.42, w * 0.12); ctx.fill();
-    rr(x + w * 0.06, y - h * 0.42, w * 0.36, h * 0.42, w * 0.12); ctx.fill();
-    ctx.fillStyle = "#212529";
-    rr(x - w * 0.46, y - h * 0.06, w * 0.42, h * 0.07, w * 0.1); ctx.fill();
-    rr(x + w * 0.04, y - h * 0.06, w * 0.42, h * 0.07, w * 0.1); ctx.fill();
-    // どう
-    ctx.fillStyle = team.color2 || "#fff";
-    rr(x - w * 0.5, y - h * 0.8, w, h * 0.42, w * 0.25); ctx.fill();
-    ctx.strokeStyle = team.color; ctx.lineWidth = Math.max(1, s * 0.06); ctx.stroke();
-    ctx.fillStyle = team.color;
-    ctx.fillRect(x - w * 0.5, y - h * 0.47, w, h * 0.05);
-    if (opt && opt.num != null && s > 14) label(String(opt.num), x, y - h * 0.62, s * 0.22, team.color);
-    // あたま
-    const hy = y - h * 0.92, hr = w * 0.48;
-    circle(x, hy, hr, "#fff3e0");
-    emoji(pl ? pl.emoji : "⚾", x, hy + hr * 0.08, hr * 1.7);
-    // ぼうし
-    ctx.fillStyle = team.cap || team.color;
-    ctx.beginPath(); ctx.arc(x, hy - hr * 0.6, hr * 0.8, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fill();
-    return { hx: x, hy, hr, sh: y - h * 0.75, w, h };
-  }
-  function drawPitcher(x, y, s, team, pl, windup, pu) {
+  // ピッチャー: ふりかぶって なげる
+  function drawPitcher(x, y, s, team, pl, windup, pu, time) {
     if (!team) return;
-    const b = body(x, y, s, team, pl, { num: 1 });
-    // うで
-    let a;
-    if (pu >= 0 && pu < 0.4) a = -0.6 + pu * 3;          // なげおわり
-    else if (windup > 0 && pu < 0) a = -Math.PI * 0.5 - windup * 2.2; // ふりかぶる
-    else a = 0.6;
-    ctx.strokeStyle = team.color2 || "#fff"; ctx.lineWidth = Math.max(2, s * 0.16); ctx.lineCap = "round";
-    ctx.beginPath(); ctx.moveTo(x + b.w * 0.45, b.sh); ctx.lineTo(x + b.w * 0.45 + Math.cos(a) * s * 0.55, b.sh + Math.sin(a) * s * 0.55); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(x - b.w * 0.45, b.sh); ctx.lineTo(x - b.w * 0.75, b.sh + s * 0.35); ctx.stroke();
-    circle(x - b.w * 0.78, b.sh + s * 0.38, s * 0.13, "#8a4b16");    // グラブ
+    let arm;
+    if (pu >= 0 && pu < 0.5) arm = -2.4 + Math.min(1, pu / 0.25) * 3.3;        // なげおわり
+    else if (windup > 0 && pu < 0) arm = 1.2 - windup * 3.6;                    // ふりかぶる
+    else arm = 1.2;
+    YC.drawChara(ctx, x, y, s, team, pl, { glove: true, arm, num: 1, ballInHand: pu < 0 }, time);
   }
+
   // ===================== うえから みた きゅうじょう =====================
   let K = 1, OX = 0, OY = 0;
   function fieldLayout() {
@@ -520,12 +419,11 @@
   }
 
   function sprite(x, y, team, pl, alpha, runner) {
-    const r = MINI ? Math.max(3, 2.4 * K) : Math.max(10, 2.6 * K);
+    const r = MINI ? Math.max(3, 2.4 * K) : Math.max(11, 2.8 * K);
     ctx.globalAlpha = alpha;
     ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.beginPath(); ctx.ellipse(x, y + r * 0.7, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); ctx.fill();
-    circle(x, y, r, runner ? team.color : "#fff", runner ? "#fff" : team.color, Math.max(2, r * 0.2));
-    if (!MINI) emoji(pl ? pl.emoji : "⚾", x, y, r * 1.25);
-    if (runner) { ctx.fillStyle = team.cap || team.color; ctx.beginPath(); ctx.arc(x, y - r * 0.15, r * 0.98, Math.PI * 1.1, Math.PI * 1.9); ctx.closePath(); ctx.fill(); }
+    circle(x, y, r, runner ? team.color : "#fff", runner ? "#fff" : team.color, Math.max(1.5, r * 0.18));
+    if (!MINI) YC.face(ctx, x, y, r * 0.9, team, pl);
     ctx.globalAlpha = 1;
   }
 
@@ -628,14 +526,18 @@
     cam = Object.assign(base, { yaw: C.yaw, tilt: C.tilt });
 
     drawWorld(v.time, play.hit || fe.hr);
+    const caught = fe.air && CATCH_KINDS.includes(play.kind);
     const objs = [];
     S.fielders.forEach((f) => {
       if (f.i === 1 && !first) return;           // キャッチャーは カメラの まえ
-      objs.push({ d: camSpace(f.x, f.y, 0).d, draw: () => person3D(f.x, f.y, v.fieldTeam, v.def[f.i], { glove: true, moving: f.moving, time: v.time }) });
+      const mood = f.i === play.anim.chaser && caught && t > fe.t && t < fe.t + 2 ? "joy" : f.i === play.anim.chaser && play.hit && t > fe.t ? "oops" : null;
+      objs.push({ d: camSpace(f.x, f.y, 0).d, draw: () => person3D(f.x, f.y, v.fieldTeam, v.def[f.i], { glove: true, moving: f.moving, time: v.time, mood }) });
     });
     S.runners.forEach((r) => {
       if (r.alpha <= 0) return;
-      objs.push({ d: camSpace(r.x, r.y, 0).d, draw: () => person3D(r.x, r.y, v.batTeam, v.bat[r.rn.p], { helmet: true, moving: r.moving, time: v.time, alpha: r.alpha }) });
+      const rn = r.rn;
+      const mood = rn.outAt != null && t > rn.outAt ? "sad" : (play.hit || fe.hr) && t > Math.min(fe.t, 1.2) ? "joy" : caught && rn.batter && t > fe.t ? "sad" : null;
+      objs.push({ d: camSpace(r.x, r.y, 0).d, draw: () => person3D(r.x, r.y, v.batTeam, v.bat[r.rn.p], { moving: r.moving, time: v.time, alpha: r.alpha, mood }) });
     });
     const trail = [];
     if (t < fe.t || fe.hr) for (let k = 5; k >= 1; k--) { if (t - k * 0.035 > 0) trail.push(playBallAt(play, t - k * 0.035)); }
