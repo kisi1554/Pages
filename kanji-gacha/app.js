@@ -76,7 +76,7 @@ const KG = (() => {
   function show(v) {
     view = v;
     VIEWS.forEach(n => { $('v-' + n).hidden = n !== v; });
-    document.body.classList.toggle('fit', v === 'gacha');    // ガチャは 1がめんに おさめる
+    document.body.classList.toggle('fit', v === 'gacha' || v === 'quiz');    // ガチャと クイズは 1がめんに おさめる
     window.scrollTo(0, 0);
     if (v === 'home') renderHome();
     if (v === 'shelf') renderShelf();
@@ -205,6 +205,7 @@ const KG = (() => {
     $('qChoices').innerHTML = q.choices.map((ch, i) => `<button class="choice ${q.cls}" data-i="${i}">${ch.h}</button>`).join('');
     $('qChoices').hidden = false;
     $('qFeed').hidden = true;
+    $('v-quiz').className = 'view';
   }
   function explain(c) {
     const k = kinfo(c);
@@ -241,6 +242,7 @@ const KG = (() => {
     if (q.toy) exp += `<br><span class="small">${nameHTML(q.toy)} の 「${q.c}」</span>`;
     $('qExp').innerHTML = exp;
     $('qFeed').hidden = false;
+    $('v-quiz').className = 'view answered';
     $('qFeed').className = 'qfeed ' + (ok ? 'ok' : 'ng');
   }
   function nextQ() {
@@ -254,6 +256,7 @@ const KG = (() => {
     $('qDots').innerHTML = Q.qs.map(x => `<span class="dot ${x.res ? 'ok' : 'ng'}"></span>`).join('');
     $('qAsk').textContent = ''; $('qBig').innerHTML = ''; $('qHint').textContent = ''; $('qPicWrap').hidden = true;
     $('qEnd').hidden = false;
+    $('v-quiz').className = 'view ended';
     $('qEndTitle').textContent = Q.right === 5 ? 'ぜんもん せいかい！ すごい！' : `${Q.right}もん せいかい！`;
     $('qEndCoins').innerHTML = Array.from({ length: Q.earned }, (_, i) => `<span class="coin big" style="animation-delay:${i * 0.12}s">か</span>`).join('') + `<span class="plus">+${Q.earned}</span>` +
       `<span class="bonus">さいごまで できた ボーナス +1${bonus > 1 ? '<br>ぜんもん せいかい ボーナス +2' : ''}</span>`;
