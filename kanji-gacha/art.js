@@ -931,6 +931,35 @@ const ART = {
   }
 };
 
+/* 都道府県の かたち（pref.js の PREF_SHAPES）。ちずの 座標の まま c に パスを つくる */
+const PREF_BOX = {};
+function prefBox(id) {
+  if (PREF_BOX[id]) return PREF_BOX[id];
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  PREF_SHAPES[id].p.forEach(pl => { for (let i = 0; i < pl.length; i += 2) { x0 = Math.min(x0, pl[i]); x1 = Math.max(x1, pl[i]); y0 = Math.min(y0, pl[i + 1]); y1 = Math.max(y1, pl[i + 1]); } });
+  return (PREF_BOX[id] = { x0, y0, x1, y1, cx: (x0 + x1) / 2, cy: (y0 + y1) / 2, w: x1 - x0, h: y1 - y0 });
+}
+/* (mx, my) を ちずの 座標の 原点に して k ばいで かく */
+function prefPath(c, id, ox, oy, k, mx, my) {
+  c.beginPath();
+  PREF_SHAPES[id].p.forEach(pl => {
+    c.moveTo(ox + (pl[0] - mx) * k, oy + (pl[1] - my) * k);
+    for (let i = 2; i < pl.length; i += 2) c.lineTo(ox + (pl[i] - mx) * k, oy + (pl[i + 1] - my) * k);
+    c.closePath();
+  });
+}
+/* おもちゃの 絵: かたちの ピースに かおを つける */
+function drawPref(c, id, col) {
+  const b = prefBox(id), k = 92 / Math.max(b.w, b.h);
+  prefPath(c, id, 0, 0, k, b.cx, b.cy);
+  c.fillStyle = col; c.fill('evenodd');
+  c.lineWidth = 3; c.strokeStyle = OL; c.stroke();
+  const [lx, ly] = PREF_SHAPES[id].l;
+  const fx = (lx - b.cx) * k, fy = (ly - b.cy) * k;
+  G.eyes(c, fx, fy - 2, 5, 2.4); G.smile(c, fx, fy + 4, 3); G.cheek(c, fx, fy + 2, 9);
+}
+if (typeof PREF_SHAPES !== 'undefined') Object.keys(PREF_SHAPES).forEach(id => { ART[id] = (c, p, col) => drawPref(c, id, col); });
+
 function drawToy(ctx, toy, size, p, x, y) {
   ctx.save();
   ctx.translate(x == null ? size / 2 : x, y == null ? size / 2 : y);

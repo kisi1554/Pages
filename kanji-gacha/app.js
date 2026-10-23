@@ -25,6 +25,7 @@ const KG = (() => {
   /* ルビ: '竹[たけ]' → <ruby> */
   const rb = s => String(s).replace(/([一-龥々])\[([^\]]+)\]/g, '<ruby>$1<rt>$2</rt></ruby>');
 
+  const gradeName = g => g === 4 ? '4年[ねん]生[せい]の 地[ち]名[めい]も' : `${g}年[ねん]生[せい] まで`;
   function gradeLabel(g) {
     if (typeof g === 'number') return `${g}年[ねん]生[せい]で ならう`;
     if (g === '中') return '中[ちゅう]学[がっ]校[こう]で ならう';
@@ -62,7 +63,7 @@ const KG = (() => {
     try { s = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) { s = null; }
     const first = !s;
     s = Object.assign({ coins: 3, owned: {}, miss: {}, grade: 1, sound: true, sets: 0, right: 0, pulls: 0 }, s || {});
-    if (![1, 2, 3].includes(s.grade)) s.grade = 1;
+    if (![1, 2, 3, 4].includes(s.grade)) s.grade = 1;
     Object.keys(s.owned).forEach(id => { if (!TOY[id]) delete s.owned[id]; });
     Object.keys(s.miss).forEach(c => { if (!GRADE[c]) delete s.miss[c]; });
     S = s;
@@ -97,7 +98,7 @@ const KG = (() => {
   function ownedCount() { return Object.keys(S.owned).length; }
   function renderHome() {
     $('shelfSub').textContent = `${ownedCount()} / ${TOYS.length} しゅるい`;
-    $('homeGrade').innerHTML = rb(`クイズ: ${S.grade}年[ねん]生[せい]までの かんじ　（⚙️ で かえられるよ）`);
+    $('homeGrade').innerHTML = rb(`クイズ: ${S.grade === 4 ? '3年[ねん]生[せい]までと 4年[ねん]生[せい]の 地[ち]名[めい]の' : `${S.grade}年[ねん]生[せい]までの`} かんじ　（⚙️ で かえられるよ）`);
   }
 
   /* ================= クイズ ================= */
@@ -110,7 +111,8 @@ const KG = (() => {
     const out = [];
     const sim = shuffle(SIM[c] || []);
     sim.filter(k => GRADE[k] <= S.grade).forEach(k => { if (out.length < 2 && ok(k)) out.push(k); });
-    sim.forEach(k => { if (out.length < 2 && ok(k)) out.push(k); });
+    // 4年の 地名の 字は 「4年生の 地名も」の ときだけ まぜる
+    sim.filter(k => GRADE[k] <= Math.max(3, S.grade)).forEach(k => { if (out.length < 2 && ok(k)) out.push(k); });
     const p = shuffle(pool());
     for (const k of p) { if (out.length >= 2) break; if (ok(k)) out.push(k); }
     return out;
@@ -508,11 +510,11 @@ const KG = (() => {
 
   /* ================= せってい ================= */
   function renderSettings() {
-    $('gradeBtns').innerHTML = [1, 2, 3].map(g => {
+    $('gradeBtns').innerHTML = [1, 2, 3, 4].map(g => {
       const n = Object.keys(GRADE).filter(c => GRADE[c] <= g).length;
-      return `<button class="gbtn ${S.grade === g ? 'on' : ''}" data-g="${g}">${rb(`${g}年[ねん]生[せい] まで`)}<small>${n}じ</small></button>`;
+      return `<button class="gbtn ${S.grade === g ? 'on' : ''}" data-g="${g}"><span>${rb(gradeName(g))}</span><small>${n}じ</small></button>`;
     }).join('');
-    $('gradeNote').innerHTML = rb(`クイズに でる かんじと、ガチャで でやすい おもちゃが かわるよ。<br>4年[ねん]生[せい]より うえの 字[じ]は ふりがなつきで みせるだけ。`);
+    $('gradeNote').innerHTML = rb(`クイズに でる かんじと、ガチャで でやすい おもちゃが かわるよ。<br>「4年[ねん]生[せい]の 地[ち]名[めい]も」は 3年[ねん]生[せい]までに、都[と]道[どう]府[ふ]県[けん]の なまえに つかう 4年[ねん]生[せい]の かんじ（${D.grades[4].length}じ）を たすよ。<br>ほかの 4年[ねん]生[せい]より うえの 字[じ]は ふりがなつきで みせるだけ。`);
     $('setSnd').textContent = S.sound ? '🔊 おと オン' : '🔇 おと オフ';
     const ms = Object.keys(S.miss);
     $('missList').textContent = ms.length ? ms.join(' ') : 'いまは ないよ';
@@ -580,7 +582,7 @@ const KG = (() => {
   function selfTest(n) {
     const errs = [];
     const keep = S.grade;
-    [1, 2, 3].forEach(g => {
+    [1, 2, 3, 4].forEach(g => {
       S.grade = g;
       for (let k = 0; k < (n || 300); k++) {
         makeSet().forEach(q => {
@@ -588,7 +590,7 @@ const KG = (() => {
           if (q.choices.length !== 3) errs.push(`${q.c} ${q.type}: せんたくしが ${q.choices.length}`);
           if (q.choices.filter(c => c.ok).length !== 1) errs.push(`${q.c}: こたえが 1つでない`);
           if (new Set(q.choices.map(c => c.h)).size !== q.choices.length) errs.push(`${q.c} ${q.type}: おなじ せんたくし`);
-          if (q.type !== 'yomi') q.choices.filter(c => !c.ok).forEach(c => { if (!GRADE[c.h]) errs.push(`${q.c}: ${c.h} は 1〜3年 いがい`); });
+          if (q.type !== 'yomi') q.choices.filter(c => !c.ok).forEach(c => { if (!GRADE[c.h]) errs.push(`${q.c}: ${c.h} は 1〜4年 いがい`); if (GRADE[c.h] > Math.max(3, g)) errs.push(`${g}年: せんたくしに 4年の ${c.h}`); });
           if (q.type === 'yomi') { const rs = readSet(q.c); q.choices.filter(c => !c.ok).forEach(c => { if (rs.has(c.h)) errs.push(`${q.c}: ${c.h} も ただしい よみ`); }); }
         });
       }

@@ -1302,6 +1302,76 @@ const Play = (() => {
     }
   };
 
+  /* ---- 都道府県: ピースを ちずの ただしい ばしょへ はこぶ ---- */
+  const REGION = { '#4dabf7': '北[ほっ]海[かい]道[どう]', '#20c997': '東[とう]北[ほく]地[ち]方[ほう]', '#fa5252': '関[かん]東[とう]地[ち]方[ほう]', '#82c91e': '中[ちゅう]部[ぶ]地[ち]方[ほう]', '#f783ac': '近[きん]畿[き]地[ち]方[ほう]', '#fab005': '中[ちゅう]国[ごく]地[ち]方[ほう]', '#ff922b': '四[し]国[こく]地[ち]方[ほう]', '#9775fa': '九[きゅう]州[しゅう]・沖[おき]縄[なわ]地[ち]方[ほう]' };
+  const TRAY = { x: 300, y: 300, r: 50 };
+  TYPES.pref = {
+    hint: 'ピースを ゆびで つまんで、ちずの ただしい ばしょへ はこぼう',
+    map() {   // ちずの 座標 → がめん（360×360）
+      const [vx, vy, vw, vh] = PREF_MAP.vb, k = Math.min(350 / vw, 350 / vh);
+      return { k, ox: (360 - vw * k) / 2 - vx * k, oy: (360 - vh * k) / 2 - vy * k };
+    },
+    init(s) {
+      s.done = false; s.drag = false; s.miss = 0; s.t = 0; s.px = TRAY.x; s.py = TRAY.y;
+      const m = this.map(), b = prefBox(s.toy.id);
+      s.tx = m.ox + b.cx * m.k; s.ty = m.oy + b.cy * m.k;          // ただしい ばしょ（がめん）
+      s.tol = Math.max(24, Math.max(b.w, b.h) * m.k * 0.45);
+    },
+    down(s, x, y) {
+      if (s.done) { s.say(`${s.toy.name}は ここだよ。「もういちど」で また あそべるよ`); return; }
+      if (Math.hypot(x - TRAY.x, y - TRAY.y) < TRAY.r + 20) { s.drag = true; s.px = x; s.py = y - 34; Snd.tap(); }
+    },
+    move(s, x, y) { if (s.drag) { s.px = x; s.py = y - 34; } },
+    up(s) {
+      if (!s.drag) return;
+      s.drag = false;
+      if (Math.hypot(s.px - s.tx, s.py - s.ty) < s.tol) {
+        s.done = true; s.px = s.tx; s.py = s.ty;
+        Snd.fanfare(); burst(s, s.tx, s.ty, 24, null, 140);
+        const own = typeof KG !== 'undefined' ? Object.keys(PREF_SHAPES).filter(id => KG.state.owned[id]).length : 0;
+        s.say(`ぴったり！ ${s.toy.name}は ここ！ ★★★（あつめた ピース ${own}/47）`);
+      } else {
+        s.miss++; s.px = TRAY.x; s.py = TRAY.y;
+        Snd.ng();
+        s.say(s.miss >= 3 ? `ヒント: ひかっている ところだよ` : s.miss === 2 ? `ヒント: ${REGION[s.toy.c] || ''}に あるよ` : 'ちがうみたい。もういちど！');
+      }
+    },
+    tick(s, dt) { s.t += dt; fxTick(s, dt, 60); },
+    draw(c, s) {
+      const m = this.map(), owned = typeof KG !== 'undefined' ? KG.state.owned : {};
+      c.fillStyle = '#d0ebff'; c.fillRect(0, 0, W, H);
+      const [ox, oy, ow, oh] = PREF_MAP.oki;   // 沖縄の インセット
+      c.setLineDash([4, 4]); G.rect(c, m.ox + ox * m.k, m.oy + oy * m.k, ow * m.k, oh * m.k, false, 4, '#74c0fc', 1.5); c.setLineDash([]);
+      Object.keys(PREF_SHAPES).forEach(id => {
+        const me = id === s.toy.id;
+        prefPath(c, id, m.ox, m.oy, m.k, 0, 0);
+        const t = typeof KG !== 'undefined' && KG.TOYS.find(x => x.id === id);
+        c.fillStyle = me ? (s.done ? s.toy.c : '#fff') : owned[id] && t ? t.c + '99' : '#f8f9fa';
+        c.fill('evenodd'); c.lineWidth = 0.8; c.strokeStyle = '#868e96'; c.stroke();
+      });
+      if (!s.done && s.miss >= 3) {   // ヒント: ひかる
+        prefPath(c, s.toy.id, m.ox, m.oy, m.k, 0, 0);
+        c.lineWidth = 3; c.strokeStyle = `rgba(250,82,82,${0.5 + Math.sin(s.t * 8) * 0.5})`; c.stroke();
+      }
+      const own = Object.keys(PREF_SHAPES).filter(id => owned[id]).length;
+      bigText(c, `ピース ${own}/47`, 64, 22, 18, '#1971c2');
+      if (s.done) { fxDraw(c, s); bigText(c, s.toy.name.replace(/\[[^\]]*\]/g, ''), 180, 340, 24, '#e8590c'); return; }
+      const b = prefBox(s.toy.id);
+      if (s.drag) {   // ちずと おなじ 大きさで ゆびの すこし うえに
+        const k = m.k;
+        prefPath(c, s.toy.id, s.px, s.py, k, b.cx, b.cy);
+        c.fillStyle = s.toy.c; c.fill('evenodd');
+        c.lineWidth = 2; c.strokeStyle = OL; c.stroke();
+        G.circ(c, s.px, s.py, Math.max(10, Math.max(b.w, b.h) * k * 0.6), false, 'rgba(232,89,12,.7)', 2);
+      } else {
+        G.circ(c, TRAY.x, TRAY.y, TRAY.r, '#fff', '#adb5bd', 3);
+        toy(c, s, 92, TRAY.x, TRAY.y);
+        bigText(c, 'つまんでね', TRAY.x, TRAY.y - TRAY.r - 12, 14, '#495057');
+      }
+      fxDraw(c, s);
+    }
+  };
+
   /* ---- うごかす しくみ ---- */
   function loop(t) {
     if (!st) return;
