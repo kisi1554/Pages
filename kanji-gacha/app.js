@@ -448,6 +448,8 @@ const KG = (() => {
     band.className = 'rare-band r' + t.rare;
     band.textContent = t.rare === 3 ? '★★★ きんいろ スーパーレア' : t.rare === 2 ? '★★ ぎんいろ レア' : '★ ふつう';
     $('rvName').innerHTML = nameHTML(t);
+    $('rvNick').hidden = !t.nick;     // 都道府県の キャラクターの あいしょう
+    if (t.nick) $('rvNick').innerHTML = `<small>あいしょう</small><b>${t.nick}</b><span>${rb(t.intro)}</span>`;
     $('rvNote').innerHTML = mode === 'new' ? '🎉 あたらしい おもちゃ！ たなに ならべたよ'
       : mode === 'dup' ? `もう もっているよ（${S.owned[t.id]}こめ）。コイン 1まい かえすね 🪙`
         : `${S.owned[t.id] || 0}こ もっているよ`;

@@ -1307,6 +1307,7 @@ const Play = (() => {
   const TRAY = { x: 300, y: 300, r: 50 };
   TYPES.pref = {
     hint: 'ピースを ゆびで つまんで、ちずの ただしい ばしょへ はこぼう',
+    nick(s) { return (s.toy.nick || '').split(' ').pop() || 'ピース'; },   // 「りんごの あおりん」→「あおりん」
     map() {   // ちずの 座標 → がめん（360×360）
       const [vx, vy, vw, vh] = PREF_MAP.vb, k = Math.min(350 / vw, 350 / vh);
       return { k, ox: (360 - vw * k) / 2 - vx * k, oy: (360 - vh * k) / 2 - vy * k };
@@ -1318,7 +1319,7 @@ const Play = (() => {
       s.tol = Math.max(24, Math.max(b.w, b.h) * m.k * 0.45);
     },
     down(s, x, y) {
-      if (s.done) { s.say(`${s.toy.name}は ここだよ。「もういちど」で また あそべるよ`); return; }
+      if (s.done) { s.say(`${this.nick(s)}の おうち、${s.toy.name}は ここだよ。「もういちど」で また あそべるよ`); return; }
       if (Math.hypot(x - TRAY.x, y - TRAY.y) < TRAY.r + 20) { s.drag = true; s.px = x; s.py = y - 34; Snd.tap(); }
     },
     move(s, x, y) { if (s.drag) { s.px = x; s.py = y - 34; } },
@@ -1329,7 +1330,7 @@ const Play = (() => {
         s.done = true; s.px = s.tx; s.py = s.ty;
         Snd.fanfare(); burst(s, s.tx, s.ty, 24, null, 140);
         const own = typeof KG !== 'undefined' ? Object.keys(PREF_SHAPES).filter(id => KG.state.owned[id]).length : 0;
-        s.say(`ぴったり！ ${s.toy.name}は ここ！ ★★★（あつめた ピース ${own}/47）`);
+        s.say(`ぴったり！ ${this.nick(s)}の おうちは ここ！ ★★★<br>「${s.toy.intro || ''}」（あつめた ピース ${own}/47）`);
       } else {
         s.miss++; s.px = TRAY.x; s.py = TRAY.y;
         Snd.ng();
@@ -1355,7 +1356,7 @@ const Play = (() => {
       }
       const own = Object.keys(PREF_SHAPES).filter(id => owned[id]).length;
       bigText(c, `ピース ${own}/47`, 64, 22, 18, '#1971c2');
-      if (s.done) { fxDraw(c, s); bigText(c, s.toy.name.replace(/\[[^\]]*\]/g, ''), 180, 340, 24, '#e8590c'); return; }
+      if (s.done) { fxDraw(c, s); bigText(c, `${s.toy.name.replace(/\[[^\]]*\]/g, '')}の ${this.nick(s)}`, 180, 340, 22, '#e8590c'); return; }
       const b = prefBox(s.toy.id);
       if (s.drag) {   // ちずと おなじ 大きさで ゆびの すこし うえに
         const k = m.k;
@@ -1366,7 +1367,9 @@ const Play = (() => {
       } else {
         G.circ(c, TRAY.x, TRAY.y, TRAY.r, '#fff', '#adb5bd', 3);
         toy(c, s, 92, TRAY.x, TRAY.y);
-        bigText(c, 'つまんでね', TRAY.x, TRAY.y - TRAY.r - 12, 14, '#495057');
+        const lb = `${this.nick(s)}を つまんでね`;
+        c.font = '900 14px system-ui, sans-serif';
+        bigText(c, lb, Math.min(TRAY.x, 352 - c.measureText(lb).width / 2), TRAY.y - TRAY.r - 12, 14, '#495057');
       }
       fxDraw(c, s);
     }
