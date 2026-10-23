@@ -76,6 +76,7 @@ const KG = (() => {
   function show(v) {
     view = v;
     VIEWS.forEach(n => { $('v-' + n).hidden = n !== v; });
+    document.body.classList.toggle('fit', v === 'gacha');    // ガチャは 1がめんに おさめる
     window.scrollTo(0, 0);
     if (v === 'home') renderHome();
     if (v === 'shelf') renderShelf();
@@ -285,7 +286,7 @@ const KG = (() => {
     gMsg();
   }
   function gMsg() {
-    $('gMsg').innerHTML = S.coins >= 3 ? (G.rot ? 'つづきから まわしてね' : 'ハンドルを 3かい ぐるぐる まわしてね（コイン 3まい）') : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
+    $('gMsg').innerHTML = S.coins >= 3 ? (G.rot ? 'つづきから まわしてね' : 'ハンドルを 3かい ぐるぐる<br>まわしてね（コイン 3まい）') : `コインが たりないよ（あと ${3 - S.coins}まい）。クイズで あつめよう！`;
     $('handHint').hidden = S.coins < 3 || G.busy;
   }
   function weightOf(t) {

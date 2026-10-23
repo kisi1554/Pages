@@ -317,7 +317,7 @@ const Play = (() => {
       if (y < 290) return;
       if (x > 180) {
         s.v = Math.min(2.4, s.v + 0.5);
-        if (s.toy.id === 'kisha') { Snd.tone(700, 0.5, { type: 'sine', vol: 0.12, vib: 0.01 }); Snd.tone(880, 0.5, { type: 'sine', vol: 0.08 }); }
+        if (s.toy.id === 'kisha' || s.toy.id === 'kinkisha') { Snd.tone(700, 0.5, { type: 'sine', vol: 0.12, vib: 0.01 }); Snd.tone(880, 0.5, { type: 'sine', vol: 0.08 }); }
         else if (s.toy.id === 'shinkansen') Snd.noise(0.6, { freq: 600, slide: 2000, q: 1, vol: 0.15 });
         else Snd.tone(440, 0.15, { type: 'square', vol: 0.06 });
       } else { s.v *= 0.35; if (s.v < 0.08) s.v = 0; Snd.noise(0.3, { freq: 3000, q: 8, vol: 0.12 }); }
@@ -334,7 +334,7 @@ const Play = (() => {
         Snd.fanfare(); s.say(`ていしゃ ぴったり！ ${stars(Math.min(3, s.stops))}`);
       } else if (s.v === 0 && !s.near && !s.said) { s.said = true; s.say('えきから はなれて いるよ'); }
       if (s.v > 0) { s.near = false; s.said = false; }
-      if (s.toy.id === 'kisha' && s.v > 0 && Math.random() < dt * (4 + s.v * 6)) {
+      if ((s.toy.id === 'kisha' || s.toy.id === 'kinkisha') && s.v > 0 && Math.random() < dt * (4 + s.v * 6)) {
         const [x, y] = this.pos(s.u);
         parts(s).push({ x, y: y - 30, vx: rnd(-10, 10), vy: -30, life: 1.2, col: 'rgba(173,181,189,.8)', r: rnd(6, 11) });
       }
@@ -389,7 +389,9 @@ const Play = (() => {
     else if (id === 'ginfue') { Snd.tone(f * 2, 0.5, { type: 'sine', vol: 0.2, vib: 0.01, attack: 0.03, hold: true }); }
     else if (id === 'mokkin') { Snd.tone(f, 0.35, { type: 'triangle', vol: 0.35 }); Snd.tone(f * 4, 0.08, { type: 'sine', vol: 0.06 }); }
     else if (id === 'tekkin') { Snd.tone(f * 2, 1.3, { type: 'sine', vol: 0.2 }); Snd.tone(f * 5.5, 0.4, { type: 'sine', vol: 0.04 }); }
-    else if (id === 'kusabue') { Snd.tone(f, 0.4, { type: 'sawtooth', vol: 0.07, vib: 0.02, attack: 0.03, hold: true }); }
+    else if (id === 'denshipiano') { Snd.tone(f, 0.5, { type: 'square', vol: 0.08 }); Snd.tone(f * 2, 0.3, { type: 'sine', vol: 0.06 }); }
+    else if (id === 'rappa') { Snd.tone(f, 0.4, { type: 'sawtooth', vol: 0.1, attack: 0.02, hold: true }); Snd.tone(f * 2, 0.4, { type: 'square', vol: 0.03, attack: 0.02 }); }
+    else if (id === 'kusabue' || id === 'mugibue') { Snd.tone(f, 0.4, { type: 'sawtooth', vol: 0.07, vib: 0.02, attack: 0.03, hold: true }); }
     else { Snd.tone(f * 1.5, 0.3, { type: 'sine', vol: 0.2, slide: f * 1.9, vib: 0.03 }); }
   }
   TYPES.notes = {
@@ -713,6 +715,8 @@ const Play = (() => {
   function dollVoice(id) {
     if (id === 'inu') { Snd.tone(700, 0.12, { type: 'sawtooth', vol: 0.12, slide: 380 }); Snd.tone(750, 0.12, { type: 'sawtooth', vol: 0.12, slide: 400, at: 0.2 }); }
     else if (id === 'hitsuji') Snd.tone(420, 0.6, { type: 'sawtooth', vol: 0.08, vib: 0.06 });
+    else if (id === 'ushi') Snd.tone(180, 0.8, { type: 'sawtooth', vol: 0.1, slide: 150, attack: 0.08 });
+    else if (id === 'uma') Snd.tone(900, 0.7, { type: 'sawtooth', vol: 0.07, slide: 500, vib: 0.08 });
     else if (id === 'yubiningyo') Snd.tone(900, 0.15, { type: 'square', vol: 0.06, slide: 1300 });
     else [1047, 1319, 1568].forEach((f, i) => Snd.tone(f, 0.3, { type: 'sine', vol: 0.12, at: i * 0.08 }));
   }
