@@ -64,10 +64,23 @@
   #bJ { width: 124px; height: 124px; font-size: 22px; pointer-events: auto; background: rgba(255, 140, 90, 0.6); }
   #bJ.on { background: rgba(255, 110, 60, 0.95); }
   #bJ span { display: block; font-size: 40px; line-height: 1; }
+  /* どかんの うえに いる ときだけ でる */
+  #bD {
+    position: absolute; width: 96px; height: 96px; font-size: 18px;
+    right: calc(max(16px, env(safe-area-inset-right)) + 14px);
+    bottom: calc(max(16px, env(safe-area-inset-bottom)) + 144px);
+    background: rgba(60, 200, 100, 0.85); visibility: hidden; opacity: 0; transition: opacity 0.15s;
+  }
+  #bD.show { visibility: visible; opacity: 1; pointer-events: auto; animation: bob 0.8s ease-in-out infinite; }
+  #bD.on { background: rgba(30, 160, 70, 1); }
+  #bD span { display: block; font-size: 30px; line-height: 1; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
   @media (orientation: landscape) and (max-height: 560px) {
     .btn { width: 78px; height: 78px; font-size: 30px; }
     #bJ { width: 100px; height: 100px; font-size: 17px; }
     #bJ span { font-size: 32px; }
+    #bD { width: 78px; height: 78px; font-size: 15px; right: calc(max(16px, env(safe-area-inset-right)) + 11px);
+      bottom: calc(max(10px, env(safe-area-inset-bottom)) + 114px); }
     #pad { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   }
 
@@ -180,6 +193,7 @@
       <div class="btn" id="bL" aria-label="ひだり">◀</div>
       <div class="btn" id="bR" aria-label="みぎ">▶</div>
     </div>
+    <div class="btn" id="bD" aria-label="どかんに はいる"><div><span>▼</span>はいる</div></div>
     <div class="btn" id="bJ" aria-label="ジャンプ"><div><span>⤒</span>ジャンプ</div></div>
   </div>
 
@@ -192,8 +206,9 @@
       <p class="howto">
         ◀ ▶ で あるく ・ ジャンプで ぴょん！ ながおしで たかく とぶよ<br>
         <b>？</b>ブロックを したから たたくと コインや きのこが でるよ<br>
+        ▼ が ついた どかんの うえで「▼ はいる」を おすと、なかに はいれるよ<br>
         てきは うえから ふむと やっつけられる
-        <span class="pc-only"><br>キーボード: <kbd>←</kbd><kbd>→</kbd> あるく ／ <kbd>スペース</kbd><kbd>↑</kbd> ジャンプ</span>
+        <span class="pc-only"><br>キーボード: <kbd>←</kbd><kbd>→</kbd> あるく ／ <kbd>スペース</kbd><kbd>↑</kbd> ジャンプ ／ <kbd>↓</kbd> どかん</span>
       </p>
       <p class="howto"><a href="../">← あそびメニューへ</a></p>
     </div>
@@ -262,6 +277,12 @@ function Builder(w) {
     coins(x, y, n) { b.row(x, y, n, 'o'); },
     enemy(x, y = 11) { b.enemies.push({ x, y }); },
     flag(x) { b.flagX = x; b.t(x, 11, '='); },
+    warps: [],
+    // ▼で はいれる どかん（x）と、でてくる どかん（outX）。なかは コインの へや
+    warp(x, h, outX, outH) {
+      b.pipe(x, h); b.pipe(outX, outH);
+      b.warps.push({ x, top: 12 - h, to: 'room', outX, outTop: 12 - outH });
+    },
   };
   return b;
 }
@@ -275,7 +296,7 @@ const LEVELS = [
       b.t(16, 8, '?');
       b.row(20, 8, 5, 'B'); b.t(21, 8, '?'); b.t(22, 8, 'M'); b.t(23, 8, '?'); b.t(22, 4, '?');
       b.enemy(24);
-      b.pipe(28, 2); b.pipe(38, 3); b.enemy(42); b.pipe(47, 4); b.enemy(52); b.enemy(54); b.pipe(58, 4);
+      b.pipe(28, 2); b.warp(38, 3, 108, 2); b.enemy(42); b.pipe(47, 4); b.enemy(52); b.enemy(54); b.pipe(58, 4);
       b.coins(62, 9, 4); b.coins(69, 8, 3);
       b.row(77, 8, 3, 'B'); b.t(78, 8, '?');
       b.row(80, 4, 8, 'B'); b.coins(80, 3, 8); b.enemy(84, 3);
@@ -299,13 +320,13 @@ const LEVELS = [
       b.enemy(18); b.enemy(20); b.pipe(24, 3); b.enemy(30); b.enemy(32);
       b.row(34, 7, 4, 'B'); b.coins(34, 6, 4);
       b.coins(40, 8, 4);
-      b.pipe(50, 2); b.enemy(54); b.pipe(58, 3); b.enemy(62); b.enemy(64);
+      b.pipe(50, 2); b.enemy(54); b.warp(58, 3, 124, 4); b.enemy(62); b.enemy(64);
       b.row(66, 8, 4, 'B'); b.t(67, 8, '?');
       b.t(74, 10, '='); b.coins(73, 8, 4);
       b.enemy(84); b.enemy(86); b.row(82, 8, 2, 'B'); b.row(84, 4, 4, 'B'); b.t(85, 4, 'M'); b.coins(84, 3, 4);
       b.row(94, 9, 3, '='); b.coins(94, 8, 3);
       b.stair(100, 3); b.pipe(106, 3); b.enemy(110); b.enemy(112); b.enemy(114);
-      b.row(116, 8, 5, '?'); b.coins(116, 4, 5); b.pipe(124, 4);
+      b.row(116, 8, 5, '?'); b.coins(116, 4, 5);
       b.coins(130, 8, 4);
       b.enemy(140); b.enemy(143); b.row(144, 8, 3, 'B'); b.t(145, 8, '?');
       b.stair(150, 8, true);
@@ -322,7 +343,7 @@ const LEVELS = [
       b.row(22, 9, 1, 'B'); b.row(22, 10, 1, 'B'); b.row(22, 11, 1, 'B');
       b.coins(24, 10, 4);
       b.row(28, 8, 6, 'B'); b.coins(28, 7, 6); b.enemy(30); b.enemy(33);
-      b.pipe(38, 3); b.pipe(44, 2); b.enemy(47);
+      b.warp(38, 3, 122, 3); b.pipe(44, 2); b.enemy(47);
       b.coins(50, 8, 5);
       b.row(58, 8, 6, 'B'); b.t(60, 8, '?'); b.t(61, 8, 'M'); b.enemy(62, 7);
       b.enemy(64); b.enemy(66); b.enemy(68);
@@ -330,7 +351,7 @@ const LEVELS = [
       b.row(88, 9, 3, '='); b.coins(88, 8, 3); b.enemy(92); b.enemy(95);
       b.row(102, 9, 2, '='); b.coins(101, 7, 4);
       b.row(110, 8, 8, 'B'); b.t(113, 8, '?'); b.t(114, 8, '?'); b.coins(110, 7, 3); b.enemy(115);
-      b.pipe(122, 3); b.enemy(126); b.enemy(128);
+      b.enemy(126); b.enemy(128);
       b.row(132, 8, 4, '?');
       b.stair(140, 5, true); b.coins(151, 6, 4);
       b.enemy(160); b.enemy(163);
@@ -346,21 +367,35 @@ const THEMES = {
   cave:    { sky: ['#1d1a2e', '#2f2a48'], hill: '#3a3358', hill2: '#2c2747', ground: '#6b5f8f', top: '#8b7fb3', cloud: null, dark: '#2a2440' },
 };
 
+// どかんの なかの コインの へや（ステージの みぎはしの さきに つくる）
+const ROOM_W = 40;
+function buildRoom(b, R0) {
+  b.ground(R0, R0 + ROOM_W - 1);
+  for (let r = 0; r < 12; r++) { b.t(R0, r, '='); b.t(R0 + ROOM_W - 1, r, '='); }
+  b.row(R0 + 6, 1, ROOM_W - 7, 'B'); // てんじょう（ひだりの すきまから おちてくる）
+  b.coins(R0 + 6, 9, 10); b.coins(R0 + 6, 11, 10);
+  b.row(R0 + 6, 6, 10, 'B');
+  b.pipe(R0 + 20, 2);
+}
+
 // ===== じょうたい =====
 let lvIndex = 0, lv = null, grid = null, W = 0, theme = THEMES.day;
 let player, enemies, items, parts, bumps;
-let state = 'title'; // title | play | miss | clear | pause
+let state = 'title'; // title | play | miss | pipe | clear | pause
 let coins = 0, totalCoins = 0, misses = 0, frame = 0;
 let camX = 0, viewW = 640, scale = 1;
-let missTimer = 0, clearPhase = '', clearTimer = 0, flagY = 0;
+let missTimer = 0, clearPhase = '', clearTimer = 0, flagY = 0, pipe = null;
 
 function loadLevel(i) {
   lvIndex = i;
   const def = LEVELS[i];
-  const b = Builder(def.w);
+  const b = Builder(def.w + ROOM_W);
   def.build(b);
-  lv = { def, flagX: b.flagX, startX: b.startX };
-  grid = b.g; W = def.w; theme = THEMES[def.theme];
+  const R0 = def.w;
+  buildRoom(b, R0);
+  for (const w of b.warps.slice()) b.warps.push({ x: R0 + 20, top: 10, to: 'main', outX: w.outX, outTop: w.outTop });
+  lv = { def, flagX: b.flagX, startX: b.startX, R0, warps: b.warps };
+  grid = b.g; W = def.w + ROOM_W; theme = THEMES[def.theme];
   totalCoins = 0;
   for (const row of grid) for (const ch of row) if (ch === 'o' || ch === '?') totalCoins++;
   enemies = b.enemies.map(e => ({ x: e.x * T + 2, y: e.y * T + 4, w: 28, h: 28, vx: -1, vy: 0, active: false, squash: 0, flip: false, onGround: false }));
@@ -369,7 +404,7 @@ function loadLevel(i) {
   player = { x: lv.startX * T, y: 12 * T - 28, w: 22, h: 28, vx: 0, vy: 0, face: 1, onGround: false, big: false,
     inv: 0, jbuf: 0, coyote: 0, walk: 0, hidden: false };
   player.safe = { x: player.x, y: 12 * T };
-  camX = 0; flagY = 2 * T + 4;
+  camX = 0; flagY = 2 * T + 4; pipe = null;
   $('stageName').textContent = (i + 1) + '. ' + def.name;
   stageEl.style.background = theme.dark;
   updateHud();
@@ -381,35 +416,38 @@ function updateHud() {
 }
 
 // ===== にゅうりょく =====
-const kb = { L: false, R: false, J: false };
-const tc = { L: false, R: false, J: false };
-let prevJ = false, jQueue = false; // jQueue: いっしゅんの タップも とりこぼさない
+const kb = { L: false, R: false, J: false, D: false };
+const tc = { L: false, R: false, J: false, D: false };
+let prevJ = false, jQueue = false, dQueue = false; // jQueue: いっしゅんの タップも とりこぼさない
 const key = k => kb[k] || tc[k];
 
-const KEYMAP = { ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R', ArrowUp: 'J', KeyW: 'J', Space: 'J', KeyZ: 'J' };
+const KEYMAP = { ArrowLeft: 'L', KeyA: 'L', ArrowRight: 'R', KeyD: 'R', ArrowUp: 'J', KeyW: 'J', Space: 'J', KeyZ: 'J', ArrowDown: 'D', KeyS: 'D' };
 addEventListener('keydown', e => {
   ensureAudio();
   const k = KEYMAP[e.code];
-  if (k) { if (k === 'J' && !e.repeat) jQueue = true; kb[k] = true; e.preventDefault(); }
+  if (k) { if (k === 'J' && !e.repeat) jQueue = true; if (k === 'D') dQueue = true; kb[k] = true; e.preventDefault(); }
   if (e.code === 'Escape' || e.code === 'KeyP') togglePause();
 });
 addEventListener('keyup', e => { const k = KEYMAP[e.code]; if (k) { kb[k] = false; e.preventDefault(); } });
-addEventListener('blur', () => { kb.L = kb.R = kb.J = false; pointers.clear(); recomputeTouch(); });
+addEventListener('blur', () => { kb.L = kb.R = kb.J = kb.D = false; pointers.clear(); recomputeTouch(); });
 
 // ゆびが ボタンの うえを すべっても きりかわるように、まいかい いちから はんていする
 const pointers = new Map();
-const bL = $('bL'), bR = $('bR'), bJ = $('bJ'), dpad = $('dpad');
+const bL = $('bL'), bR = $('bR'), bJ = $('bJ'), bD = $('bD'), dpad = $('dpad');
 function inRect(p, r, pad) { return p.x >= r.left - pad && p.x <= r.right + pad && p.y >= r.top - pad && p.y <= r.bottom + pad; }
 function recomputeTouch() {
-  const wasJ = tc.J;
-  tc.L = tc.R = tc.J = false;
+  const wasJ = tc.J, wasD = tc.D;
+  tc.L = tc.R = tc.J = tc.D = false;
   const dr = dpad.getBoundingClientRect(), jr = bJ.getBoundingClientRect();
+  const showD = bD.classList.contains('show'), drr = bD.getBoundingClientRect();
   for (const p of pointers.values()) {
-    if (inRect(p, jr, 24)) tc.J = true;
+    if (showD && inRect(p, drr, 12)) tc.D = true;
+    else if (inRect(p, jr, 24)) tc.J = true;
     else if (inRect(p, dr, 30)) { if (p.x < dr.left + dr.width / 2) tc.L = true; else tc.R = true; }
   }
   if (tc.J && !wasJ) jQueue = true;
-  bL.classList.toggle('on', tc.L); bR.classList.toggle('on', tc.R); bJ.classList.toggle('on', tc.J);
+  if (tc.D && !wasD) dQueue = true;
+  bL.classList.toggle('on', tc.L); bR.classList.toggle('on', tc.R); bJ.classList.toggle('on', tc.J); bD.classList.toggle('on', tc.D);
 }
 $('pad').addEventListener('pointerdown', e => {
   ensureAudio();
@@ -458,15 +496,102 @@ function sfx(name) {
       case 'item': [523, 659, 784].forEach((f, i) => tone(f, 0, 0.1, 'square', 0.05, i * 0.06)); break;
       case 'grow': [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, 0, 0.09, 'square', 0.06, i * 0.06)); break;
       case 'shrink': [784, 523, 392].forEach((f, i) => tone(f, 0, 0.1, 'square', 0.06, i * 0.07)); break;
-      case 'miss': tone(660, 110, 0.6, 'triangle', 0.12); break;
+      case 'miss': {
+        // ぴたっと とまって「ぴょっ」→ かなしい メロディ →「ぼん・ぼーん」
+        tone(1400, 500, 0.12, 'square', 0.07);
+        const mel = [[659, .12], [784, .12], [0, .1], [740, .1], [698, .1], [659, .1], [622, .1], [587, .32], [0, .16]];
+        let t = 0.5;
+        for (const [f, d] of mel) { if (f) tone(f, 0, d * 0.95, 'square', 0.07, t); t += d; }
+        tone(294, 0, 0.5, 'triangle', 0.12, 0.84);
+        tone(392, 0, 0.14, 'square', 0.07, t); tone(196, 0, 0.14, 'triangle', 0.14, t);
+        tone(262, 0, 0.5, 'square', 0.07, t + 0.18); tone(131, 0, 0.6, 'triangle', 0.16, t + 0.18);
+        break;
+      }
+      case 'pipe': [0, 0.11, 0.22].forEach(d => tone(620, 160, 0.09, 'square', 0.07, d)); break;
       case 'clear': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0, i === 5 ? 0.5 : 0.14, 'square', 0.06, i * 0.13)); break;
     }
   } catch (e) {}
 }
+// ----- BGM（ステージごとの オリジナル きょく。1こま＝8ぶんおんぷ、- は のばす、. は やすみ） -----
+const SONGS = {
+  day: { bpm: 150, tracks: [
+    { wave: 'square', vol: 0.035, len: 0.8, notes: 'E5 . G5 . C6 . G5 E5 | F5 . A5 . F5 . D5 . | E5 . G5 . C6 . E6 D6 | C6 - - - . . G5 . | A5 . F5 . A5 . C6 . | G5 . E5 . G5 . C6 . | F5 E5 D5 C5 D5 . G4 . | C5 - - - . . . .' },
+    { wave: 'triangle', vol: 0.09, len: 0.7, notes: 'C3 . G3 . C3 . G3 . | F2 . C3 . F2 . C3 . | C3 . G3 . C3 . G3 . | C3 . G3 . E3 . G3 . | F2 . C3 . F2 . C3 . | C3 . G3 . C3 . G3 . | G2 . D3 . G2 . B2 . | C3 . G3 . C3 . G2 .' },
+  ] },
+  evening: { bpm: 118, tracks: [
+    { wave: 'triangle', vol: 0.09, len: 0.9, notes: 'A4 . C5 . E5 . D5 C5 | D5 - - . F5 . E5 . | C5 . B4 . A4 . G4 . | A4 - - - . . E4 . | F4 . A4 . C5 . F5 . | E5 - D5 . C5 . B4 . | C5 . A4 . B4 . G#4 . | A4 - - - . . . .' },
+    { wave: 'square', vol: 0.025, len: 0.5, notes: 'A2 . E3 . A2 . E3 . | D3 . A3 . D3 . A3 . | F2 . C3 . G2 . D3 . | A2 . E3 . A2 . E3 . | F2 . C3 . F2 . C3 . | C3 . G3 . G2 . D3 . | F2 . C3 . E2 . B2 . | A2 . E3 . A2 . E3 .' },
+  ] },
+  cave: { bpm: 132, tracks: [
+    { wave: 'square', vol: 0.03, len: 0.45, notes: 'D5 . . F5 . . A5 . | G5 . F5 . E5 . . . | D5 . . F5 . . A5 . | C6 . A5 . G5 . . . | A#4 . . D5 . . F5 . | E5 . D5 . C#5 . . . | D5 . F5 . E5 . C#5 . | D5 . . . . . . .' },
+    { wave: 'triangle', vol: 0.1, len: 0.5, notes: 'D2 . D3 . D2 . D3 . | C2 . C3 . C2 . C3 . | A#1 . A#2 . A#1 . A#2 . | A1 . A2 . A1 . A2 . | G1 . G2 . G1 . G2 . | A1 . A2 . A1 . A2 . | A#1 . A#2 . A1 . A2 . | D2 . D3 . D2 . A1 .' },
+  ] },
+  room: { bpm: 168, tracks: [
+    { wave: 'square', vol: 0.03, len: 0.7, notes: 'C5 E5 G5 C6 G5 E5 C5 E5 | D5 F5 A5 D6 A5 F5 D5 F5 | E5 G5 C6 E6 C6 G5 E5 G5 | F5 A5 C6 F6 E6 D6 C6 .' },
+    { wave: 'triangle', vol: 0.09, len: 0.6, notes: 'C3 . C3 . G2 . G2 . | D3 . D3 . A2 . A2 . | C3 . C3 . E3 . E3 . | F2 . F2 . G2 . G2 .' },
+  ] },
+};
+const PITCH = { C: 0, 'C#': 1, D: 2, 'D#': 3, E: 4, F: 5, 'F#': 6, G: 7, 'G#': 8, A: 9, 'A#': 10, B: 11 };
+for (const song of Object.values(SONGS)) for (const tr of song.tracks) {
+  const toks = tr.notes.split(/\s+/).filter(t => t && t !== '|');
+  tr.steps = new Array(toks.length).fill(null);
+  let lastI = -1;
+  toks.forEach((t, i) => {
+    if (t === '-') { if (lastI >= 0) tr.steps[lastI].len++; return; }
+    lastI = -1;
+    if (t === '.') return;
+    const m = /^([A-G]#?)(\d)$/.exec(t);
+    tr.steps[i] = { f: 440 * Math.pow(2, ((+m[2] + 1) * 12 + PITCH[m[1]] - 69) / 12), len: 1 };
+    lastI = i;
+  });
+}
+let bgm = null;
+function bgmNote(tr, n, t, dur) {
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = tr.wave; o.frequency.setValueAtTime(n.f, t);
+  const d = dur * n.len * tr.len;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(tr.vol, t + 0.01);
+  g.gain.setValueAtTime(tr.vol, t + d * 0.7);
+  g.gain.linearRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(bgm.out);
+  o.start(t); o.stop(t + d + 0.02);
+}
+function bgmTick() {
+  if (!bgm) return;
+  const spb = 60 / bgm.song.bpm / 2;
+  while (bgm.next < actx.currentTime + 0.25) {
+    for (const tr of bgm.song.tracks) {
+      const n = tr.steps[bgm.step % tr.steps.length];
+      if (n) bgmNote(tr, n, bgm.next, spb);
+    }
+    bgm.step++; bgm.next += spb;
+  }
+}
+function bgmPlay(name) {
+  bgmStop();
+  if (!save.sound || !actx) return;
+  try {
+    const out = actx.createGain(); out.gain.value = 1; out.connect(actx.destination);
+    bgm = { song: SONGS[name], step: 0, next: actx.currentTime + 0.1, out };
+    bgm.timer = setInterval(bgmTick, 40);
+    bgmTick();
+  } catch (e) { bgm = null; }
+}
+function bgmStop() {
+  if (!bgm) return;
+  clearInterval(bgm.timer);
+  const out = bgm.out; bgm = null;
+  try { out.gain.setTargetAtTime(0, actx.currentTime, 0.02); setTimeout(() => out.disconnect(), 400); } catch (e) {}
+}
+const inRoom = () => lv && player && player.x >= lv.R0 * T;
+const songName = () => inRoom() ? 'room' : lv.def.theme;
+
 function setSound(on) {
   save.sound = on; writeSave();
   $('soundBtn').textContent = on ? '🔊' : '🔇';
-  if (on) ensureAudio();
+  if (on) { ensureAudio(); if (state === 'play') bgmPlay(songName()); }
+  else bgmStop();
 }
 $('soundBtn').addEventListener('click', () => setSound(!save.sound));
 
@@ -494,7 +619,7 @@ function collideY(e) {
   const l = Math.floor(e.x / T), rr = Math.floor((e.x + e.w - 1) / T);
   e.onGround = false;
   if (e.vy > 0) {
-    const r = Math.floor((e.y + e.h - 1) / T);
+    const r = Math.floor((e.y + e.h) / T); // ちょうど のっている ときも ゆかと みなす（onGround が ちらつかない）
     for (let c = l; c <= rr; c++) if (solidAt(c, r)) { e.y = r * T - e.h; e.vy = 0; e.onGround = true; return null; }
   } else if (e.vy < 0) {
     const r = Math.floor(e.y / T);
@@ -554,9 +679,10 @@ function hurt() {
   } else miss(true);
 }
 function miss(pop) {
-  misses++; updateHud(); sfx('miss');
-  state = 'miss'; missTimer = 70;
-  player.vx = 0; player.vy = pop ? -9 : 0; player.big = false;
+  misses++; updateHud(); bgmStop(); sfx('miss');
+  // ぴたっと とまってから、ぴょーんと とびあがって おちていく
+  state = 'miss'; missTimer = 160; player.missPop = pop;
+  player.vx = 0; player.vy = 0; player.big = false;
   if (player.h !== 28) { player.y += player.h - 28; player.h = 28; }
 }
 function respawn() {
@@ -566,6 +692,7 @@ function respawn() {
   if (!solidAt(c1, r) || !solidAt(c2, r)) { x = lv.startX * T; y = 12 * T; }
   player.x = x; player.y = y - player.h; player.vx = 0; player.vy = 0; player.inv = 120;
   state = 'play';
+  bgmPlay(songName());
 }
 
 function updatePlayer() {
@@ -615,15 +742,20 @@ function updatePlayer() {
 
   if (p.y > ROWS * T + 40) { miss(false); return; }
 
+  // どかんに はいる（▼ボタン か ↓キー）
+  const wantD = key('D') || dQueue;
+  dQueue = false;
+  if (p.onGround && wantD) { const w = warpUnder(p); if (w) { startPipe(w); return; } }
+
   // ゴール
-  if (p.x + p.w >= lv.flagX * T) startClear();
+  if (p.x + p.w >= lv.flagX * T && !inRoom()) startClear();
 }
 
 function startClear() {
   state = 'clear'; clearPhase = 'slide'; clearTimer = 0;
   const p = player;
   p.x = lv.flagX * T + 16 - p.w - 2; p.vx = 0; p.vy = 0; p.face = 1;
-  sfx('clear');
+  bgmStop(); sfx('clear');
 }
 function updateClear() {
   const p = player;
@@ -695,14 +827,61 @@ function step() {
   frame++;
   if (state === 'play') updatePlayer();
   else if (state === 'miss') {
-    player.vy = Math.min(player.vy + 0.5, 11); player.y += player.vy;
-    if (--missTimer <= 0) respawn();
-  } else if (state === 'clear') updateClear();
-  if (state === 'play' || state === 'clear' || state === 'miss') { updateEnemies(); updateItems(); updateParts(); }
+    missTimer--;
+    if (missTimer === 130 && player.missPop) player.vy = -10;
+    if (missTimer < 130) { player.vy = Math.min(player.vy + 0.45, 11); player.y += player.vy; }
+    if (missTimer <= 0) respawn();
+  } else if (state === 'pipe') updatePipe();
+  else if (state === 'clear') updateClear();
+  if ((state === 'play' || state === 'clear') && !inRoom()) { updateEnemies(); updateItems(); }
+  if (state !== 'miss') updateParts();
   // カメラ
-  const target = Math.max(0, Math.min(W * T - viewW, player.x + player.w / 2 - viewW * 0.4));
+  const target = camTarget();
   camX += (target - camX) * (state === 'miss' ? 0 : 0.2);
   if (Math.abs(target - camX) < 0.5) camX = target;
+  // どかんの うえに いる ときだけ ▼ボタンを だす
+  const showD = state === 'play' && player.onGround && !!warpUnder(player);
+  if (showD !== bD.classList.contains('show')) { bD.classList.toggle('show', showD); if (!showD) { tc.D = false; bD.classList.remove('on'); } }
+}
+function camTarget() {
+  let lo = 0, hi = lv.R0 * T - viewW;
+  if (inRoom()) { lo = lv.R0 * T; hi = (lv.R0 + ROOM_W) * T - viewW; }
+  if (hi < lo) return (lo + hi) / 2;
+  return Math.max(lo, Math.min(hi, player.x + player.w / 2 - viewW * 0.4));
+}
+
+// ===== どかん =====
+function warpUnder(p) {
+  const r = Math.round((p.y + p.h) / T), cx = p.x + p.w / 2;
+  return lv.warps.find(w => w.top === r && cx >= w.x * T + 4 && cx <= w.x * T + 60);
+}
+function startPipe(w) {
+  const p = player;
+  state = 'pipe'; pipe = { w, phase: 'down' };
+  p.vx = 0; p.vy = 0; p.x = w.x * T + 32 - p.w / 2; p.walk = 0;
+  bgmStop(); sfx('pipe');
+}
+function updatePipe() {
+  const p = player, w = pipe.w;
+  if (pipe.phase === 'down') {
+    p.y += 1.5;
+    if (p.y < w.top * T + 6) return;
+    if (w.to === 'room') {
+      // へやの てんじょうの すきまから おちてくる
+      p.x = (lv.R0 + 3) * T; p.y = -p.h; p.safe = { x: p.x, y: 12 * T };
+      camX = camTarget(); state = 'play'; pipe = null;
+      bgmPlay('room');
+    } else {
+      p.x = w.outX * T + 32 - p.w / 2; p.y = w.outTop * T + 6;
+      camX = camTarget(); pipe.phase = 'up'; sfx('pipe');
+    }
+  } else {
+    p.y -= 1.5;
+    if (p.y + p.h <= w.outTop * T) {
+      p.y = w.outTop * T - p.h; p.safe = { x: p.x, y: w.outTop * T };
+      state = 'play'; pipe = null; bgmPlay(songName());
+    }
+  }
 }
 
 // ===== えがく =====
@@ -932,10 +1111,14 @@ function drawParts() {
 function draw() {
   ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   if (!lv) { ctx.fillStyle = '#6ec6ff'; ctx.fillRect(0, 0, viewW, ROWS * T); return; }
+  const room = inRoom(), mainTheme = theme;
+  if (room) theme = THEMES.cave; // どかんの なかは くらい へや
   drawBg();
   const cam = Math.round(camX);
   ctx.save(); ctx.translate(-cam, 0);
-  drawFlag();
+  if (!room) drawFlag();
+  // どかんに はいる ときは どかんの うしろに かく
+  if (state === 'pipe') drawPlayer();
   const c0 = Math.max(0, Math.floor(cam / T) - 1), c1 = Math.min(W - 1, Math.floor((cam + viewW) / T) + 1);
   for (let r = 0; r < ROWS; r++) for (let c = c0; c <= c1; c++) {
     const ch = grid[r][c];
@@ -945,11 +1128,24 @@ function draw() {
     if (b) y -= Math.sin((10 - b.t) / 10 * Math.PI) * 8;
     drawTile(ch, c, r, c * T, y);
   }
+  for (const w of lv.warps) {
+    // はいれる どかんの めじるし
+    const ax = w.x * T + 32, ay = w.top * T - 30 + Math.sin(frame / 8) * 5;
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; ctx.strokeStyle = '#1e8a37'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(ax - 11, ay - 8); ctx.lineTo(ax + 11, ay - 8); ctx.lineTo(ax, ay + 8); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  }
   for (const it of items) drawItem(it);
-  for (const e of enemies) if (e.active || e.x < cam + viewW + 64) drawEnemy(e);
-  drawPlayer();
+  if (!room) for (const e of enemies) if (e.active || e.x < cam + viewW + 64) drawEnemy(e);
+  if (state !== 'pipe') drawPlayer();
   drawParts();
+  if (room) {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(cam - 10, 0, lv.R0 * T - cam + 10, ROWS * T);
+    ctx.fillRect((lv.R0 + ROOM_W) * T, 0, viewW + 10, ROWS * T);
+  }
   ctx.restore();
+  theme = mainTheme;
 }
 
 // ===== がめんの おおきさ =====
@@ -992,6 +1188,7 @@ function startLevel(i) {
   loadLevel(i);
   state = 'play'; prevJ = true; jQueue = false;
   showOv(null);
+  bgmPlay(songName());
 }
 function showResult() {
   const stars = misses === 0 ? 3 : misses <= 3 ? 2 : 1;
@@ -1009,11 +1206,15 @@ function showResult() {
   showOv('resultOv');
 }
 function togglePause() {
-  if (state === 'play' || state === 'miss') { pausedFrom = state; state = 'pause'; showOv('pauseOv'); }
-  else if (state === 'pause') { state = pausedFrom; showOv(null); }
+  if (state === 'play' || state === 'miss' || state === 'pipe') {
+    pausedFrom = state; state = 'pause'; showOv('pauseOv'); if (pausedFrom !== 'miss') bgmStop();
+  } else if (state === 'pause') {
+    state = pausedFrom; showOv(null);
+    if (state === 'play') bgmPlay(songName());
+  }
 }
 let pausedFrom = 'play';
-function toMenu() { state = 'title'; renderStageList(); showOv('titleOv'); }
+function toMenu() { bgmStop(); state = 'title'; renderStageList(); showOv('titleOv'); }
 
 $('pauseBtn').addEventListener('click', togglePause);
 $('resumeBtn').addEventListener('click', togglePause);
@@ -1022,14 +1223,14 @@ $('retryBtn2').addEventListener('click', () => startLevel(lvIndex));
 $('nextBtn').addEventListener('click', () => startLevel(lvIndex + 1));
 $('menuBtn').addEventListener('click', toMenu);
 $('menuBtn2').addEventListener('click', toMenu);
-document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'play' || state === 'miss')) togglePause(); });
+document.addEventListener('visibilitychange', () => { if (document.hidden && (state === 'play' || state === 'miss' || state === 'pipe')) togglePause(); });
 
 // ===== ループ =====
 let last = 0, acc = 0;
 function loop(t) {
   const dt = Math.min(0.1, (t - last) / 1000 || 0);
   last = t;
-  if (state === 'play' || state === 'miss' || state === 'clear') {
+  if (state === 'play' || state === 'miss' || state === 'pipe' || state === 'clear') {
     acc += dt;
     while (acc >= 1 / 60) { step(); acc -= 1 / 60; }
   } else { acc = 0; frame++; }
