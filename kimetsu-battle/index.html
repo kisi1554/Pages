@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>きめつバトル</title>
+<meta name="description" content="たんじろう と ぎゆう で アカザ に いどむ、FF7ふうの ATB コマンドバトル（ファンメイド）。">
+<meta name="theme-color" content="#0a1640">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🗡️</text></svg>">
+<link rel="stylesheet" href="style.css?v=78f94e4">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <!-- タイトル -->
+  <section id="title" class="screen">
+    <div class="tbox">
+      <p class="tsub">ファンメイド・ひこうしき</p>
+      <h1>きめつ<span>バトル</span></h1>
+      <p class="tlead">ゲージが たまったら コマンドを えらんで たたかおう！</p>
+      <button type="button" id="startBtn" class="big">はじめる</button>
+      <div id="titleSettings"></div>
+      <details class="howto">
+        <summary>あそびかた</summary>
+        <ul>
+          <li>したの <b>きいろい ゲージ</b>が たまると、その キャラの ばん。</li>
+          <li><b>たたかう</b>・<b>わざ</b>（MP を つかう）・<b>どうぐ</b>・<b>ぼうぎょ</b> から えらぶ。</li>
+          <li>こうげきを うけると <b>ピンクの ゲージ</b>が たまる。まんたんで <b>ひっさつ</b>！</li>
+          <li>ぼうぎょ すると うける ダメージが はんぶん。MP も すこし もどる。</li>
+          <li>キーボード：やじるし で えらぶ、Enter で けってい、Esc で もどる。</li>
+        </ul>
+      </details>
+    </div>
+  </section>
+
+  <!-- シーンえらび -->
+  <section id="select" class="screen" hidden>
+    <div class="selhead">
+      <button type="button" id="backTitle" class="mini">◀ もどる</button>
+      <h2>たたかいを えらぶ</h2>
+    </div>
+    <div id="diff" role="group" aria-label="むずかしさ">
+      <button type="button" data-diff="easy">🌱 やさしい</button>
+      <button type="button" data-diff="normal">🔥 ふつう</button>
+    </div>
+    <div id="sceneList"></div>
+  </section>
+
+  <!-- たたかい -->
+  <section id="battle" class="screen" hidden>
+    <div id="stage"><div id="view">
+      <canvas id="cv" width="640" height="360"></canvas>
+      <div id="ebar" class="win"><span id="ename"></span><span class="bar"><i id="ehpBar"></i></span><span id="ehp" hidden></span></div>
+      <div id="banner" class="win" hidden></div>
+      <div id="talk" class="win" hidden role="button" tabindex="0"><b id="talkWho"></b><p id="talkTxt"></p><span class="next">▼</span></div>
+      <div id="hint" hidden></div>
+      <button type="button" id="pauseBtn" aria-label="ひとやすみ">⏸</button>
+    </div></div>
+    <div id="panel">
+      <div id="cmd" class="win"></div>
+      <div id="party" class="win"></div>
+    </div>
+  </section>
+
+  <div id="overlay" hidden>
+    <div class="ovbox win">
+      <h2 id="ovTitle"></h2>
+      <div id="ovBody"></div>
+      <div id="ovBtns"></div>
+    </div>
+  </div>
+</div>
+
+<script src="data.js?v=78f94e4"></script>
+<script src="draw.js?v=78f94e4"></script>
+<script src="audio.js?v=78f94e4"></script>
+<script src="game.js?v=78f94e4"></script>
+</body>
+</html>
