@@ -47,13 +47,13 @@
     if (isEnemy) {
       var e = KB.ENEMIES[id];
       return { id: id, def: e, enemy: true, name: e.name, look: e.look, maxHp: e.hp[diff], hp: e.hp[diff], atk: e.atk,
-        wait: e.wait[diff], atb: 20, x: 170, y: 292, scale: 1.4, ox: 0, oy: 0, flip: false, pose: "idle", swing: 0, flash: 0, alpha: 1,
+        wait: e.wait[diff], atb: 20, x: 165, y: 296, scale: 1.42, ghosts: [], rashinS: 1, ox: 0, oy: 0, flip: false, pose: "idle", swing: 0, flash: 0, alpha: 1,
         phase: 0, dodge: 0, regen: 0, rashin: 0 };
     }
     var c = KB.CHARS[id];
-    var homes = [[468, 252], [548, 314], [600, 220]];
+    var homes = [[470, 250], [552, 318], [604, 214]];
     return { id: id, def: c, name: c.name, look: c.look, maxHp: c.hp, hp: c.hp, maxMp: c.mp, mp: c.mp, atk: c.atk, wait: c.wait,
-      atb: 40 + i * 25, limit: 0, x: homes[i][0], y: homes[i][1], scale: 1, ox: 0, oy: 0, flip: true, pose: "idle", swing: 0, flash: 0, alpha: 1,
+      atb: 40 + i * 25, limit: 0, x: homes[i][0], y: homes[i][1], scale: 1.12, ghosts: [], ox: 0, oy: 0, flip: true, pose: "idle", swing: 0, flash: 0, alpha: 1,
       skills: c.skills.filter(function (s) { return !KB.SKILLS[s].hidden; }), guard: false, sukitooru: 0, kabau: false, down: false };
   }
 
@@ -65,10 +65,12 @@
       enemy: makeActor(scene.enemy, true, diff),
       items: Object.assign({}, scene.items),
       queue: [], ready: [], busy: false, talking: false, paused: false,
-      fx: [], nums: [], bubble: null, shake: 0, flashScr: 0, nagi: 0, misses: 0, koCount: 0, hintShown: {},
+      fx: [], parts: [], nums: [], bubble: null, shake: 0, flashScr: 0, hitstop: 0, timeScale: 1, speed: 0, cutin: null,
+      cam: { x: 0, y: 0, z: 1 }, tint: { col: "#000", a: 0, mode: null }, nagi: 0, misses: 0, koCount: 0, hintShown: {},
       menu: null
     };
     B.all = B.party.concat([B.enemy]);
+    timers = []; tweens = [];
     show("battle");
     renderParty(true);
     closeMenu();
@@ -79,27 +81,68 @@
     sleep(900).then(function () { return talk(scene.intro); }).then(function () { B.busy = false; B.startAt = now(); });
   }
 
-  /* ---------- じかんの どうぐ ---------- */
-  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  var tweens = [];
-  function tween(o, props, ms) {
+  /* ---------- じかんの どうぐ ----------
+     sleep・tween は ゲームの じかんで すすむ（ヒットストップや スローでも ずれない） */
+  var timers = [], tweens = [];
+  function sleep(ms) { return new Promise(function (r) { timers.push({ t: ms / 1000, res: r }); }); }
+  function tween(o, props, ms, ez) {
     return new Promise(function (res) {
       var from = {}; for (var k in props) from[k] = o[k];
-      tweens.push({ o: o, from: from, to: props, t: 0, d: ms / 1000, res: res });
+      tweens.push({ o: o, from: from, to: props, t: 0, d: Math.max(0.001, ms / 1000), res: res, ez: ez });
     });
   }
-  function stepTweens(dt) {
+  function stepTime(dt) {
     for (var i = tweens.length - 1; i >= 0; i--) {
-      var w = tweens[i]; w.t += dt; var k = Math.min(1, w.t / w.d), e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      var w = tweens[i]; w.t += dt; var k = Math.min(1, w.t / w.d);
+      var e = w.ez === "out" ? 1 - Math.pow(1 - k, 3) : w.ez === "in" ? k * k * k : (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
       for (var p in w.to) w.o[p] = w.from[p] + (w.to[p] - w.from[p]) * e;
       if (k >= 1) { tweens.splice(i, 1); w.res(); }
     }
+    for (var j = timers.length - 1; j >= 0; j--) { timers[j].t -= dt; if (timers[j].t <= 0) { var r = timers[j].res; timers.splice(j, 1); r(); } }
   }
   function fx(type, x, y, opt) { var f = Object.assign({ type: type, x: x, y: y, t: 0, life: 0.6 }, opt || {}); B.fx.push(f); return f; }
-  function num(a, text, color, big) {
-    B.nums.push({ x: a.x + a.ox + (a.enemy ? 10 : 0), y: a.y - (a.enemy ? 120 : 95), text: String(text), color: color || "#fff", t: 0, big: !!big });
+  // つぶを まく（kind: drop / ember / spark / snow / streak）
+  function emit(kind, x, y, n, o) {
+    o = o || {};
+    for (var i = 0; i < n; i++) {
+      var an = (o.angle == null ? -Math.PI / 2 : o.angle) + (Math.random() - 0.5) * (o.spread == null ? Math.PI * 2 : o.spread);
+      var sp = (o.speed || 200) * (0.4 + Math.random() * 0.8);
+      B.parts.push({ kind: kind, x: x + (Math.random() - 0.5) * (o.jitter || 10), y: y + (Math.random() - 0.5) * (o.jitter || 10),
+        vx: Math.cos(an) * sp, vy: Math.sin(an) * sp, g: o.gravity == null ? 400 : o.gravity, drag: o.drag || 1.5,
+        t: 0, life: (o.life || 0.7) * (0.6 + Math.random() * 0.6), size: (o.size || 3) * (0.6 + Math.random() * 0.8),
+        color: o.colors ? o.colors[i % o.colors.length] : (o.color || "#fff") });
+    }
   }
-  function center(a) { return { x: a.x + a.ox + (a.enemy ? 12 : -4), y: a.y + a.oy - (a.enemy ? 75 : 55) }; }
+  var HIT = {
+    water: function (x, y) { emit("drop", x, y, 40, { speed: 280, colors: ["#e9f8ff", "#6ac0ff", "#2a7ae0"], size: 3.2, gravity: 500 }); },
+    fire: function (x, y) { emit("ember", x, y, 40, { speed: 240, colors: ["#fff3b0", "#ffb040", "#ff5a1a"], size: 3, gravity: -120, life: 0.9 }); },
+    slash: function (x, y) { emit("streak", x, y, 10, { speed: 420, color: "#fff", size: 2, gravity: 0, life: 0.3 }); },
+    snow: function (x, y) { emit("snow", x, y, 8, { speed: 220, color: "#e6f8ff", size: 5, gravity: 60, life: 0.8 }); emit("streak", x, y, 12, { speed: 480, color: "#8fdcff", size: 2.5, gravity: 0, life: 0.3 }); }
+  };
+  function num(a, text, color, big) {
+    B.nums.push({ x: a.x + a.ox + (a.enemy ? 10 : 0) + (Math.random() - 0.5) * 16, y: a.y + a.oy - (a.enemy ? 150 : 110), text: String(text), color: color || "#fff", t: 0, big: !!big });
+  }
+  function center(a) { return { x: a.x + a.ox + (a.enemy ? 10 : -4), y: a.y + a.oy - (a.enemy ? 90 : 62) }; }
+  // カメラ: px,py の ほうへ よって z ばいに ズーム
+  function cam(px, py, z, ms) {
+    var vc = W / 2, dx = (px - vc) * 0.7, dy = (py - H / 2) * 0.7, mx = W / 2 - W / (2 * z), my = H / 2 - H / (2 * z);
+    dx = Math.max(-mx, Math.min(mx, dx)); dy = Math.max(-my, Math.min(my, dy));
+    return tween(B.cam, { x: dx, y: dy, z: z }, ms || 300, "out");
+  }
+  function camReset(ms) { return tween(B.cam, { x: 0, y: 0, z: 1 }, ms || 350); }
+  function hitstop(s) { B.hitstop = Math.max(B.hitstop, s); }
+  function slowmo(scale, ms) { B.timeScale = scale; setTimeout(function () { if (B) B.timeScale = 1; }, ms); }
+  function tint(col, a, ms, mode) { B.tint.col = col; B.tint.mode = mode || null; return tween(B.tint, { a: a }, ms || 250); }
+  // カットイン（かおの アップ＋わざの なまえ）
+  function cutin(a, name, sub, big) {
+    var cols = { tanjiro: [["#0b3a26", "#1c8f5c"], "#ffe066"], giyu: [["#0a1c4a", "#2f7ae0"], "#bfe4ff"], akaza: [["#2a0a24", "#d9488f"], "#a9dcff"] };
+    var c = cols[a.look] || [["#222", "#555"], "#fff"];
+    var fire = name.indexOf("ヒノカミ") >= 0 || name.indexOf("れつじつ") >= 0;
+    if (fire) c = [["#3a0806", "#e0501e"], "#ffe066"];
+    B.cutin = { look: a.look, name: name, sub: sub, color: c[0], textColor: c[1], t: 0, life: big ? 1.5 : 1.0, flip: !a.enemy, st: { mark: a.mark } };
+    A.sfx(big ? "cutinBig" : "cutin");
+    return sleep(big ? 1450 : 950);
+  }
 
   /* ---------- セリフ ---------- */
   var talkDone = null;
@@ -141,18 +184,19 @@
     if (was < 100 && a.limit >= 100) { A.sfx("limit"); refreshMenu(); }
   }
   function hurtParty(a, dmg) {
-    a.hp = Math.max(0, a.hp - dmg); a.flash = 1; num(a, dmg);
+    a.hp = Math.max(0, a.hp - dmg); a.flash = 1; num(a, dmg, "#fff", dmg >= 300);
     addLimit(a, dmg / a.maxHp * 110);
-    tween(a, { ox: 14 }, 90).then(function () { return tween(a, { ox: 0 }, 160); });
+    tween(a, { ox: 18 }, 80, "out").then(function () { return tween(a, { ox: 0 }, 200); });
     if (a.hp <= 0) {
       a.down = true; a.pose = "down"; a.atb = 0; a.limit = 0; a.guard = false; a.kabau = false; a.sukitooru = 0; B.koCount++;
       A.sfx("down"); dropReady(a);
-    } else { a.pose = "hurt"; setTimeout(function () { if (!a.down && a.pose === "hurt") a.pose = "idle"; }, 380); }
+    } else { a.pose = "hurt"; sleep(380).then(function () { if (!a.down && a.pose === "hurt") a.pose = "idle"; }); }
   }
   function hurtEnemy(e, dmg, crit) {
-    e.hp = Math.max(0, e.hp - dmg); e.flash = 1; num(e, dmg, crit ? "#ffe066" : "#fff", crit);
-    e.pose = "hurt"; setTimeout(function () { if (e.pose === "hurt") e.pose = "idle"; }, 300);
-    B.shake = Math.max(B.shake, crit ? 7 : 4);
+    e.hp = Math.max(0, e.hp - dmg); e.flash = 1; num(e, dmg, crit ? "#ffe066" : "#fff", crit || dmg >= 400);
+    e.pose = "hurt"; sleep(260).then(function () { if (e.pose === "hurt") e.pose = "idle"; });
+    tween(e, { ox: -10 }, 60, "out").then(function () { return tween(e, { ox: 0 }, 160); });
+    B.shake = Math.max(B.shake, crit ? 9 : 5);
     checkPhase();
   }
   function checkPhase() {
@@ -164,40 +208,133 @@
     }
   }
 
-  /* ---------- みかたの こうどう ---------- */
-  async function strike(a, sk) {
+  /* ---------- みかたの こうげき ----------
+     sk.anim で ふりつけと エフェクトが かわる（data.js の わざに かく）
+     slash / minamo / wheel / vortex / dragon / waterfall / enbu / firering / renjitsu */
+  function oneHit(a, sk, hitNo, hits) {
     var e = B.enemy, c = center(e);
-    a.pose = "attack"; a.swing = 0;
-    await tween(a, { ox: e.x + 95 - a.x, oy: e.y - a.y - 6 }, 230);
-    var hits = sk.hits || 1;
-    for (var h = 0; h < hits; h++) {
-      a.swing = 0; await tween(a, { swing: 1 }, 150);
-      var rot = -0.9 + Math.random() * 1.6;
-      var type = sk.fx === "water" || sk.fx === "fire" ? sk.fx : "slash";
-      fx(type, c.x + (Math.random() * 20 - 10), c.y + (Math.random() * 20 - 10), { rot: rot, life: type === "slash" ? 0.35 : 0.55 });
-      A.sfx(type === "slash" ? "slash" : type);
-      var sure = sk.sure || a.sukitooru > 0;
-      if (!sure && Math.random() < e.dodge) {
-        A.sfx("miss"); num(e, "かわされた", "#9fe4ff"); B.misses++;
-        tween(e, { ox: -26 }, 100).then(function () { return tween(e, { ox: 0 }, 200); });
-        if (B.misses >= 2 && hasSkill(B.party[0], "sukitooru")) maybeHint(1);
-      } else {
-        var crit = a.sukitooru > 0 || Math.random() < 0.08;
-        var dmg = roll(a.atk, sk.power) * (crit ? 1.5 : 1) | 0;
-        hurtEnemy(e, dmg, crit);
-      }
-      await sleep(hits > 3 ? 90 : 140);
-      if (e.hp <= 0) break;
+    var sure = sk.sure || a.sukitooru > 0;
+    var elem = sk.fx === "water" || sk.fx === "fire" ? sk.fx : "slash";
+    if (!sure && Math.random() < e.dodge) {
+      A.sfx("miss"); num(e, "かわされた", "#9fe4ff"); B.misses++;
+      tween(e, { ox: -34, oy: -6 }, 90, "out").then(function () { return tween(e, { ox: 0, oy: 0 }, 220); });
+      emit("snow", c.x - 20, c.y, 4, { speed: 120, color: "#9fe4ff", size: 4, gravity: 0 });
+      if (B.misses >= 2 && hasSkill(B.party[0], "sukitooru")) maybeHint(1);
+      return false;
     }
-    await tween(a, { ox: 0, oy: 0 }, 220);
-    a.pose = "idle"; a.swing = 0;
+    var crit = a.sukitooru > 0 || Math.random() < 0.08;
+    var dmg = roll(a.atk, sk.power) * (crit ? 1.5 : 1) | 0;
+    HIT[elem](c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 30);
+    A.sfx(elem === "slash" ? "hit" : elem + "Hit");
+    hitstop(crit || hitNo === hits - 1 ? 0.09 : 0.05);
+    if (sk !== a.def.attack) B.flashScr = Math.max(B.flashScr, 0.22);
+    hurtEnemy(e, dmg, crit);
+    return true;
+  }
+  async function strike(a, sk) {
+    var e = B.enemy, c = center(e), hits = sk.hits || 1, anim = sk.anim || "slash";
+    var elem = sk.fx === "water" || sk.fx === "fire" ? sk.fx : "slash";
+    a.water = elem === "water"; a.fire = elem === "fire";
+    var near = { ox: e.x + 100 - a.x, oy: e.y - a.y - 4 };
+    var swingTo = async function (ms) { a.pose = "attack"; a.swing = 0; await tween(a, { swing: 1 }, ms || 140); };
+    a.trail = sk !== a.def.attack;
+    if (anim === "slash") {
+      a.pose = "attack"; a.swing = 0;
+      await tween(a, near, 210, "out");
+      await swingTo(130);
+      fx("slash", c.x, c.y, { rot: -0.9 + Math.random() * 1.6, life: 0.32 }); A.sfx("slash");
+      oneHit(a, sk, 0, 1);
+      await sleep(160);
+    } else if (anim === "renjitsu") {
+      await renjitsu(a, sk);
+    } else {
+      cam(c.x + 40, c.y + 10, 1.18, 260);
+      if (anim === "waterfall" || anim === "enbu") {
+        // とびあがって うえから
+        a.pose = "attack"; a.swing = 0;
+        await tween(a, { ox: near.ox + 10, oy: near.oy - 150 }, 280, "out");
+        A.sfx(elem === "water" ? "water" : "fire");
+        fx(anim, c.x, c.y, { life: anim === "waterfall" ? 1.1 : 0.9 });
+        await tween(a, { swing: 1, oy: near.oy }, 220, "in");
+        B.shake = 12; fx("shock", e.x, e.y, { r: 180, col: elem === "water" ? "#bfe4ff" : "#ffb040", life: 0.6 });
+        oneHit(a, sk, 0, 1);
+        if (elem === "water") emit("drop", e.x, e.y - 10, 50, { speed: 380, angle: -Math.PI / 2, spread: 2.4, colors: ["#e9f8ff", "#6ac0ff"], size: 3.5, gravity: 700 });
+        else emit("ember", e.x, e.y - 40, 50, { speed: 320, colors: ["#fff3b0", "#ffb040", "#ff5a1a"], gravity: -150, life: 1.1 });
+        await sleep(380);
+      } else if (anim === "dragon") {
+        // みずの りゅうが ながれる。たんじろうも いっしょに ながれる ように すすむ
+        var ac = center(a);
+        fx("dragon", c.x, c.y, { sx: ac.x, sy: ac.y, life: 1.3 }); A.sfx("water");
+        tween(a, near, 600, "out");
+        for (var h = 0; h < hits; h++) {
+          await sleep(h ? 200 : 520);
+          await swingTo(110);
+          fx("water", c.x + (Math.random() - 0.5) * 20, c.y + (Math.random() - 0.5) * 20, { rot: -1 + h, life: 0.5, r: 44 });
+          oneHit(a, sk, h, hits); if (e.hp <= 0) break;
+        }
+        await sleep(250);
+      } else {
+        a.pose = "attack"; a.swing = 0;
+        await tween(a, near, 220, "out");
+        var big = { minamo: "minamo", wheel: "wheel", vortex: "vortex", firering: "firering" }[anim];
+        if (big) fx(big, c.x, c.y, { life: anim === "vortex" || anim === "firering" ? 1.3 : 0.8 });
+        A.sfx(elem === "fire" ? "fire" : "water");
+        for (var k = 0; k < hits; k++) {
+          await swingTo(hits > 1 ? 120 : 170);
+          if (hits > 1) fx(elem, c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 30, { rot: Math.random() * 6, life: 0.45, r: 40, w: 14 });
+          oneHit(a, sk, k, hits);
+          if (e.hp <= 0) break;
+          await sleep(hits > 1 ? 150 : 200);
+        }
+        await sleep(200);
+      }
+      camReset(300);
+    }
+    a.trail = false;
+    await tween(a, { ox: 0, oy: 0 }, 240);
+    a.pose = "idle"; a.swing = 0; a.water = a.fire = false;
+  }
+  // ひっさつ: ヒノカミかぐら・れつじつこうきょう（たいようを せおって 5れんげき → ばってんぎり）
+  async function renjitsu(a, sk) {
+    var e = B.enemy, c = center(e);
+    tint("#1a0200", 0.55, 300);
+    fx("sun", c.x + 10, c.y - 10, { life: 2.6, under: true });
+    B.speed = 1;
+    cam(c.x, c.y, 1.3, 400);
+    var spots = [[90, -10], [-70, -30], [70, 30], [-80, 20], [10, -80]];
+    for (var h = 0; h < 5; h++) {
+      var sp = spots[h];
+      a.flip = sp[0] > 0;
+      await tween(a, { ox: e.x + sp[0] - a.x, oy: e.y + sp[1] - a.y + 10 }, 90, "out");
+      a.pose = "attack"; a.swing = 0; await tween(a, { swing: 1 }, 90);
+      fx("fire", c.x, c.y, { rot: h * 1.3, life: 0.5, r: 58, w: 26 }); A.sfx("fire");
+      oneHit(a, sk, h, 5);
+      await sleep(110);
+    }
+    // しめの ばってんぎり
+    a.flip = true;
+    await tween(a, { ox: e.x + 120 - a.x, oy: e.y - a.y }, 140, "out");
+    slowmo(0.35, 700);
+    fx("cross", c.x, c.y, { life: 0.9 }); A.sfx("big"); B.flashScr = 0.9; B.shake = 16;
+    emit("ember", c.x, c.y, 80, { speed: 420, colors: ["#fff3b0", "#ffb040", "#ff5a1a"], gravity: -100, life: 1.4, size: 3.5 });
+    var dmg = roll(a.atk, sk.power * 1.4); hurtEnemy(e, dmg, true); hitstop(0.18);
+    await sleep(700);
+    B.speed = 0; tint("#1a0200", 0, 400); camReset(400);
+  }
+  // 「みずのこきゅう・いちのかた みなもぎり」→ [みなもぎり, みずのこきゅう・いちのかた]
+  function splitName(name) {
+    var i = name.lastIndexOf(" ");
+    if (i > 0 && name.slice(0, i).indexOf("・") >= 0) return [name.slice(i + 1), name.slice(0, i)];
+    var j = name.lastIndexOf("・");
+    if (j > 0) return [name.slice(j + 1), name.slice(0, j)];
+    return [name, ""];
   }
   function hasSkill(a, id) { return a && a.skills.indexOf(id) >= 0; }
-  function maybeHint(i) { var ph = B.enemy.def.phases[i - 1]; if (ph && ph.hint && !B.hintShown[i]) { B.hintShown[i] = true; } if (ph && ph.hint) hint(ph.hint); }
+  function maybeHint(i) { var ph = B.enemy.def.phases[i - 1]; if (ph && ph.hint) { B.hintShown[i] = true; hint(ph.hint); } }
 
   async function partyAct(q) {
     var a = q.actor; if (a.down) return;
-    var justCast = false, e = B.enemy;
+    var justCast = false;
     a.guard = false;
     if (a.kabau) a.kabau = false;
     if (q.kind === "attack") {
@@ -205,20 +342,33 @@
     } else if (q.kind === "skill" || q.kind === "limit") {
       var sk = KB.SKILLS[q.id];
       if (q.kind === "limit") a.limit = 0; else a.mp -= sk.mp;
-      banner(sk.name, 1600); await sleep(350);
+      var nm = splitName(sk.name), main = nm[0], sub = nm[1];
+      banner(sk.name, 1800);
+      if (sk.type === "attack" || sk.type === "nagi" || sk.type === "buff") await cutin(a, main, sub, q.kind === "limit");
+      else await sleep(300);
       if (sk.type === "attack") {
-        if (q.kind === "limit") { B.flashScr = 0.6; a.glow = "#ffb340"; }
+        if (q.kind === "limit") a.glow = "#ffb340";
         await strike(a, sk); a.glow = null;
       } else if (sk.type === "buff") {
-        a.pose = "cast"; var c = center(a); fx("clear", c.x, c.y, { life: 1.2 }); A.sfx("buff");
-        a.sukitooru = sk.turns; justCast = true; await sleep(900); a.pose = "idle";
-        num(a, "すきとおる", "#e8fbff");
+        // すきとおる せかい: がめんの いろが ぬけて、すきとおった せんが みえる
+        a.pose = "cast"; var c = center(a);
+        tint("#808080", 0.85, 200, "saturation");
+        fx("clear", c.x, c.y, { life: 1.6 }); A.sfx("buff");
+        await sleep(1100); tint("#808080", 0, 500, "saturation");
+        a.sukitooru = sk.turns; justCast = true; a.pose = "idle";
+        num(a, "すきとおる せかい", "#e8fbff");
       } else if (sk.type === "cover") {
-        a.pose = "guard"; A.sfx("guard"); a.kabau = true; num(a, "かばう", "#9cc4ff"); await sleep(700); a.pose = "idle";
+        a.pose = "guard"; A.sfx("guard"); a.kabau = true; num(a, "かばう", "#9cc4ff");
+        fx("shock", a.x, a.y, { r: 60, col: "#9cc4ff", life: 0.5 }); await sleep(700); a.pose = "idle";
       } else if (sk.type === "nagi") {
+        // なぎ: すべてが しずまる
         a.pose = "cast"; A.sfx("nagi");
-        B.party.forEach(function (p) { if (!p.down) fx("nagi", p.x, p.y, { life: 1.6 }); });
-        B.nagi = sk.turns; await sleep(1300); a.pose = "idle";
+        slowmo(0.5, 1200);
+        tint("#0a2a5a", 0.4, 400);
+        fx("nagi", (B.party[0].x + B.party[B.party.length - 1].x) / 2, B.party[0].y + 30, { life: 2.4, under: true }); a.water = true; cam(a.x, a.y - 60, 1.2, 400);
+        B.party.forEach(function (p) { if (!p.down) fx("nagi", p.x, p.y, { life: 1.8 }); });
+        emit("drop", a.x, a.y - 60, 30, { speed: 60, colors: ["#e9f8ff", "#9cc4ff"], gravity: -30, life: 1.6, size: 2.4 });
+        B.nagi = sk.turns; await sleep(1400); a.pose = "idle"; a.water = false; camReset(400);
         num(a, "なぎ", "#bfe4ff");
       }
     } else if (q.kind === "item") {
@@ -226,11 +376,11 @@
       banner(it.name, 1100); await sleep(300);
       var cc = center(tg);
       if (it.revive) {
-        if (tg.down) { tg.down = false; tg.pose = "idle"; tg.hp = Math.round(tg.maxHp * it.revive); tg.atb = 0; fx("heal", cc.x, cc.y + 30, { life: 1 }); A.sfx("heal"); num(tg, tg.hp, "#7dff9a"); }
+        if (tg.down) { tg.down = false; tg.pose = "idle"; tg.hp = Math.round(tg.maxHp * it.revive); tg.atb = 0; fx("heal", cc.x, cc.y, { life: 1.1 }); A.sfx("heal"); num(tg, tg.hp, "#7dff9a"); }
       } else if (it.heal) {
-        var hv = Math.min(it.heal, tg.maxHp - tg.hp); tg.hp += hv; fx("heal", cc.x, cc.y + 30, { life: 1 }); A.sfx("heal"); num(tg, hv, "#7dff9a");
+        var hv = Math.min(it.heal, tg.maxHp - tg.hp); tg.hp += hv; fx("heal", cc.x, cc.y, { life: 1.1 }); A.sfx("heal"); num(tg, hv, "#7dff9a");
       } else if (it.mp) {
-        var mv = Math.min(it.mp, tg.maxMp - tg.mp); tg.mp += mv; fx("mp", cc.x, cc.y + 30, { life: 1 }); A.sfx("heal"); num(tg, mv + " MP", "#9dd4ff");
+        var mv = Math.min(it.mp, tg.maxMp - tg.mp); tg.mp += mv; fx("mp", cc.x, cc.y, { life: 1.1 }); A.sfx("heal"); num(tg, mv + " MP", "#9dd4ff");
       }
       await sleep(700);
     } else if (q.kind === "guard") {
@@ -240,7 +390,6 @@
     if (a.sukitooru > 0 && !justCast) a.sukitooru--;
     a.atb = 0;
     if (q.kind !== "guard" && !a.down) a.pose = "idle";
-    void e;
   }
 
   /* ---------- てきの こうどう ---------- */
@@ -253,57 +402,88 @@
   }
   // 1かいぶんの こうげきを みかたに あてる（なぎ・ぼうぎょ・すきとおる を ここで しらべる）
   async function hitParty(e, a, mv, cover) {
+    var ac = center(a);
     if (B.nagi > 0) {
       A.sfx("nagi"); num(a, "なぎ！", "#bfe4ff"); fx("nagi", a.x, a.y, { life: 0.9 });
       var gy = B.party.filter(function (p) { return p.id === "giyu" && !p.down; })[0];
-      if (gy) { await sleep(200); var c = center(e); fx("water", c.x, c.y, { rot: Math.random() - 0.5 }); A.sfx("water"); hurtEnemy(e, roll(gy.atk, 2.4), false); }
+      if (gy) { await sleep(150); var c = center(e); fx("water", c.x, c.y, { rot: Math.random() - 0.5, life: 0.5 }); A.sfx("waterHit"); HIT.water(c.x, c.y); hurtEnemy(e, roll(gy.atk, 2.4), false); }
       return;
     }
-    if (a.sukitooru > 0 && Math.random() < 0.6) { A.sfx("miss"); num(a, "みきった！", "#e8fbff"); tween(a, { oy: -24 }, 120).then(function () { return tween(a, { oy: 0 }, 180); }); return; }
+    if (a.sukitooru > 0 && Math.random() < 0.6) { A.sfx("miss"); num(a, "みきった！", "#e8fbff"); tween(a, { oy: -30 }, 110, "out").then(function () { return tween(a, { oy: 0 }, 180); }); return; }
     var dmg = roll(e.atk, mv.power) * (B.diff === "easy" ? 0.55 : 1);
     if (a.guard) dmg *= 0.5;
     if (cover) dmg *= 0.5;
+    HIT.snow(ac.x, ac.y);
+    A.sfx(mv.fx === "bigpunch" || mv.fx === "shuushiki" ? "big" : "punch");
+    hitstop(mv.fx === "bigpunch" ? 0.14 : 0.05);
     hurtParty(a, Math.max(1, Math.round(dmg)));
-    B.shake = Math.max(B.shake, mv.fx === "bigpunch" || mv.fx === "shuushiki" ? 9 : 5);
+    B.shake = Math.max(B.shake, mv.fx === "bigpunch" || mv.fx === "shuushiki" ? 14 : 6);
   }
   async function enemyAct() {
     var e = B.enemy, def = e.def;
     if (!B.party.some(function (p) { return !p.down; })) return;
     var mvId = def.ai(B, e), mv = def.moves[mvId];
-    banner(mv.name, 1400);
+    banner(mv.name, 1500);
     if (Math.random() < 0.25 && mv.type !== "charge") bubble(def.taunts[Math.floor(Math.random() * def.taunts.length)]);
-    await sleep(380);
+    if (mv.cutin) { var mn = splitName(mv.name); await cutin(e, mn[0], mn[1], mv.type === "all"); }
+    else await sleep(320);
+    var ec = center(e);
     if (mv.type === "charge") {
-      e.pose = "cast"; e.glow = "#7fd8ff"; A.sfx("charge"); B.flashScr = 0.25; await sleep(1200);
+      // ちからを ためる: らしんが おおきく ひかり、オーラが たちのぼる
+      e.pose = "cast"; e.glow = "#7fd8ff"; A.sfx("charge"); B.flashScr = 0.25;
+      fx("aura", e.x, e.y - 20, { life: 1.4 }); tween(e, { rashinS: 1.6 }, 900);
+      emit("snow", e.x, e.y - 40, 16, { speed: 120, color: "#bfe8ff", size: 5, gravity: -60, life: 1.3, jitter: 60 });
+      await sleep(1300);
       maybeHint(2);
     } else if (mv.type === "all") {
-      e.pose = "cast"; A.sfx("charge"); await sleep(700);
+      // しゅうしき: よぞらの ような あおい ひかりが ふりそそぐ
+      tint("#020818", 0.6, 300);
+      e.pose = "cast"; A.sfx("charge"); await sleep(600);
       e.pose = "attack"; e.swing = 0; tween(e, { swing: 1 }, 300);
-      fx("shuushiki", 0, 0, { life: 1.3 }); A.sfx("big"); B.flashScr = 0.7;
-      await sleep(500);
-      for (var i = 0; i < B.party.length; i++) { var p = B.party[i]; if (!p.down) await hitParty(e, p, mv, false); }
-      await sleep(600); e.glow = null;
+      fx("shuushiki", 0, 0, { life: 1.6 }); A.sfx("shuushiki"); B.flashScr = 0.5;
+      cam(480, 230, 1.1, 300);
+      await sleep(600);
+      for (var i = 0; i < B.party.length; i++) {
+        var p = B.party[i]; if (p.down) continue;
+        var pc = center(p); fx("bigburst", pc.x, pc.y, { life: 0.7 });
+        await hitParty(e, p, mv, false); await sleep(160);
+      }
+      await sleep(600); e.glow = null; e.rashinS = 1;
+      tint("#020818", 0, 400); camReset(400);
     } else {
       var pt = pickTarget(), a = pt.t, ac = center(a);
       if (mv.fx === "airpunch") {
-        e.pose = "attack"; e.swing = 0; await tween(e, { swing: 0.5 }, 120);
-        var ec = center(e); fx("airpunch", ac.x, ac.y, { sx: ec.x + 40, sy: ec.y, life: 0.5 }); A.sfx("punch");
-        await sleep(300); fx("punch", ac.x, ac.y, { life: 0.4 }); await hitParty(e, a, mv, pt.cover);
-        await tween(e, { swing: 1 }, 120);
+        // くうしき: その ばで こぶしを ふると、こぶしの かたまりが とんでいく
+        for (var s = 0; s < 3; s++) {
+          e.pose = "attack"; e.swing = 0; await tween(e, { swing: 1 }, 90);
+          fx("airpunch", ac.x + (s - 1) * 12, ac.y + (s - 1) * 14, { sx: ec.x + 50, sy: ec.y - 10 + s * 8, life: 0.45 }); A.sfx("whoosh");
+          await sleep(70);
+        }
+        await sleep(200);
+        fx("punch", ac.x, ac.y, { life: 0.45 }); await hitParty(e, a, mv, pt.cover);
       } else {
-        await tween(e, { ox: a.x - 110 - e.x, oy: a.y - e.y }, 240);
+        // ちかよって なぐる・ける
+        e.trail = true;
+        await tween(e, { ox: a.x - 120 - e.x, oy: a.y - e.y }, mv.fx === "bigpunch" ? 160 : 230, "out");
+        if (mv.fx === "bigpunch") { cam(ac.x - 30, ac.y, 1.25, 200); slowmo(0.4, 500); }
         for (var h = 0; h < (mv.hits || 1); h++) {
-          e.pose = mv.fx === "kick" ? "kick" : "attack"; e.swing = 0; await tween(e, { swing: 1 }, mv.hits > 1 ? 110 : 200);
-          fx("punch", ac.x - 10, ac.y + (Math.random() * 20 - 10), { big: mv.fx === "bigpunch", life: 0.45 }); A.sfx(mv.fx === "bigpunch" ? "big" : "punch");
+          e.pose = mv.fx === "kick" ? "kick" : "attack"; e.swing = 0;
+          await tween(e, { swing: 1 }, mv.hits > 1 ? 100 : 200);
+          var hx = ac.x - 10, hy = ac.y + (Math.random() * 24 - 12);
+          if (mv.fx === "kick") { fx("pillar", ac.x, a.y, { life: 0.7 }); tween(a, { oy: -50 }, 160, "out").then(function () { return tween(a, { oy: 0 }, 220, "in"); }); }
+          else if (mv.fx === "bigpunch") { fx("bigburst", hx, hy, { life: 0.9 }); B.flashScr = 0.6; emit("snow", hx, hy, 18, { speed: 320, color: "#e6f8ff", size: 6, gravity: 40, life: 1 }); }
+          else fx("punch", hx, hy, { life: 0.4, rot: Math.random() });
           await hitParty(e, a, mv, pt.cover);
           if (a.down) break;
         }
-        await sleep(150);
+        await sleep(160);
+        if (mv.fx === "bigpunch") camReset(300);
         await tween(e, { ox: 0, oy: 0 }, 260);
+        e.trail = false;
       }
     }
-    if (mv.type !== "charge") { e.pose = "idle"; e.swing = 0; if (B.nagi > 0) B.nagi--; }
-    if (e.regen && e.hp > 0) { var rv = Math.min(e.regen, e.maxHp - e.hp); if (rv > 0) { e.hp += rv; num(e, "+" + rv, "#7dff9a"); } }
+    if (mv.type !== "charge") { e.pose = "idle"; e.swing = 0; if (B.nagi > 0) { B.nagi--; if (!B.nagi) tint("#0a2a5a", 0, 600); } }
+    if (e.regen && e.hp > 0) { var rv = Math.min(e.regen, e.maxHp - e.hp); if (rv > 0) { e.hp += rv; num(e, "+" + rv, "#7dff9a"); emit("snow", e.x, e.y - 60, 6, { speed: 60, color: "#9dffb0", size: 4, gravity: -40, life: 1 }); } }
     e.atb = 0;
   }
 
@@ -314,10 +494,12 @@
     if (ph.dodge != null) e.dodge = ph.dodge;
     if (ph.regen != null) e.regen = ph.regen;
     if (ph.rashin) e.rashin = 1;
+    if (ph.mark) ph.mark.forEach(function (pid) { B.party.forEach(function (p) { if (p.id === pid) { p.mark = true; var c = center(p); fx("clear", c.x, c.y, { life: 1 }); } }); });
     if (ph.unlock) Object.keys(ph.unlock).forEach(function (pid) {
       var p = B.party.filter(function (x) { return x.id === pid; })[0];
       if (p) ph.unlock[pid].forEach(function (s) { if (p.skills.indexOf(s) < 0) p.skills.push(s); });
     });
+    if (ph.bgm) A.bgm(ph.bgm);
     if (ph.hint) hint(ph.hint);
   }
 
@@ -358,27 +540,39 @@
   /* ---------- まいフレーム ---------- */
   var last = now();
   function frame() {
-    var t = now(), dt = Math.min(0.05, t - last); last = t;
+    var t = now(), raw = Math.min(0.05, t - last); last = t;
     if (B && !$("#battle").hidden) {
-      stepTweens(dt);
-      update(dt);
+      // ヒットストップ中は とまる。スローモーションは timeScale
+      var dt = raw * (B.timeScale || 1);
+      if (B.hitstop > 0) { B.hitstop -= raw; dt = 0; }
+      stepTime(dt);
+      update(dt, raw);
       render();
     }
     requestAnimationFrame(frame);
   }
-  function update(dt) {
+  function update(dt, raw) {
     B.t += dt;
-    B.all.forEach(function (a) { a.flash = Math.max(0, a.flash - dt * 4); });
+    if (B.cutin) { B.cutin.t += raw; if (B.cutin.t >= B.cutin.life) B.cutin = null; }
+    B.all.forEach(function (a) {
+      a.flash = Math.max(0, a.flash - dt * 4);
+      // ざんぞう（すばやく うごく ときの のこりかげ）
+      if (a.trail && dt > 0) { a.ghosts.push({ x: a.x + a.ox, y: a.y + a.oy, pose: a.pose, swing: a.swing, flip: a.flip, t: 0 }); }
+      a.ghosts.forEach(function (gh) { gh.t += dt; }); a.ghosts = a.ghosts.filter(function (gh) { return gh.t < 0.18; });
+    });
     B.fx.forEach(function (f) { f.t += dt; }); B.fx = B.fx.filter(function (f) { return f.t < f.life; });
-    B.nums.forEach(function (n) { n.t += dt; }); B.nums = B.nums.filter(function (n) { return n.t < 1.1; });
-    if (B.bubble) { B.bubble.t += dt; if (B.bubble.t > B.bubble.life) B.bubble = null; }
-    B.shake = Math.max(0, B.shake - dt * 30); B.flashScr = Math.max(0, B.flashScr - dt * 2);
+    B.parts.forEach(function (p) { p.t += dt; p.vy += p.g * dt; var d = Math.exp(-p.drag * dt); p.vx *= d; p.vy *= d; p.x += p.vx * dt; p.y += p.vy * dt; });
+    B.parts = B.parts.filter(function (p) { return p.t < p.life; });
+    if (B.parts.length > 600) B.parts.splice(0, B.parts.length - 600);
+    B.nums.forEach(function (n) { n.t += raw; }); B.nums = B.nums.filter(function (n) { return n.t < 1.1; });
+    if (B.bubble) { B.bubble.t += raw; if (B.bubble.t > B.bubble.life) B.bubble = null; }
+    B.shake = Math.max(0, B.shake - raw * 30); B.flashScr = Math.max(0, B.flashScr - raw * 2);
     if (B.over) return;
     var stop = B.busy || B.talking || B.paused || (save.settings.wait && B.menu);
     if (!stop) {
       B.all.forEach(function (a) {
         if (a.down || a.hp <= 0 || queued(a) || B.ready.indexOf(a) >= 0) return;
-        a.atb = Math.min(100, a.atb + dt * 100 / a.wait);
+        a.atb = Math.min(100, a.atb + raw * 100 / a.wait);
         if (a.atb >= 100) {
           if (a.enemy) B.queue.push({ actor: a });
           else { B.ready.push(a); A.sfx("ready"); openMenuIfReady(); }
@@ -389,46 +583,69 @@
     renderParty();
   }
 
+  function charState(a, extra) {
+    return Object.assign({ t: B.t, pose: a.pose, swing: a.swing, scale: a.scale, flip: a.flip, mark: a.mark, water: a.water, fire: a.fire }, extra || {});
+  }
   function render() {
-    g.setTransform(cv.width / VW, 0, 0, cv.height / H, -VX0 * cv.width / VW, 0);
+    var sc = cv.width / VW;
+    g.setTransform(sc, 0, 0, cv.height / H, -VX0 * sc, 0);
     var sx = B.shake ? (Math.random() - 0.5) * B.shake : 0, sy = B.shake ? (Math.random() - 0.5) * B.shake : 0;
-    g.save(); g.translate(sx, sy);
+    g.save();
+    // カメラ
+    var cm = B.cam, vcx = VX0 + VW / 2;
+    g.translate(vcx + sx, H / 2 + sy); g.scale(cm.z, cm.z); g.translate(-(vcx + cm.x), -(H / 2 + cm.y));
     KB.drawBg(g, B.scene.bg, B.t);
     var e = B.enemy;
-    if (e.rashin && e.alpha > 0) KB.drawRashin(g, e.x + e.ox, e.y + e.oy, B.t, 0.75 * e.alpha);
+    if (e.rashin && e.alpha > 0) {
+      g.save(); g.translate(e.x + e.ox, e.y + e.oy); g.scale(e.rashinS || 1, e.rashinS || 1);
+      KB.drawRashin(g, 0, 0, B.t, 0.75 * e.alpha); g.restore();
+    }
+    if (B.tint.a > 0 && !B.tint.mode) KB.drawTint(g, -200, W + 400, B.tint.col, B.tint.a);
+    B.fx.forEach(function (f) { if (f.under) KB.drawFx(g, f); });
     // おくに いる ものから かく
     var order = B.all.slice().sort(function (p, q) { return (p.y + p.oy) - (q.y + q.oy); });
     order.forEach(function (a) {
+      a.ghosts.forEach(function (gh, i) {
+        KB.drawChar(g, a.look, gh.x, gh.y, charState(a, { pose: gh.pose, swing: gh.swing, flip: gh.flip, alpha: 0.25 * (1 - gh.t / 0.18) * a.alpha, glow: a.enemy ? "#7fd8ff" : (a.fire ? "#ff7a2a" : "#5ab4ff") }));
+        void i;
+      });
       var glow = a.glow || (a.sukitooru > 0 ? "#e8fbff" : null) || (!a.enemy && a.limit >= 100 ? "#ffb340" : null);
-      var alpha = a.alpha * (a.sukitooru > 0 ? 0.7 + Math.sin(B.t * 6) * 0.15 : 1);
-      KB.drawChar(g, a.look, a.x + a.ox, a.y + a.oy, { t: B.t, pose: a.pose, swing: a.swing, scale: a.scale, flip: a.flip, flash: a.flash, alpha: alpha, glow: glow });
-      if (a.guard && !a.down) { g.save(); g.globalAlpha = 0.35; g.strokeStyle = "#ffd27a"; g.lineWidth = 3; g.beginPath(); g.arc(a.x + a.ox - 20, a.y - 55, 34, 2, 4.3); g.stroke(); g.restore(); }
+      var alpha = a.alpha * (a.sukitooru > 0 ? 0.72 + Math.sin(B.t * 6) * 0.15 : 1);
+      KB.drawChar(g, a.look, a.x + a.ox, a.y + a.oy, charState(a, { flash: a.flash, alpha: alpha, glow: glow }));
+      if (a.guard && !a.down) { g.save(); g.globalAlpha = 0.4; g.strokeStyle = "#ffd27a"; g.lineWidth = 3; g.beginPath(); g.arc(a.x + a.ox - 22, a.y - 62, 40, 2, 4.3); g.stroke(); g.restore(); }
       // コマンドを えらんでいる キャラに ゆびさし
       if (B.menu && B.menu.actor === a) {
-        var by = a.y - 128 + Math.sin(B.t * 8) * 3;
-        g.fillStyle = "#ffe066"; g.beginPath(); g.moveTo(a.x - 8, by); g.lineTo(a.x + 8, by); g.lineTo(a.x, by + 10); g.closePath(); g.fill();
+        var by = a.y - 150 + Math.sin(B.t * 8) * 3;
+        g.fillStyle = "#ffe066"; g.beginPath(); g.moveTo(a.x - 9, by); g.lineTo(a.x + 9, by); g.lineTo(a.x, by + 11); g.closePath(); g.fill();
       }
     });
-    if (B.nagi > 0) B.party.forEach(function (p) { if (!p.down) { g.save(); g.globalAlpha = 0.5 + Math.sin(B.t * 3) * 0.2; g.translate(p.x, p.y); g.scale(1, 0.3); g.strokeStyle = "#bfe4ff"; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, 38, 0, Math.PI * 2); g.stroke(); g.restore(); } });
-    B.fx.forEach(function (f) { KB.drawFx(g, f); });
+    if (B.nagi > 0) B.party.forEach(function (p) { if (!p.down) { g.save(); g.globalAlpha = 0.5 + Math.sin(B.t * 3) * 0.2; g.translate(p.x, p.y); g.scale(1, 0.28); g.strokeStyle = "#d8f0ff"; g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, 44 + Math.sin(B.t * 2) * 4, 0, Math.PI * 2); g.stroke(); g.restore(); } });
+    B.fx.forEach(function (f) { if (!f.under) KB.drawFx(g, f); });
+    KB.drawParts(g, B.parts);
     // ダメージの すうじ
     B.nums.forEach(function (n) {
-      var k = n.t, y = n.y - (k < 0.25 ? Math.sin(k / 0.25 * Math.PI) * 14 : 0) - k * 10;
+      var k = n.t, y = n.y - (k < 0.25 ? Math.sin(k / 0.25 * Math.PI) * 16 : 0) - k * 10;
+      var s = n.big ? (k < 0.12 ? 1.8 - k / 0.12 * 0.8 : 1) : 1;
       g.save(); g.globalAlpha = k > 0.85 ? (1.1 - k) / 0.25 : 1;
-      g.font = "bold " + (n.big ? 26 : 20) + "px system-ui, sans-serif"; g.textAlign = "center";
-      g.lineWidth = 4; g.strokeStyle = "#000"; g.strokeText(n.text, n.x, y); g.fillStyle = n.color; g.fillText(n.text, n.x, y);
+      g.translate(n.x, y); g.scale(s, s);
+      g.font = "900 " + (n.big ? 28 : 21) + "px system-ui, sans-serif"; g.textAlign = "center";
+      g.lineWidth = 5; g.strokeStyle = "#000"; g.strokeText(n.text, 0, 0); g.fillStyle = n.color; g.fillText(n.text, 0, 0);
       g.restore();
     });
     // アカザの ふきだし
     if (B.bubble && e.alpha > 0.5) {
-      var bx = e.x + e.ox + 40, byy = e.y - 200;
+      var bx = e.x + e.ox + 40, byy = e.y - 225;
       g.save(); g.font = "bold 15px system-ui, sans-serif"; var w = g.measureText(B.bubble.text).width + 20;
       g.fillStyle = "rgba(255,255,255,.95)"; g.strokeStyle = "#5a1438"; g.lineWidth = 2;
-      g.beginPath(); g.roundRect ? g.roundRect(bx - 10, byy - 20, w, 30, 10) : g.rect(bx - 10, byy - 20, w, 30); g.fill(); g.stroke();
+      g.beginPath(); if (g.roundRect) g.roundRect(bx - 10, byy - 20, w, 30, 10); else g.rect(bx - 10, byy - 20, w, 30); g.fill(); g.stroke();
       g.fillStyle = "#5a1438"; g.fillText(B.bubble.text, bx, byy); g.restore();
     }
     g.restore();
-    if (B.flashScr > 0) { g.fillStyle = "rgba(255,255,255," + Math.min(0.8, B.flashScr) + ")"; g.fillRect(VX0, 0, VW, H); }
+    // がめん ぜんたい（カメラの そと）
+    if (B.tint.a > 0 && B.tint.mode) KB.drawTint(g, VX0, VW, B.tint.col, B.tint.a, B.tint.mode);
+    if (B.speed > 0) KB.drawSpeedLines(g, VX0 + VW / 2, H / 2, 0.5 * B.speed, B.t);
+    if (B.cutin) KB.drawCutin(g, B.cutin, VX0, VW);
+    if (B.flashScr > 0) { g.fillStyle = "rgba(255,255,255," + Math.min(0.85, B.flashScr) + ")"; g.fillRect(VX0, 0, VW, H); }
   }
 
   /* ---------- したの まど（なかまの じょうたい） ---------- */

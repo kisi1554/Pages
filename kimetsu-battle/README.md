@@ -18,7 +18,7 @@
 ### アカザせんの ながれ
 
 1. HP 60% で「はかいさつ・らしん」… こうげきが かわされやすく なり、アカザの きずも なおる。
-   たんじろうが **すきとおる せかい** を おぼえる（3ターン かならず あたって クリティカル、てきの こうげきも みきる）
+   ぎゆうの ほおに あざが でて、たんじろうが **すきとおる せかい** を おぼえる（3ターン かならず あたって クリティカル、てきの こうげきも みきる）
 2. HP 25% で さらに つよく なる。4かいに 1かい「ちからを ためる」→ つぎに ぜんいん こうげき「しゅうしき」。
    **ぼうぎょ** か ぎゆうの **なぎ** で ふせぐ
 3. たおすと、アカザが にんげんだった ころを おもいだして しずかに きえる おはなし（こわい ひょうげんは しない）
@@ -36,13 +36,17 @@
 | ファイル | なかみ |
 | --- | --- |
 | `data.js` | キャラ（`CHARS`）・わざ（`SKILLS`）・どうぐ（`ITEMS`）・てき（`ENEMIES`）・セリフの なまえ（`SPEAKERS`）・シーン（`SCENES`） |
-| `draw.js` | キャラの みため（`LOOKS`）・はいけい（`BGS`）・わざの エフェクト（`FX`）。ぜんぶ Canvas に コードで かく |
-| `audio.js` | WebAudio の ごうせいおん（こうかおん・BGM）。オン/オフ あり |
-| `game.js` | ATB バトルの しくみ・コマンドの まど・セーブ（localStorage `kimetsu-battle-v1`） |
+| `chars.js` | キャラの みため（`LOOKS`）。アニメふうの め・かみ・はおりの もよう（いちまつ・きっこう）・はなふだの みみかざり・アカザの あおい しま など。カットインよう の かおの アップ（`drawPortrait`） |
+| `draw.js` | はいけい（`BGS`）・わざの エフェクト（`FX`）・つぶ（しぶき・ひのこ・ゆきの けっしょう）・カットイン・しゅうちゅうせん。ぜんぶ Canvas に コードで かく |
+| `audio.js` | WebAudio の ごうせいおん。BGM は わふうロック（ひずんだ ギター・ベース・ツーバス・たいこ・しゃみせんふうの はやびき）。`battle`（172 BPM）→ HP 25% で `battle2`（188 BPM）、かつと `win`。オン/オフ あり |
+| `game.js` | ATB バトルの しくみ・わざの ふりつけ（カメラ・ヒットストップ・スロー・ざんぞう）・コマンドの まど・セーブ（localStorage `kimetsu-battle-v1`） |
 
 - **キャラを たす**: `CHARS` に 1つ（hp・mp・atk・wait・skills・limit）、`draw.js` の `LOOKS` に みためを 1つ、
   `SPEAKERS` に なまえと いろ。みかたは 3にんまで ならべられる（`game.js` の `homes`）
-- **わざを たす**: `SKILLS` に たす。type は `attack` / `buff` / `cover` / `nagi`。fx は `slash` / `water` / `fire`
-- **てきを たす**: `ENEMIES` に `moves`・`ai`（つぎの わざを えらぶ かんすう）・`phases`（HP で おこる イベント）・`defeat`
+- **わざを たす**: `SKILLS` に たす。type は `attack` / `buff` / `cover` / `nagi`。fx は `slash` / `water` / `fire`。
+  `anim` で ふりつけを えらぶ（`minamo` / `wheel` / `vortex` / `dragon` / `waterfall` / `enbu` / `firering` / `renjitsu`）。
+  わざを つかうと かおの アップの カットインが でる（ひっさつは おおきく）
+- **てきを たす**: `ENEMIES` に `moves`（`cutin: true` で カットイン）・`ai`（つぎの わざを えらぶ かんすう）・
+  `phases`（HP で おこる イベント。`mark` で あざ、`bgm` で きょくを かえる）・`defeat`
 - **たたかい（シーン）を たす**: `SCENES` に `{ id, emoji, title, desc, bg, party, enemy, items, intro }` を たす。
   `coming: true` の「じゅんびちゅう」カードは いらなくなったら けす
