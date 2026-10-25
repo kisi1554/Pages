@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0ca678">
+<title>ぴょこっと にっぽん リズム</title>
+<link rel="stylesheet" href="style.css?v=37507ed">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== タイトル ===== -->
+  <section class="screen is-active" id="sc-title">
+    <div class="scroll">
+      <div class="hero">
+        <div class="hero-pyokos" id="heroPyokos"></div>
+        <h1 class="logo">ぴょこっと<br><span>にっぽん リズム</span></h1>
+        <p class="hero-sub">おんがくに のって、とどうふけんの なまえと ばしょを おぼえよう</p>
+        <div class="hero-stat" id="heroStat"></div>
+      </div>
+      <button class="btn btn-main" data-go="select">▶ あそぶ</button>
+      <div class="menu-row">
+        <button class="btn btn-sub" data-go="zukan">📔 ぴょこ ずかん</button>
+        <button class="btn btn-sub" data-go="settings">⚙️ せってい</button>
+      </div>
+      <div class="menu-row">
+        <button class="btn btn-sub btn-small" data-go="parent">👪 おうちの かたへ</button>
+        <button class="btn btn-sub btn-small js-mute">🔊 おと オン</button>
+      </div>
+      <p class="free-note">47けん ぜんぶ むりょう・こうこく なし</p>
+    </div>
+  </section>
+
+  <!-- ===== ちほう を えらぶ ===== -->
+  <section class="screen" id="sc-select">
+    <header class="bar">
+      <button class="iconbtn" data-go="title" aria-label="もどる">←</button>
+      <h2>ちほうを えらぼう</h2>
+      <button class="iconbtn js-mute" aria-label="おと">🔊</button>
+    </header>
+    <div class="scroll">
+      <div class="tempo-row" id="tempoRow"></div>
+      <div class="region-grid" id="regionGrid"></div>
+      <div class="medley-card" id="medleyCard"></div>
+    </div>
+  </section>
+
+  <!-- ===== あそぶ ===== -->
+  <section class="screen" id="sc-play">
+    <header class="hud">
+      <button class="iconbtn" id="btnQuit" aria-label="やめる">✕</button>
+      <div class="hud-title">
+        <span id="hudRegion"></span>
+        <span class="phase-pill" id="hudPhase"></span>
+      </div>
+      <div class="beats" id="beats"><i></i><i></i><i></i><i></i></div>
+      <button class="iconbtn js-mute" aria-label="おと">🔊</button>
+    </header>
+    <div class="play-body">
+      <div class="mapwrap" id="mapWrap">
+        <div class="map-host" id="mapHost"></div>
+        <div class="mini" id="miniHost"></div>
+        <div class="judge" id="judge"></div>
+        <div class="intro" id="intro"></div>
+        <div class="dance" id="dance"></div>
+      </div>
+      <aside class="panel">
+        <div class="banner" id="banner">
+          <div class="bn-name" id="bnName"></div>
+          <div class="bn-sub" id="bnSub"></div>
+        </div>
+        <div class="choices" id="choices"></div>
+        <div class="progress" id="progress"></div>
+        <button class="btn btn-sub btn-small is-hidden" id="btnSkip">ぎゃく は とばす ⏭</button>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ===== クリア ===== -->
+  <section class="screen" id="sc-clear">
+    <div class="scroll">
+      <h2 class="clear-title" id="clearTitle"></h2>
+      <p class="clear-msg" id="clearMsg"></p>
+      <div class="clear-pyokos" id="clearPyokos"></div>
+      <div class="menu-col" id="clearBtns"></div>
+      <div class="next-apps">
+        <p>つぎは こちらも あそんでみよう</p>
+        <a class="btn btn-link" href="../shirotto-quiz/">🗾 しろっとクイズ<small>かたちで あてよう</small></a>
+        <a class="btn btn-link" href="../nihon-chiri-tanken/">🏔️ <ruby>日本<rt>にほん</rt></ruby><ruby>地理<rt>ちり</rt></ruby>たんけん<small>けんちょう・めいさん・ちけい</small></a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== ずかん ===== -->
+  <section class="screen" id="sc-zukan">
+    <header class="bar">
+      <button class="iconbtn" data-go="title" aria-label="もどる">←</button>
+      <h2>ぴょこ ずかん <small id="zukanCount"></small></h2>
+      <button class="iconbtn js-mute" aria-label="おと">🔊</button>
+    </header>
+    <div class="scroll"><div id="zukanList"></div></div>
+  </section>
+
+  <!-- ===== おうちの かたへ ===== -->
+  <section class="screen" id="sc-parent">
+    <header class="bar">
+      <button class="iconbtn" data-go="title" aria-label="もどる">←</button>
+      <h2>おうちの かたへ</h2>
+      <span class="iconbtn-space"></span>
+    </header>
+    <div class="scroll parent" id="parentBody"></div>
+  </section>
+
+  <!-- ===== せってい ===== -->
+  <section class="screen" id="sc-settings">
+    <header class="bar">
+      <button class="iconbtn" data-go="title" aria-label="もどる">←</button>
+      <h2>せってい</h2>
+      <span class="iconbtn-space"></span>
+    </header>
+    <div class="scroll settings" id="settingsBody"></div>
+  </section>
+
+</div>
+<script src="map-data.js?v=37507ed"></script>
+<script src="data.js?v=37507ed"></script>
+<script src="audio.js?v=37507ed"></script>
+<script src="chara.js?v=37507ed"></script>
+<script src="map.js?v=37507ed"></script>
+<script src="game.js?v=37507ed"></script>
+</body>
+</html>
