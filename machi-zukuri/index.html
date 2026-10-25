@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>まちづくり</title>
+<meta name="description" content="みちや えき、びょういんを おいて じぶんの まちを つくろう。まちの しせつの やくわりも わかるよ。">
+<meta name="theme-color" content="#74b816">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏘️</text></svg>">
+<link rel="stylesheet" href="style.css?v=da649a0">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<header class="top">
+  <a class="pill round" href="../" aria-label="あそびメニュー へ もどる">🏠</a>
+  <h1 class="title"><span aria-hidden="true">🏘️</span><span class="long">まちづくり</span></h1>
+  <button class="pill" id="moodBtn" aria-label="にこにこ メーター">😊 <b id="moodVal">0</b></button>
+  <button class="pill round" id="soundBtn" aria-pressed="true" aria-label="おと オン／オフ">🔊</button>
+</header>
+
+<main class="stage" id="stage">
+  <canvas id="bg"></canvas>
+  <canvas id="fg"></canvas>
+
+  <div class="clock" id="clock">🌅 あさ 7:00</div>
+  <div class="banner" id="banner" hidden></div>
+
+  <div class="side" id="side">
+    <button class="tb play" id="playBtn" aria-label="じかん を すすめる">▶</button>
+    <button class="tb" id="speedBtn" aria-label="はやさ">×1</button>
+    <button class="tb" id="mapBtn" aria-label="ちず モード">🗺️</button>
+    <button class="tb" id="undoBtn" aria-label="もどす">↩️</button>
+    <button class="tb" id="fitBtn" aria-label="ぜんぶ みる">🔭</button>
+    <button class="tb" id="growBtn" aria-label="とち を ひろげる">➕</button>
+    <button class="tb" id="slotBtn" aria-label="ほぞん スロット">💾</button>
+  </div>
+
+  <div class="legend" id="legend" hidden></div>
+  <div class="hint" id="hint"></div>
+</main>
+
+<nav class="palette" id="palette" aria-label="おく もの"></nav>
+
+<!-- しせつ の せつめい -->
+<div class="sheet" id="info" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="infoName">
+    <button class="close" data-close aria-label="とじる">✕</button>
+    <div class="info-head"><span class="big" id="infoEmoji"></span><h2 id="infoName"></h2></div>
+    <div id="infoBody"></div>
+  </div>
+</div>
+
+<!-- にこにこ -->
+<div class="sheet" id="moodPanel" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="moodTitle">
+    <button class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="moodTitle">まちの にこにこ</h2>
+    <div id="moodBody"></div>
+  </div>
+</div>
+
+<!-- スロット -->
+<div class="sheet" id="slots" hidden>
+  <div class="card" role="dialog" aria-modal="true" aria-labelledby="slotTitle">
+    <button class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="slotTitle">💾 まち の ほぞん</h2>
+    <p class="note">つくった まちは じどうで ほぞん されるよ。3つ まで つくれる。</p>
+    <div id="slotList"></div>
+    <div class="row">
+      <button class="btn" id="sampleBtn">🏘️ おてほん の まち</button>
+      <button class="btn ghost" id="clearBtn">🧹 まっさら に する</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js?v=da649a0"></script>
+<script src="kigou.js?v=da649a0"></script>
+<script src="city.js?v=da649a0"></script>
+<script src="agents.js?v=da649a0"></script>
+<script src="render.js?v=da649a0"></script>
+<script src="app.js?v=da649a0"></script>
+</body>
+</html>
