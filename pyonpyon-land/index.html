@@ -292,21 +292,21 @@ const CHARS = {
     name: 'ぴょんた', emoji: '🐰', jump: 10.2, speed: 4.2, pitch: 1.5, rate: 1.1,
     skill: '2だんジャンプ', desc: 'くうちゅうで もういちど ジャンプ',
     say: { start: 'ぴょんたが いくよ！', miss: 'いたたた…', grow: 'おおきく なったよ！', boss: 'ちゅうボスだ！ うえから ふんづけよう！',
-      bossDown: 'やったー！ ボスを たおしたよ！', clear: 'ゴール！ やったね！', pipe: 'どかんに はいるよ！', room: 'わあ、 コインが いっぱい！',
+      bossDown: 'やったー！ ボスを たおしたよ！', clear: 'ゴール！ やったね！', pipe: 'どかんに はいるよ！', room: 'わあ、 コインが いっぱい！', rice: 'チャーハン おいしい！ ちからが もりもり わいてきた！',
       stomp: 'えいっ！', skill: 'ぴょーん！', swap: 'ぴょんたに こうたい！' },
   },
   turtle: {
     name: 'かめきち', emoji: '🐢', jump: 9.4, speed: 3.7, pitch: 0.6, rate: 0.95,
     skill: 'こうらアタック', desc: '「わざ」で こうらで つっこむ。たいふうも ボスも はじく',
     say: { start: 'かめきち、 しゅつじん じゃ！', miss: 'あいたた… まだまだ じゃ', grow: 'おおきく なったぞい！', boss: 'でたな ボス！ こうらアタック じゃ！',
-      bossDown: 'わっはっは！ ボスを たおしたぞい！', clear: 'ゴールじゃ！ ばんざーい！', pipe: 'どかんに もぐるぞい', room: 'おお、 おたからじゃ！',
+      bossDown: 'わっはっは！ ボスを たおしたぞい！', clear: 'ゴールじゃ！ ばんざーい！', pipe: 'どかんに もぐるぞい', room: 'おお、 おたからじゃ！', rice: 'うまい チャーハン じゃ！ ちからが みなぎるぞい！',
       stomp: 'ほいっ！', skill: 'ごろごろー！', swap: 'かめきちに こうたい じゃ！' },
   },
   bird: {
     name: 'ぴぴ', emoji: '🐤', jump: 9.2, speed: 4.0, pitch: 1.9, rate: 1.2,
     skill: 'はばたき', desc: 'くうちゅうで 4かい はばたける。ながおしで ふわふわ',
     say: { start: 'ぴぴ、 とんでいくよ！', miss: 'ぴえーん…', grow: 'おおきく なったっぴ！', boss: 'ボスだっぴ！ そらから ふんづけるよ！',
-      bossDown: 'ボスを やっつけたっぴ！', clear: 'ゴールだっぴ！ わーい！', pipe: 'どかんに はいるっぴ', room: 'きらきら コインだっぴ！',
+      bossDown: 'ボスを やっつけたっぴ！', clear: 'ゴールだっぴ！ わーい！', pipe: 'どかんに はいるっぴ', room: 'きらきら コインだっぴ！', rice: 'チャーハン おいしいっぴ！ もりもり パワーだっぴ！',
       stomp: 'ぴっ！', skill: 'ぱたぱた！', swap: 'ぴぴに こうたい！' },
   },
 };
@@ -343,6 +343,8 @@ function Builder(w) {
     boss(x, hp = 3, fire = false) { b.bossFire = fire; b.enemies.push({ type: 'boss', x, y: 11, hp }); },
     flag(x) { b.flagX = x; b.t(x, 11, '='); },
     warps: [],
+    sharks: [],
+    shark(x) { b.sharks.push(x); }, // みずから でてきて チャーハンを くれる サメ
     // ▼で はいれる どかん（x）と、でてくる どかん（outX）。なかは コインの へや
     warp(x, h, outX, outH) {
       b.pipe(x, h); b.pipe(outX, outH);
@@ -435,12 +437,12 @@ const LEVELS = [
       b.ground(0, 30); b.ground(36, 60); b.ground(67, 100); b.ground(105, 140); b.ground(146, 209);
       b.coins(6, 9, 3); b.row(12, 8, 3, '?'); b.t(13, 8, 'M');
       b.enemy(20); b.fly(26, 7);
-      b.fish(32); b.fish(34); b.coins(31, 8, 5);
+      b.fish(32); b.fish(34); b.coins(31, 8, 5); b.shark(33.5);
       b.warp(44, 3, 132, 2); b.enemy(50); b.fire(56);
       b.row(62, 9, 2, '='); b.t(65, 9, '='); b.fish(61); b.fish(64); b.fish(66); b.coins(62, 8, 4);
       b.fly(74, 6); b.storm(80); b.row(84, 8, 4, 'B'); b.t(85, 8, '?'); b.t(86, 8, 'M'); b.fly(92, 7);
       b.enemy(96); b.enemy(98);
-      b.fish(102); b.fish(103); b.coins(101, 8, 4);
+      b.fish(102); b.fish(103); b.coins(101, 8, 4); b.shark(103);
       b.fire(112); b.enemy(118); b.enemy(120); b.row(122, 8, 5, '?'); b.coins(122, 4, 5); b.storm(128);
       b.fish(142); b.fish(144); b.t(143, 9, '='); b.coins(142, 7, 3);
       b.fly(150, 6); b.stair(152, 6, true);
@@ -485,7 +487,8 @@ function loadLevel(i) {
   buildRoom(b, R0);
   for (const w of b.warps.slice()) b.warps.push({ x: R0 + 20, top: 10, to: 'main', outX: w.outX, outTop: w.outTop });
   lv = { def, flagX: b.flagX, startX: b.startX, R0, warps: b.warps, gateX: b.flagX - 2, bossFire: !!b.bossFire,
-    bossAlive: b.enemies.some(e => e.type === 'boss'), bossOn: false, seen: {} };
+    bossAlive: b.enemies.some(e => e.type === 'boss'), bossOn: false, seen: {},
+    sharks: b.sharks.map(x => ({ x: x * T, st: 'hide', t: 0, cd: 0, up: 0, face: -1, given: false, times: 0 })) };
   grid = b.g; W = def.w + ROOM_W; theme = THEMES[def.theme];
   totalCoins = 0;
   for (const row of grid) for (const ch of row) if (ch === 'o' || ch === '?') totalCoins++;
@@ -493,7 +496,7 @@ function loadLevel(i) {
   items = []; parts = []; bumps = []; shots = [];
   coins = 0; misses = 0;
   player = { x: lv.startX * T, y: 12 * T - 28, w: 22, h: 28, vx: 0, vy: 0, face: 1, onGround: false, big: false,
-    inv: 0, jbuf: 0, coyote: 0, walk: 0, hidden: false, dash: 0, dashCd: 0, extra: 0 };
+    inv: 0, jbuf: 0, coyote: 0, walk: 0, hidden: false, dash: 0, dashCd: 0, extra: 0, power: 0 };
   player.safe = { x: player.x, y: 12 * T };
   camX = 0; flagY = 2 * T + 4; pipe = null;
   $('stageName').textContent = (i + 1) + '. ' + def.name;
@@ -621,6 +624,8 @@ function sfx(name) {
       case 'thud': tone(110, 40, 0.25, 'triangle', 0.2); break;
       case 'bosshit': tone(330, 90, 0.3, 'square', 0.08); tone(220, 60, 0.35, 'triangle', 0.15, 0.05); break;
       case 'bossdown': [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0, i === 6 ? 0.6 : 0.12, 'square', 0.06, i * 0.11)); break;
+      case 'eat': [0, 0.13, 0.26].forEach(d => tone(260, 180, 0.08, 'square', 0.06, d)); [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0, 0.1, 'square', 0.05, 0.45 + i * 0.07)); break;
+      case 'toss': tone(400, 900, 0.2, 'triangle', 0.1); break;
       case 'swap': tone(500, 1000, 0.1, 'square', 0.05); tone(800, 1600, 0.12, 'square', 0.05, 0.1); break;
       case 'pipe': [0, 0.11, 0.22].forEach(d => tone(620, 160, 0.09, 'square', 0.07, d)); break;
       case 'clear': [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0, i === 5 ? 0.5 : 0.14, 'square', 0.06, i * 0.13)); break;
@@ -729,7 +734,7 @@ function pickVoice() {
 }
 if (canSpeak) { pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) {} }
 // minor: しゃべっている さいちゅうなら いわない（「えいっ」など）
-function say(text, minor = false) {
+function say(text, minor = false, voice = null) {
   if (!save.voice || !canSpeak || !text) return;
   const now = Date.now();
   if (minor && now < sayBusyUntil) return;
@@ -738,7 +743,8 @@ function say(text, minor = false) {
     const c = CHARS[charId];
     const u = new SpeechSynthesisUtterance(text);
     u.lang = 'ja-JP'; if (jaVoice) u.voice = jaVoice;
-    u.pitch = c.pitch; u.rate = c.rate; u.volume = 1;
+    const v = voice || c;
+    u.pitch = v.pitch; u.rate = v.rate; u.volume = 1;
     speechSynthesis.speak(u);
     sayBusyUntil = now + 400 + text.length * 150;
   } catch (e) {}
@@ -849,15 +855,21 @@ function grow() {
   sfx('grow'); say(line('grow'));
   parts.push({ kind: 'text', x: player.x - 10, y: player.y - 6, vy: -1, t: 50, s: 'おおきくなった!' });
 }
+function eatRice() {
+  const p = player;
+  if (!p.big) { p.big = true; p.y -= 24; p.h = 52; }
+  p.power = 480; sfx('eat'); say(line('rice'));
+  parts.push({ kind: 'text', x: p.x - 24, y: p.y - 8, vy: -0.8, t: 70, s: 'チャーハン パワー!' });
+}
 function hurt() {
-  if (player.inv > 0 || player.dash > 0 || state !== 'play') return;
+  if (player.inv > 0 || player.dash > 0 || player.power > 0 || state !== 'play') return;
   if (player.big) {
     player.big = false; player.y += 24; player.h = 28; player.inv = 120; sfx('shrink');
   } else miss(true);
 }
 function miss(pop) {
   misses++; updateHud(); bgmStop(); sfx('miss'); say(line('miss'));
-  player.dash = 0;
+  player.dash = 0; player.power = 0;
   // ぴたっと とまってから、ぴょーんと とびあがって おちていく
   state = 'miss'; missTimer = 160; player.missPop = pop;
   player.vx = 0; player.vy = 0; player.big = false;
@@ -886,6 +898,10 @@ function updatePlayer() {
     p.dash = 42; p.dashCd = 85; sfx('dash'); say(line('skill'), true);
   }
   if (p.dashCd > 0) p.dashCd--;
+  if (p.power > 0) {
+    p.power--;
+    if (frame % 5 === 0) parts.push({ kind: 'spark', x: p.x + Math.random() * p.w, y: p.y + Math.random() * p.h, t: 14 });
+  }
   const ax = (key('R') ? 1 : 0) - (key('L') ? 1 : 0);
   if (p.dash > 0) {
     p.dash--; p.vx = p.face * 7;
@@ -898,7 +914,8 @@ function updatePlayer() {
       const f = p.onGround ? 0.35 : 0.08;
       p.vx = Math.abs(p.vx) <= f ? 0 : p.vx - Math.sign(p.vx) * f;
     }
-    p.vx = Math.max(-C.speed, Math.min(C.speed, p.vx));
+    const sp = C.speed + (p.power > 0 ? 0.8 : 0);
+    p.vx = Math.max(-sp, Math.min(sp, p.vx));
   }
 
   if (jPressed) p.jbuf = 8;
@@ -1028,7 +1045,8 @@ function bossHit(e) {
 }
 function touchEnemy(e) {
   const p = player;
-  if (p.dash > 0) {
+  if (p.dash > 0 || p.power > 0) {
+    // こうらアタック・チャーハンパワーの ときは さわるだけで はじきとばす
     if (e.type === 'boss') { bossHit(e); p.dash = 0; p.vx = -p.face * 4; p.vy = -6; }
     else { killEnemy(e, true); sfx('stomp'); }
     return;
@@ -1091,12 +1109,55 @@ function updateItems() {
       it.vy = Math.min(it.vy + 0.5, 10);
       const d = it.vx; it.x += d; if (collideX(it)) it.vx = -d;
       it.y += it.vy; collideY(it);
+      if (it.kind === 'rice' && it.onGround) it.vx = 0;
       if (it.y > ROWS * T + 64) it.dead = true;
     }
-    if ((state === 'play') && overlap(player, it)) { it.dead = true; grow(); }
+    if ((state === 'play') && overlap(player, it)) {
+      it.dead = true;
+      if (it.kind === 'rice') { it.from.given = true; eatRice(); } else grow();
+    }
   }
   items = items.filter(i => !i.dead);
 }
+// ===== なかよしの サメ「さめじろう」: みずから でてきて チャーハンを なげてくれる =====
+const SHARK_VOICE = { pitch: 0.35, rate: 0.95 };
+function updateSharks() {
+  for (const k of lv.sharks) {
+    if (k.cd > 0) k.cd--;
+    k.face = player.x + player.w / 2 < k.x ? -1 : 1;
+    if (k.st === 'hide') {
+      const near = Math.abs(player.x + player.w / 2 - k.x) < 6 * T;
+      if (!k.given && k.cd <= 0 && near && state === 'play' && player.onGround && !items.some(i => i.from === k)) {
+        k.st = 'rise'; k.t = 0; sfx('splash');
+      }
+      continue;
+    }
+    k.t++;
+    if (k.st === 'rise') {
+      k.up = k.t / 30;
+      if (k.t >= 30) {
+        k.st = 'talk'; k.t = 0;
+        say(k.times ? 'もう ひとつ どうぞ！ こんどは ちゃんと うけとってな！' : 'よう！ おいらは サメの さめじろう。 とくせい チャーハン、 たべてきな！', false, SHARK_VOICE);
+        parts.push({ kind: 'text', x: k.x - 50, y: 12 * T - 50, vy: -0.5, t: 80, s: 'チャーハン どうぞ!' });
+        k.times++;
+      }
+    } else if (k.st === 'talk') {
+      if (k.t >= 50) {
+        // プレイヤーの ところへ ぽーんと なげる
+        const sx = k.x + k.face * 14, sy = 12 * T - 44;
+        const vx = Math.max(-5, Math.min(5, (player.x + player.w / 2 - sx) / 38));
+        items.push({ kind: 'rice', from: k, x: sx - 14, y: sy, w: 28, h: 22, vx, vy: -9, rise: 0, onGround: false });
+        sfx('toss'); k.st = 'wait'; k.t = 0;
+      }
+    } else if (k.st === 'wait') {
+      if (k.t >= 30) { k.st = 'dive'; k.t = 0; }
+    } else if (k.st === 'dive') {
+      k.up = 1 - k.t / 30;
+      if (k.t >= 30) { k.st = 'hide'; k.up = 0; k.cd = 240; sfx('splash'); }
+    }
+  }
+}
+
 function updateParts() {
   for (const p of parts) {
     p.t--;
@@ -1119,7 +1180,7 @@ function step() {
     if (missTimer <= 0) respawn();
   } else if (state === 'pipe') updatePipe();
   else if (state === 'clear') updateClear();
-  if ((state === 'play' || state === 'clear') && !inRoom()) { updateEnemies(); updateItems(); }
+  if ((state === 'play' || state === 'clear') && !inRoom()) { updateEnemies(); updateItems(); updateSharks(); }
   if (state !== 'miss') updateParts();
   // カメラ
   const target = camTarget();
@@ -1311,6 +1372,10 @@ function drawPlayer() {
   const cx = x + w / 2;
   ctx.save();
   ctx.translate(cx, 0); ctx.scale(p.face, 1); ctx.translate(-cx, 0);
+  if (p.power > 0 && (p.power > 90 || Math.floor(p.power / 5) % 2)) {
+    ctx.fillStyle = `hsla(${(frame * 9) % 360}, 100%, 60%, 0.45)`;
+    ctx.beginPath(); ctx.ellipse(cx, y + h / 2, w / 2 + 10, h / 2 + 10, 0, 0, Math.PI * 2); ctx.fill();
+  }
   if (charId === 'turtle') drawTurtle(p, x, y, w, h, cx);
   else if (charId === 'bird') drawBird(p, x, y, w, h, cx);
   else drawBunny(p, x, y, w, h, cx);
@@ -1568,7 +1633,54 @@ function drawGate() {
   ctx.font = '20px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('🔒', x + 16, 2 * T - 14);
 }
 
+function drawRice(x, y) {
+  // さら
+  ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#4f8fd6'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(x + 14, y + 18, 15, 5, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  // チャーハン
+  ctx.fillStyle = '#f2c94c';
+  ctx.beginPath(); ctx.ellipse(x + 14, y + 16, 12, 11, 0, Math.PI, 0); ctx.fill();
+  const bits = [['#4caf50', 6, 10], ['#ff8a3d', 12, 7], ['#ff9ab0', 18, 11], ['#4caf50', 15, 13], ['#ff8a3d', 9, 14], ['#fff3b0', 20, 14]];
+  for (const [c, bx, by] of bits) { ctx.fillStyle = c; ctx.fillRect(x + bx, y + by, 3, 3); }
+  // ゆげ
+  ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2;
+  for (let i = 0; i < 2; i++) {
+    const sx = x + 9 + i * 10, o = Math.sin(frame / 6 + i) * 2;
+    ctx.beginPath(); ctx.moveTo(sx, y + 2); ctx.quadraticCurveTo(sx + 4 + o, y - 4, sx, y - 10); ctx.stroke();
+  }
+}
+function drawSharks() {
+  for (const k of lv.sharks) {
+    if (k.st === 'hide') continue;
+    const top = 12 * T + 34 - k.up * 84, x = k.x;
+    ctx.save(); ctx.translate(x, 0); ctx.scale(k.face, 1);
+    // せびれ と からだ
+    ctx.fillStyle = '#6f8fb3';
+    ctx.beginPath(); ctx.moveTo(-14, top + 8); ctx.lineTo(-4, top - 16); ctx.lineTo(6, top + 6); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, top + 30, 30, 28, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#eaf3ff'; ctx.beginPath(); ctx.ellipse(10, top + 40, 18, 16, 0, 0, Math.PI * 2); ctx.fill();
+    // コックさんの ぼうし
+    ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#c9d6e8'; ctx.lineWidth = 1.5;
+    ctx.fillRect(-8, top - 2, 20, 8); ctx.strokeRect(-8, top - 2, 20, 8);
+    ctx.beginPath(); ctx.arc(-4, top - 6, 7, 0, Math.PI * 2); ctx.arc(8, top - 6, 7, 0, Math.PI * 2); ctx.arc(2, top - 11, 7, 0, Math.PI * 2); ctx.fill();
+    // かお（にっこり）
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(12, top + 18, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2b2b3a'; ctx.beginPath(); ctx.arc(13, top + 18, 2.5, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#2b2b3a'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(14, top + 28, 9, 0.15 * Math.PI, 0.75 * Math.PI); ctx.stroke();
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(10 + i * 5, top + 34); ctx.lineTo(12 + i * 5, top + 38); ctx.lineTo(14 + i * 5, top + 34); ctx.fill(); }
+    ctx.fillStyle = '#ffb3c6'; ctx.beginPath(); ctx.arc(22, top + 24, 3, 0, Math.PI * 2); ctx.fill();
+    // ひれで もった チャーハン（なげる まえ）
+    if (k.st === 'rise' || k.st === 'talk') {
+      ctx.fillStyle = '#5f7fa3'; ctx.beginPath(); ctx.ellipse(26, top + 30, 10, 5, -0.6, 0, Math.PI * 2); ctx.fill();
+      ctx.scale(k.face, 1); drawRice(k.face * 22 - 14, top + 6);
+    }
+    ctx.restore();
+  }
+}
 function drawItem(it) {
+  if (it.kind === 'rice') { drawRice(Math.round(it.x), Math.round(it.y)); return; }
   const x = Math.round(it.x), y = Math.round(it.y);
   ctx.fillStyle = '#ffe9c7'; rr(x + 8, y + 14, 12, 14, 4); ctx.fill();
   ctx.fillStyle = '#ff5a5a';
@@ -1630,6 +1742,7 @@ function draw() {
     drawGate();
     for (const e of enemies) if (e.active || e.x < cam + viewW + 64) drawEnemy(e);
     drawShots();
+    drawSharks();
     if (theme.water) drawWater(c0, c1);
   }
   if (state !== 'pipe') drawPlayer();
