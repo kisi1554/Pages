@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>PK たいけつ</title>
+<link rel="stylesheet" href="style.css?v=12784e1">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <!-- うえの スコアボード -->
+  <header id="top">
+    <div id="sb">
+      <div class="sbrow" id="sbA"><span class="em"></span><span class="nm"></span><span class="marks"></span><b class="sc">0</b></div>
+      <div class="sbrow" id="sbB"><span class="em"></span><span class="nm"></span><span class="marks"></span><b class="sc">0</b></div>
+    </div>
+    <div class="tools">
+      <button class="round" id="bSound" aria-label="おと">🔊</button>
+      <button class="round" id="bVoice" aria-label="じっきょうの こえ">🗣️</button>
+      <button class="round" id="bQuit" aria-label="やめる">✕</button>
+    </div>
+  </header>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="role"></div>
+    <div id="swipeHint" hidden><span class="fing">👆</span><span>ボールから ゴールへ シュッ！</span></div>
+    <div id="duoLeft" hidden>⚽ キッカーは ここで スワイプ</div>
+  </main>
+
+  <div id="talk"><span id="talkText">PK たいけつ！</span></div>
+
+  <section id="panel">
+    <!-- キッカー（スワイプ） -->
+    <div class="pane" id="pKick" hidden>
+      <p class="hint" id="kickHint">ボールから ねらう ところへ スワイプ！<br><small>はやく スワイプ → つよい ／ まげて スワイプ → カーブ</small></p>
+      <div class="row"><button class="btn big feint" id="bFeint" hidden>🌀 フェイント</button></div>
+    </div>
+    <!-- キッカー（かんたん: 9マス → ゲージ） -->
+    <div class="pane" id="pEasy" hidden>
+      <p class="hint" id="easyHint">ゴールの ねらう マスを タップ！</p>
+      <div class="row">
+        <button class="btn big red" id="bStop" hidden>✋ とめる！</button>
+        <button class="btn big feint" id="bFeint2" hidden>🌀 フェイント</button>
+      </div>
+    </div>
+    <!-- キーパー -->
+    <div class="pane" id="pKeep" hidden>
+      <p class="hint" id="keepHint">とぶ むきに スワイプ！（ボタンでも OK）</p>
+      <div class="dive" id="diveGrid"></div>
+      <p class="tip" id="keepTip">ヒント: キッカーの <b>め</b>・<b>からだの むき</b>・<b>はしって くる むき</b> を みよう</p>
+    </div>
+    <!-- 2人 どうじ: キーパーの ボタン（おした むきは ひょうじ しない） -->
+    <div class="pane" id="pDuo" hidden>
+      <p class="hint"><span id="duoKeeperName"></span> キーパー: とぶ むきを えらんでね<br><small>（キッカーに みえないように そっと おしてね 🤫）</small></p>
+      <div class="dive secret" id="duoGrid"></div>
+      <p class="tip" id="duoState">まだ えらんで いないよ</p>
+    </div>
+    <div class="pane" id="pWait" hidden><p class="hint" id="waitHint">…</p></div>
+  </section>
+</div>
+
+<!-- タイトル -->
+<div class="overlay show" id="menu">
+  <div class="box">
+    <h1><span class="ball">⚽</span> PK たいけつ</h1>
+    <p class="lead">スワイプで シュート！ キーパーにも なって PKせんで たたかおう</p>
+    <div class="modes">
+      <button class="mode" data-mode="cpu" style="--tint:#e3f8ef; --sh:#7cc7a6;"><span class="em">🤖</span><span>1にん<small>CPU と PKせん</small></span></button>
+      <button class="mode" data-mode="cup" style="--tint:#fff3bf; --sh:#e0b54a;"><span class="em">🏆</span><span>たいかい<small>3かい かてば ゆうしょう</small></span></button>
+      <button class="mode" data-mode="duo" style="--tint:#e7f5ff; --sh:#8cc0ea;"><span class="em">👫</span><span>2にん どうじ<small>よこもち タブレット 1だい</small></span></button>
+      <button class="mode" data-mode="pass" style="--tint:#fff0f6; --sh:#e8a0c0;"><span class="em">🔄</span><span>2にん こうたい<small>1本ごとに わたす</small></span></button>
+    </div>
+    <div class="row">
+      <button class="btn" id="mData">📊 データ</button>
+      <button class="btn" id="mTips">📖 まめちしき</button>
+    </div>
+    <div class="row">
+      <button class="btn" id="mSound">🔊 おと オン</button>
+      <button class="btn" id="mVoice">🗣️ こえ オン</button>
+    </div>
+    <p class="trophies" id="mTrophy"></p>
+  </div>
+</div>
+
+<!-- じゅんび -->
+<div class="overlay" id="setup">
+  <div class="box">
+    <h2 id="setupTitle">チームを えらぼう</h2>
+    <p class="pick" id="pick1Label">きみの チーム</p>
+    <div class="teams" id="teams1"></div>
+    <div class="colors" id="colors1"></div>
+    <div id="pick2">
+      <p class="pick" id="pick2Label">あいての チーム</p>
+      <div class="teams" id="teams2"></div>
+      <div class="colors" id="colors2"></div>
+    </div>
+    <div id="orderBox">
+      <p class="pick">きみは</p>
+      <div class="seg" id="segOrder">
+        <button data-v="0" class="on">さきに ける<small>（<ruby>先攻<rt>せんこう</rt></ruby>）</small></button>
+        <button data-v="1">あとで ける<small>（<ruby>後攻<rt>こうこう</rt></ruby>）</small></button>
+      </div>
+    </div>
+    <div id="levelBox">
+      <p class="pick">CPU の つよさ</p>
+      <div class="seg" id="segLevel">
+        <button data-v="0">🐣 よわい</button>
+        <button data-v="1" class="on">🐥 ふつう</button>
+        <button data-v="2">🦅 つよい</button>
+      </div>
+    </div>
+    <p class="pick">シュートの そうさ</p>
+    <div class="seg" id="segEasy">
+      <button data-v="0" class="on">👆 スワイプ</button>
+      <button data-v="1">🎯 かんたん<small>9マス＋ゲージ</small></button>
+    </div>
+    <div class="row">
+      <button class="btn" id="sBack">もどる</button>
+      <button class="btn red" id="sGo">⚽ はじめる！</button>
+    </div>
+  </div>
+</div>
+
+<!-- こうたい（たんまつを わたす） -->
+<div class="overlay" id="pass">
+  <div class="box">
+    <div class="rot">🔄</div>
+    <h2 id="passTitle"></h2>
+    <p class="lead" id="passText"></p>
+    <div class="row"><button class="btn red big" id="passGo">じゅんび OK！</button></div>
+  </div>
+</div>
+
+<!-- しあいの けっか -->
+<div class="overlay" id="result">
+  <div class="box">
+    <div class="trophy" id="resEmoji">🎉</div>
+    <h2 id="resTitle"></h2>
+    <p class="lead" id="resText"></p>
+    <div class="board" id="resBoard"></div>
+    <div class="row" id="resBtns"></div>
+  </div>
+</div>
+
+<!-- たいかい の くみあわせ -->
+<div class="overlay" id="cup">
+  <div class="box wide">
+    <h2 id="cupTitle">たいかい</h2>
+    <div class="bracket" id="bracket"></div>
+    <p class="lead" id="cupText"></p>
+    <div class="row" id="cupBtns"></div>
+  </div>
+</div>
+
+<!-- データ -->
+<div class="overlay" id="data">
+  <div class="box wide">
+    <h2>📊 データで みよう</h2>
+    <div class="datas">
+      <section>
+        <h3>⚽ きみが けった ところ</h3>
+        <p class="note">ゴールを キッカーから みた ところ。こい いろ ほど よく はいった マス</p>
+        <div class="heat" id="heatKick"></div>
+        <p class="say" id="sayKick"></p>
+      </section>
+      <section>
+        <h3>🧤 きみが とんだ ほう</h3>
+        <p class="note">キーパーから みた ところ。こい いろ ほど よく とめた マス</p>
+        <div class="heat" id="heatKeep"></div>
+        <p class="say" id="sayKeep"></p>
+      </section>
+    </div>
+    <p class="note" id="dataTotal"></p>
+    <div class="row"><button class="btn" id="dataReset">けす</button><button class="btn red" id="dataClose">とじる</button></div>
+  </div>
+</div>
+
+<!-- まめちしき -->
+<div class="overlay" id="tips">
+  <div class="box wide">
+    <h2>📖 サッカーの まめちしき</h2>
+    <ul class="tips" id="tipList"></ul>
+    <div class="row"><button class="btn red" id="tipsClose">とじる</button></div>
+  </div>
+</div>
+
+<script src="physics.js?v=12784e1"></script>
+<script src="rules.js?v=12784e1"></script>
+<script src="teams.js?v=12784e1"></script>
+<script src="ai.js?v=12784e1"></script>
+<script src="render.js?v=12784e1"></script>
+<script src="audio.js?v=12784e1"></script>
+<script src="game.js?v=12784e1"></script>
+</body>
+</html>
