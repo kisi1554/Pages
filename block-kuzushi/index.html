@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ドカーン ブロックくずし</title>
+<meta name="description" content="ばくだんで れんさ！ マルチボールで ブロックを くずしまくろう。40ステージ と ボス かいじゅう。">
+<meta name="theme-color" content="#fa5252">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧱</text></svg>">
+<link rel="stylesheet" href="style.css?v=72be106">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header id="hud" hidden>
+    <button type="button" id="btnPause" class="hud-btn" aria-label="いちじ ていし">⏸</button>
+    <div class="hud-item"><span class="lab">ステージ</span><b id="hudStage">1</b></div>
+    <div class="hud-item grow"><span class="lab">スコア</span><b id="hudScore">0</b></div>
+    <div class="hud-item"><span class="lab">ライフ</span><b id="hudLives">3</b></div>
+  </header>
+
+  <main id="play" aria-label="あそぶ ところ">
+    <canvas id="cv" aria-label="ブロックくずしの ばんめん"></canvas>
+  </main>
+
+  <!-- タイトル -->
+  <section class="screen" id="scTitle">
+    <div class="title-box">
+      <div class="logo" aria-hidden="true"><span>🧱</span><span>💥</span><span>⚪</span></div>
+      <h1><span class="big">ドカーン</span><br>ブロックくずし</h1>
+      <p class="lead">ゆびで パドルを うごかして ボールを はねかえそう！<br>ばくだんで れんさ、マルチボールで くずしまくれ！</p>
+      <button type="button" class="btn main" id="btnPlay">▶ あそぶ</button>
+      <button type="button" class="btn" id="btnSelect">🗺️ ステージを えらぶ</button>
+      <button type="button" class="btn" id="btnSettings">⚙️ せってい</button>
+      <p class="hi">ハイスコア <b id="titleHi">0</b> ・ <span id="titleProg">ステージ 1 まで</span></p>
+      <a class="back" href="../">← あそびメニュー</a>
+    </div>
+  </section>
+
+  <!-- ステージえらび -->
+  <section class="screen" id="scSelect" hidden>
+    <div class="panel wide">
+      <h2>ステージを えらぶ</h2>
+      <p class="note">👾 は ボス。クリアすると つぎの ステージが ひらくよ</p>
+      <div class="stage-grid" id="stageGrid"></div>
+      <button type="button" class="btn" data-go="title">↩ もどる</button>
+    </div>
+  </section>
+
+  <!-- せってい -->
+  <section class="screen" id="scSettings" hidden>
+    <div class="panel">
+      <h2>せってい</h2>
+      <button type="button" class="toggle" id="tgSfx" aria-pressed="true"><span>🔊 こうかおん</span><b></b></button>
+      <button type="button" class="toggle" id="tgBgm" aria-pressed="true"><span>🎵 おんがく</span><b></b></button>
+      <button type="button" class="toggle" id="tgShake" aria-pressed="true"><span>📳 がめんの ゆれ</span><b></b></button>
+      <button type="button" class="toggle" id="tgEasy" aria-pressed="false"><span>🛡️ やさしい モード</span><b></b></button>
+      <p class="note">やさしい モード: ボールが ゆっくり、パドルが ながく、したに 1かいだけ まもる バーが でるよ</p>
+      <button type="button" class="btn" data-go="title">↩ もどる</button>
+    </div>
+  </section>
+
+  <!-- いちじていし -->
+  <div class="overlay" id="ovPause" hidden>
+    <div class="panel">
+      <h2>いちじ ていし</h2>
+      <button type="button" class="btn main" id="btnResume">▶ つづける</button>
+      <button type="button" class="btn" id="btnRetry">🔄 さいしょから</button>
+      <button type="button" class="toggle" id="tgSfx2" aria-pressed="true"><span>🔊 おと</span><b></b></button>
+      <button type="button" class="btn" id="btnQuit">🏠 タイトルへ</button>
+    </div>
+  </div>
+
+  <!-- クリア -->
+  <div class="overlay" id="ovClear" hidden>
+    <div class="panel">
+      <h2 id="clearTitle">ステージ クリア！</h2>
+      <p class="score-line">スコア <b id="clearScore">0</b></p>
+      <p class="note" id="clearNote"></p>
+      <button type="button" class="btn main" id="btnNext">つぎへ ▶</button>
+      <button type="button" class="btn" id="btnClearSelect">🗺️ ステージを えらぶ</button>
+    </div>
+  </div>
+
+  <!-- ゲームオーバー -->
+  <div class="overlay" id="ovOver" hidden>
+    <div class="panel">
+      <h2>ざんねん！</h2>
+      <p class="score-line">スコア <b id="overScore">0</b></p>
+      <p class="note" id="overNote"></p>
+      <button type="button" class="btn main" id="btnAgain">🔄 この ステージから もういちど</button>
+      <button type="button" class="btn" id="btnOverTitle">🏠 タイトルへ</button>
+    </div>
+  </div>
+</div>
+<script src="stages.js?v=72be106"></script>
+<script src="physics.js?v=72be106"></script>
+<script src="particles.js?v=72be106"></script>
+<script src="audio.js?v=72be106"></script>
+<script src="game.js?v=72be106"></script>
+</body>
+</html>
