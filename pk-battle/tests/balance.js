@@ -31,8 +31,8 @@ function kidKeep(kl, r, i) {
   const tl = A.tells(cell, kl, r);
   let shot = A.cpuShotFor(cell, kl, r);
   const kc = Math.floor(r() * 3) * 3 + (tl.look + 1), t = -0.45 + r() * 0.7;
-  if (t < -0.18) { const c2 = A.exploit(cell, kc, kl, r); if (c2 !== cell) { cell = c2; shot = A.cpuShotFor(c2, kl, r); } }
-  return P.runShot(shot, { size: 1, catchSkill: 0.55, dive: { cell: kc, t } }, i + 1).goal;
+  if (t < A.HUMAN_KEEPER.early) { const c2 = A.exploitHuman(cell, kc, kl, r); if (c2 !== cell) { cell = c2; shot = A.cpuShotFor(c2, kl, r); } }
+  return P.runShot(shot, A.humanKeeperOf(T, { cell: kc, t }), i + 1).goal;
 }
 function kidVs(level, seed, games) {
   const r = P.rng(seed);

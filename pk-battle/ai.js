@@ -19,6 +19,17 @@
     { read: 0.34, react: 0.1, skill: 0.7, fool: 0.3, useKuse: 0.9, stay: 0.1 },
   ];
   const LEVEL_NAME = ["よわい", "ふつう", "つよい"];
+  // にんげんの キーパーへの てだすけ（CPU どうし の バランス には かんけい しない）
+  //   reach … て の とどく はんい（からだの おおきさ に かける）、early … これより まえに とぶと「はやすぎ」（けってから の びょう）、
+  //   exploit … CPU キッカーが はやすぎを みのがさない かくりつ に かける かず、catchSkill … キャッチの うまさ、
+  //   slow / slowEasy … ボールの はやさ（にんげんが みて うごける ように すこし ゆっくり）
+  const HUMAN_KEEPER = { reach: 1.12, early: -0.3, exploit: 0.6, catchSkill: 0.7, slow: 0.85, slowEasy: 0.6 };
+  const humanKeeperOf = (team, dive) => ({ size: team.size * HUMAN_KEEPER.reach, catchSkill: HUMAN_KEEPER.catchSkill, dive });
+  // にんげんの キーパーが はやく とびすぎた とき（CPU キッカーは ときどき みのがす）
+  function exploitHuman(cell, keeperCell, level, r) {
+    if (r() > HUMAN_KEEPER.exploit) return cell;
+    return exploit(cell, keeperCell, level, () => r() * 0.999);
+  }
 
   function pickW(weights, r) {
     const sum = weights.reduce((a, b) => a + b, 0);
@@ -124,7 +135,7 @@
     return { kicks, winner: 0, score: [0, 0] };
   }
 
-  const api = { KICKER, KEEPER, LEVEL_NAME, pickW, cpuCell, cpuShotFor, cpuShot, tells, cpuKeeper, exploit, keeperOf, simulateKick, simulateShootout };
+  const api = { KICKER, KEEPER, LEVEL_NAME, HUMAN_KEEPER, humanKeeperOf, exploitHuman, pickW, cpuCell, cpuShotFor, cpuShot, tells, cpuKeeper, exploit, keeperOf, simulateKick, simulateShootout };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.PKAI = api;
 })(this);

@@ -15,3 +15,13 @@ test("キーパーが つよい ほど きまりにくい（よわい CPU なら
   const w = run(1, 0, 1).goal, n = run(1, 1, 2).goal, s = run(1, 2, 3).goal;
   assert.ok(w > n && n > s, [w, n, s].join(" "));
 });
+
+test("にんげんの キーパーの てだすけ: こどもモデル の キーパーで CPU が きめる かくりつ が さがる", () => {
+  const A = require("../ai.js"), { kidVs } = require("./balance.js");
+  const base = kidVs(1, 77, 600).cpu;
+  const H = A.HUMAN_KEEPER, keep = Object.assign({}, H);
+  Object.assign(H, { reach: 1, early: -0.18, exploit: 1, catchSkill: 0.55 });
+  const hard = kidVs(1, 77, 600).cpu;
+  Object.assign(H, keep);
+  assert.ok(base < hard - 0.02, "てだすけ あり " + base + " / なし " + hard);
+});

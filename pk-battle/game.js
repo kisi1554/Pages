@@ -303,7 +303,7 @@
     sfx.kick(sim.shot.power);
     scene.ball = { x: 0, y: P.BALL_R, z: 0, rot: 0, trail: [] };
     let seen = 0, dove = sim.plan.cell != null && sim.plan.cell !== 4 && sim.plan.t0 <= 0;
-    const ts = o.slow ? 0.6 : 1;
+    const ts = o.slow || 1;
     while (!sim.done) {
       await raf();
       const dt = Math.min(0.05, 1 / 60) * SPEED * ts;
@@ -379,6 +379,7 @@
     if (!kH) { cell = A.cpuCell(kT, kl, rnd); tells = A.tells(cell, kl, rnd); }
     // くせ（はしって くる むき）: おおきく ななめ から はしって くる → みぎへ、まっすぐ → ひだりへ けりやすい（キッカー から みて）
     setFigures(kH ? "kicker" : "keeper", kT, gT, kH ? -1.0 : -0.75 - 0.5 * tells.run);
+    if (gH) scene.keeper.size = gT.size * A.HUMAN_KEEPER.reach;   // にんげんの キーパーは て が すこし ながい
     const role = kH && !gH ? "きみは キッカー ⚽" : gH && !kH ? "きみは キーパー 🧤" : "⚽ " + kT.name + " → 🧤 " + gT.name;
     setRole(role);
     let line = head + kickerLabel + "。";
@@ -463,7 +464,7 @@
     // ----- じょそう -----
     const preview = () => {
       // けるまえ: キーパーの かたち（はやく とんだ とき は うごきだす）
-      const plan = P.keeperPlan({ size: gT.size, dive: gH ? (hDive ? { cell: hDive.cell, t: hDive.tRel } : null) : cpuDive });
+      const plan = P.keeperPlan({ size: scene.keeper.size, dive: gH ? (hDive ? { cell: hDive.cell, t: hDive.tRel } : null) : cpuDive });
       scene.keeper.pose = P.keeperPose(plan, runClock - kickAt);
     };
     const feintBtn = kH && !duo ? (save.easy ? $("bFeint2") : $("bFeint")) : kH && duo ? $("bFeint") : null;
@@ -484,8 +485,8 @@
     stageMode = keeperView ? "dive" : null;
     kickAt = runClock;
     // キーパーが はやく うごきすぎたら、CPU キッカーは ぎゃく を つく
-    if (!kH && gH && hDive && hDive.tRel < -0.18) {
-      const c2 = A.exploit(cell, hDive.cell, kl, rnd);
+    if (!kH && gH && hDive && hDive.tRel < A.HUMAN_KEEPER.early) {
+      const c2 = A.exploitHuman(cell, hDive.cell, kl, rnd);
       if (c2 !== cell) { cell = c2; shot = A.cpuShotFor(c2, kl, rnd); }
     }
     let dive;
@@ -493,11 +494,11 @@
     else if (gH) dive = hDive ? { cell: hDive.cell, t: hDive.tRel } : null;
     else dive = cpuDive;
     if (duo) { duoHandler = null; if (duoPick != null) keeperCellsH.push(mirror(duoPick)); }
-    const keeper = { size: gT.size, catchSkill: gH ? 0.55 : A.KEEPER[gl].skill, dive: dive || { cell: null, t: 0 } };
+    const keeper = gH ? A.humanKeeperOf(gT, dive || { cell: null, t: 0 }) : A.keeperOf(gT, gl, dive || { cell: null, t: 0 });
     const sim = P.createShot(shot, keeper, Math.floor(rnd() * 1e9));
     simRef = sim; lastShot = shot;
     talk(kickerLabel + "、けったー！", { say: false });
-    const res = await flight(g, sim, { slow: keeperView && save.easy });
+    const res = await flight(g, sim, { slow: keeperView ? (save.easy ? A.HUMAN_KEEPER.slowEasy : A.HUMAN_KEEPER.slow) : 1 });
     stageMode = null; stageCb = null; diveHandler = null; simRef = null;
     document.querySelectorAll("#diveGrid button").forEach((b) => { b.disabled = true; });
 
