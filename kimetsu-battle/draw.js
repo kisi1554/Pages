@@ -23,6 +23,45 @@
   /* ---------- はいけい ---------- */
   var bgCache = {};
   var BGS = {
+    // どうまの へや: こおりの はすが さく いけ（つめたい あおい ひかり）
+    lotus: function (g) {
+      var sky = g.createLinearGradient(0, 0, 0, H);
+      sky.addColorStop(0, "#050a16"); sky.addColorStop(0.5, "#0e1c34"); sky.addColorStop(1, "#08101e");
+      g.fillStyle = sky; g.fillRect(0, 0, W, H);
+      // おくの しょうじ（あおじろく ひかる）
+      for (var r = 0; r < 2; r++) for (var i = 0; i < 9; i++) {
+        var x = i * 76 - 20 + r * 38, y = 40 + r * 70, w = 60, h = 50 - r * 6;
+        g.fillStyle = "#162238"; g.fillRect(x - 3, y - 3, w + 6, h + 6);
+        var lg = g.createLinearGradient(0, y, 0, y + h); lg.addColorStop(0, "rgba(190,225,255,.55)"); lg.addColorStop(1, "rgba(110,160,220,.35)");
+        g.fillStyle = lg; g.fillRect(x, y, w, h);
+        g.strokeStyle = "rgba(20,40,70,.8)"; g.lineWidth = 1;
+        for (var k = 1; k < 4; k++) { g.beginPath(); g.moveTo(x, y + h * k / 4); g.lineTo(x + w, y + h * k / 4); g.stroke(); g.beginPath(); g.moveTo(x + w * k / 4, y); g.lineTo(x + w * k / 4, y + h); g.stroke(); }
+      }
+      // いけ（みずめん＋こおり）
+      var fy = 200;
+      var wg = g.createLinearGradient(0, fy, 0, H); wg.addColorStop(0, "#1a3458"); wg.addColorStop(1, "#2e5a88");
+      g.fillStyle = wg; g.fillRect(0, fy, W, H - fy);
+      g.strokeStyle = "rgba(200,235,255,.25)"; g.lineWidth = 1;
+      for (var j = 0; j < 14; j++) { var yy = fy + 6 + Math.pow(j / 14, 1.5) * (H - fy); g.beginPath(); g.moveTo(0, yy); g.bezierCurveTo(W * 0.3, yy - 3, W * 0.6, yy + 3, W, yy); g.stroke(); }
+      // はすの は と こおりの はす
+      function pad(x, y, s) {
+        g.save(); g.translate(x, y); g.scale(1, 0.35);
+        g.fillStyle = "#2a6a5a"; g.beginPath(); g.arc(0, 0, 22 * s, 0.3, PI * 2 - 0.1); g.lineTo(0, 0); g.fill();
+        g.strokeStyle = "rgba(160,230,200,.4)"; g.lineWidth = 1.2; g.stroke(); g.restore();
+      }
+      function lotus(x, y, s) {
+        g.save(); g.translate(x, y); g.scale(s, s);
+        for (var i = 0; i < 7; i++) { g.save(); g.rotate((i - 3) * 0.32);
+          var lg2 = g.createLinearGradient(0, 0, 0, -26); lg2.addColorStop(0, "rgba(140,200,255,.9)"); lg2.addColorStop(1, "rgba(245,252,255,.95)");
+          g.fillStyle = lg2; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-8, -14, 0, -26); g.quadraticCurveTo(8, -14, 0, 0); g.fill(); g.restore(); }
+        g.restore();
+      }
+      [[40, 238, 1], [120, 300, 1.3], [250, 228, 0.8], [330, 340, 1.4], [440, 232, 0.9], [610, 262, 1.2], [560, 345, 1.1], [190, 350, 1]].forEach(function (p) { pad(p[0], p[1], p[2]); });
+      [[70, 236, 0.8], [300, 226, 0.7], [600, 255, 0.9], [150, 296, 1], [520, 228, 0.6]].forEach(function (p) { lotus(p[0], p[1], p[2]); });
+      // こおりの はしら
+      g.fillStyle = "rgba(200,235,255,.35)";
+      [[10, 0, 30], [600, 0, 40], [300, 0, 18]].forEach(function (c) { g.beginPath(); g.moveTo(c[0], c[1]); g.lineTo(c[0] + c[2], c[1]); g.lineTo(c[0] + c[2] / 2, 60 + c[2] * 2); g.closePath(); g.fill(); });
+    },
     // むげんじょう: もくぞうの へや・しょうじ・てすりが どこまでも つづく。さかさまの へやも
     mugen: function (g) {
       var vx = 320, vy = 150;
@@ -166,6 +205,18 @@
     g.beginPath(); for (var j = 0; j < 6; j++) { var aa = j * PI / 3 + PI / 6; g.lineTo(Math.cos(aa) * r * 0.25, Math.sin(aa) * r * 0.25); } g.closePath(); g.stroke();
   }
   KB.snowflake = snowflake;
+  // ちょう（はばたく）
+  function drawButterfly(g, x, y, s, ph, col, a) {
+    var fl = Math.abs(Math.sin(ph)) * 0.8 + 0.2;
+    g.save(); g.translate(x, y); g.globalAlpha = a;
+    g.fillStyle = col; g.strokeStyle = "rgba(40,10,60,.6)"; g.lineWidth = 0.6;
+    g.beginPath(); g.ellipse(-s * 0.55 * fl, -s * 0.3, s * 0.6 * fl, s * 0.5, -0.4, 0, PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(s * 0.55 * fl, -s * 0.3, s * 0.6 * fl, s * 0.5, 0.4, 0, PI * 2); g.fill(); g.stroke();
+    g.beginPath(); g.ellipse(-s * 0.4 * fl, s * 0.35, s * 0.4 * fl, s * 0.32, 0.4, 0, PI * 2); g.fill();
+    g.beginPath(); g.ellipse(s * 0.4 * fl, s * 0.35, s * 0.4 * fl, s * 0.32, -0.4, 0, PI * 2); g.fill();
+    g.fillStyle = "#1a0a20"; g.fillRect(-0.6, -s * 0.6, 1.2, s * 1.2);
+    g.restore();
+  }
   function shockRing(g, x, y, r, w, col, alpha, flat) {
     g.save(); g.translate(x, y); if (flat) g.scale(1, flat);
     g.globalAlpha = alpha; g.strokeStyle = col; g.lineWidth = w; g.shadowColor = col; g.shadowBlur = 12;
@@ -416,6 +467,211 @@
       }
       g.restore();
     },
+    /* ----- むしのこきゅう（しのぶ） ----- */
+    // ちょうのまい たわむれ: ちょうが まいながら つく
+    butterfly: function (g, f, k) {
+      g.save(); g.globalCompositeOperation = "lighter";
+      for (var i = 0; i < 7; i++) {
+        var u = Math.min(1, k * 1.6 - i * 0.06); if (u <= 0) continue;
+        var x = f.x + Math.cos(i * 0.9 + k * 6) * (60 - u * 40), y = f.y + Math.sin(i * 1.3 + k * 5) * 40 - u * 20;
+        drawButterfly(g, x, y, 9 + (i % 3) * 3, k * 30 + i, i % 2 ? "#b080f0" : "#7ad0b8", (1 - k) * 0.95);
+      }
+      g.restore();
+    },
+    // はちばのまい まなこい: とおくから いっしゅんで つきさす ひかりの せん
+    sting: function (g, f, k) {
+      var p = ease(Math.min(1, k * 3)), a = fade(k, 0.02, 0.5), sx = (f.sx || f.x + 200);
+      g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = a;
+      g.shadowColor = "#c070ff"; g.shadowBlur = 20;
+      g.strokeStyle = "#e0c0ff"; g.lineWidth = 6; g.beginPath(); g.moveTo(sx, f.y); g.lineTo(sx + (f.x - sx) * p, f.y); g.stroke();
+      g.strokeStyle = "#fff"; g.lineWidth = 2; g.stroke();
+      if (p >= 1) { var kk = (k - 0.33) / 0.67; g.translate(f.x, f.y); for (var i = 0; i < 8; i++) { g.rotate(PI / 4); g.fillStyle = i % 2 ? "#c070ff" : "#fff"; g.beginPath(); g.moveTo(0, -2); g.lineTo(26 + kk * 40, 0); g.lineTo(0, 2); g.fill(); } }
+      g.restore();
+    },
+    // つく（ちいさな ひかりの はり）
+    stab: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.rotate(f.rot || 0); g.globalCompositeOperation = "lighter"; g.globalAlpha = 1 - k;
+      g.shadowColor = "#c070ff"; g.shadowBlur = 14; g.fillStyle = "#f0e0ff";
+      var L = 30 + k * 50; g.beginPath(); g.moveTo(-L, 0); g.lineTo(0, -3); g.lineTo(L * 0.3, 0); g.lineTo(0, 3); g.closePath(); g.fill();
+      circ(g, 0, 0, 4 + k * 12, null, "#c070ff", 2);
+      g.restore();
+    },
+    // せいれいのまい ふくがんろっかく: とんぼの めの ような ろっかくけい
+    hexagon: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.globalCompositeOperation = "lighter";
+      var a = fade(k, 0.05, 0.7);
+      for (var j = 0; j < 7; j++) {
+        var cx = j ? Math.cos(j * PI / 3) * 34 : 0, cy = j ? Math.sin(j * PI / 3) * 34 : 0, show = Math.min(1, k * 4 - j * 0.3); if (show <= 0) continue;
+        g.globalAlpha = a * show; g.strokeStyle = j % 2 ? "#c090ff" : "#7ad0b8"; g.lineWidth = 2.5; g.shadowColor = "#c070ff"; g.shadowBlur = 12;
+        g.beginPath(); for (var i = 0; i < 6; i++) { var an = i * PI / 3 + PI / 6; g.lineTo(cx + Math.cos(an) * 19, cy + Math.sin(an) * 19); } g.closePath(); g.stroke();
+        g.fillStyle = "rgba(200,150,255,.18)"; g.fill();
+      }
+      g.restore();
+    },
+    // どくが ひろがる（むらさきの はなが ひらく）
+    poisonBloom: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.globalCompositeOperation = "lighter"; g.globalAlpha = 1 - k;
+      var rg = g.createRadialGradient(0, 0, 4, 0, 0, 30 + k * 70); rg.addColorStop(0, "rgba(230,200,255,.9)"); rg.addColorStop(0.5, "rgba(160,80,220,.5)"); rg.addColorStop(1, "rgba(80,20,140,0)");
+      circ(g, 0, 0, 30 + k * 70, rg);
+      for (var i = 0; i < 6; i++) { g.save(); g.rotate(i * PI / 3 + k); g.fillStyle = "rgba(200,140,255,.6)"; g.beginPath(); g.ellipse(18 + k * 30, 0, 14 + k * 10, 6, 0, 0, PI * 2); g.fill(); g.restore(); }
+      g.restore();
+    },
+    /* ----- はなのこきゅう（カナヲ） ----- */
+    petalburst: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.globalAlpha = fade(k, 0.03, 0.6);
+      for (var i = 0; i < 5; i++) { // うめの はな
+        var an = i * PI * 2 / 5 + k * 1.5, r = ease(Math.min(1, k * 2.5)) * 60;
+        g.save(); g.rotate(an); g.translate(r * 0.5, 0);
+        g.fillStyle = "#ffb8d8"; g.shadowColor = "#ff7ab8"; g.shadowBlur = 16;
+        g.beginPath(); g.ellipse(r * 0.5, 0, 30 * ease(Math.min(1, k * 3)), 20 * ease(Math.min(1, k * 3)), 0, 0, PI * 2); g.fill(); g.restore();
+      }
+      circ(g, 0, 0, 14, "#ffe066");
+      g.globalCompositeOperation = "lighter"; crescent(g, 60, 14, -1.6, 1.6, Math.min(1, k * 3), 1); g.fillStyle = "rgba(255,255,255,.8)"; g.fill();
+      g.restore();
+    },
+    petalarc: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.rotate(-0.6);
+      var p = Math.min(1, ease(k * 2)), a = fade(k, 0.03, 0.6);
+      g.globalAlpha = a; g.shadowColor = "#ff5a9a"; g.shadowBlur = 20;
+      crescent(g, 78, 32, -1.8, 1.8, p); g.fillStyle = "rgba(200,30,80,.75)"; g.fill();
+      crescent(g, 80, 18, -1.8, 1.8, p); g.fillStyle = "#ff8ac0"; g.fill();
+      crescent(g, 82, 7, -1.8, 1.8, p); g.fillStyle = "#fff0f6"; g.fill();
+      g.restore();
+    },
+    flowerArc: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.rotate(f.rot || 0); g.globalAlpha = 1 - k; g.shadowColor = "#ff7ab8"; g.shadowBlur = 12;
+      crescent(g, 44, 14, -1.5, 1.5, Math.min(1, ease(k * 2.5))); g.fillStyle = "#ffc0dc"; g.fill(); g.restore();
+    },
+    petalswirl: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.scale(1, 0.8);
+      for (var i = 0; i < 40; i++) {
+        var an = i * 0.5 + k * 9, r = 20 + (i % 10) * 7 * (0.5 + k);
+        g.save(); g.translate(Math.cos(an) * r, Math.sin(an) * r); g.rotate(an * 2);
+        g.globalAlpha = fade(k, 0.05, 0.7); g.fillStyle = i % 3 ? "#ffb0d0" : "#fff0f6";
+        g.beginPath(); g.ellipse(0, 0, 6, 3.2, 0, 0, PI * 2); g.fill(); g.restore();
+      }
+      g.restore();
+    },
+    // ひがんしゅがん: おおきな め が ひらく
+    eye: function (g, f, k) {
+      var o = k < 0.2 ? k / 0.2 : (k > 0.8 ? (1 - k) / 0.2 : 1);
+      g.save(); g.translate(f.x, f.y - 30); g.globalAlpha = o * 0.85;
+      g.fillStyle = "rgba(255,240,248,.9)"; g.beginPath(); g.moveTo(-120, 0); g.quadraticCurveTo(0, -70 * o, 120, 0); g.quadraticCurveTo(0, 70 * o, -120, 0); g.fill();
+      var rg = g.createRadialGradient(0, 0, 4, 0, 0, 40); rg.addColorStop(0, "#2a0a2a"); rg.addColorStop(0.35, "#8a3a8a"); rg.addColorStop(1, "#f0a0e0");
+      circ(g, 0, 0, 40 * o, rg); circ(g, 0, 0, 14 * o, "#1a041a"); circ(g, -12, -12, 7 * o, "#fff");
+      g.strokeStyle = "#5a1a4a"; g.lineWidth = 4; g.beginPath(); g.moveTo(-120, 0); g.quadraticCurveTo(0, -70 * o, 120, 0); g.stroke();
+      g.restore();
+    },
+    /* ----- けもののこきゅう（いのすけ） ----- */
+    claw: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.rotate((f.rot || 0) * 0.3 - 0.5); g.globalCompositeOperation = "lighter";
+      var p = ease(Math.min(1, k * 3)), a = 1 - k;
+      for (var i = 0; i < 4; i++) {
+        var y = (i - 1.5) * 16; g.globalAlpha = a; g.strokeStyle = i % 2 ? "#c8d8ff" : "#fff"; g.lineWidth = 5 - i * 0.6; g.shadowColor = "#8ab0ff"; g.shadowBlur = 14;
+        g.beginPath(); g.moveTo(-70, y - 20);
+        for (var s = 1; s <= 8; s++) { var u = s / 8; if (u > p) break; g.lineTo(-70 + u * 140, y - 20 + u * 40 + (s % 2 ? -5 : 5)); }
+        g.stroke();
+      }
+      g.restore();
+    },
+    beastpierce: function (g, f, k) {
+      var p = ease(Math.min(1, k * 3)), a = fade(k, 0.02, 0.55), sx = f.sx || f.x + 200;
+      g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = a; g.shadowColor = "#8ab0ff"; g.shadowBlur = 18;
+      [-10, 10].forEach(function (dy) { g.fillStyle = "#dfe8ff"; g.beginPath(); g.moveTo(sx, f.y + dy - 6); g.lineTo(sx + (f.x - 10 - sx) * p, f.y + dy); g.lineTo(sx, f.y + dy + 6); g.fill(); });
+      if (p >= 1) shockRing(g, f.x, f.y, 10 + (k - 0.33) * 120, 4, "#c8d8ff", 1 - k);
+      g.restore();
+    },
+    /* ----- どうまの けっきじゅつ（こおり） ----- */
+    icelotus: function (g, f, k) {
+      var grow = ease(Math.min(1, k * 2.5)), a = fade(k, 0.02, 0.7);
+      g.save(); g.translate(f.x, f.y + 50); g.globalAlpha = a;
+      for (var ring = 0; ring < 2; ring++) for (var i = 0; i < 8; i++) {
+        var an = -PI / 2 + (i - 3.5) * 0.36 * (ring ? 1.3 : 1);
+        g.save(); g.rotate(an + PI / 2); g.scale(1, 1);
+        var L = (ring ? 70 : 50) * grow, W = ring ? 20 : 15;
+        var gr = g.createLinearGradient(0, 0, 0, -L); gr.addColorStop(0, "rgba(120,190,255,.9)"); gr.addColorStop(1, "rgba(240,252,255,.95)");
+        g.fillStyle = gr; g.strokeStyle = "#ffffff"; g.lineWidth = 1.2;
+        g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-W, -L * 0.5, 0, -L); g.quadraticCurveTo(W, -L * 0.5, 0, 0); g.fill(); g.stroke();
+        g.restore();
+      }
+      g.restore();
+    },
+    icefan: function (g, f, k) {
+      g.save(); g.translate(f.x, f.y); g.rotate(-0.4);
+      var p = Math.min(1, ease(k * 2.2)), a = fade(k, 0.03, 0.6);
+      g.globalAlpha = a; g.shadowColor = "#8fdcff"; g.shadowBlur = 22;
+      crescent(g, 80, 36, -1.9, 1.9, p); g.fillStyle = "rgba(60,140,230,.7)"; g.fill();
+      crescent(g, 84, 18, -1.9, 1.9, p); g.fillStyle = "#cfefff"; g.fill();
+      g.shadowBlur = 0;
+      for (var i = 0; i < 10; i++) { var an = -1.9 + 3.8 * (i / 10) * p, r = 96; g.save(); g.translate(Math.cos(an) * r, Math.sin(an) * r); g.rotate(an); g.fillStyle = "#f2fbff"; g.beginPath(); g.moveTo(0, -3); g.lineTo(14, 0); g.lineTo(0, 3); g.fill(); g.restore(); }
+      g.restore();
+    },
+    icepetal: function (g, f, k) {
+      var u = Math.min(1, k * 1.8), x = f.sx + (f.x - f.sx) * u, y = f.sy + (f.y - f.sy) * u - Math.sin(u * PI) * 40;
+      g.save(); g.globalAlpha = 1 - Math.max(0, (k - 0.6) * 2.5);
+      for (var i = 0; i < 6; i++) { g.save(); g.translate(x + Math.cos(i + k * 9) * 12, y + Math.sin(i * 2 + k * 9) * 10); g.rotate(k * 12 + i);
+        g.fillStyle = i % 2 ? "#e8f8ff" : "#9fd8ff"; g.beginPath(); g.ellipse(0, 0, 8, 4, 0, 0, PI * 2); g.fill(); g.restore(); }
+      g.restore();
+    },
+    // こなごおり: こおりの きりが みかたを つつむ
+    icemist: function (g, f, k) {
+      var a = fade(k, 0.15, 0.6);
+      g.save(); g.globalAlpha = a * 0.75;
+      for (var i = 0; i < 14; i++) {
+        var x = f.x - 160 + ((i * 53) % 320) + Math.sin(k * 3 + i) * 20, y = f.y - 100 + ((i * 37) % 120);
+        var rg = g.createRadialGradient(x, y, 4, x, y, 60); rg.addColorStop(0, "rgba(230,248,255,.7)"); rg.addColorStop(1, "rgba(180,220,255,0)");
+        circ(g, x, y, 60, rg);
+      }
+      g.restore();
+    },
+    // ふゆざれつらら: うえから つららが ふる
+    icicle: function (g, f, k) {
+      g.save();
+      for (var i = 0; i < 12; i++) {
+        var x = f.x - 160 + i * 30, d = Math.min(1, Math.max(0, k * 2.2 - (i % 4) * 0.15)), y = -40 + (f.y + 60) * ease(d);
+        g.globalAlpha = 1 - Math.max(0, (k - 0.7) * 3.3);
+        var gr = g.createLinearGradient(x, y - 80, x, y); gr.addColorStop(0, "rgba(200,235,255,.4)"); gr.addColorStop(1, "#ffffff");
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x - 11, y - 80); g.lineTo(x + 11, y - 80); g.lineTo(x, y); g.closePath(); g.fill();
+        g.strokeStyle = "rgba(120,190,255,.8)"; g.lineWidth = 1; g.stroke();
+        if (d >= 1) shockRing(g, x, f.y + 60, 6 + (k * 2.2 - 1) * 20, 2, "#e6f8ff", 1 - k, 0.3);
+      }
+      g.restore();
+    },
+    // けっしょうのみこ: ちいさな こおりの どうまが あらわれて こうげき
+    iceclone: function (g, f, k) {
+      var a = fade(k, 0.15, 0.75);
+      for (var i = 0; i < 3; i++) {
+        var x = f.x - 130 + i * 30, y = f.y + 40 - i * 8;
+        KB.drawChar(g, "douma", x, y, { t: k * 4 + i, pose: k > 0.4 ? "attack" : "idle", swing: Math.min(1, Math.max(0, (k - 0.4) * 3)), scale: 0.7, alpha: a * 0.7, glow: "#9fdcff", ice: true });
+      }
+      g.save(); g.globalCompositeOperation = "lighter"; g.globalAlpha = a * 0.35;
+      var rg = g.createRadialGradient(f.x - 100, f.y + 30, 10, f.x - 100, f.y + 30, 110); rg.addColorStop(0, "rgba(160,220,255,.8)"); rg.addColorStop(1, "rgba(160,220,255,0)");
+      circ(g, f.x - 100, f.y + 30, 110, rg); g.restore();
+    },
+    // むひょう すいれんぼさつ: こおりの おおきな ぼさつが あらわれる
+    bodhisattva: function (g, f, k) {
+      var rise = ease(Math.min(1, k * 2.5)), a = fade(k, 0.05, 0.8), x = f.x - 40, base = f.y + 60;
+      g.save(); g.translate(x, base + (1 - rise) * 160); g.scale(1.3, 1.3); g.globalAlpha = a;
+      var gr = g.createLinearGradient(0, -300, 0, 0); gr.addColorStop(0, "rgba(230,250,255,.9)"); gr.addColorStop(0.6, "rgba(130,200,255,.75)"); gr.addColorStop(1, "rgba(60,120,220,.5)");
+      g.shadowColor = "#8fdcff"; g.shadowBlur = 30; g.fillStyle = gr; g.strokeStyle = "rgba(255,255,255,.9)"; g.lineWidth = 2;
+      // こうはい（うしろの わ）
+      g.save(); g.globalAlpha = a * 0.5; circ(g, 0, -230, 70, null, "#e6f8ff", 5); g.restore();
+      // はすの だい
+      for (var i = 0; i < 9; i++) { g.save(); g.rotate((i - 4) * 0.22); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(-18, -40, 0, -70); g.quadraticCurveTo(18, -40, 0, 0); g.fill(); g.stroke(); g.restore(); }
+      // からだ
+      g.beginPath(); g.moveTo(-90, -40); g.quadraticCurveTo(-100, -150, -50, -180); g.lineTo(50, -180); g.quadraticCurveTo(100, -150, 90, -40); g.closePath(); g.fill(); g.stroke();
+      // あたま
+      g.beginPath(); g.ellipse(0, -220, 36, 42, 0, 0, PI * 2); g.fill(); g.stroke();
+      g.beginPath(); g.ellipse(0, -268, 16, 14, 0, 0, PI * 2); g.fill(); g.stroke();
+      g.shadowBlur = 0; g.strokeStyle = "rgba(40,90,170,.7)"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(-16, -222); g.quadraticCurveTo(-8, -216, 0, -222); g.moveTo(4, -222); g.quadraticCurveTo(12, -216, 20, -222); g.stroke();
+      // がっしょう する て（ふりおろす）
+      var slam = k > 0.4 ? Math.min(1, (k - 0.4) * 5) : 0;
+      g.fillStyle = gr; g.save(); g.translate(0, -150 + slam * 90);
+      g.beginPath(); g.moveTo(-14, 0); g.quadraticCurveTo(-18, -40, 0, -60); g.quadraticCurveTo(18, -40, 14, 0); g.closePath(); g.fill(); g.stroke(); g.restore();
+      g.restore();
+      if (k > 0.45 && k < 0.8) { var kk = (k - 0.45) / 0.35; shockRing(g, x, base, 30 + kk * 260, 6, "#e6f8ff", 1 - kk, 0.3); }
+    },
     // ひかりの つぶ（アカザが きえるとき）
     light: function (g, f, k) {
       g.save(); g.globalCompositeOperation = "lighter";
@@ -439,6 +695,8 @@
       var p = parts[i], k = p.t / p.life, a = (1 - k) * (p.a || 1);
       if (a <= 0) continue;
       g.globalAlpha = a;
+      if (p.kind === "butterfly") { drawButterfly(g, p.x, p.y, p.size, p.t * 25, p.color, a); continue; }
+      if (p.kind === "petal") { g.save(); g.translate(p.x, p.y); g.rotate(p.t * 5 + i); g.fillStyle = p.color; g.beginPath(); g.ellipse(0, 0, p.size, p.size * 0.55, 0, 0, PI * 2); g.fill(); g.restore(); continue; }
       if (p.kind === "snow") { g.save(); g.translate(p.x, p.y); g.rotate(p.t * 4); snowflake(g, p.size, 1.2, p.color); g.restore(); }
       else if (p.kind === "streak") { g.strokeStyle = p.color; g.lineWidth = p.size; g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * 0.04, p.y - p.vy * 0.04); g.stroke(); }
       else { circ(g, p.x, p.y, p.size * (p.kind === "ember" ? (1 - k * 0.5) : 1), p.color); }

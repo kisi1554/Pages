@@ -126,6 +126,10 @@
   var P1 = [[0, 74, 1], [2, 69, 1], [3, 70, 1], [4, 74, 1], [6, 77, 1], [7, 76, 1], [8, 74, 2], [10, 70, 1], [11, 69, 1], [12, 65, 2], [14, 64, 2]];
   var P2 = [[0, 69, 1], [1, 70, 1], [2, 74, 1], [3, 76, 1], [4, 77, 2], [6, 76, 1], [7, 74, 1], [8, 76, 1], [9, 77, 1], [10, 81, 2], [12, 82, 1], [13, 81, 1], [14, 77, 1], [15, 76, 1]];
   var P3 = [[0, 62, 1], [1, 64, 1], [2, 65, 1], [3, 69, 1], [4, 70, 1], [5, 74, 1], [6, 76, 1], [7, 77, 1], [8, 81, 4], [12, 77, 2], [14, 76, 2]];
+  var B1 = 35;
+  var ICE1 = [[0, 76, 1], [1, 77, 1], [2, 81, 1], [3, 83, 1], [4, 84, 2], [6, 83, 1], [7, 81, 1], [8, 77, 2], [10, 76, 1], [11, 77, 1], [12, 71, 2], [14, 72, 2]];
+  var ICE2 = [[0, 84, 1], [2, 83, 1], [3, 81, 1], [4, 77, 1], [6, 76, 1], [7, 77, 1], [8, 81, 2], [10, 83, 1], [11, 84, 1], [12, 88, 4]];
+  var ICE3 = [[0, 64, 1], [1, 65, 1], [2, 69, 1], [3, 71, 1], [4, 72, 1], [5, 76, 1], [6, 77, 1], [7, 81, 1], [8, 83, 4], [12, 81, 2], [14, 77, 2]];
   var SONGS = {
     battle: {
       bpm: 172, loopFrom: 2,
@@ -159,6 +163,20 @@
         bar(Bb - 12, CHUG, DR_BLAST, { l: [[0, 82, 6], [6, 81, 2], [8, 77, 4], [12, 74, 4]] }),
         bar(G - 12, CHUG, DR_BLAST, { c: 1, l: [[0, 79, 4], [4, 81, 2], [6, 82, 2], [8, 84, 6], [14, 82, 2]] }),
         bar(A - 12, "X.X.X.X.XXXXXXXX", DR_FILL, { l: [[0, 81, 8], [8, 85, 8]], t: "x.x.x.x.xxxxxxxx" })
+      ]
+    },
+    // どうません: こおりの ように つめたい マイナー（E の わふう）。しゃみせんが はやく きざむ
+    ice: {
+      bpm: 168, loopFrom: 1,
+      bars: [
+        bar(E, HOLD, ["................", "................", "o...o...o...o..."], { c: 1, p: ICE1, t: "x.......x......." }),
+        bar(E, RIFF1, DR_A, { c: 1, p: ICE1 }), bar(C - 12, RIFF1, DR_A, { p: ICE2 }), bar(D, RIFF2, DR_A, { p: ICE1 }), bar(B1, CHUG, DR_FILL, { p: ICE3 }),
+        bar(E, CHUG, DR_B, { c: 1, l: [[0, 76, 4], [4, 79, 2], [6, 81, 2], [8, 83, 6], [14, 81, 2]] }),
+        bar(C - 12, CHUG, DR_B, { l: [[0, 84, 4], [4, 83, 2], [6, 81, 2], [8, 79, 4], [12, 76, 4]] }),
+        bar(D, CHUG, DR_B, { c: 1, l: [[0, 74, 2], [2, 76, 2], [4, 79, 4], [8, 81, 4], [12, 83, 4]] }),
+        bar(B1, "X.......X.X.X.XX", DR_BLAST, { l: [[0, 83, 8], [8, 87, 8]], t: "........x.x.xxxx" }),
+        bar(E, HOLD, DR_HALF, { c: 1, p: ICE2, t: "x.....x.x......." }), bar(F - 12 + 12, HOLD, DR_HALF, { p: ICE3 }),
+        bar(E, "x.x.x.x.x.x.x.x.", DR_HALF, { p: ICE1 }), bar(B1, CHUG, DR_FILL, { p: ICE3, t: "x.x.x.x.xxxxxxxx" })
       ]
     },
     win: {
@@ -235,6 +253,15 @@
     cutinBig: function (t) { tone(o(), t, "sine", 80, 0.8, 0.9, 35); hiss(o(), t, 0.4, 0.5, "lowpass", 900); hiss(o(), t + 0.1, 0.4, 0.5, "bandpass", 800, 7000, 3);
       [880, 1318, 1760].forEach(function (f, i) { tone(o(), t + 0.2 + i * 0.04, "triangle", f, 0.6, 0.1); }); },
     shuushiki: function (t) { for (var i = 0; i < 14; i++) { tone(o(), t + i * 0.06, "sine", 1800 + (i % 5) * 300, 0.25, 0.05); hiss(o(), t + i * 0.07, 0.15, 0.25, "bandpass", 2000 + i * 200, 800, 2); } tone(o(), t + 0.9, "sine", 100, 0.8, 0.8, 25); },
+    sting: function (t) { hiss(o(), t, 0.15, 0.5, "highpass", 5000, 9000); tone(o(), t, "triangle", 2400, 0.12, 0.12, 3600); },
+    poison: function (t) { for (var i = 0; i < 5; i++) tone(o(), t + i * 0.05, "sine", 300 + (i % 3) * 120, 0.12, 0.1, 180); },
+    poisonHit: function (t) { hiss(o(), t, 0.15, 0.5, "bandpass", 4000, 1500, 2); tone(o(), t, "sine", 520, 0.15, 0.2, 260); },
+    petal: function (t) { [1318, 1568, 1760, 2093].forEach(function (f, i) { tone(o(), t + i * 0.04, "sine", f, 0.4, 0.07); }); hiss(o(), t, 0.4, 0.3, "bandpass", 1500, 4000, 2); },
+    flowerHit: function (t) { hiss(o(), t, 0.25, 0.6, "bandpass", 3500, 900, 1.5); tone(o(), t, "triangle", 1046, 0.2, 0.1); },
+    claw: function (t) { hiss(o(), t, 0.2, 0.6, "bandpass", 2500, 600, 3); tone(o(), t, "sawtooth", 300, 0.1, 0.12, 120); },
+    beastHit: function (t) { hiss(o(), t, 0.18, 0.7, "bandpass", 1800, 500, 2); tone(o(), t, "square", 140, 0.12, 0.25, 60); },
+    ice: function (t) { [2637, 3136, 3520].forEach(function (f, i) { tone(o(), t + i * 0.03, "sine", f, 0.3, 0.06); }); hiss(o(), t, 0.3, 0.4, "highpass", 6000); },
+    iceBig: function (t) { tone(o(), t, "sine", 90, 1.0, 0.8, 30); for (var i = 0; i < 10; i++) tone(o(), t + i * 0.05, "sine", 2000 + i * 200, 0.4, 0.05); hiss(o(), t, 1.0, 0.5, "highpass", 4000); },
     biwa: function (t) { [220, 220, 330].forEach(function (f, i) { tone(o(), t + i * 0.16, "sawtooth", f, 0.7, 0.18, f * 0.98); tone(o(), t + i * 0.16, "triangle", f * 2, 0.4, 0.08); }); },
     down: function (t) { tone(o(), t, "triangle", 440, 0.5, 0.15, 110); },
     sparkle: function (t) { for (var i = 0; i < 8; i++) tone(o(), t + i * 0.09, "sine", 1200 + i * 180, 0.3, 0.06); }

@@ -43,17 +43,18 @@
   var B = null;
   var now = function () { return performance.now() / 1000; };
 
-  function makeActor(id, isEnemy, diff, i) {
+  function makeActor(id, isEnemy, diff, i, scene) {
     if (isEnemy) {
       var e = KB.ENEMIES[id];
       return { id: id, def: e, enemy: true, name: e.name, look: e.look, maxHp: e.hp[diff], hp: e.hp[diff], atk: e.atk,
-        wait: e.wait[diff], atb: 20, x: 165, y: 296, scale: 1.42, ghosts: [], rashinS: 1, ox: 0, oy: 0, flip: false, pose: "idle", swing: 0, flash: 0, alpha: 1,
+        wait: e.wait[diff], atb: 20, x: 165, y: 296, scale: e.scale || 1.42, ghosts: [], rashinS: 1,
+        poison: (scene && scene.enemyStart && scene.enemyStart.poison) || 0, resist: 0, dot: 0, ox: 0, oy: 0, flip: false, pose: "idle", swing: 0, flash: 0, alpha: 1,
         phase: 0, dodge: 0, regen: 0, rashin: 0 };
     }
     var c = KB.CHARS[id];
     var homes = [[470, 250], [552, 318], [604, 214]];
     return { id: id, def: c, name: c.name, look: c.look, maxHp: c.hp, hp: c.hp, maxMp: c.mp, mp: c.mp, atk: c.atk, wait: c.wait,
-      atb: 40 + i * 25, limit: 0, x: homes[i][0], y: homes[i][1], scale: 1.12, ghosts: [], ox: 0, oy: 0, flip: true, pose: "idle", swing: 0, flash: 0, alpha: 1,
+      atb: 40 + i * 25, limit: 0, x: homes[i][0], y: homes[i][1], scale: c.scale || 1.12, ghosts: [], frost: 0, ox: 0, oy: 0, flip: true, pose: "idle", swing: 0, flash: 0, alpha: 1,
       skills: c.skills.filter(function (s) { return !KB.SKILLS[s].hidden; }), guard: false, sukitooru: 0, kabau: false, down: false };
   }
 
@@ -62,7 +63,7 @@
     B = {
       scene: scene, diff: diff, t: 0, startAt: now(), over: false,
       party: scene.party.map(function (id, i) { return makeActor(id, false, diff, i); }),
-      enemy: makeActor(scene.enemy, true, diff),
+      enemy: makeActor(scene.enemy, true, diff, 0, scene),
       items: Object.assign({}, scene.items),
       queue: [], ready: [], busy: false, talking: false, paused: false,
       fx: [], parts: [], nums: [], bubble: null, shake: 0, flashScr: 0, hitstop: 0, timeScale: 1, speed: 0, cutin: null,
@@ -78,7 +79,7 @@
     var st = $("#stage"); st.classList.remove("swirl"); void st.offsetWidth; st.classList.add("swirl");
     A.bgm(scene.bgm || "battle");
     B.busy = true;
-    sleep(900).then(function () { return talk(scene.intro); }).then(function () { B.busy = false; B.startAt = now(); });
+    sleep(900).then(function () { return talk(scene.intro); }).then(function () { B.busy = false; B.startAt = now(); if (scene.hint) hint(scene.hint); });
   }
 
   /* ---------- じかんの どうぐ ----------
@@ -117,6 +118,9 @@
     water: function (x, y) { emit("drop", x, y, 40, { speed: 280, colors: ["#e9f8ff", "#6ac0ff", "#2a7ae0"], size: 3.2, gravity: 500 }); },
     fire: function (x, y) { emit("ember", x, y, 40, { speed: 240, colors: ["#fff3b0", "#ffb040", "#ff5a1a"], size: 3, gravity: -120, life: 0.9 }); },
     slash: function (x, y) { emit("streak", x, y, 10, { speed: 420, color: "#fff", size: 2, gravity: 0, life: 0.3 }); },
+    poison: function (x, y) { emit("drop", x, y, 30, { speed: 200, colors: ["#e8c8ff", "#a060e0", "#6ac0a8"], size: 3, gravity: -60, life: 0.9 }); emit("butterfly", x, y, 3, { speed: 90, colors: ["#b080f0", "#7ad0b8"], size: 6, gravity: -40, life: 1.2 }); },
+    flower: function (x, y) { emit("petal", x, y, 26, { speed: 240, colors: ["#ffd0e8", "#ff8ac0", "#fff0f6"], size: 4, gravity: 60, life: 1.2 }); },
+    beast: function (x, y) { emit("streak", x, y, 16, { speed: 520, colors: ["#e0ecff", "#8aa0c8"], size: 2.5, gravity: 0, life: 0.3 }); emit("drop", x, y, 10, { speed: 260, color: "#c8d0e0", size: 2, gravity: 500, life: 0.5 }); },
     snow: function (x, y) { emit("snow", x, y, 8, { speed: 220, color: "#e6f8ff", size: 5, gravity: 60, life: 0.8 }); emit("streak", x, y, 12, { speed: 480, color: "#8fdcff", size: 2.5, gravity: 0, life: 0.3 }); }
   };
   function num(a, text, color, big) {
@@ -135,7 +139,8 @@
   function tint(col, a, ms, mode) { B.tint.col = col; B.tint.mode = mode || null; return tween(B.tint, { a: a }, ms || 250); }
   // カットイン（かおの アップ＋わざの なまえ）
   function cutin(a, name, sub, big) {
-    var cols = { tanjiro: [["#0b3a26", "#1c8f5c"], "#ffe066"], giyu: [["#0a1c4a", "#2f7ae0"], "#bfe4ff"], akaza: [["#2a0a24", "#d9488f"], "#a9dcff"] };
+    var cols = { tanjiro: [["#0b3a26", "#1c8f5c"], "#ffe066"], giyu: [["#0a1c4a", "#2f7ae0"], "#bfe4ff"], akaza: [["#2a0a24", "#d9488f"], "#a9dcff"],
+      shinobu: [["#24083a", "#9a5ad0"], "#d8fff0"], kanao: [["#3a0a24", "#e46aa8"], "#fff0f8"], inosuke: [["#141a28", "#5a6a8a"], "#e0ecff"], douma: [["#06182a", "#7ac8f0"], "#ffe9a0"] };
     var c = cols[a.look] || [["#222", "#555"], "#fff"];
     var fire = name.indexOf("ヒノカミ") >= 0 || name.indexOf("れつじつ") >= 0;
     if (fire) c = [["#3a0806", "#e0501e"], "#ffe066"];
@@ -214,7 +219,7 @@
   function oneHit(a, sk, hitNo, hits) {
     var e = B.enemy, c = center(e);
     var sure = sk.sure || a.sukitooru > 0;
-    var elem = sk.fx === "water" || sk.fx === "fire" ? sk.fx : "slash";
+    var elem = HIT[sk.fx] && sk.fx !== "snow" ? sk.fx : "slash";
     if (!sure && Math.random() < e.dodge) {
       A.sfx("miss"); num(e, "かわされた", "#9fe4ff"); B.misses++;
       tween(e, { ox: -34, oy: -6 }, 90, "out").then(function () { return tween(e, { ox: 0, oy: 0 }, 220); });
@@ -229,12 +234,17 @@
     hitstop(crit || hitNo === hits - 1 ? 0.09 : 0.05);
     if (sk !== a.def.attack) B.flashScr = Math.max(B.flashScr, 0.22);
     hurtEnemy(e, dmg, crit);
+    // どく（しのぶ）: 1かいの わざで sk.poison だけ たまる（さいごの ヒットで まとめて）
+    if (sk.poison && hitNo === hits - 1) { e.poison += sk.poison; addPoisonNum(e, "どく +" + sk.poison); A.sfx("poison"); }
     return true;
   }
+  function addPoisonNum(e, text) { B.nums.push({ x: e.x + e.ox + 50, y: e.y - 120, text: text, color: "#d0a0ff", t: 0, big: false }); }
   async function strike(a, sk) {
     var e = B.enemy, c = center(e), hits = sk.hits || 1, anim = sk.anim || "slash";
-    var elem = sk.fx === "water" || sk.fx === "fire" ? sk.fx : "slash";
-    a.water = elem === "water"; a.fire = elem === "fire";
+    var elem = HIT[sk.fx] && sk.fx !== "snow" ? sk.fx : "slash";
+    a.water = elem === "water"; a.fire = elem === "fire"; a.poison = elem === "poison"; a.flower = elem === "flower"; a.beast = elem === "beast";
+    var castSfx = { water: "water", fire: "fire", poison: "sting", flower: "petal", beast: "claw", slash: "slash" }[elem];
+    var hitFx = { water: "water", fire: "fire", poison: "stab", flower: "flowerArc", beast: "claw", slash: "slash" }[elem];
     var near = { ox: e.x + 100 - a.x, oy: e.y - a.y - 4 };
     var swingTo = async function (ms) { a.pose = "attack"; a.swing = 0; await tween(a, { swing: 1 }, ms || 140); };
     a.trail = sk !== a.def.attack;
@@ -247,6 +257,10 @@
       await sleep(160);
     } else if (anim === "renjitsu") {
       await renjitsu(a, sk);
+    } else if (anim === "zigzag") {
+      await zigzag(a, sk);
+    } else if (anim === "rush") {
+      await rush(a, sk);
     } else {
       cam(c.x + 40, c.y + 10, 1.18, 260);
       if (anim === "waterfall" || anim === "enbu") {
@@ -276,15 +290,15 @@
       } else {
         a.pose = "attack"; a.swing = 0;
         await tween(a, near, 220, "out");
-        var big = { minamo: "minamo", wheel: "wheel", vortex: "vortex", firering: "firering" }[anim];
-        if (big) fx(big, c.x, c.y, { life: anim === "vortex" || anim === "firering" ? 1.3 : 0.8 });
-        A.sfx(elem === "fire" ? "fire" : "water");
+        var BIG = { minamo: 0.8, wheel: 0.8, vortex: 1.3, firering: 1.3, butterfly: 1.2, sting: 0.7, hexagon: 1.3, petalburst: 1.0, petalarc: 0.9, petalswirl: 1.3, beastpierce: 0.7, claw: 0.5 };
+        if (BIG[anim] && !(anim === "claw" && hits > 1)) fx(anim, c.x, c.y, { life: BIG[anim], sx: center(a).x });
+        A.sfx(castSfx);
         for (var k = 0; k < hits; k++) {
-          await swingTo(hits > 1 ? 120 : 170);
-          if (hits > 1) fx(elem, c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 30, { rot: Math.random() * 6, life: 0.45, r: 40, w: 14 });
+          await swingTo(hits > 1 ? (hits > 4 ? 80 : 120) : 170);
+          if (hits > 1) fx(hitFx, c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 30, { rot: Math.random() * 6, life: 0.45, r: 40, w: 14 });
           oneHit(a, sk, k, hits);
           if (e.hp <= 0) break;
-          await sleep(hits > 1 ? 150 : 200);
+          await sleep(hits > 4 ? 70 : (hits > 1 ? 150 : 200));
         }
         await sleep(200);
       }
@@ -292,7 +306,45 @@
     }
     a.trail = false;
     await tween(a, { ox: 0, oy: 0 }, 240);
-    a.pose = "idle"; a.swing = 0; a.water = a.fire = false;
+    a.pose = "idle"; a.swing = 0; a.water = a.fire = a.poison = a.flower = a.beast = false;
+  }
+  // ひっさつ: むしのこきゅう・ひゃくそくじゃばら（ジグザグに はしって なんども つく）
+  async function zigzag(a, sk) {
+    var e = B.enemy, c = center(e);
+    tint("#12041e", 0.5, 300); B.speed = 0.8; cam(c.x, c.y, 1.25, 400);
+    for (var h = 0; h < sk.hits; h++) {
+      var side = h % 2 ? -1 : 1;
+      a.flip = side > 0;
+      await tween(a, { ox: e.x + side * (70 + (h % 3) * 15) - a.x, oy: e.y - a.y + ((h * 37) % 50) - 25 }, 70, "out");
+      a.pose = "attack"; a.swing = 0; await tween(a, { swing: 1 }, 60);
+      fx("stab", c.x + (Math.random() - 0.5) * 30, c.y + (Math.random() - 0.5) * 40, { rot: side > 0 ? Math.PI : 0, life: 0.4 });
+      A.sfx("sting"); oneHit(a, sk, h, sk.hits);
+      emit("butterfly", c.x, c.y, 2, { speed: 120, colors: ["#b080f0", "#7ad0b8"], size: 6, gravity: -40, life: 1.4 });
+      await sleep(50);
+    }
+    a.flip = true;
+    slowmo(0.4, 600);
+    fx("poisonBloom", c.x, c.y, { life: 1.2 }); A.sfx("poison"); B.flashScr = 0.5;
+    emit("butterfly", c.x, c.y, 24, { speed: 200, colors: ["#c090ff", "#7ad0b8", "#f0e0ff"], size: 7, gravity: -50, life: 1.8, jitter: 40 });
+    await sleep(800);
+    B.speed = 0; tint("#12041e", 0, 400); camReset(400);
+  }
+  // ひっさつ: けもののこきゅう・ばくれつもうしん（さがって ためて、いっきに とっしん）
+  async function rush(a, sk) {
+    var e = B.enemy, c = center(e);
+    a.pose = "cast"; await tween(a, { ox: 40 }, 250, "out");
+    fx("aura", a.x + a.ox, a.y, { life: 0.8 }); A.sfx("charge"); await sleep(500);
+    B.speed = 1; tint("#0a0e18", 0.4, 150);
+    a.pose = "attack"; a.swing = 0;
+    await tween(a, { ox: e.x + 60 - a.x, oy: e.y - a.y }, 160, "in");
+    tween(a, { swing: 1 }, 120);
+    slowmo(0.35, 600); B.flashScr = 0.8; B.shake = 18;
+    fx("bigburst", c.x, c.y, { life: 1 }); fx("claw", c.x, c.y, { life: 0.7 }); fx("shock", e.x, e.y, { r: 220, col: "#e0ecff", life: 0.8 });
+    A.sfx("big"); HIT.beast(c.x, c.y); HIT.beast(c.x, c.y - 30);
+    hurtEnemy(e, roll(a.atk, sk.power), true); hitstop(0.2);
+    await tween(e, { ox: -40 }, 120, "out"); tween(e, { ox: 0 }, 400);
+    await sleep(500);
+    B.speed = 0; tint("#0a0e18", 0, 300); camReset(400);
   }
   // ひっさつ: ヒノカミかぐら・れつじつこうきょう（たいようを せおって 5れんげき → ばってんぎり）
   async function renjitsu(a, sk) {
@@ -342,9 +394,11 @@
     } else if (q.kind === "skill" || q.kind === "limit") {
       var sk = KB.SKILLS[q.id];
       if (q.kind === "limit") a.limit = 0; else a.mp -= sk.mp;
+      // ひえ（こなごおり）: こきゅうを すると はいが いたむ
+      if (a.frost > 0) { var fd = Math.min(a.hp - 1, Math.round(a.maxHp * 0.06)); if (fd > 0) { a.hp -= fd; num(a, "ひえ -" + fd, "#bfeaff"); A.sfx("ice"); emit("snow", a.x, a.y - 70, 6, { speed: 80, color: "#e6f8ff", size: 4, gravity: 20, life: 0.8 }); } }
       var nm = splitName(sk.name), main = nm[0], sub = nm[1];
       banner(sk.name, 1800);
-      if (sk.type === "attack" || sk.type === "nagi" || sk.type === "buff") await cutin(a, main, sub, q.kind === "limit");
+      if (sk.type === "attack" || sk.type === "nagi" || sk.type === "buff" || sk.type === "buffAll") await cutin(a, main, sub, q.kind === "limit");
       else await sleep(300);
       if (sk.type === "attack") {
         if (q.kind === "limit") a.glow = "#ffb340";
@@ -356,7 +410,15 @@
         fx("clear", c.x, c.y, { life: 1.6 }); A.sfx("buff");
         await sleep(1100); tint("#808080", 0, 500, "saturation");
         a.sukitooru = sk.turns; justCast = true; a.pose = "idle";
-        num(a, "すきとおる せかい", "#e8fbff");
+        num(a, sk.short, "#e8fbff");
+      } else if (sk.type === "buffAll") {
+        // ひがんしゅがん: め が ひかり、せかいが ゆっくりに みえる
+        a.pose = "cast"; slowmo(0.4, 1200);
+        tint("#2a0a1a", 0.45, 250); fx("eye", center(B.enemy).x, center(B.enemy).y, { life: 1.6 }); A.sfx("buff");
+        emit("petal", a.x, a.y - 60, 30, { speed: 160, colors: ["#ffd0e8", "#ff8ac0"], size: 4, gravity: 30, life: 1.6, jitter: 40 });
+        await sleep(1200); tint("#2a0a1a", 0, 500);
+        B.party.forEach(function (p) { if (!p.down) { p.sukitooru = sk.turns; var pc = center(p); fx("clear", pc.x, pc.y, { life: 1 }); num(p, sk.short, "#ffd0e8"); } });
+        justCast = true; a.pose = "idle";
       } else if (sk.type === "cover") {
         a.pose = "guard"; A.sfx("guard"); a.kabau = true; num(a, "かばう", "#9cc4ff");
         fx("shock", a.x, a.y, { r: 60, col: "#9cc4ff", life: 0.5 }); await sleep(700); a.pose = "idle";
@@ -384,10 +446,13 @@
       }
       await sleep(700);
     } else if (q.kind === "guard") {
-      a.guard = true; a.pose = "guard"; A.sfx("guard"); a.mp = Math.min(a.maxMp, a.mp + 8); num(a, "ぼうぎょ", "#ffd27a"); await sleep(500);
+      a.guard = true; a.pose = "guard"; A.sfx("guard"); a.mp = Math.min(a.maxMp, a.mp + 8); num(a, "ぼうぎょ", "#ffd27a");
+      if (a.frost > 0) { a.frost = 0; sleep(250).then(function () { num(a, "こきゅうを ととのえた", "#bfeaff"); }); }
+      await sleep(500);
     }
     addLimit(a, 3);
     if (a.sukitooru > 0 && !justCast) a.sukitooru--;
+    if (a.frost > 0 && q.kind !== "guard") a.frost--;
     a.atb = 0;
     if (q.kind !== "guard" && !a.down) a.pose = "idle";
   }
@@ -414,10 +479,12 @@
     if (a.guard) dmg *= 0.5;
     if (cover) dmg *= 0.5;
     HIT.snow(ac.x, ac.y);
-    A.sfx(mv.fx === "bigpunch" || mv.fx === "shuushiki" ? "big" : "punch");
+    var heavy = mv.fx === "bigpunch" || mv.fx === "shuushiki" || mv.fx === "bodhisattva";
+    A.sfx(heavy ? "big" : (e.def.look === "douma" ? "ice" : "punch"));
     hitstop(mv.fx === "bigpunch" ? 0.14 : 0.05);
     hurtParty(a, Math.max(1, Math.round(dmg)));
-    B.shake = Math.max(B.shake, mv.fx === "bigpunch" || mv.fx === "shuushiki" ? 14 : 6);
+    B.shake = Math.max(B.shake, heavy ? 14 : 6);
+    if (mv.frost && !a.down) { a.frost = mv.frost; num(a, "ひえ", "#bfeaff"); }
   }
   async function enemyAct() {
     var e = B.enemy, def = e.def;
@@ -436,23 +503,43 @@
       await sleep(1300);
       maybeHint(2);
     } else if (mv.type === "all") {
-      // しゅうしき: よぞらの ような あおい ひかりが ふりそそぐ
-      tint("#020818", 0.6, 300);
-      e.pose = "cast"; A.sfx("charge"); await sleep(600);
+      // ぜんいんへの こうげき（しゅうしき・こなごおり・つらら・けっしょうのみこ・すいれんぼさつ）
+      var heavyAll = mv.fx === "shuushiki" || mv.fx === "bodhisattva";
+      if (heavyAll || mv.fx === "iceclone") tint("#020818", 0.6, 300);
+      e.pose = "cast"; e.ice = true; A.sfx(heavyAll ? "charge" : "ice"); await sleep(heavyAll ? 600 : 300);
       e.pose = "attack"; e.swing = 0; tween(e, { swing: 1 }, 300);
-      fx("shuushiki", 0, 0, { life: 1.6 }); A.sfx("shuushiki"); B.flashScr = 0.5;
+      var px = (B.party[0].x + B.party[B.party.length - 1].x) / 2, py = (B.party[0].y + B.party[B.party.length - 1].y) / 2;
+      fx(mv.fx || "shuushiki", px, py, { life: heavyAll ? 1.8 : 1.3, sx: ec.x, sy: ec.y, under: mv.fx === "bodhisattva" });
+      A.sfx(mv.fx === "shuushiki" ? "shuushiki" : (heavyAll ? "iceBig" : "ice")); B.flashScr = heavyAll ? 0.5 : 0.2;
       cam(480, 230, 1.1, 300);
-      await sleep(600);
+      await sleep(heavyAll ? 700 : 500);
       for (var i = 0; i < B.party.length; i++) {
         var p = B.party[i]; if (p.down) continue;
-        var pc = center(p); fx("bigburst", pc.x, pc.y, { life: 0.7 });
+        var pc = center(p); fx(heavyAll ? "bigburst" : "punch", pc.x, pc.y, { life: 0.7 });
+        if (mv.fx === "icicle" || mv.fx === "icemist" || mv.fx === "iceclone" || mv.fx === "bodhisattva") emit("snow", pc.x, pc.y, 10, { speed: 200, color: "#e6f8ff", size: 5, gravity: 80, life: 0.9 });
         await hitParty(e, p, mv, false); await sleep(160);
       }
+      e.ice = false;
       await sleep(600); e.glow = null; e.rashinS = 1;
       tint("#020818", 0, 400); camReset(400);
     } else {
       var pt = pickTarget(), a = pt.t, ac = center(a);
-      if (mv.fx === "airpunch") {
+      if (mv.fx === "icelotus" || mv.fx === "icefan" || mv.fx === "icepetal") {
+        // どうま: その ばで せんすを ふるう（こおりの はす・こおりの せんす・こおりの はなびら）
+        e.ice = true;
+        for (var r = 0; r < (mv.hits || 1); r++) {
+          e.pose = "attack"; e.swing = 0; await tween(e, { swing: 1 }, mv.hits > 1 ? 120 : 220);
+          if (mv.fx === "icepetal") fx("icepetal", ac.x, ac.y + (Math.random() - 0.5) * 30, { sx: ec.x + 40, sy: ec.y, life: 0.5 });
+          else fx(mv.fx, ac.x, ac.y, { life: 0.9, sx: ec.x + 40, sy: ec.y });
+          A.sfx("ice");
+          await sleep(mv.hits > 1 ? 160 : 300);
+          if (mv.fx === "icefan") { B.flashScr = 0.3; cam(ac.x, ac.y, 1.15, 200); }
+          await hitParty(e, a, mv, pt.cover);
+          if (a.down) break;
+        }
+        if (mv.fx === "icefan") camReset(300);
+        e.ice = false;
+      } else if (mv.fx === "airpunch") {
         // くうしき: その ばで こぶしを ふると、こぶしの かたまりが とんでいく
         for (var s = 0; s < 3; s++) {
           e.pose = "attack"; e.swing = 0; await tween(e, { swing: 1 }, 90);
@@ -483,8 +570,33 @@
       }
     }
     if (mv.type !== "charge") { e.pose = "idle"; e.swing = 0; if (B.nagi > 0) { B.nagi--; if (!B.nagi) tint("#0a2a5a", 0, 600); } }
+    await poisonTick(e);
     if (e.regen && e.hp > 0) { var rv = Math.min(e.regen, e.maxHp - e.hp); if (rv > 0) { e.hp += rv; num(e, "+" + rv, "#7dff9a"); emit("snow", e.x, e.y - 60, 6, { speed: 60, color: "#9dffb0", size: 4, gravity: -40, life: 1 }); } }
     e.atb = 0;
+  }
+
+  // どく（しのぶ）と とける（dot）。てきの ばんの おわりに ダメージ
+  async function poisonTick(e) {
+    var def = e.def;
+    if (e.poison > 0 && e.hp > 0) {
+      var pd = Math.max(1, Math.round(e.poison * (def.poisonDmg || 30) * (1 - e.resist)));
+      var c = center(e);
+      fx("poisonBloom", c.x, c.y, { life: 0.8 }); A.sfx("poison");
+      emit("drop", c.x, c.y, 18, { speed: 120, colors: ["#e8c8ff", "#a060e0"], size: 3, gravity: -80, life: 1 });
+      e.hp = Math.max(0, e.hp - pd); e.flash = 0.6; addPoisonNum(e, "どく " + pd);
+      checkPhase();
+      var before = e.resist;
+      e.resist = Math.min(def.adaptMax || 0, e.resist + (def.adapt || 0));
+      if (Math.floor(before / 0.15) < Math.floor(e.resist / 0.15)) { await sleep(300); num(e, "どくに なれてきた", "#c8b8e0"); }
+      await sleep(350);
+    }
+    if (e.dot > 0 && e.hp > 0) {
+      var dd = Math.min(e.hp, e.dot);
+      e.hp -= dd; e.flash = 0.6; num(e, "とける " + dd, "#d0a0ff");
+      emit("drop", e.x, e.y - 60, 20, { speed: 80, colors: ["#e8c8ff", "#b080f0"], size: 3, gravity: 200, life: 1, jitter: 40 });
+      checkPhase();
+      await sleep(350);
+    }
   }
 
   async function phaseEvent(i) {
@@ -493,6 +605,7 @@
     await talk(ph.say);
     if (ph.dodge != null) e.dodge = ph.dodge;
     if (ph.regen != null) e.regen = ph.regen;
+    if (ph.dot != null) { e.dot = ph.dot; e.resist = 0; }
     if (ph.rashin) e.rashin = 1;
     if (ph.mark) ph.mark.forEach(function (pid) { B.party.forEach(function (p) { if (p.id === pid) { p.mark = true; var c = center(p); fx("clear", c.x, c.y, { life: 1 }); } }); });
     if (ph.unlock) Object.keys(ph.unlock).forEach(function (pid) {
@@ -561,6 +674,8 @@
       a.ghosts.forEach(function (gh) { gh.t += dt; }); a.ghosts = a.ghosts.filter(function (gh) { return gh.t < 0.18; });
     });
     B.fx.forEach(function (f) { f.t += dt; }); B.fx = B.fx.filter(function (f) { return f.t < f.life; });
+    if (B.enemy.poison > 0 && B.enemy.alpha > 0.5 && Math.random() < dt * (2 + B.enemy.poison * 0.3)) { var ce = center(B.enemy); emit("drop", ce.x + (Math.random() - 0.5) * 40, ce.y + 20, 1, { speed: 30, color: "#c090f0", size: 2.5, gravity: -60, life: 1.2 }); }
+    B.party.forEach(function (p) { if (p.frost > 0 && !p.down && Math.random() < dt * 3) emit("snow", p.x + (Math.random() - 0.5) * 30, p.y - 90, 1, { speed: 20, color: "#e6f8ff", size: 3, gravity: 30, life: 1 }); });
     B.parts.forEach(function (p) { p.t += dt; p.vy += p.g * dt; var d = Math.exp(-p.drag * dt); p.vx *= d; p.vy *= d; p.x += p.vx * dt; p.y += p.vy * dt; });
     B.parts = B.parts.filter(function (p) { return p.t < p.life; });
     if (B.parts.length > 600) B.parts.splice(0, B.parts.length - 600);
@@ -584,7 +699,7 @@
   }
 
   function charState(a, extra) {
-    return Object.assign({ t: B.t, pose: a.pose, swing: a.swing, scale: a.scale, flip: a.flip, mark: a.mark, water: a.water, fire: a.fire }, extra || {});
+    return Object.assign({ t: B.t, pose: a.pose, swing: a.swing, scale: a.scale, flip: a.flip, mark: a.mark, water: a.water, fire: a.fire, poison: a.poison === true, flower: a.flower, beast: a.beast, ice: a.ice }, extra || {});
   }
   function render() {
     var sc = cv.width / VW;
@@ -609,7 +724,7 @@
         KB.drawChar(g, a.look, gh.x, gh.y, charState(a, { pose: gh.pose, swing: gh.swing, flip: gh.flip, alpha: 0.25 * (1 - gh.t / 0.18) * a.alpha, glow: a.enemy ? "#7fd8ff" : (a.fire ? "#ff7a2a" : "#5ab4ff") }));
         void i;
       });
-      var glow = a.glow || (a.sukitooru > 0 ? "#e8fbff" : null) || (!a.enemy && a.limit >= 100 ? "#ffb340" : null);
+      var glow = a.glow || (a.sukitooru > 0 ? "#e8fbff" : null) || (!a.enemy && a.limit >= 100 ? "#ffb340" : null) || (a.frost > 0 ? "#9fdcff" : null) || (a.enemy && a.poison > 0 ? "#b070e0" : null);
       var alpha = a.alpha * (a.sukitooru > 0 ? 0.72 + Math.sin(B.t * 6) * 0.15 : 1);
       KB.drawChar(g, a.look, a.x + a.ox, a.y + a.oy, charState(a, { flash: a.flash, alpha: alpha, glow: glow }));
       if (a.guard && !a.down) { g.save(); g.globalAlpha = 0.4; g.strokeStyle = "#ffd27a"; g.lineWidth = 3; g.beginPath(); g.arc(a.x + a.ox - 22, a.y - 62, 40, 2, 4.3); g.stroke(); g.restore(); }
@@ -676,7 +791,8 @@
       var act = !!(B.menu && B.menu.actor === a); if (c.act !== act) { c.act = act; r.el.classList.toggle("active", act); }
     });
     var e = B.enemy, eh = $("#ehp");
-    if (eh.dataset.v !== String(e.hp)) { eh.dataset.v = e.hp; $("#ehpBar").style.width = (e.hp / e.maxHp * 100) + "%"; $("#ename").textContent = e.def.title + "・" + e.name; }
+    var ek = e.hp + "/" + e.poison;
+    if (eh.dataset.v !== ek) { eh.dataset.v = ek; $("#ehpBar").style.width = (e.hp / e.maxHp * 100) + "%"; $("#ename").textContent = e.def.title + "・" + e.name + (e.poison > 0 ? "　☠どく " + e.poison : ""); }
   }
 
   /* ---------- コマンドの まど ---------- */
@@ -790,7 +906,7 @@
   }
   function lose() {
     B.over = true; closeMenu(); A.stopBgm(); A.sfx("down");
-    result("ぜんめつ…", "でも だいじょうぶ！ もういちど いどもう。<br><small>ヒント：HP が へったら「どうぐ」の きずぐすり。<br>アカザが ちからを ためたら「ぼうぎょ」！<br>むずかしいときは「やさしい」で あそんでね。</small>", false);
+    result("ぜんめつ…", "でも だいじょうぶ！ もういちど いどもう。<br><small>ヒント：HP が へったら「どうぐ」の きずぐすり。<br>てきが ちからを ためたら「ぼうぎょ」！<br>むずかしいときは「やさしい」で あそんでね。</small>", false);
   }
   function result(title, html, won) {
     var o = $("#overlay"); o.hidden = false;
@@ -801,6 +917,12 @@
     r.addEventListener("click", function () { A.sfx("ok"); o.hidden = true; startBattle(B.scene); });
     var s = document.createElement("button"); s.type = "button"; s.textContent = "たたかいを えらぶ";
     s.addEventListener("click", function () { A.sfx("ok"); o.hidden = true; A.stopBgm(); buildSelect(); show("select"); });
+    var nx = won && B.scene.next && KB.SCENES.filter(function (x) { return x.id === B.scene.next; })[0];
+    if (nx) {
+      var n = document.createElement("button"); n.type = "button"; n.textContent = "▶ つぎの たたかいへ"; n.className = "next";
+      n.addEventListener("click", function () { A.sfx("ok"); o.hidden = true; startBattle(nx); });
+      $("#ovBtns").appendChild(n);
+    }
     $("#ovBtns").appendChild(r); $("#ovBtns").appendChild(s);
   }
 
