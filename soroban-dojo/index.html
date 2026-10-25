@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>そろばん どうじょう</title>
+<meta name="description" content="たまを はじいて かずを あらわそう。5と10の こつで たしざん ひきざん">
+<meta name="theme-color" content="#6f4e37">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧮</text></svg>">
+<link rel="stylesheet" href="style.css?v=7ac92c9">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="bar">
+  <button class="icon" id="back" aria-label="もどる" hidden>←</button>
+  <h1 id="title">🧮 そろばん どうじょう</h1>
+  <button class="icon" id="sound" aria-label="おと">🔊</button>
+  <button class="icon" id="gear" aria-label="せってい">⚙️</button>
+</header>
+
+<!-- ホーム -->
+<main class="view" id="v-home">
+  <section class="hero">
+    <p>たまを はじいて かずを あらわそう。<br>5と10の こつを おぼえたら、たしざん ひきざん も すいすい！</p>
+    <p class="mykyu" id="mykyu"></p>
+  </section>
+  <h2>📚 ステップ</h2>
+  <div class="grid" id="steps"></div>
+  <h2>🥋 モード</h2>
+  <div class="grid">
+    <button class="card mode" data-go="test"><span class="em">📜</span><b>しんさ ふう テスト</b><small>10<ruby>級<rt>きゅう</rt></ruby> → 1<ruby>級<rt>きゅう</rt></ruby> に ちょうせん</small></button>
+    <button class="card mode" data-go="anzan"><span class="em">🧠</span><b>あんざん</b><small>あたまの なかの そろばん・フラッシュ</small></button>
+    <button class="card mode" data-go="chal"><span class="em">⏱️</span><b>ちょうせん</b><small>1ぷんで なんもん？ <span id="best"></span></small></button>
+    <button class="card mode" data-go="free"><span class="em">🖐️</span><b>じゆうに さわる</b><small>すきに たまを うごかそう</small></button>
+  </div>
+</main>
+
+<!-- そろばんを つかう がめん（ステップ・テスト・ちょうせん・じゆう） -->
+<main class="view" id="v-play" hidden>
+  <div class="tabs" id="tabs"></div>
+  <section class="panel" id="panel">
+    <div class="prob" id="prob"></div>
+    <div class="dots" id="dots"></div>
+  </section>
+  <p class="coach" id="coach" aria-live="polite"></p>
+  <div class="sorowrap" id="soro"></div>
+  <div class="btns" id="btns">
+    <button class="btn" id="b-demo">▶ みほん</button>
+    <button class="btn" id="b-clear">ごはさん</button>
+    <button class="btn main" id="b-ok">できた！</button>
+  </div>
+</main>
+
+<!-- しんさ: きゅう えらび -->
+<main class="view" id="v-test" hidden>
+  <p class="lead">じぶんの <ruby>級<rt>きゅう</rt></ruby>を えらんで ちょうせん。<br>
+    <small>※ この アプリ だけの めやす です（ほんとうの けんてい とは ちがいます）</small></p>
+  <div class="kyulist" id="kyulist"></div>
+</main>
+
+<!-- しんさ・ちょうせん の けっか -->
+<main class="view" id="v-result" hidden>
+  <section class="result" id="result"></section>
+  <div class="btns">
+    <button class="btn" id="r-again">もういちど</button>
+    <button class="btn main" id="r-home">メニューへ</button>
+  </div>
+</main>
+
+<!-- あんざん -->
+<main class="view" id="v-anzan" hidden>
+  <div class="tabs" id="a-tabs">
+    <button class="tab on" data-am="peek">👀 ちらっと そろばん</button>
+    <button class="tab" data-am="flash">⚡ フラッシュ</button>
+  </div>
+  <div class="aopts" id="a-opts"></div>
+  <section class="stage" id="a-stage">
+    <div class="sorowrap mini" id="a-soro"></div>
+    <div class="flash" id="a-flash"></div>
+    <div class="cover" id="a-cover" hidden>？</div>
+  </section>
+  <p class="coach" id="a-q"></p>
+  <div class="answer" id="a-ans">&nbsp;</div>
+  <div class="keypad" id="keypad"></div>
+  <div class="btns"><button class="btn main" id="a-start">はじめる</button></div>
+</main>
+
+<!-- せってい -->
+<dialog id="dlg">
+  <form method="dialog" class="set">
+    <h3>⚙️ せってい</h3>
+    <label><input type="checkbox" data-set="sound"> おと（パチッ・ジャラッ）</label>
+    <label><input type="checkbox" data-set="speech"> よみあげ（ごはさんで ねがいましては）</label>
+    <label><input type="checkbox" data-set="finger"> ゆびの アイコン</label>
+    <label><input type="checkbox" data-set="labels"> くらいの なまえ（いち・じゅう・ひゃく）</label>
+    <label>みほんの はやさ
+      <select data-set="speed"><option value="1.6">ゆっくり</option><option value="1">ふつう</option><option value="0.6">はやい</option></select></label>
+    <div class="row"><button type="button" class="btn small" id="reset">きろくを けす</button><button class="btn main small">とじる</button></div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="soroban.js?v=7ac92c9"></script>
+<script src="view.js?v=7ac92c9"></script>
+<script src="app.js?v=7ac92c9"></script>
+</body>
+</html>
