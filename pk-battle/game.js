@@ -351,7 +351,7 @@
     scene.kicker = { x: startX, z: -1.25, pose: "stand", phase: 0, kickT: 0, shirt: kT.shirt, shorts: kT.shorts, head: kT.head, num: 10, look: 0, lean: 0, mood: "focus" };
     scene.keeper = { pose: null, mood: "ready", shirt: gT.keeperShirt, shorts: gT.shorts, head: gT.head, size: gT.size };
     scene.ball = { x: 0, y: P.BALL_R, z: 0, rot: 0, trail: [] };
-    scene.net = null; scene.postShake = null; scene.swipe = null; scene.grid = null; scene.gauge = null; scene.cheer = 0;
+    scene.net = null; scene.postShake = null; scene.swipe = null; scene.tells = null; scene.grid = null; scene.gauge = null; scene.cheer = 0;
   }
   function passScreen(title, text) {
     $("passTitle").textContent = title; $("passText").innerHTML = text;
@@ -429,6 +429,15 @@
     }
     // くせ を みせる（キーパー から みえる）
     scene.kicker.look = tells.look; scene.kicker.lean = tells.body * 0.8;
+    if (keeperView && !kH) {
+      // めせん・アップ・やじるし で くせ を みやすく（つよい CPU ほど うそ が まざる）
+      scene.tells = Object.assign({ a: 0 }, tells);
+      const w = (v) => (-v < 0 ? "ひだり" : -v > 0 ? "みぎ" : "まんなか");   // キーパー から みた むき
+      $("keepTip").innerHTML = "👀 め: <b>" + w(tells.look) + "</b>・🧍 からだ: <b>" + w(tells.body) + "</b>・🏃 はしりかた: <b>" + w(tells.run) +
+        "</b><br><small>（くせ は ときどき うそ。つよい キッカー ほど だまして くるよ）</small>";
+    } else {
+      $("keepTip").innerHTML = "ヒント: キッカーの <b>め</b>・<b>からだの むき</b>・<b>はしって くる むき</b> を みよう";
+    }
     // にんげんの キーパーが とぶ
     let simRef = null;
     const humanDive = (screenCell, btn) => {
@@ -471,6 +480,19 @@
     if (kH && duo) showPane("pDuo");
     if (kH && !keeperView && !duo) showPane(save.easy ? "pEasy" : "pKick");
     if (kH && save.easy && !duo) $("easyHint").textContent = "はしって いる あいだに 1かい だけ フェイント できるよ";
+    // くせを みる じかん: キッカーが はしりだす まえに 1びょう じっと ゴールを みる（キーパーの がめん だけ）
+    if (scene.tells) {
+      const WAIT = 1.0;
+      kickAt += WAIT;
+      let w = 0;
+      await waitInput((done) => {
+        anim = (dt) => {
+          w += dt; runClock += dt; preview();
+          scene.tells.a = Math.min(1, scene.tells.a + dt * 4);
+          if (w >= WAIT) { anim = null; done(true); }
+        };
+      }).finally(() => { anim = null; });
+    }
     // CPU キッカーも ときどき フェイント
     const cpuFeint = !kH && rnd() < [0.05, 0.12, 0.2][kl];
     await runup(g, {
@@ -480,8 +502,9 @@
         kickAt += 0.6;
         if (!gH) cpuDive = A.cpuKeeper(gl, shot, kT.kuse, kH ? save.kick.n : null, true, rnd);
       },
-      tick: (dt) => { runClock += dt; preview(); },
+      tick: (dt) => { runClock += dt; preview(); if (scene.tells) scene.tells.a = Math.min(1, scene.tells.a + dt * 4); },
     });
+    scene.tells = null;
     stageMode = keeperView ? "dive" : null;
     kickAt = runClock;
     // キーパーが はやく うごきすぎたら、CPU キッカーは ぎゃく を つく

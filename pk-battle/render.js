@@ -283,7 +283,7 @@
     }
     // かお
     const m = o.mood || "normal";
-    const lk = (o.look || 0) * r * 0.16;
+    const lk = Math.max(-1, Math.min(1, o.look || 0)) * r * 0.09;   // くろめ が しろめ から はみださない
     const ey = hy - r * 0.02, ex = r * 0.36;
     if (m === "joy") {
       ctx.strokeStyle = "#212529"; ctx.lineWidth = Math.max(1, r * 0.12); ctx.lineCap = "round";
@@ -354,7 +354,7 @@
   // キッカー: k = { x, z, phase（はしる うごき）, pose: "stand"|"run"|"kick"|"joy"|"sad"|"stutter", kickT（0〜1）, lean（からだの むき -1〜1）, look }
   function kickerJoints(k, t) {
     const x = k.x, z = k.z;
-    let hipY = 0.92, lean = (k.lean || 0) * 0.12;
+    let hipY = 0.92, lean = (k.lean || 0) * 0.2;
     const ph = k.phase || 0;
     const j = {};
     let lF, rF, lH, rH;
@@ -496,6 +496,7 @@
     // カメラ から とおい じゅん
     items.sort((a, b) => b.d - a.d).forEach((it) => it.f());
     if (st.grid) drawGrid9(st);
+    if (st.tells && st.kicker && cam.kind === "keeper") drawTells(st);
     if (st.swipe && st.swipe.length > 1) {
       ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
       ctx.strokeStyle = "rgba(255,255,255,.85)"; ctx.lineWidth = 8;
@@ -503,6 +504,55 @@
       ctx.strokeStyle = "rgba(255,212,59,.95)"; ctx.lineWidth = 4; ctx.stroke();
       ctx.restore();
     }
+  }
+  // ===== キッカーの くせ を みやすく（キーパー の がめん） =====
+  // st.tells = { look, body, run（キッカー から みた x の むき -1/0/1）, a（でて くる こさ 0〜1） }
+  //   1) めせん: キッカーの め から みて いる ところ へ きいろい てんせん
+  //   2) みぎうえ に キッカーの アップ（おおきな かお と かたむいた からだ）と 3つの やじるし
+  function drawTells(st) {
+    const tl = st.tells, k = st.kicker, a = Math.max(0, Math.min(1, tl.a == null ? 1 : tl.a));
+    if (a <= 0) return;
+    const scr = (v) => v * cam.dir;           // キッカー から みた むき → がめんの むき
+    ctx.save();
+    ctx.globalAlpha = a;
+    // めせん
+    if (tl.look) {
+      const h = proj(k.x + (k.lean || 0) * 0.26, 1.72, k.z), g = proj(tl.look * 2.6, 1.1, P.GOAL_Z);
+      ctx.setLineDash([6, 6]); ctx.lineDashOffset = -(st.time || 0) * 30;
+      ctx.strokeStyle = "rgba(255,212,59,.9)"; ctx.lineWidth = 3; ctx.lineCap = "round";
+      ctx.beginPath(); ctx.moveTo(h.x, h.y); ctx.lineTo(g.x, g.y); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "20px system-ui, sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("👀", g.x, g.y);
+    }
+    // アップ
+    const S = Math.min(W * 0.36, H * 0.42, 170), x0 = W - S - 8, y0 = 8;
+    rr(x0, y0, S, S, 16); ctx.fillStyle = "rgba(255,253,245,.93)"; ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,.25)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = "#12261c"; ctx.font = "900 " + Math.round(S * 0.085) + "px system-ui, sans-serif";
+    ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.fillText("キッカーの ようす", x0 + S / 2, y0 + S * 0.04);
+    const cx = x0 + S / 2, hr = S * 0.15, hy = y0 + S * 0.36;
+    const tilt = scr(tl.body) * 0.28;
+    // からだ（かたむき）
+    ctx.save();
+    ctx.beginPath(); rr(x0, y0, S, S * 0.66, 16); ctx.clip();
+    ctx.translate(cx, y0 + S * 0.66); ctx.rotate(tilt);
+    ctx.fillStyle = k.shirt; rr(-S * 0.17, -S * 0.2, S * 0.34, S * 0.3, S * 0.07); ctx.fill();
+    ctx.restore();
+    const hx = cx + Math.sin(tilt) * S * 0.2;
+    drawHead(hx, hy, hr, { head: k.head, skin: "#ffd8b5", shirt: k.shirt, front: true, look: scr(tl.look), mood: "focus" });
+    // やじるし 3つ（がめんで みた むき）
+    const row = [["👀", tl.look], ["🧍", tl.body], ["🏃", tl.run]];
+    const arrow = (v) => (v < 0 ? "⬅" : v > 0 ? "➡" : "●");
+    const fs = Math.round(S * 0.11);
+    ctx.font = "900 " + fs + "px system-ui, sans-serif"; ctx.textBaseline = "middle";
+    row.forEach(([ic, v], i) => {
+      const x = x0 + S * (0.18 + i * 0.32), y = y0 + S * 0.83;
+      ctx.fillStyle = "#12261c"; ctx.fillText(ic, x - fs * 0.45, y);
+      ctx.fillStyle = scr(v) ? "#e8590c" : "#868e96"; ctx.fillText(arrow(scr(v)), x + fs * 0.6, y);
+    });
+    ctx.restore();
   }
   // がめんの どこに ボールが あるか（スワイプの はじめ を きめる）
   function ballScreen() { const p = proj(0, P.BALL_R, 0); return { x: p.x, y: p.y, r: Math.max(8, P.BALL_R * p.s) }; }
