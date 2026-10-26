@@ -9,7 +9,7 @@
 
   /* ---------- ほぞん ---------- */
   function defaults() {
-    return { floor: 1, visited: [], cards: [], friends: {}, review: { n: 0, ok: 0 }, n: 0,
+    return { floor: 1, visited: [], cards: [], friends: {}, gates: {}, review: { n: 0, ok: 0 }, n: 0,
       set: { sound: true, voice: true, bgm: true, tod: 'auto', weather: 'auto', sort: 'got' } };
   }
   let save = defaults();
@@ -21,6 +21,7 @@
       if (!Lift.valid(save.floor)) save.floor = 1;
       save.cards = (save.cards || []).filter(c => c && Words.get(c.id));
       save.visited = (save.visited || []).filter(Lift.valid);
+      if (!save.gates || typeof save.gates !== 'object') save.gates = {};
     }
   } catch (e) { save = defaults(); }
   function persist() { try { localStorage.setItem(LS, JSON.stringify(save)); } catch (e) { /* ほぞん できなくても あそべる */ } }
@@ -171,6 +172,9 @@
     if (fl.special) L.push(fl.special.say);
     L.push(`ここは ${fl.yomi}。${fl.line}`);
     L.push(w.ex);
+    const g = Floors.gate(n);
+    if (g && !save.gates[n]) L.push(`この かいには あいことばの とびらが あるよ。なぞは「${g.question}」 ポケットの カードで こたえてね。`);
+    else if (g) L.push('あいことばの とびらは もう ひらいてるね。ひみつの たからもの、みてね！');
     if (have) L.push(`「${w.k}」の カードは もう もってるね！ いみは おぼえてる？ ${w.mean}`);
     else L.push(`この かいの ことばは「${w.k}」。カードを あげるね！`);
     Object.assign(talk, { lines: L, i: 0, floor: n, friend: f, give: have ? null : w.id });
@@ -191,6 +195,55 @@
     if (talk.give) { giveCard(talk.give, talk.friend.id, talk.floor); talk.give = null; }
     endTalk();
     $('#hMsg').textContent = `${Floors.get(view.floor).name}。▲▼ で エレベーターを よべるよ。`;
+    const g = Floors.gate(view.floor);
+    if (g && !save.gates[view.floor]) { $('#hMsg').textContent = '🔑 あいことばの とびらに こたえて みよう！'; openGate(); }
+  }
+
+  /* ---------- あいことばの とびら ---------- */
+  function openGate() {
+    const g = Floors.gate(view.floor);
+    if (!g) return;
+    const body = $('#gateBody');
+    const done = !!save.gates[view.floor];
+    const fr = Friends.get(Floors.get(view.floor).friend);
+    let html = `<div class="gq">🔑 ${Words.ruby(g.question)}</div>`;
+    if (done) {
+      html += `<div class="empty">とびらは もう ひらいて いるよ！<br>ひみつの たからもの ${Object.keys(save.gates).length} / ${Object.keys(Floors.GATES).length}</div>`;
+      body.innerHTML = html; openDlg('#dGate'); return;
+    }
+    if (!save.cards.length) html += '<div class="empty">ポケットが からっぽ。ことばを あつめて きてね。</div>';
+    else html += '<div class="qask" style="margin-bottom:8px">ポケットから こたえの カードを えらんでね</div><div class="gcards" id="gcards"></div>';
+    html += '<div class="fb" id="gfb"></div><div class="acts"><button class="sub" id="gHint">💡 ヒント</button></div>';
+    body.innerHTML = html;
+    const box = $('#gcards');
+    if (box) Pocket.sort(save.cards, 'aiueo').forEach(c => {
+      const w = Words.get(c.id);
+      const b = document.createElement('button');
+      b.innerHTML = `<div class="mini" style="${catStyle(w)}"><div class="wd">${Words.ruby(w.k)}</div></div>`;
+      b.addEventListener('click', () => answerGate(g, c.id, b));
+      box.appendChild(b);
+    });
+    $('#gHint').addEventListener('click', () => {
+      const h = g.hints[0];
+      $('#gfb').innerHTML = h.floor ? `💡 こたえの ことばは ${Lift.yomi(h.floor)}の おともだちが もってるよ。` : '💡 まどの そとを よく みてね。';
+    });
+    openDlg('#dGate');
+    speak(Words.plain(g.question), fr);
+  }
+  function answerGate(g, id, btn) {
+    if (g.accept.includes(id)) {
+      save.gates[g.n] = Date.now(); persist();
+      SND.card(); SND.ok();
+      $('#gfb').innerHTML = `⭕ せいかい！「${Words.ruby(Words.get(id).k)}」で とびらが ひらいた！`;
+      toast('🔓 とびらが ひらいた！ ひみつの たからもの を みつけた！', 2600);
+      speak('せいかい！ とびらが ひらいたよ', Friends.get(Floors.get(g.n).friend));
+      $('#hMsg').textContent = `🔓 とびらが ひらいた！ ひみつの たからもの ${Object.keys(save.gates).length} / ${Object.keys(Floors.GATES).length}`;
+      setTimeout(() => $('#dGate').close(), 1600);
+      updatePanels();
+    } else {
+      SND.ng(); btn.querySelector('.mini').classList.add('ng');
+      $('#gfb').textContent = '🔺 ちがうみたい。べつの カードで ためして みてね。';
+    }
   }
   function endTalk() { view.talking = false; $('#talk').classList.remove('show'); VOICE.stop(); }
 
@@ -256,6 +309,9 @@
       $('#cUp').setAttribute('aria-pressed', String(sim.st.up.has(n)));
       $('#cDn').setAttribute('aria-pressed', String(sim.st.down.has(n)));
       $('#hRide').disabled = !(open && sim.at === n);
+      const g = Floors.gate(n);
+      $('#hGate').hidden = !g;
+      if (g) $('#hGate').textContent = save.gates[n] ? '🔓 ひらいた とびら' : '🔑 あいことばの とびら';
     }
   }
   function updateBadge() { $('#pCount').textContent = save.cards.length; }
@@ -381,9 +437,30 @@
     ctx.font = `bold ${Math.round(Math.min(30, sw * .12))}px sans-serif`; ctx.fillText(`${fl.label}F`, sx + 12, sy + 8);
     ctx.font = `bold ${Math.round(Math.min(15, sw * .055))}px sans-serif`; ctx.fillStyle = '#ffe066';
     ctx.fillText(fl.special ? `⭐ ${fl.special.name}` : `${Floors.zone(fl.zone).emoji} ${fl.zoneName}`, sx + 12, sy + 42);
+    // あいことばの とびら
+    const gt = Floors.gate(view.floor);
+    if (gt) {
+      const gw = Math.min(W * .16, H * .22), gh = gw * 1.5, gx = W * .5 - gw / 2, gy = wy - gh;
+      ctx.fillStyle = '#5c3d1e'; ctx.fillRect(gx - 6, gy - 6, gw + 12, gh + 6);
+      if (save.gates[view.floor]) {
+        const lg = ctx.createRadialGradient(gx + gw / 2, gy + gh / 2, 0, gx + gw / 2, gy + gh / 2, gw);
+        lg.addColorStop(0, '#fff9db'); lg.addColorStop(1, '#ffd43b');
+        ctx.fillStyle = lg; ctx.fillRect(gx, gy, gw, gh);
+        ctx.fillStyle = '#a0522d'; ctx.fillRect(gx - gw * .35, gy, gw * .35, gh);
+        Props.draw(ctx, gt.prize, gx + gw / 2, gy + gh * .75, gw * .6, t);
+        Props.draw(ctx, 'gem', gx + gw / 2, gy + gh * .32, gw * .3, t);
+      } else {
+        ctx.fillStyle = '#8d5a2b'; ctx.fillRect(gx, gy, gw, gh);
+        ctx.strokeStyle = '#5c3d1e'; ctx.lineWidth = 3; ctx.strokeRect(gx + gw * .1, gy + gh * .08, gw * .8, gh * .38); ctx.strokeRect(gx + gw * .1, gy + gh * .52, gw * .8, gh * .4);
+        ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(gx + gw * .5, gy + gh * .5, gw * .1, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = '#5c3d1e'; ctx.fillRect(gx + gw * .48, gy + gh * .5, gw * .04, gw * .12);
+      }
+      ctx.fillStyle = '#ffd43b'; ctx.font = `bold ${Math.round(gw * .16)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+      ctx.fillText(save.gates[view.floor] ? 'ひらいた！' : 'あいことば', gx + gw / 2, gy - 8);
+    }
     // こもの と おともだち
     const fs = Math.min(H * .34, W * .3);
-    Props.draw(ctx, fl.prop, W * .58, wy + H * .12, Math.min(H * .16, 90), t);
+    Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
     const f = Friends.present(fl.friend, night(), fl.deco.seed);
     if (f) Friends.draw(ctx, f, W * .8, wy - fs * .2, fs, t, { wave: view.talking, open: view.talking && Math.sin(t * 12) > 0, fly: f.kind === 'bird' && false });
   }
@@ -550,7 +627,7 @@
     const got = new Set(save.cards.map(c => c.floor));
     const wordFloors = new Set(save.cards.filter(c => c.from !== 'mado').map(c => c.floor));
     const body = $('#mapBody');
-    let html = `<div class="stat"><span>🚶 いった かい ${visited.size} / ${Lift.COUNT}</span><span>🎁 ことばを もらった かい ${wordFloors.size} / ${Lift.COUNT}</span></div>
+    let html = `<div class="stat"><span>🚶 いった かい ${visited.size} / ${Lift.COUNT}</span><span>🎁 ことばを もらった かい ${wordFloors.size} / ${Lift.COUNT}</span><span>🔑 とびら ${Object.keys(save.gates).length} / ${Object.keys(Floors.GATES).length}</span></div>
       <div class="legend"><span><i style="background:#a5d8ff"></i>いった</span><span><i style="background:#fab005"></i>ことばを もらった</span><span><i style="outline:2px solid #e03131;background:#fff"></i>いま</span></div><div class="map">`;
     const here = view.mode === 'hall' ? view.floor : sim.floorNow();
     for (const z of [...Floors.ZONES].reverse()) {
@@ -580,7 +657,8 @@
       const sp = Floors.SPECIAL[n];
       const b = document.createElement('button');
       b.className = (sim.st.car.has(n) ? 'on ' : '') + (visited.has(n) ? 'got' : '');
-      b.innerHTML = `<b>${Lift.label(n)}かい</b>${Words.esc(sp.name)}`;
+      const g = Floors.GATES[n];
+      b.innerHTML = `<b>${Lift.label(n)}かい${g ? (save.gates[n] ? ' 🔓' : ' 🔑') : ''}</b>${Words.esc(sp.name)}`;
       b.addEventListener('click', () => { closeAll(); goFloor(n); });
       box.appendChild(b);
     }
@@ -630,6 +708,7 @@
   $('#cDn').addEventListener('click', () => { SND.unlock(); SND.beep(); if (sim.call(view.floor, -1)) $('#hMsg').textContent = 'よんだよ。エレベーターを まってね。'; updatePanels(); });
   $('#hRide').addEventListener('click', () => { SND.unlock(); board(); if (pendingDest != null) { register(pendingDest); pendingDest = null; } });
   $('#hTalk').addEventListener('click', () => { SND.unlock(); startTalk(view.floor); });
+  $('#hGate').addEventListener('click', () => { SND.unlock(); openGate(); });
   $('#tNext').addEventListener('click', nextLine);
   $('#tAgain').addEventListener('click', showLine);
   $('#bPocket').addEventListener('click', () => { SND.unlock(); renderPocket(); openDlg('#dPocket'); });
@@ -653,5 +732,5 @@
   requestAnimationFrame(loop);
 
   // テストよう（tools/tenku-elevator/e2e.js が よむ）
-  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard };
+  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard, openGate };
 })();
