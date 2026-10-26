@@ -179,6 +179,7 @@
     else L.push(`この かいの ことばは「${w.k}」。カードを あげるね！`);
     Object.assign(talk, { lines: L, i: 0, floor: n, friend: f, give: have ? null : w.id });
     view.talking = true;
+    layoutTalk();
     $('#tWho').textContent = f.name + (met ? `　💛 なかよし ${Math.min(5, met + 1)}` : '');
     $('#talk').classList.add('show');
     showLine();
@@ -459,10 +460,34 @@
       ctx.fillText(save.gates[view.floor] ? 'ひらいた！' : 'あいことば', gx + gw / 2, gy - 8);
     }
     // こもの と おともだち
-    const fs = Math.min(H * .34, W * .3);
+    let fs = Math.min(H * .34, W * .3), fx = W * .8, fy = wy - fs * .2;
     Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
+    // はなして いる ときは ふきだしに かぶらない ばしょへ
+    if (view.talking) ({ fs, fx, fy } = friendSpot(fs, fx, fy));
     const f = Friends.present(fl.friend, night(), fl.deco.seed);
-    if (f) Friends.draw(ctx, f, W * .8, wy - fs * .2, fs, t, { wave: view.talking, open: view.talking && Math.sin(t * 12) > 0, fly: f.kind === 'bird' && false });
+    if (f) Friends.draw(ctx, f, fx, fy, fs, t, { wave: view.talking, open: view.talking && Math.sin(t * 12) > 0 });
+  }
+  /* ふきだし（#talk）を よけて おともだちを かく ばしょと おおきさ。
+   * よこに ひろい がめんは ふきだしを ひだりに よせて みぎに、たてながは ふきだしの うえに。
+   * おともだちの え は だいたい (y - .7s)〜(y + .55s) に おさまる */
+  function friendSpot(fs, fx, fy) {
+    const tk = $('#talk'), cr = cv.getBoundingClientRect(), r = tk.getBoundingClientRect();
+    const side = tk.classList.contains('side');
+    if (side) {
+      const left = r.right - cr.left + 12, room = W - left - 8;
+      fs = Math.min(fs, room / 1.15);
+      return { fs, fx: left + room / 2, fy: Math.min(fy, H - 8 - fs * .55) };
+    }
+    const top = r.top - cr.top - 14, ceil = 84;          // かんばんの した 〜 ふきだしの うえ
+    fs = Math.max(40, Math.min(fs, (top - ceil) / 1.25));
+    fy = Math.min(fy, top - fs * .55);
+    return { fs, fx, fy };
+  }
+  function layoutTalk() {
+    const tk = $('#talk'), side = W >= 640 && W > H * 1.1;
+    tk.classList.toggle('side', side);
+    // しっぽは おともだちの ほうへ
+    tk.style.setProperty('--tail', side ? '' : `${Math.round(W * .8 - 8)}px`);
   }
   function roundRect(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
@@ -485,7 +510,7 @@
     const now = ts / 1000, dt = last ? Math.min(.05, now - last) : .016; last = now;
     for (let i = 0; i < SPEED; i++) sim.tick(dt);
     resize();
-    if (view.mode === 'car') drawCar(now); else drawHall(now);
+    if (view.mode === 'car') drawCar(now); else { if (view.talking) layoutTalk(); drawHall(now); }
     updateHud();
     panelT -= dt; if (panelT <= 0) { panelT = .2; updatePanels(); }
     // おと
