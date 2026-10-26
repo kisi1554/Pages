@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>てんくうエレベーター</title>
+<meta name="theme-color" content="#1c7ed6">
+<style>
+  :root {
+    --accent: #1c7ed6; --tint: #e7f5ff; --ink: #1d2b3a; --sub: #5c6b7a; --panel: #f4f8fc;
+    --key: #ffffff; --lit: #ffd43b; --bad: #e03131; --ok: #2f9e44;
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: #0b1a2e; color: var(--ink); overflow: hidden; }
+  body { -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+  ruby rt { font-size: .5em; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+
+  #app { height: 100%; display: flex; flex-direction: column; max-width: 1400px; margin: 0 auto; background: var(--panel); }
+  header.top { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--accent); color: #fff; flex: none; padding-top: max(6px, env(safe-area-inset-top)); }
+  header.top h1 { font-size: 17px; margin: 0 auto 0 4px; white-space: nowrap; letter-spacing: .02em; }
+  header.top h1 .floor { display: none; }
+  header.top h1 .t1, header.top h1 .t2 { display: inline-block; }
+  @media (max-width: 520px) { header.top h1 { font-size: 13px; line-height: 1.25; } header.top h1 .t2 { display: block; } .tb { min-width: 40px; padding: 0 5px; } }
+  .tb { background: rgba(255,255,255,.18); color: #fff; border-radius: 12px; min-width: 44px; height: 40px; padding: 0 8px; font-size: 18px; display: inline-flex; align-items: center; justify-content: center; gap: 2px; }
+  .tb small { font-size: 11px; }
+  .tb[aria-pressed="false"] { opacity: .55; }
+  .tb .badge { background: var(--lit); color: #333; border-radius: 9px; font-size: 11px; padding: 0 5px; margin-left: 2px; }
+
+  main.stage { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+  .view { position: relative; flex: 1; min-height: 240px; background: #000; overflow: hidden; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  .panel { flex: none; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: var(--panel); }
+
+  /* ひょうじ */
+  .disp { display: flex; gap: 8px; align-items: stretch; margin-bottom: 6px; }
+  .ind { background: #10202f; color: #ffb84d; border-radius: 12px; padding: 4px 10px; min-width: 112px; display: flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .ind .arw { font-size: 22px; width: 22px; text-align: center; color: #69db7c; }
+  .ind .num { font-size: 30px; font-weight: 800; letter-spacing: .02em; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .entry { flex: 1; background: #fff; border: 3px solid #cfe0f1; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font-size: 26px; font-weight: 800; min-height: 50px; }
+  .entry .hint { font-size: 14px; font-weight: 600; color: var(--sub); }
+  .entry.err { border-color: var(--bad); color: var(--bad); }
+  .entry.err .hint { color: var(--bad); }
+  .regs { display: flex; gap: 6px; overflow-x: auto; min-height: 34px; align-items: center; margin-bottom: 6px; scrollbar-width: none; }
+  .regs::-webkit-scrollbar { display: none; }
+  .regs .none { color: var(--sub); font-size: 13px; }
+  .chip { flex: none; background: var(--lit); border-radius: 17px; height: 32px; padding: 0 12px; font-weight: 800; box-shadow: 0 0 10px rgba(255,212,59,.9); font-size: 15px; }
+  .chip.rider { background: #ffc9de; box-shadow: 0 0 10px rgba(247,131,172,.8); }
+
+  /* テンキー */
+  .pad { display: grid; grid-template-columns: repeat(5, minmax(64px, 1fr)); grid-auto-rows: 64px; gap: 6px; }
+  .k { background: var(--key); border-radius: 14px; font-size: 28px; font-weight: 800; box-shadow: 0 3px 0 #b8c9da; min-width: 64px; min-height: 64px; display: flex; align-items: center; justify-content: center; flex-direction: column; line-height: 1.1; }
+  .k:active { transform: translateY(2px); box-shadow: 0 1px 0 #b8c9da; }
+  .k small { font-size: 12px; font-weight: 700; }
+  .k.zero { grid-column: span 3; }
+  .k.b { font-size: 20px; background: #e9ecef; }
+  .k.b[aria-pressed="true"] { background: #845ef7; color: #fff; box-shadow: 0 3px 0 #5f3dc4; }
+  .k.del { font-size: 18px; background: #e9ecef; }
+  .k.go { grid-row: span 2; background: var(--accent); color: #fff; box-shadow: 0 3px 0 #1864ab; font-size: 20px; white-space: nowrap; letter-spacing: -.05em; }
+  .k.door { font-size: 18px; background: #e3fafc; }
+  .k.out { grid-row: span 2; background: #2f9e44; color: #fff; box-shadow: 0 3px 0 #2b8a3e; font-size: 18px; white-space: nowrap; letter-spacing: -.05em; }
+  #app.hall .hud .cmp { display: none; }
+  .k:disabled { opacity: .35; }
+  .quick { display: flex; gap: 6px; overflow-x: auto; margin-top: 8px; padding-bottom: 2px; scrollbar-width: none; }
+  .quick::-webkit-scrollbar { display: none; }
+  .q { flex: none; background: #fff; border: 2px solid #cfe0f1; border-radius: 14px; height: 46px; padding: 0 12px; font-size: 15px; font-weight: 700; }
+
+  /* ホール */
+  .hallp { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; }
+  .calls { display: flex; flex-direction: column; gap: 8px; }
+  .call { width: 92px; height: 74px; border-radius: 50%; background: #fff; box-shadow: 0 4px 0 #b8c9da; font-size: 32px; border: 4px solid #dee2e6; }
+  .call[aria-pressed="true"] { border-color: var(--lit); box-shadow: 0 0 18px var(--lit); background: #fff9db; }
+  .call:disabled { opacity: .25; }
+  .hallinfo { display: flex; flex-direction: column; gap: 8px; }
+  .hallinfo .ind { min-height: 60px; }
+  .hallinfo .msg { font-size: 15px; color: var(--sub); min-height: 2.6em; }
+  .big { height: 60px; border-radius: 16px; font-size: 20px; font-weight: 800; background: var(--accent); color: #fff; box-shadow: 0 4px 0 #1864ab; }
+  .big.green { background: #2f9e44; box-shadow: 0 4px 0 #2b8a3e; }
+  .big.sub { background: #fff; color: var(--ink); border: 2px solid #cfe0f1; box-shadow: none; }
+  .big:disabled { opacity: .35; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; }
+
+  /* まどの うえの ひょうじ */
+  .meter { position: absolute; right: 8px; top: 8px; bottom: 8px; width: 30px; pointer-events: none; }
+  .meter .bar { position: absolute; left: 12px; width: 6px; top: 0; bottom: 0; border-radius: 3px; background: linear-gradient(#a5d8ff, #fff 60%, #8d6e63 60.1%, #4e342e); opacity: .8; }
+  .meter .mk { position: absolute; left: 0; width: 30px; height: 4px; background: #ff6b6b; border-radius: 2px; box-shadow: 0 0 6px #ff6b6b; }
+  .meter .lm { position: absolute; left: 20px; width: 10px; height: 2px; background: #fff; opacity: .8; }
+  .hud { position: absolute; left: 8px; top: 8px; right: 46px; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; pointer-events: none; }
+  .hud .alt { background: rgba(10,25,45,.72); color: #fff; border-radius: 10px; padding: 3px 10px; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .hud .cmp { background: rgba(255,255,255,.85); color: var(--ink); border-radius: 10px; padding: 3px 10px; font-size: 13px; font-weight: 700; }
+  .hud .cmp:empty { display: none; }
+  .bubble { position: absolute; max-width: 240px; background: #fff; border-radius: 16px; padding: 10px 12px; box-shadow: 0 6px 20px rgba(0,0,0,.3); font-size: 16px; z-index: 5; }
+  .bubble b { font-size: 20px; display: block; }
+  .bubble p { margin: 4px 0 8px; font-size: 13px; color: var(--sub); }
+  .bubble button { background: var(--accent); color: #fff; border-radius: 12px; padding: 8px 12px; font-weight: 700; font-size: 15px; }
+  .bubble button.done { background: #adb5bd; }
+  .toast { position: absolute; left: 50%; top: 22%; transform: translateX(-50%); background: rgba(16,32,47,.9); color: #fff; padding: 10px 16px; border-radius: 14px; font-size: 18px; font-weight: 700; pointer-events: none; opacity: 0; transition: opacity .25s; white-space: nowrap; z-index: 6; max-width: 92%; overflow: hidden; text-overflow: ellipsis; }
+  .toast.show { opacity: 1; }
+  .talk { position: absolute; left: 8px; right: 8px; bottom: 8px; background: rgba(255,255,255,.96); border-radius: 18px; padding: 10px 14px 10px; box-shadow: 0 6px 24px rgba(0,0,0,.35); display: none; z-index: 4; }
+  .talk.show { display: block; }
+  .talk .who { font-size: 13px; color: var(--accent); font-weight: 800; }
+  .talk .say { font-size: 19px; line-height: 1.7; min-height: 3.4em; margin: 2px 0 6px; }
+  .talk .nav { display: flex; gap: 8px; justify-content: flex-end; }
+  .talk .nav button { background: var(--accent); color: #fff; border-radius: 12px; height: 46px; padding: 0 18px; font-size: 17px; font-weight: 800; }
+  .talk .nav button.sub { background: #e9ecef; color: var(--ink); }
+
+  /* カード */
+  .card { border-radius: 18px; background: #fff; border: 4px solid var(--cc, #4dabf7); padding: 10px 12px; position: relative; }
+  .card .cat { display: inline-block; background: var(--cc); color: #fff; border-radius: 8px; padding: 1px 8px; font-size: 12px; font-weight: 800; }
+  .card .wd { font-size: 30px; font-weight: 800; margin: 6px 0 2px; line-height: 1.5; }
+  .card .stars { color: #fab005; font-size: 14px; }
+  .mini { border-radius: 14px; background: #fff; border: 3px solid var(--cc); padding: 6px 8px; text-align: left; min-height: 64px; display: flex; flex-direction: column; justify-content: space-between; }
+  .mini .wd { font-size: 19px; font-weight: 800; line-height: 1.45; }
+  .mini .lv { font-size: 12px; color: #fab005; }
+  .mini.new { box-shadow: 0 0 0 3px var(--lit); }
+
+  /* ダイアログ */
+  dialog { border: 0; border-radius: 22px; padding: 0; width: min(560px, 94vw); max-height: 90vh; background: #fff; color: var(--ink); box-shadow: 0 10px 40px rgba(0,0,0,.4); }
+  dialog::backdrop { background: rgba(5,15,30,.55); }
+  .dlg { display: flex; flex-direction: column; max-height: 90vh; }
+  .dlg header { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-bottom: 2px solid #eef3f8; }
+  .dlg header h2 { margin: 0; font-size: 20px; flex: 1; }
+  .dlg .x { width: 48px; height: 48px; border-radius: 50%; background: #e9ecef; font-size: 22px; }
+  .dlg .body { padding: 12px 14px 16px; overflow-y: auto; }
+  .seg { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .seg button { background: #e9ecef; border-radius: 12px; height: 44px; padding: 0 12px; font-size: 15px; font-weight: 700; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .jars { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 8px; }
+  .jar { flex: none; width: 62px; text-align: center; font-size: 11px; font-weight: 700; color: var(--sub); }
+  .jar .gl { height: 62px; border: 3px solid #adb5bd; border-top-width: 6px; border-radius: 10px 10px 18px 18px; position: relative; overflow: hidden; background: #f8f9fa; }
+  .jar .fill { position: absolute; left: 0; right: 0; bottom: 0; background: var(--cc); opacity: .85; }
+  .jar .n { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #222; font-weight: 800; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; }
+  .grid button { padding: 0; background: none; }
+  .empty { color: var(--sub); text-align: center; padding: 20px 0; line-height: 1.8; }
+  .kv { margin: 8px 0; line-height: 1.8; font-size: 17px; }
+  .kv b { display: inline-block; background: #eef3f8; border-radius: 8px; padding: 0 8px; font-size: 13px; margin-right: 6px; color: var(--sub); }
+  .ex { background: #fff9db; border-radius: 12px; padding: 8px 12px; font-size: 17px; line-height: 1.8; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .acts button { flex: 1; min-width: 140px; height: 54px; border-radius: 14px; font-size: 17px; font-weight: 800; background: var(--accent); color: #fff; }
+  .acts button.sub { background: #e9ecef; color: var(--ink); }
+  .choices { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+  .choices button { min-height: 58px; border-radius: 14px; background: #f1f5f9; border: 3px solid #dbe4ee; font-size: 17px; text-align: left; padding: 8px 12px; line-height: 1.6; }
+  .choices button.ok { background: #d3f9d8; border-color: var(--ok); }
+  .choices button.ng { background: #ffe3e3; border-color: var(--bad); }
+  .qtext { font-size: 20px; line-height: 1.8; font-weight: 700; }
+  .qask { color: var(--sub); font-size: 14px; margin-top: 4px; }
+  .fb { font-size: 18px; font-weight: 800; min-height: 1.6em; margin-top: 8px; }
+  .slist { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .slist button { background: #f1f5f9; border: 2px solid #dbe4ee; border-radius: 14px; min-height: 60px; padding: 6px 10px; text-align: left; font-size: 14px; line-height: 1.4; }
+  .slist button b { display: block; font-size: 18px; }
+  .slist button.on { background: #fff9db; border-color: var(--lit); }
+  .slist button.got::after { content: ' ✓'; color: var(--ok); font-weight: 800; }
+  .map { display: grid; grid-template-columns: 54px repeat(10, 1fr); gap: 2px; font-size: 10px; }
+  .map .lab { font-size: 11px; color: var(--sub); text-align: right; padding-right: 4px; line-height: 16px; }
+  .map button { height: 16px; border-radius: 3px; background: #e9ecef; padding: 0; font-size: 0; }
+  .map button.v { background: #a5d8ff; }
+  .map button.g { background: #fab005; }
+  .map button.here { outline: 3px solid #e03131; outline-offset: -1px; }
+  .map .zl { grid-column: 1 / -1; font-size: 12px; font-weight: 800; color: var(--accent); margin-top: 6px; }
+  .stat { display: flex; gap: 10px; margin-bottom: 8px; font-size: 16px; font-weight: 800; flex-wrap: wrap; }
+  .stat span { background: #eef3f8; border-radius: 10px; padding: 4px 10px; }
+  .set { display: flex; flex-direction: column; gap: 14px; }
+  .set h3 { margin: 0 0 6px; font-size: 16px; }
+  .danger { background: #ffe3e3 !important; color: var(--bad) !important; }
+  .legend { display: flex; gap: 10px; font-size: 12px; color: var(--sub); margin-bottom: 6px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -2px; margin-right: 3px; }
+
+  /* よこもち（タブレット）: まど ひだり・ボタン みぎ */
+  @media (orientation: landscape) and (min-width: 700px) {
+    main.stage { flex-direction: row; }
+    .view { flex: 1; }
+    .panel { width: 400px; overflow-y: auto; display: flex; flex-direction: column; justify-content: center; }
+    .pad { grid-template-columns: repeat(5, 68px); grid-auto-rows: 68px; justify-content: center; }
+    .quick { flex-wrap: wrap; }
+    .hallp { grid-template-columns: 1fr; }
+    .calls { flex-direction: row; justify-content: center; }
+    header.top h1 .floor { display: inline; }
+  }
+  @media (max-height: 700px) and (orientation: portrait) {
+    .pad { grid-auto-rows: 64px; gap: 5px; }
+    .regs { min-height: 28px; margin-bottom: 4px; }
+  }
+  [hidden] { display: none !important; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <h1><span class="t1">🌤️ てんくう</span><span class="t2">エレベーター</span> <span class="floor" id="tFloor"></span></h1>
+    <button class="tb" id="bPocket" aria-label="ことばの ポケット">🫙<span class="badge" id="pCount">0</span></button>
+    <button class="tb" id="bReview" aria-label="ふくしゅう">📝</button>
+    <button class="tb" id="bMap" aria-label="たてもの マップ">🗺️</button>
+    <button class="tb" id="bSound" aria-label="おと" aria-pressed="true">🔊</button>
+    <button class="tb" id="bVoice" aria-label="こえ" aria-pressed="true">🗣️</button>
+    <button class="tb" id="bSet" aria-label="せってい">⚙️</button>
+  </header>
+  <main class="stage">
+    <section class="view" id="view">
+      <canvas id="cv" aria-label="まどの そと"></canvas>
+      <div class="hud"><div class="alt" id="alt">たかさ 4m</div><div class="cmp" id="cmp"></div></div>
+      <div class="meter" id="meter"><div class="bar"></div><div class="mk" id="mk"></div></div>
+      <div class="toast" id="toast"></div>
+      <div class="bubble" id="bubble" hidden></div>
+      <div class="talk" id="talk"><div class="who" id="tWho"></div><div class="say" id="tSay"></div><div class="nav"><button class="sub" id="tAgain">🔁 もういちど</button><button id="tNext">つぎ ▶</button></div></div>
+    </section>
+    <section class="panel">
+      <!-- かごの なか -->
+      <div id="carPanel">
+        <div class="disp">
+          <div class="ind" aria-live="polite"><span class="arw" id="cArw"></span><span class="num" id="cNum">1</span></div>
+          <div class="entry" id="entry"><span id="eVal">&nbsp;</span><span class="hint" id="eHint">いきたい かいを おしてね</span></div>
+        </div>
+        <div class="regs" id="regs"></div>
+        <div class="pad" id="pad">
+          <button class="k" data-d="7">7</button><button class="k" data-d="8">8</button><button class="k" data-d="9">9</button>
+          <button class="k b" id="kB" aria-pressed="false">ちか<small>(B)</small></button>
+          <button class="k door" id="kOpen" aria-label="ひらく">◀▶<small>ひらく</small></button>
+          <button class="k" data-d="4">4</button><button class="k" data-d="5">5</button><button class="k" data-d="6">6</button>
+          <button class="k del" id="kDel">けす<small>⌫</small></button>
+          <button class="k door" id="kClose" aria-label="しめる">▶◀<small>しめる</small></button>
+          <button class="k" data-d="1">1</button><button class="k" data-d="2">2</button><button class="k" data-d="3">3</button>
+          <button class="k go" id="kGo">いく！</button>
+          <button class="k out" id="kOut" disabled>おりる<small>🚶</small></button>
+          <button class="k zero" data-d="0">0</button>
+        </div>
+        <div class="quick">
+          <button class="q" data-f="1">🏠 1かい</button>
+          <button class="q" data-f="500">🌤️ おくじょう</button>
+          <button class="q" data-f="-50">💎 いちばん した</button>
+          <button class="q" id="qNew">🎲 まだ いってない かい</button>
+          <button class="q" id="qSp">⭐ とくべつな かい</button>
+        </div>
+      </div>
+      <!-- ホール -->
+      <div id="hallPanel" hidden>
+        <div class="hallp">
+          <div class="hallinfo">
+            <div class="row" style="align-items:center">
+              <div class="ind" style="flex:none"><span class="arw" id="hArw"></span><span class="num" id="hNum">1</span></div>
+              <div class="msg" id="hMsg"></div>
+            </div>
+            <div class="row">
+              <button class="big green" id="hRide" disabled>🛗 のる</button>
+              <button class="big sub" id="hTalk">💬 はなす</button>
+            </div>
+          </div>
+          <div class="calls">
+            <button class="call" id="cUp" aria-pressed="false" aria-label="うえへ">▲</button>
+            <button class="call" id="cDn" aria-pressed="false" aria-label="したへ">▼</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<dialog id="dPocket"><div class="dlg"><header><h2>🫙 ことばの ポケット</h2><button class="x" data-close>✕</button></header>
+  <div class="body">
+    <div class="jars" id="jars"></div>
+    <div class="seg" id="sortSeg">
+      <button data-s="got">もらった じゅん</button><button data-s="aiueo">あいうえお</button><button data-s="cat">なかま べつ</button><button data-s="star">★ じゅん</button>
+    </div>
+    <div class="grid" id="cards"></div>
+  </div></div></dialog>
+<dialog id="dCard"><div class="dlg"><header><h2>ことばカード</h2><button class="x" data-close>✕</button></header><div class="body" id="cardBody"></div></div></dialog>
+<dialog id="dReview"><div class="dlg"><header><h2>📝 ふくしゅう</h2><button class="x" data-close>✕</button></header><div class="body" id="revBody"></div></div></dialog>
+<dialog id="dMap"><div class="dlg"><header><h2>🗺️ たてもの マップ</h2><button class="x" data-close>✕</button></header><div class="body" id="mapBody"></div></div></dialog>
+<dialog id="dSp"><div class="dlg"><header><h2>⭐ とくべつな かい</h2><button class="x" data-close>✕</button></header><div class="body"><div class="slist" id="spList"></div></div></div></dialog>
+<dialog id="dSet"><div class="dlg"><header><h2>⚙️ せってい</h2><button class="x" data-close>✕</button></header><div class="body set" id="setBody"></div></div></dialog>
+
+<script src="words.js?v=b07b18a"></script>
+<script src="friends.js?v=b07b18a"></script>
+<script src="elevator.js?v=b07b18a"></script>
+<script src="floors.js?v=b07b18a"></script>
+<script src="scenery.js?v=b07b18a"></script>
+<script src="audio.js?v=b07b18a"></script>
+<script src="pocket.js?v=b07b18a"></script>
+<script src="app.js?v=b07b18a"></script>
+</body>
+</html>
