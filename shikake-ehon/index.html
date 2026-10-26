@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#ffe3ef">
+<title>まいごの ぼうし ― さわって すすむ しかけ えほん</title>
+<link rel="stylesheet" href="style.css?v=73f6c15">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs id="defsInner"></defs></svg>
+
+<!-- ============================ ひょうし ============================ -->
+<section id="screen-title" class="screen is-on">
+  <div class="cover">
+    <div class="cover-art" id="coverArt"></div>
+    <div class="cover-text">
+      <h1 class="title"><span class="t1">まいごの</span><span class="t2">ぼうし</span></h1>
+      <p class="subtitle">さわって すすむ しかけ えほん</p>
+      <div class="modes">
+        <button class="big-btn" id="btn-yonde">🔊 よんで</button>
+        <button class="big-btn alt" id="btn-jibun">👆 じぶんで よむ</button>
+      </div>
+      <div class="sub-btns">
+        <button class="ghost-btn is-hidden" id="btn-continue">🔖 つづき から</button>
+        <button class="ghost-btn" id="btn-toc">📑 もくじ</button>
+        <button class="ghost-btn" id="btn-shiori">🐱 しおり</button>
+      </div>
+      <div class="settings">
+        <button class="toggle" id="tg-music" aria-pressed="true">🎵 おんがく <b>オン</b></button>
+        <button class="toggle" id="tg-voice" aria-pressed="true">🗣 よみあげ <b>オン</b></button>
+      </div>
+      <p class="collect" id="titleCollect"></p>
+      <a class="back-menu" href="../">← あそびメニュー</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ ほん ============================ -->
+<section id="screen-book" class="screen">
+  <header class="topbar">
+    <button class="icon-btn" id="btn-home" aria-label="ひょうし へ">🏠</button>
+    <div class="where"><span id="placeName"></span><small id="pageNo"></small></div>
+    <button class="icon-btn mike-btn" id="btn-mike" aria-label="しおり">🐱<b id="mikeCount">0</b></button>
+    <button class="icon-btn" id="btn-music" aria-label="おんがく">🎵<b></b></button>
+    <button class="icon-btn" id="btn-voice" aria-label="よみあげ">🗣<b></b></button>
+  </header>
+  <div class="book" id="book">
+    <div class="leaf leaf-art">
+      <div class="art" id="art">
+        <div class="art-svg" id="artSvg"></div>
+        <canvas id="fx"></canvas>
+        <div class="sparkles" id="sparkles"></div>
+        <div class="art-ui" id="artUi"></div>
+      </div>
+    </div>
+    <div class="leaf leaf-text">
+      <div class="words" id="words"></div>
+      <div class="controls">
+        <button class="nav-btn prev" id="btn-prev" aria-label="まえ の ページ">◀</button>
+        <button class="nav-btn reread" id="btn-reread" aria-label="もういちど よむ">🔁</button>
+        <button class="nav-btn next" id="btn-next">つぎ ▶</button>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+</section>
+
+<!-- ============================ おしまい ============================ -->
+<section id="screen-end" class="screen">
+  <div class="end-card">
+    <div class="end-medal"><span id="endIcon">👒</span></div>
+    <h2 class="end-big">おしまい</h2>
+    <p class="end-title" id="endTitle"></p>
+    <p class="end-count">みつけた けつまつ <b id="endCount">1</b> / 3</p>
+    <div class="end-list" id="endList"></div>
+    <p class="end-hint" id="endHint"></p>
+    <p class="end-mike" id="endMike"></p>
+    <div class="end-btns">
+      <button class="big-btn" id="btn-end-toc">📑 もくじ</button>
+      <button class="ghost-btn" id="btn-end-again">📖 はじめ から</button>
+      <button class="ghost-btn" id="btn-end-home">🏠 ひょうし</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ もくじ・しおり ============================ -->
+<div class="modal" id="modal-toc" role="dialog" aria-label="もくじ">
+  <div class="sheet">
+    <h2>📑 もくじ</h2>
+    <div class="toc-list" id="tocList"></div>
+    <button class="ghost-btn" data-close>とじる</button>
+  </div>
+</div>
+<div class="modal" id="modal-shiori" role="dialog" aria-label="しおり">
+  <div class="sheet">
+    <h2>🔖 しおり</h2>
+    <div id="shioriBody"></div>
+    <button class="ghost-btn" data-close>とじる</button>
+  </div>
+</div>
+
+<script src="art.js?v=73f6c15"></script>
+<script src="story.js?v=73f6c15"></script>
+<script src="audio.js?v=73f6c15"></script>
+<script src="shikake.js?v=73f6c15"></script>
+<script src="app.js?v=73f6c15"></script>
+</body>
+</html>
