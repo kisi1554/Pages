@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>きょうりゅう はっくつ</title>
+<meta name="description" content="がけの ちそうを ほって かせきを みつけ、ほねを くみたてると きょうりゅうが うごきだす！ ずかん・おおきさくらべ・ねんぴょう つき。">
+<meta name="theme-color" content="#66a80f">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🦖</text></svg>">
+<link rel="stylesheet" href="style.css?v=97e7c38">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button id="btnBack" class="tool" aria-label="もどる" hidden>◀<span>もどる</span></button>
+  <h1 id="title">🦖 きょうりゅう はっくつ</h1>
+  <button id="btnSnd" class="tool" aria-label="おと">🔊<span>おと</span></button>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section class="screen" id="home">
+    <canvas id="homeArt" class="homeArt" aria-hidden="true"></canvas>
+    <p class="lead">がけを ほって かせきを さがそう！<br>ほねを くみたてると きょうりゅうが うごきだすよ</p>
+    <div class="menuGrid">
+      <button class="bigBtn dig" data-go="layers"><b>⛏️</b><span>はっくつ</span><small>かせきを ほる</small></button>
+      <button class="bigBtn zukan" data-go="zukan"><b>📖</b><span>ずかん</span><small id="homeCount"></small></button>
+      <button class="bigBtn size" data-go="compare"><b>📏</b><span>おおきさ くらべ</span><small>でんしゃと くらべる</small></button>
+      <button class="bigBtn time" data-go="timeline"><b>⏳</b><span>ねんぴょう</span><small>いつ いたのかな</small></button>
+    </div>
+    <button class="linkBtn" data-go="parents">ほごしゃの かたへ</button>
+  </section>
+
+  <!-- がけ（ちそう えらび） -->
+  <section class="screen" id="layers" hidden>
+    <p class="say">どの <ruby>地層<rt>ちそう</rt></ruby> を ほる？ <b>したの ちそう ほど むかし</b> に つもったんだよ。</p>
+    <div class="cliffWrap">
+      <div class="cliffArrow" aria-hidden="true"><span>あたらしい</span><i></i><span>むかし</span></div>
+      <div class="cliff" id="cliff"></div>
+    </div>
+  </section>
+
+  <!-- はっくつ -->
+  <section class="screen" id="dig" hidden>
+    <div class="digHead">
+      <span id="digPeriod" class="pill"></span>
+      <span class="stars" id="digStars" aria-label="ほし"></span>
+      <div class="meter" aria-label="ほれた わりあい"><div id="digBar"></div></div>
+    </div>
+    <div class="digBody">
+      <div class="digStage" id="digStage">
+        <canvas id="digFossil"></canvas>
+        <canvas id="digSand"></canvas>
+        <canvas id="digRock"></canvas>
+        <canvas id="digTop"></canvas>
+      </div>
+      <div class="toolBar" id="toolBar">
+        <button class="toolBtn on" data-tool="brush"><b>🖌️</b><span>ハケ</span><small>なぞって すなを はらう</small></button>
+        <button class="toolBtn" data-tool="hammer"><b>🔨</b><span>ハンマー</span><small>タップで いわを わる</small></button>
+        <button class="toolBtn" data-tool="loupe"><b>🔍</b><span>ルーペ</span><small>したに ある ほねを みる</small></button>
+      </div>
+    </div>
+    <p class="say" id="digMsg"></p>
+  </section>
+
+  <!-- くみたて -->
+  <section class="screen" id="build" hidden>
+    <div class="buildHead">
+      <span id="buildName" class="pill"></span>
+      <span id="buildCount" class="pill sub"></span>
+      <button id="btnHint" class="smallBtn">💡 ヒント</button>
+    </div>
+    <div class="buildStage" id="buildStage"><canvas id="buildCanvas"></canvas></div>
+    <p class="say" id="buildMsg">ほねを ドラッグして かげの ところに はめよう！</p>
+    <div class="buildDone" id="buildDone" hidden></div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="screen" id="zukan" hidden>
+    <div class="tabs" id="zukanTabs"></div>
+    <div class="chips" id="zukanChips"></div>
+    <p class="note" id="zukanNote"></p>
+    <div class="cards" id="zukanCards"></div>
+  </section>
+
+  <!-- おおきさ くらべ -->
+  <section class="screen" id="compare" hidden>
+    <p class="say">おなじ しゅくしゃく（ちぢめかた）で ならべたよ。</p>
+    <div class="pickRow" id="comparePick"></div>
+    <div class="compareBox"><canvas id="compareCanvas"></canvas></div>
+    <p class="say" id="compareMsg"></p>
+  </section>
+
+  <!-- ねんぴょう -->
+  <section class="screen" id="timeline" hidden>
+    <p class="say">よこに スクロール してね。<b>みぎへ いくほど いまに ちかい</b> よ。</p>
+    <div class="tlScroll" id="tlScroll"><div class="tl" id="tl"></div></div>
+    <p class="say" id="tlMsg"></p>
+  </section>
+
+  <!-- ほごしゃの かたへ -->
+  <section class="screen" id="parents" hidden>
+    <div class="paper">
+      <h2>保護者の方へ</h2>
+      <ul>
+        <li><b>色や模様は想像です。</b>恐竜の色はほとんど分かっていません（羽毛の化石から色が推定された種はごく一部です）。アプリの色はやさしい見た目にするための想像です。</li>
+        <li><b>大きさは研究で変わります。</b>全長・体重は博物館などの資料をもとに「やく」「〜くらい」と幅を持たせています。部分的な骨しか見つかっていない種（アルゼンチノサウルスなど）は特に幅があります。</li>
+        <li><b>鳴き声は分かっていません。</b>アプリの声は「こんな声かも？」という合成音です。</li>
+        <li><b>恐竜ではない生き物</b>（翼竜のプテラノドン、首長竜のフタバスズキリュウ、モササウルス、魚竜など）は、ずかんの別の棚に分けています。</li>
+        <li><b>鳥は恐竜の子孫（なかま）です。</b>羽毛があった恐竜も見つかっています（ヴェロキラプトルなど）。</li>
+        <li>骨の絵・くみたてパズルは、子ども向けに簡略化した模式図で、実際の骨の数や形とは異なります。</li>
+        <li>発掘のハンマーは「岩だけをやさしく」。速く叩きすぎたり、出てきた骨を叩いたりすると化石にひびが入り、★が減ります。</li>
+        <li>進み具合はこの端末のブラウザ（localStorage）にだけ保存されます。</li>
+      </ul>
+      <p>出典・参考は <a href="https://github.com/kisi1554/Claude/tree/main/kyoryu-hakkutsu" target="_blank" rel="noopener">README</a> にまとめています。</p>
+      <button class="smallBtn" id="btnReset">きろくを ぜんぶ けす</button>
+    </div>
+  </section>
+</main>
+
+<!-- しょうさい・おしらせ -->
+<div class="overlay" id="sheet" hidden>
+  <div class="sheetBox">
+    <button class="close" id="sheetClose" aria-label="とじる">✕</button>
+    <div id="sheetBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="data.js?v=97e7c38"></script>
+<script src="art.js?v=97e7c38"></script>
+<script src="sound.js?v=97e7c38"></script>
+<script src="dig.js?v=97e7c38"></script>
+<script src="skeleton.js?v=97e7c38"></script>
+<script src="main.js?v=97e7c38"></script>
+</body>
+</html>
