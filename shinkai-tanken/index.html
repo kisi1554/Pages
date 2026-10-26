@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>しんかい たんけん</title>
+<style>
+  :root {
+    --accent: #1d3b8b;
+    --tint: #e6ecfa;
+    --ink: #10214d;
+    --panel: rgba(8, 20, 52, .72);
+    --line: rgba(160, 190, 255, .35);
+    --good: #40c057;
+    --warn: #ffa94d;
+    --bad: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #061334; color: #fff;
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font-family: inherit; color: inherit; cursor: pointer; }
+  rt { font-size: .5em; }
+  [hidden] { display: none !important; }
+
+  #sea { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---- うえ の パネル ---- */
+  #hud {
+    position: fixed; left: 8px; right: 8px; top: calc(6px + env(safe-area-inset-top));
+    display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+    padding: 6px 10px 8px; border-radius: 18px; background: var(--panel);
+    border: 2px solid var(--line); pointer-events: none;
+  }
+  #hud .depth { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; min-width: 0; }
+  #depthNum { font-size: clamp(28px, 7.5vw, 36px); line-height: 1.15; font-weight: 800; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+  #depthNum small { font-size: .55em; margin-left: 2px; }
+  #zoneName { display: inline-block; font-size: 13.5px; font-weight: 700; padding: 1px 9px; margin-right: 4px; border-radius: 999px; background: #3b5bdb; white-space: nowrap; }
+  #hud .icons { display: flex; gap: 6px; pointer-events: auto; align-items: flex-start; }
+  .iconbtn {
+    width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--line);
+    background: rgba(255,255,255,.12); font-size: 26px; line-height: 1; padding: 0;
+  }
+  .iconbtn:active { transform: scale(.94); }
+  #hud .stats { grid-column: 1 / -1; font-size: 13.5px; line-height: 1.5; color: #dbe4ff; white-space: nowrap; overflow: hidden; }
+  #hud .stats b { color: #fff; }
+  #hud .bars { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bar { display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
+  .bar .track { flex: 1; height: 12px; border-radius: 6px; background: rgba(255,255,255,.18); overflow: hidden; }
+  .bar .fill { height: 100%; width: 100%; background: var(--good); border-radius: 6px; transition: background .3s; }
+  .bar.low .fill { background: var(--warn); }
+  .bar.empty .fill { background: var(--bad); }
+  .bar.low { animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+
+  /* ---- おしらせ ---- */
+  #toasts {
+    position: fixed; left: 8px; width: min(560px, calc(100% - 96px));
+    display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 5;
+  }
+  .toast {
+    background: rgba(255,255,255,.92); color: var(--ink); border-radius: 14px; padding: 6px 12px;
+    font-size: 14.5px; line-height: 1.55; box-shadow: 0 4px 16px rgba(0,0,0,.3); border-left: 8px solid var(--accent);
+    animation: tin .3s ease-out;
+  }
+  .toast.warn { border-left-color: var(--warn); background: #fff4e6; font-weight: 700; }
+  .toast.ok { border-left-color: var(--good); }
+  @keyframes tin { from { opacity: 0; transform: translateY(-8px); } }
+
+  /* ---- そうさ ボタン ---- */
+  #controls { position: fixed; left: 0; right: 0; bottom: calc(10px + env(safe-area-inset-bottom)); pointer-events: none; }
+  .dpad {
+    position: absolute; left: 10px; bottom: 0; display: grid;
+    grid-template-columns: repeat(3, 62px); grid-template-rows: repeat(3, 62px); gap: 4px; pointer-events: auto;
+  }
+  .dpad button, .acts button {
+    border: 3px solid rgba(255,255,255,.55); background: rgba(20,40,100,.55); border-radius: 18px;
+    font-size: 28px; font-weight: 800; touch-action: none; padding: 0;
+  }
+  .dpad button.on, .dpad button:active { background: rgba(80,130,255,.8); }
+  .dpad [data-dir=up] { grid-area: 1 / 2; }
+  .dpad [data-dir=left] { grid-area: 2 / 1; }
+  .dpad [data-dir=right] { grid-area: 2 / 3; }
+  .dpad [data-dir=down] { grid-area: 3 / 2; }
+  .acts { position: absolute; right: 10px; bottom: 0; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+  .acts button { width: 84px; height: 76px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .acts button span { font-size: 13px; font-weight: 700; }
+  #btnLight.on { background: rgba(255,212,59,.85); color: #3b2f00; border-color: #fff3bf; }
+  #btnSonar.on { background: rgba(102,217,232,.8); color: #052c33; }
+
+  /* ---- タイトル・まど ---- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center;
+    padding: 16px; background: rgba(4,12,36,.55);
+  }
+  #title { background: linear-gradient(#7fd3ff 0%, #2f74c9 30%, #13307a 60%, #050a22 100%); }
+  .card {
+    width: min(560px, 100%); max-height: calc(100% - 20px); overflow: auto; -webkit-overflow-scrolling: touch;
+    background: #fff; color: var(--ink); border-radius: 26px; padding: 20px 18px;
+    box-shadow: 0 10px 40px rgba(0,0,0,.4); touch-action: pan-y;
+  }
+  #title .card { text-align: center; background: rgba(255,255,255,.95); }
+  h1 { margin: 4px 0 6px; font-size: clamp(30px, 8vw, 44px); color: var(--accent); letter-spacing: .06em; }
+  h2 { margin: 0 0 10px; font-size: 22px; color: var(--accent); }
+  h3 { margin: 16px 0 8px; font-size: 17px; padding: 4px 10px; border-radius: 10px; color: #fff; }
+  .lead { font-size: 16px; line-height: 1.7; margin: 6px 0 14px; }
+  .big {
+    display: block; width: 100%; min-height: 64px; margin: 10px 0 0; border: 0; border-radius: 20px;
+    background: var(--accent); color: #fff; font-size: 22px; font-weight: 800; letter-spacing: .05em;
+    box-shadow: 0 5px 0 #0f2259;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #0f2259; }
+  .big.sub { background: var(--tint); color: var(--accent); box-shadow: 0 5px 0 #b9c7ea; }
+  .howto { text-align: left; font-size: 15px; line-height: 1.7; background: var(--tint); border-radius: 16px; padding: 10px 14px; margin: 14px 0 0; }
+  .howto li { margin: 2px 0; }
+  .best { font-size: 15px; color: #4a5a85; margin: 8px 0 0; }
+  .x {
+    float: right; width: 52px; height: 52px; border-radius: 16px; border: 2px solid #c5d0ee;
+    background: #fff; font-size: 26px; margin: -6px -4px 4px 8px; color: var(--accent);
+  }
+
+  /* ずかん */
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+  .zcard {
+    border: 2px solid #d5ddf3; border-radius: 16px; background: #0d1c47; color: #fff; padding: 6px 4px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 120px; font-size: 13px; line-height: 1.3;
+  }
+  .zcard canvas { width: 106px; height: 72px; }
+  .zcard.unknown { background: #e9edf7; color: #7c88a8; }
+  .zcard .nm { font-weight: 700; text-align: center; }
+  .zcount { font-size: 15px; margin: 0 0 6px; }
+  .detail { text-align: center; }
+  .detail canvas { width: 100%; max-width: 420px; height: auto; aspect-ratio: 420 / 260; background: radial-gradient(#2b4aa8, #0a1640); border-radius: 18px; }
+  .detail dl { text-align: left; margin: 12px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; font-size: 16px; line-height: 1.6; }
+  .detail dt { font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .detail dd { margin: 0; }
+  .tag { display: inline-block; padding: 1px 10px; border-radius: 999px; background: var(--tint); color: var(--accent); font-size: 14px; margin: 2px; font-weight: 700; }
+  .newbadge { display: inline-block; background: #ffd43b; color: #5c3c00; font-weight: 800; padding: 2px 12px; border-radius: 999px; margin-bottom: 6px; }
+
+  /* ミッション */
+  .mlist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .mlist li { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: center; padding: 10px; border-radius: 16px; background: #f1f4fc; font-size: 16px; line-height: 1.5; }
+  .mlist li.done { background: #ebfbee; }
+  .mlist .st { font-size: 30px; text-align: center; }
+  .mlist .hint { font-size: 13.5px; color: #5a6890; }
+  .prog { height: 8px; border-radius: 4px; background: #dbe2f5; overflow: hidden; margin-top: 4px; }
+  .prog i { display: block; height: 100%; background: var(--accent); }
+  .row2 { display: flex; gap: 8px; }
+  .row2 .big { flex: 1; font-size: 18px; letter-spacing: 0; }
+  .reset { margin-top: 18px; font-size: 14px; background: none; border: 0; color: #8a94b0; text-decoration: underline; min-height: 44px; }
+
+  @media (orientation: landscape) and (min-width: 700px) {
+    #hud { right: auto; width: min(640px, calc(100% - 130px)); }
+    .dpad { grid-template-columns: repeat(3, 72px); grid-template-rows: repeat(3, 72px); }
+    .acts button { width: 92px; height: 80px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="sea" aria-label="うみ の なか"></canvas>
+
+<header id="hud">
+  <div class="depth"><span id="depthNum">0<small>m</small></span></div>
+  <div class="icons">
+    <button class="iconbtn" id="btnMission" aria-label="ミッション">🎯</button>
+    <button class="iconbtn" id="btnZukan" aria-label="ずかん">📖</button>
+    <button class="iconbtn" id="btnSound" aria-label="おと オン・オフ">🔊</button>
+  </div>
+  <div class="stats">
+    <div><span id="zoneName">ひょうそう</span> 🌡️<ruby>水温<rt>すいおん</rt></ruby> <b id="temp">やく 24℃</b></div>
+    <div>⬇️<ruby>水圧<rt>すいあつ</rt></ruby> <span id="press">つめ に やく 1kg</span></div>
+  </div>
+  <div class="bars">
+    <div class="bar" id="batBox">🔋 でんち <div class="track"><div class="fill" id="batBar"></div></div></div>
+    <div class="bar" id="oxyBox">🫧 <ruby>酸素<rt>さんそ</rt></ruby> <div class="track"><div class="fill" id="oxyBar"></div></div></div>
+  </div>
+</header>
+
+<div id="toasts"></div>
+
+<div id="controls">
+  <div class="dpad" aria-label="いどう">
+    <button data-dir="up" aria-label="うえ へ">▲</button>
+    <button data-dir="left" aria-label="ひだり へ">◀</button>
+    <button data-dir="right" aria-label="みぎ へ">▶</button>
+    <button data-dir="down" aria-label="した へ">▼</button>
+  </div>
+  <div class="acts">
+    <button id="btnLight" aria-label="ライト">💡<span>ライト</span></button>
+    <button id="btnSonar" aria-label="ソナー">📡<span>ソナー</span></button>
+  </div>
+</div>
+
+<div class="overlay" id="title">
+  <div class="card">
+    <div style="font-size:56px; line-height:1">🐙🌊</div>
+    <h1>しんかい たんけん</h1>
+    <p class="lead"><ruby>潜水艇<rt>せんすいてい</rt></ruby>「たんけんごう」で うみ の そこ へ。<br>くらやみ に すむ いきもの を しゃしん に とって、ずかん を つくろう！</p>
+    <button class="big" id="btnStart">しゅっぱつ！ 🚢</button>
+    <div class="row2">
+      <button class="big sub" id="btnTitleZukan">📖 ずかん</button>
+      <button class="big sub" id="btnTitleMission">🎯 ミッション</button>
+    </div>
+    <p class="best" id="best"></p>
+    <ul class="howto">
+      <li>▲▼◀▶ ボタン（または がめん を ドラッグ）で うごく。ながく おすと はやく なるよ</li>
+      <li>💡 ライト で まわり が <ruby>見<rt>み</rt></ruby>える。でんち が へるので こまめ に けそう</li>
+      <li>いきもの を タップ すると 📷 しゃしん → ずかん に のる</li>
+      <li>📡 ソナー で ちかく の いきもの や ねっすい が わかる</li>
+      <li>でんち・<ruby>酸素<rt>さんそ</rt></ruby> が へったら うえ へ。うみ の <ruby>上<rt>うえ</rt></ruby> に でると じゅうでん できる</li>
+    </ul>
+  </div>
+</div>
+
+<div class="overlay" id="modal" hidden>
+  <div class="card" id="modalCard">
+    <button class="x" id="modalClose" aria-label="とじる">✕</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script src="data.js?v=64609e7"></script>
+<script src="render.js?v=64609e7"></script>
+<script src="sound.js?v=64609e7"></script>
+<script src="dive.js?v=64609e7"></script>
+</body>
+</html>
