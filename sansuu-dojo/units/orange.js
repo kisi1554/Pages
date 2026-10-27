@@ -13,7 +13,7 @@
     build: function (p) {
       var n = p.n, k = n - 10, r = SD.rng(p.s);
       var tool = { name: "blocks", cfg: { frames: 2, mode: "place" } };
-      if (p.t === "count") return { q: "ブロック は いくつ？", pic: P.frame(n, { frames: 2 }), ans: n, kind: { op: "count", n: n }, type: "20 まで の かず を よむ", tool: tool };
+      if (p.t === "count") return { q: "ブロック は いくつ？", pic: P.frame(n, { frames: 2 }), ans: n, kind: { op: "count", n: n }, type: "20 まで の かず を よむ", tool: tool, picWithTool: true };
       if (p.t === "make") return { q: "10 と " + k + " で いくつ？", expr: "10 と " + k + " で □", ans: n, kind: { op: "+", a: 10, b: k }, type: "10 と いくつ", tool: tool, toolAnswer: false };
       if (p.t === "split") return { q: n + " は 10 と いくつ？", expr: n + " は 10 と □", ans: k, kind: { op: "decomp", T: n, a: 10 }, type: "10 と いくつ", tool: tool };
       if (p.t === "seq") {

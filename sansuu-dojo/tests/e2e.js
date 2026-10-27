@@ -68,7 +68,7 @@ const url = "file://" + path.resolve(__dirname, "../index.html") + "?fast=1";
     }
     async function finishQuiz(label, wrongFirst) {
       let n = 0, shotTaken = false;
-      while ((await page.evaluate(() => window.__sd.view)) === "q" && n < 40) {
+      while ((await page.evaluate(() => window.__sd.view)) === "q" && n < 200) {
         if (!shotTaken && label) { await shot(label); await noHScroll(label); await bigTargets(label); shotTaken = true; }
         const ok = await answer(wrongFirst && n === 0);
         if (!ok) break;

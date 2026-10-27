@@ -6,6 +6,7 @@ const fs = require("fs");
 const path = require("path");
 const SD = require("../engine.js");
 require("../tools/pics.js");
+require("../tools/pics2.js");
 const dir = path.join(__dirname, "../units");
 const ORDER = ["shiro", "kiiro", "orange", "midori", "ao", "murasaki", "cha", "kuro"];
 fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
@@ -26,6 +27,8 @@ function verify(u, p) {
     case "decomp": return p.ans === k.T - k.a;
     case "count": return p.ans === k.n;
     case "clock": return p.ans === `${k.h}:${k.m}`;
+    case "kukurev": return k.a === undefined || p.ans === k.b;
+    case "fracof": return p.ans * k.d === k.n;
     case "cmp":
       if (num(p.ans)) return p.ans === (k.less ? Math.min(k.a, k.b) : Math.max(k.a, k.b));
       return ["a", "b", "red", "blue"].includes(p.ans);
@@ -45,7 +48,16 @@ const RANGE = {
   kuriagari: (p) => p.kind.a <= 9 && p.kind.b <= 9 && p.ans > 10,
   kurisagari: (p) => p.kind.a <= 18 && p.kind.a >= 11 && p.kind.a % 10 < p.kind.b && p.ans < 10,
   mittsu: (p) => { let s = 0; return p.kind.terms.every((t) => { s += t; return s >= 0 && s <= 20; }); },
-  tokei1: (p) => [0, 30].includes(p.kind.m)
+  tokei1: (p) => [0, 30].includes(p.kind.m),
+  kazu100: (p) => (typeof p.ans === "number" ? p.ans <= 120 : true),
+  nanju: (p) => p.ans <= 100 && (p.kind.a % 10 === 0 || p.kind.b % 10 === p.kind.a % 10),
+  hissan2: (p) => p.ans <= 99 && p.kind.a >= 10 && p.kind.a <= 99 && p.kind.b <= 99,
+  hissan3: (p) => p.ans <= 999 && (p.kind.a >= 100 || p.ans >= 100),
+  kake: (p) => typeof p.ans !== "number" || p.ans <= 45,
+  kuku1: (p) => [2, 5, 3, 4].includes(p.kind.a) || p.kind.op !== "*",
+  kuku2: (p) => [6, 7, 8, 9, 1].includes(p.kind.a) || p.kind.op !== "*",
+  tokei2: (p) => p.kind.m >= 0 && p.kind.m < 60,
+  tape: (p) => typeof p.ans !== "number" || (p.ans > 0 && p.ans <= 99)
 };
 
 for (const u of SD.units) {
@@ -72,21 +84,24 @@ for (const u of SD.units) {
         assert.ok(vs.length >= 2, `せんたくし 2つ いじょう ${where}`);
       }
       if (p.toolAnswer) assert.ok(p.tool && p.tool.name, `どうぐ で こたえる もんだい に どうぐ ${where}`);
+      if (p.accept) assert.ok(p.accept.includes(String(p.ans)), `accept に こたえ ${where}`);
+      if (!num(p.ans)) assert.ok(p.choices || p.toolAnswer, `すうじ で ない こたえ は えらぶ か どうぐ ${where}`);
       if (lv === 2) assert.ok(!p.toolAnswer || u.testTool, `しけん は どうぐ なし で こたえられる ${where}`);
       const key = [p.q, p.expr, p.pic, String(p.ans), (p.choices || []).map((c) => c.v).join()].join("|");
       seen.set(key, (seen.get(key) || 0) + 1);
     }
     const max = Math.max(...seen.values());
     assert.ok(seen.size >= (u.minUnique || 15), `${u.id}: しゅるい が すくなすぎない (${seen.size})`);
-    assert.ok(max <= N * 0.12, `${u.id}: おなじ もんだい が でて すぎない (さいだい ${max}かい)`);
+    assert.ok(max <= N * (u.maxFreq || 0.12), `${u.id}: おなじ もんだい が でて すぎない (さいだい ${max}かい)`);
   });
 
   test(`${u.belt} / ${u.id}: れんしゅう は どうぐ つき → なし、ちょうふく なし`, () => {
     const ps = SD.makePractice(u, SD.rng(7));
     assert.ok(ps.length >= 5);
-    assert.equal(ps[0].lv, 0);
+    if (!u.timed) assert.equal(ps[0].lv, 0);
     assert.equal(ps[ps.length - 1].lv, 1);
-    assert.equal(new Set(ps.map((p) => p.key)).size, ps.length, "おなじ もんだい が 2かい でない");
+    if (!u.timed) assert.equal(new Set(ps.map((p) => p.key)).size, ps.length, "おなじ もんだい が 2かい でない");
+    else ps.slice(1).forEach((p, i) => assert.ok(ps.length >= 60, "1ぷん ぶん の もんだい"));
   });
 
   test(`${u.belt} / ${u.id}: おてほん・やってみる が ある`, () => {
@@ -241,4 +256,16 @@ test("よみあげ と ふりがな", () => {
   assert.equal(SD.say("7 + 5 = □"), "7 たす 5 は？");
   assert.equal(SD.say("13 − 8 = □"), "13 ひく 8 は？");
   assert.equal(SD.say("3 × 4 = □"), "3 かける 4 は？");
+});
+
+test("かたち の はんてい（てん を むすぶ）", () => {
+  assert.equal(SD.classify([[0, 0], [0, 3], [4, 3]]), "righttri");
+  assert.equal(SD.classify([[0, 3], [4, 3], [1, 0]]), "tri");
+  assert.equal(SD.classify([[0, 0], [3, 0], [3, 3], [0, 3]]), "square");
+  assert.equal(SD.classify([[0, 0], [5, 0], [5, 2], [0, 2]]), "rect");
+  assert.equal(SD.classify([[0, 3], [5, 3], [4, 0], [1, 0]]), "quad");
+  assert.equal(SD.classify([[0, 0], [1, 0], [2, 0]]), "", "いっちょくせん");
+  assert.equal(SD.classify([[0, 0], [2, 2], [2, 0], [0, 2]]), "", "ねじれた 四角 は かたち に ならない");
+  for (const k of ["tri", "righttri", "rect", "square", "quad"]) SD.SHAPES && SD.SHAPES[k].forEach((pts) => assert.equal(SD.classify(pts), k, JSON.stringify(pts)));
+  assert.deepEqual(SD.rightCorners([[0, 0], [3, 0], [3, 3], [0, 3]]), [0, 1, 2, 3]);
 });

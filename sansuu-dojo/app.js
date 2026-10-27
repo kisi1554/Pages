@@ -205,10 +205,25 @@
     var title = mode === "t" ? "📜 " + SD.belt(meta.belt).name + " しょうきゅう しけん" : mode === "k" ? "📅 きょう の けいこ" : mode === "r" ? "🔁 まちがえた ところ" : meta.u.em + " " + meta.u.title + "：れんしゅう";
     show("q", title, mode === "p" ? function () { openUnit(meta.u, "exp"); } : mode === "k" ? home : map);
     cur.quiz = { list: list, mode: mode, meta: meta, i: 0, res: [], requeued: {} };
+    var tl = mode === "p" && meta.u.timed;
+    if (tl) {
+      var Q0 = cur.quiz, end = Date.now() + tl * 1000 * (FAST ? 0.25 : 1);
+      Q0.timed = true;
+      var tick = function () {
+        if (cur.quiz !== Q0 || cur.view !== "q") return;
+        var left = Math.max(0, Math.ceil((end - Date.now()) / 1000 / (FAST ? 0.25 : 1)));
+        $("#q-dots").innerHTML = '<b class="timer">⏱️ のこり ' + left + "びょう ・ " + Q0.res.filter(function (x) { return x && x.ok; }).length + "もん</b>";
+        if (Date.now() >= end) { Q0.locked = true; finish(); return; }
+        setTimeout(tick, 200);
+      };
+      renderQ(); tick();
+      return;
+    }
     renderQ();
   }
   function dots() {
     var Q = cur.quiz, out = "";
+    if (Q.timed) return;
     Q.list.forEach(function (_, i) { var r = Q.res[i]; out += '<span class="' + (i === Q.i ? "now" : r ? (r.ok ? "ok" : "ng") : "") + '"></span>'; });
     $("#q-dots").innerHTML = out;
   }
@@ -240,12 +255,12 @@
     } else {
       $("#q-ans").classList.remove("off");
       drawAns();
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach(function (d) { padKey(String(d), "", function () { if (Q.input.length < 4) { Q.input = (Q.input === "0" ? "" : Q.input) + d; SD.audio.sfx("poko"); drawAns(); } }); });
+      [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].forEach(function (d) { padKey(String(d), "", function () { if (Q.input.length < 5) { Q.input = (Q.input === "0" ? "" : Q.input) + d; SD.audio.sfx("poko"); drawAns(); } }); });
       padKey("けす", "del", function () { Q.input = Q.input.slice(0, -1); SD.audio.sfx("poko2"); drawAns(); });
       padKey("こたえる", "go", function () { if (Q.input !== "") submit(Number(Q.input)); });
     }
     setBtns("#q-btns", btns);
-    speak(p.say || (p.q + "　" + (p.expr || "")));
+    if (!Q.timed) speak(p.say || (p.q + "　" + (p.expr || "")));
   }
   function padKey(label, cls, fn) {
     var b = document.createElement("button");
@@ -280,11 +295,11 @@
       $("#q-face").innerHTML = SD.chara.tanuki("happy");
       if (Q.lastBtn) Q.lastBtn.classList.add("ok");
       $("#q-fb").innerHTML = '<span class="hint">' + SD.chara.kotori("happy").replace("<svg", '<svg style="width:40px;height:40px;vertical-align:middle"') + H(SD.rng().pick(["ピッコ：すごい！ しゅっぱつ しんこう！", "ピッコ：ぴったり！ ていじ うんてん！", "ピッコ：いいね！ つぎ の えき へ！"])) + "</span>";
-      setTimeout(advance, 950 * Math.max(SD.timeScale, 0.05));
+      setTimeout(advance, (Q.timed ? 250 : 950) * Math.max(SD.timeScale, 0.05));
       Q.lastBtn = null;
       return;
     }
-    if (Q.mode === "t") {
+    if (Q.mode === "t" || Q.timed) {
       Q.locked = true;
       SD.audio.sfx("tap");
       setTimeout(advance, 500 * Math.max(SD.timeScale, 0.05));
@@ -339,10 +354,11 @@
     show("result", "けっか", Q.mode === "p" ? map : Q.mode === "k" ? home : map);
     if (Q.mode === "p") {
       var u = Q.meta.u, ur = SD.uRec(r, u.id), miss = res.length - okN, stars = SD.starsFor(miss, res.length), was = ur.stars;
+      if (u.timed) { stars = okN >= u.starsAt[2] ? 3 : okN >= u.starsAt[1] ? 2 : okN >= u.starsAt[0] ? 1 : 0; ur.best = Math.max(ur.best || 0, okN); }
       ur.stars = Math.max(ur.stars, stars); ur.n++; save();
       var nx = SD.unitsOf(u.belt), idx = nx.indexOf(u), nextU = nx[idx + 1];
       html = SD.chara.tanuki("cheer") + "<h2>" + H(u.title) + " の れんしゅう おわり！</h2><div class='stars'>" + "★★★".slice(0, stars) + "<span class='off'>" + "★★★".slice(stars) + "</span></div>" +
-        "<p>" + res.length + "もん ちゅう " + okN + "もん いっぱつ で せいかい" + (was === 0 ? "。あたらしい たんげん が ひらいたよ！" : "") + "</p>" + resTable(res);
+        "<p>" + (u.timed ? "1ぷん で <b>" + okN + "もん</b> せいかい！（さいこう " + ur.best + "もん）" + (stars ? "" : "<br>" + u.starsAt[0] + "もん で ★ だよ") : res.length + "もん ちゅう " + okN + "もん いっぱつ で せいかい" + (was === 0 ? "。あたらしい たんげん が ひらいたよ！" : "")) + "</p>" + (u.timed ? "" : resTable(res));
       bts.push(btn("もういちど", "", function () { startPractice(u); }));
       if (nextU) bts.push(btn("つぎ：" + nextU.title + " →", "main", function () { openUnit(nextU); }));
       else if (SD.testOpen(r, u.belt) && !SD.passed(r, u.belt)) bts.push(btn("📜 しょうきゅう しけん へ", "main", function () { startTest(u.belt); }));

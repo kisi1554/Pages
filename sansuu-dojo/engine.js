@@ -165,6 +165,38 @@
     return h + ji + " " + m + fun(m);
   };
 
+  // かたち の なかま わけ（てん の ざひょう）
+  SD.classify = function (pts) {
+    var n = pts.length;
+    var v = function (i) { var a = pts[i], b = pts[(i + 1) % n]; return [b[0] - a[0], b[1] - a[1]]; };
+    var area = 0; for (var i = 0; i < n; i++) area += pts[i][0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * pts[i][1];
+    if (Math.abs(area) < 1e-9) return "";
+    var right = 0, cross = [];
+    for (var k = 0; k < n; k++) {
+      var p = v((k + n - 1) % n), q = v(k);
+      if (p[0] * q[0] + p[1] * q[1] === 0) right++;
+      cross.push(p[0] * q[1] - p[1] * q[0]);
+      if (cross[k] === 0) return ""; // まっすぐ に ならんだ てん
+    }
+    if (n === 3) return right ? "righttri" : "tri";
+    if (n === 4) {
+      var convex = cross.every(function (c) { return c > 0; }) || cross.every(function (c) { return c < 0; });
+      if (!convex) return "poly";
+      if (right === 4) { var L = [0, 1, 2, 3].map(function (j) { var w = v(j); return w[0] * w[0] + w[1] * w[1]; }); return L.every(function (x) { return x === L[0]; }) ? "square" : "rect"; }
+      return "quad";
+    }
+    return "poly";
+  };
+  SD.rightCorners = function (pts) {
+    var n = pts.length, out = [];
+    for (var k = 0; k < n; k++) {
+      var a = pts[(k + n - 1) % n], b = pts[k], c = pts[(k + 1) % n];
+      var p = [b[0] - a[0], b[1] - a[1]], q = [c[0] - b[0], c[1] - b[1]];
+      if (p[0] * q[0] + p[1] * q[1] === 0) out.push(k);
+    }
+    return out;
+  };
+
   // すうじの せんたくし（こたえの ちかくの かず）
   SD.numChoices = function (ans, r, lo, hi, k) {
     k = k || 4; lo = lo == null ? 0 : lo; hi = hi == null ? Math.max(10, ans + 3) : hi;
@@ -181,6 +213,7 @@
   /* ---------- 答えあわせ と まちがえ方の 見立て ---------- */
   SD.check = function (p, given) {
     if (given == null || given === "") return false;
+    if (p.accept) return p.accept.indexOf(String(given)) >= 0;
     if (typeof p.ans === "number") return Number(given) === p.ans;
     return String(given) === String(p.ans);
   };
@@ -206,6 +239,7 @@
     "kuku-next": "となりの 九九 に なって いる かも。○の だん を となえ なおそう",
     "unit-mix": "たんい に ちゅうい！ 1cm ＝ 10mm、1m ＝ 100cm だよ",
     "all-plus": "ぜんぶ たして いない？ − の ところ は ひくよ",
+    "min-number": "ながい はり が さす すうじ × 5 が「ふん」だよ（4 を さして いたら 20ぷん）",
     "tape-op": "テープの ずで、もとめる ところ が ぜんたい か ぶぶん か を みよう"
   };
 
@@ -263,7 +297,7 @@
   SD.makePractice = function (u, r) {
     var avoid = {}, out = [];
     var n = u.practiceN || SD.PRACTICE_N, half = Math.ceil(n / 2);
-    for (var i = 0; i < n; i++) out.push(SD.genOne(u, r, i < half ? 0 : 1, avoid));
+    for (var i = 0; i < n; i++) out.push(SD.genOne(u, r, u.timed || i >= half ? 1 : 0, u.timed ? null : avoid));
     return out;
   };
   SD.TEST_N = 10; SD.TEST_PASS = 8;
