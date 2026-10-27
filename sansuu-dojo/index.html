@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>さんすう どうじょう</title>
+<meta name="description" content="しはんに まなんで さんすうの しゅぎょう！ しょうきゅう しけんで くろおびを めざそう">
+<meta name="theme-color" content="#0b7285">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🥋</text></svg>">
+<link rel="stylesheet" href="style.css?v=7b4d715">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="bar">
+  <button class="icon" id="back" aria-label="もどる" hidden>←</button>
+  <h1 id="title">🥋 さんすう どうじょう</h1>
+  <button class="kid" id="kid" aria-label="だれが けいこ する？"></button>
+  <button class="icon" id="sound" aria-label="おと">🔊</button>
+  <button class="icon" id="gear" aria-label="せってい">⚙️</button>
+</header>
+
+<!-- ホーム（どうじょう） -->
+<main class="view" id="v-home">
+  <section class="dojo">
+    <div class="kakejiku" aria-hidden="true"><div class="jiku"></div><div class="kami"><span>さんすう</span><span><ruby>道場<rt>どうじょう</rt></ruby></span></div><div class="jiku"></div></div>
+    <div class="shihan" id="h-shihan"></div>
+    <div class="me" id="h-me"></div>
+  </section>
+  <button class="keiko" id="go-keiko"><span class="em">📅</span><span><b>きょう の けいこ</b><small id="keiko-sub">5ふん・にがて ＋ ふくしゅう ＋ あたらしい</small></span><span class="hanko" id="keiko-hanko" hidden>けいこ<br>ずみ</span></button>
+  <div class="grid4">
+    <button class="tile" data-go="map"><span class="em">🥋</span><b>おび の みち</b><small>たんげん を じゅんばん に</small></button>
+    <button class="tile" data-go="book"><span class="em">📒</span><b>けいこ<ruby>帳<rt>ちょう</rt></ruby></b><small>はんこ を あつめよう</small></button>
+    <button class="tile" data-go="rooms"><span class="em">🚪</span><b>となり の へや</b><small>ほか の さんすう あそび</small></button>
+    <button class="tile" data-go="parent"><span class="em">👪</span><b>おうち の ひと</b><small>きろく・せってい</small></button>
+  </div>
+</main>
+
+<!-- おび の みち -->
+<main class="view" id="v-map" hidden><div id="map"></div></main>
+
+<!-- 単元（おてほん → やってみる → れんしゅう） -->
+<main class="view" id="v-unit" hidden>
+  <div class="steps" id="u-steps"></div>
+  <div class="talk"><div class="face" id="u-face"></div><p class="bubble" id="u-say" aria-live="polite"></p></div>
+  <div class="toolwrap" id="u-toolwrap"><div class="toolhost" id="u-tool"></div><div class="toolbar"></div></div>
+  <div class="btns" id="u-btns"></div>
+</main>
+
+<!-- もんだい（れんしゅう・しけん・けいこ） -->
+<main class="view qview" id="v-q" hidden>
+  <div class="qhead"><span id="q-tag"></span><div class="dots" id="q-dots"></div></div>
+  <div class="qgrid">
+    <div class="qleft">
+      <div class="talk"><div class="face" id="q-face"></div><p class="bubble" id="q-text" aria-live="polite"></p><button class="icon small" id="q-say" aria-label="もういちど よむ">🔈</button></div>
+      <div class="expr" id="q-expr"></div>
+      <div class="picbox" id="q-pic"></div>
+      <div class="toolwrap" id="q-toolwrap"><div class="toolhost" id="q-tool"></div><div class="toolbar"></div></div>
+    </div>
+    <div class="qright">
+      <div class="answer" id="q-ans"></div>
+      <div class="choices" id="q-choices"></div>
+      <div class="keypad" id="q-pad"></div>
+      <div class="fb" id="q-fb"></div>
+      <div class="btns" id="q-btns"></div>
+    </div>
+  </div>
+</main>
+
+<!-- けっか -->
+<main class="view" id="v-result" hidden><section class="result" id="result"></section></main>
+
+<!-- けいこ帳 -->
+<main class="view" id="v-book" hidden><div id="book"></div></main>
+
+<!-- となり の へや -->
+<main class="view" id="v-rooms" hidden><div id="rooms"></div></main>
+
+<!-- ほごしゃ -->
+<main class="view" id="v-parent" hidden><div id="parent"></div></main>
+
+<!-- せってい -->
+<dialog id="dlg">
+  <form method="dialog" class="set">
+    <h3>⚙️ せってい</h3>
+    <label><input type="checkbox" data-set="sound"> こうかおん（ぽこっ・ドン）</label>
+    <label><input type="checkbox" data-set="speech"> よみあげ（しはん の こえ）</label>
+    <label><input type="checkbox" data-set="fast"> おてほん を はやく する</label>
+    <div class="row"><button class="btn main small">とじる</button></div>
+  </form>
+</dialog>
+
+<!-- だれ が けいこ する？ -->
+<dialog id="dlg-kid">
+  <form method="dialog" class="set" id="kid-form"></form>
+</dialog>
+
+<!-- しょうきゅう の めんじょう -->
+<div class="menjo" id="menjo" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="engine.js?v=7b4d715"></script>
+<script src="audio.js?v=7b4d715"></script>
+<script src="chara.js?v=7b4d715"></script>
+<script src="tools/pics.js?v=7b4d715"></script>
+<script src="tools/base.js?v=7b4d715"></script>
+<script src="tools/blocks.js?v=7b4d715"></script>
+<script src="tools/numline.js?v=7b4d715"></script>
+<script src="tools/clock.js?v=7b4d715"></script>
+<script src="tools/trace.js?v=7b4d715"></script>
+<script src="tools/lineup.js?v=7b4d715"></script>
+<script src="tools/measure.js?v=7b4d715"></script>
+<script src="units/shiro.js?v=7b4d715"></script>
+<script src="units/kiiro.js?v=7b4d715"></script>
+<script src="units/orange.js?v=7b4d715"></script>
+<script src="app.js?v=7b4d715"></script>
+</body>
+</html>
