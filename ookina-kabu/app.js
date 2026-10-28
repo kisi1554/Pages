@@ -249,7 +249,8 @@
     return lines.map((s) => {
       const p = document.createElement('p');
       p.className = 'line' + (s.charAt(0) === '「' ? ' serif' : '') + (cls ? ' ' + cls : '');
-      p.textContent = s;
+      p.innerHTML = Story.ruby(s);
+      p.dataset.raw = s;
       words.appendChild(p);
       return p;
     });
@@ -269,7 +270,7 @@
       const el = els[i];
       i += 1;
       el.classList.add('reading');
-      Sound.speak(Story.plain(el.textContent), next);
+      Sound.speak(Story.plain(el.dataset.raw), next);
     };
     next();
   }
@@ -330,7 +331,7 @@
     const st = step();
     counter = 0;
     if (!st) return;
-    hintEl.textContent = st.hint;
+    hintEl.innerHTML = Story.ruby(st.hint);
     hintEl.classList.remove('is-hidden');
     showStepHint();
     if (st.kind === 'pull') {
