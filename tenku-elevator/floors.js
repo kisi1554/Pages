@@ -51,6 +51,8 @@ const Floors = (() => {
     '-11': { name: 'ゾロめの かい B11', tag: 'zoro', prop: 'pipe', friend: 'kerosuke', say: 'ちか 11かいは ゾロめ。1が ふたつ！' },
     '-10': { name: 'ちかてつの いりぐち', tag: 'entrance', prop: 'train', friend: 'tetsuo',
       say: 'ここから したには ちかてつ の トンネルが とおっているよ。' },
+    '-9': { name: 'ブルーライン のりば', tag: 'hall', prop: 'train', friend: 'tetsuo', line: 'blue',
+      say: 'ここは ちかてつ ブルーラインの のりば。しょうなんだい ゆき と あざみの ゆき の でんしゃが くるよ。' },
     '-5': { name: 'ちかてつの えき', tag: 'hall', prop: 'train', friend: 'tetsuo',
       say: 'ちかてつの えきに ついたよ。でんしゃが ごうごう はいって くる。' },
     '-3': { name: 'ちかがい', tag: 'hall', prop: 'shop', friend: 'hanako',

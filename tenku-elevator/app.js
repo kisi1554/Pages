@@ -140,6 +140,7 @@
     if (sim.moving || sim.at !== view.floor || !(sim.door.phase === 'open' || sim.door.phase === 'opening')) return;
     clearTimeout(awayTimer);
     endTalk();
+    train = null;
     view.mode = 'car'; setMode();
     sim.open();
     // ときどき おともだちも いっしょに のる
@@ -198,6 +199,81 @@
     $('#hMsg').textContent = `${Floors.get(view.floor).name}。▲▼ で エレベーターを よべるよ。`;
     const g = Floors.gate(view.floor);
     if (g && !save.gates[view.floor]) { $('#hMsg').textContent = '🔑 あいことばの とびらに こたえて みよう！'; openGate(); }
+    if (isBlue(view.floor)) askTrain();
+  }
+
+  /* ---------- B9 ブルーライン のりば ----------
+   * しょうなんだい ゆき は ひだりへ、あざみの ゆき は みぎへ でて いく。
+   * train = { dir: 'shonandai'|'azamino', t0 } … アナウンス → はいって くる → ドア → でて いく
+   */
+  const LINE = { shonandai: { name: 'しょうなんだい ゆき', go: -1 }, azamino: { name: 'あざみの ゆき', go: 1 } };
+  const TRAIN = { ANN: 2.5, IN: 3, OPEN: 4.5, OUT: 3 };
+  let train = null;
+  const isBlue = n => { const sp = Floors.get(n).special; return !!(sp && sp.line === 'blue'); };
+  function askTrain() {
+    if (train) return;
+    openDlg('#dTrain');
+    speak('しょうなんだい ゆき と あざみの ゆき、どっちに いく？', Friends.get('tetsuo'));
+  }
+  function rideTrain(dir) {
+    $('#dTrain').close();
+    const L = LINE[dir], f = Friends.get('tetsuo');
+    train = { dir, t0: performance.now() / 1000 };
+    $('#hMsg').textContent = `🚇 ${L.name} を まって いるよ。`;
+    const msg = `まもなく、${L.name} が まいります。きいろい せんの うちがわで おまちください。`;
+    toast(`📢 ${msg}`, 3000); speak(msg, f);
+  }
+  function trainStep(now) {
+    if (!train) return;
+    const t = now - train.t0, L = LINE[train.dir], f = Friends.get('tetsuo');
+    const t1 = TRAIN.ANN + TRAIN.IN, t2 = t1 + TRAIN.OPEN;
+    if (t >= t1 && !train.opened) {
+      train.opened = true; SND.door(true);
+      const m = `${L.name} です。ドアが ひらきます。`; toast(`🚇 ${m}`, 2500); speak(m, f);
+      $('#hMsg').textContent = `🚇 ${L.name} が きたよ！`;
+    }
+    if (t >= t2 && !train.left) {
+      train.left = true; SND.door(false);
+      const m = `${L.name}、しゅっぱつ しんこう！ いってらっしゃい！`;
+      toast(`🚇 ${m}`, 3000); speak(m, f);
+      $('#hMsg').textContent = `🚇 ${L.name} に のったよ！ また のりたく なったら 🚇 を おしてね。`;
+    }
+    if (t >= t2 + TRAIN.OUT) train = null;
+  }
+  /* でんしゃの いち（がめんの よこ: 0 = まんなかに とまる）と ドアの ひらき */
+  function trainPose(now) {
+    if (!train) return null;
+    const t = now - train.t0, go = LINE[train.dir].go;
+    const t1 = TRAIN.ANN + TRAIN.IN, t2 = t1 + TRAIN.OPEN;
+    if (t < TRAIN.ANN) return null;
+    const ease = k => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
+    if (t < t1) return { x: -go * (1 - ease((t - TRAIN.ANN) / TRAIN.IN)) * 1.6, door: 0 };
+    if (t < t2) { const k = (t - t1) / TRAIN.OPEN; return { x: 0, door: Math.min(1, k * 4, (1 - k) * 4) }; }
+    const k = (t - t2) / TRAIN.OUT;
+    return { x: go * k * k * 1.6, door: 0 };
+  }
+  function drawTrain(now, wy) {
+    const p = trainPose(now);
+    if (!p) return;
+    const th = Math.min(H * .32, 150), tw = W * 1.15, x0 = W / 2 - tw / 2 + p.x * W, y0 = wy - th * .72;
+    ctx.save();
+    ctx.fillStyle = '#f8f9fa'; roundRect(x0, y0, tw, th, th * .18); ctx.fill();
+    ctx.fillStyle = '#0B78BE'; ctx.fillRect(x0, y0 + th * .62, tw, th * .14);
+    ctx.fillStyle = '#075E96'; ctx.fillRect(x0, y0 + th * .08, tw, th * .05);
+    const nd = 4;
+    for (let i = 0; i < nd; i++) {
+      const dx = x0 + tw * (i + .5) / nd, dw = th * .42, dh = th * .78, dy = y0 + th * .15;
+      ctx.fillStyle = '#343a40'; ctx.fillRect(dx - dw / 2, dy, dw, dh);
+      const o = p.door * dw * .45;
+      ctx.fillStyle = '#dee2e6'; ctx.fillRect(dx - dw / 2 - o, dy, dw / 2, dh); ctx.fillRect(dx + o, dy, dw / 2, dh);
+      ctx.fillStyle = '#a5d8ff'; ctx.fillRect(dx - dw / 2 - o + dw * .08, dy + dh * .1, dw * .34, dh * .35); ctx.fillRect(dx + o + dw * .08, dy + dh * .1, dw * .34, dh * .35);
+      if (i < nd - 1) { ctx.fillStyle = '#a5d8ff'; ctx.fillRect(dx + dw * .7, y0 + th * .2, tw / nd - dw * 1.4, th * .3); }
+    }
+    // いきさき ひょうじ
+    ctx.fillStyle = '#10202f'; ctx.fillRect(x0 + tw * .02, y0 + th * .18, th * .9, th * .2);
+    ctx.fillStyle = '#ffb84d'; ctx.font = `bold ${Math.round(th * .12)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(LINE[train.dir].name, x0 + tw * .02 + th * .45, y0 + th * .28);
+    ctx.restore();
   }
 
   /* ---------- あいことばの とびら ---------- */
@@ -312,6 +388,7 @@
       $('#hRide').disabled = !(open && sim.at === n);
       const g = Floors.gate(n);
       $('#hGate').hidden = !g;
+      $('#hTrain').hidden = !isBlue(n);
       if (g) $('#hGate').textContent = save.gates[n] ? '🔓 ひらいた とびら' : '🔑 あいことばの とびら';
     }
   }
@@ -459,9 +536,10 @@
       ctx.fillStyle = '#ffd43b'; ctx.font = `bold ${Math.round(gw * .16)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillText(save.gates[view.floor] ? 'ひらいた！' : 'あいことば', gx + gw / 2, gy - 8);
     }
+    if (isBlue(view.floor)) drawTrain(t, wy);
     // こもの と おともだち
     let fs = Math.min(H * .34, W * .3), fx = W * .8, fy = wy - fs * .2;
-    Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
+    if (!trainPose(t)) Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
     // はなして いる ときは ふきだしに かぶらない ばしょへ
     if (view.talking) ({ fs, fx, fy } = friendSpot(fs, fx, fy));
     const f = Friends.present(fl.friend, night(), fl.deco.seed);
@@ -510,6 +588,7 @@
     const now = ts / 1000, dt = last ? Math.min(.05, now - last) : .016; last = now;
     for (let i = 0; i < SPEED; i++) sim.tick(dt);
     resize();
+    trainStep(now);
     if (view.mode === 'car') drawCar(now); else { if (view.talking) layoutTalk(); drawHall(now); }
     updateHud();
     panelT -= dt; if (panelT <= 0) { panelT = .2; updatePanels(); }
@@ -734,6 +813,9 @@
   $('#hRide').addEventListener('click', () => { SND.unlock(); board(); if (pendingDest != null) { register(pendingDest); pendingDest = null; } });
   $('#hTalk').addEventListener('click', () => { SND.unlock(); startTalk(view.floor); });
   $('#hGate').addEventListener('click', () => { SND.unlock(); openGate(); });
+  $('#hTrain').addEventListener('click', () => { SND.unlock(); askTrain(); });
+  $('#trS').addEventListener('click', () => { SND.unlock(); rideTrain('shonandai'); });
+  $('#trA').addEventListener('click', () => { SND.unlock(); rideTrain('azamino'); });
   $('#tNext').addEventListener('click', nextLine);
   $('#tAgain').addEventListener('click', showLine);
   $('#bPocket').addEventListener('click', () => { SND.unlock(); renderPocket(); openDlg('#dPocket'); });
@@ -757,5 +839,5 @@
   requestAnimationFrame(loop);
 
   // テストよう（tools/tenku-elevator/e2e.js が よむ）
-  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard, openGate };
+  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard, openGate, get train() { return train; } };
 })();

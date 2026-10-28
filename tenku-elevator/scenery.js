@@ -908,7 +908,19 @@ const Scenery = (() => {
       c.fillStyle = '#dee2e6'; for (let x = R.x; x < R.x + R.w; x += 44) c.fillRect(x, R.y, 42, wy - R.y);
       c.fillStyle = '#1c7ed6'; c.fillRect(R.x, R.y + (wy - R.y) * .12, R.w, R.h * .06);
       c.fillStyle = '#fff'; c.font = `bold ${Math.round(R.h * .035)}px sans-serif`; c.textAlign = 'left'; c.textBaseline = 'middle';
-      c.fillText('ちかてつ のりば →', R.x + 12, R.y + (wy - R.y) * .12 + R.h * .03);
+      if (fl.special && fl.special.line === 'blue') {
+        // ブルーライン のりば: あおい おびの かんばん と ホームの きいろい せん
+        const by = R.y + (wy - R.y) * .12, bh = R.h * .06;
+        c.fillStyle = '#0B78BE'; c.fillRect(R.x, by, R.w, bh);
+        c.fillStyle = '#fff'; c.textAlign = 'center';
+        c.fillText('ブルーライン のりば', R.x + R.w * .32, by + bh / 2);
+        c.font = `bold ${Math.round(R.h * .026)}px sans-serif`;
+        c.textAlign = 'left'; c.fillText('← しょうなんだい ゆき', R.x + 10, by + bh * 1.6);
+        c.textAlign = 'right'; c.fillText('あざみの ゆき →', R.x + R.w - 10, by + bh * 1.6);
+        c.fillStyle = '#ffd43b'; c.fillRect(R.x, wy + 4, R.w, 5);
+      } else {
+        c.fillText('ちかてつ のりば →', R.x + 12, R.y + (wy - R.y) * .12 + R.h * .03);
+      }
     } else {
       // まど（そとの けしきが すこし みえる）
       const n = Math.max(2, Math.round(R.w / 180));
