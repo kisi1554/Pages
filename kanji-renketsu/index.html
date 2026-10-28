@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#5f3dc4">
+<title>かんじ れんけつ</title>
+<link rel="stylesheet" href="style.css?v=d2fcdcb">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <!-- ======================= タイトル ======================= -->
+  <section class="screen is-active" id="screen-title">
+    <div class="title-bar">
+      <button class="pill" id="btn-sound" type="button">🔊 おと オン</button>
+      <button class="pill" id="btn-voice" type="button">🗣️ よみあげ オン</button>
+    </div>
+    <div class="title-wrap">
+      <h1 class="title-main">かんじ れんけつ</h1>
+      <p class="title-sub">へん と つくり の しゃりょうを ガチャンと つないで かんじを つくろう</p>
+      <div class="title-demo" id="title-demo" aria-hidden="true"></div>
+      <div class="mode-grid">
+        <button class="mode-btn" data-go="puzzle" type="button"><span class="m-emoji">🔗</span><span class="m-name">れんけつ パズル</span><span class="m-desc">へん ＋ つくり で かんじ</span></button>
+        <button class="mode-btn" data-go="quiz" type="button"><span class="m-emoji">🏷️</span><span class="m-name">へん の なまえ クイズ</span><span class="m-desc">さんずい・きへん…</span></button>
+        <button class="mode-btn" data-go="lines" type="button"><span class="m-emoji">🚉</span><span class="m-name">えきめい を つくろう</span><span class="m-desc">えきめいひょう を かんせい</span></button>
+        <button class="mode-btn" data-go="nikai" type="button"><span class="m-emoji">🚌</span><span class="m-name">2かいだて しゃりょう</span><span class="m-desc">うえ と した で かんじ</span></button>
+      </div>
+      <div class="sub-row">
+        <button class="sub-btn" data-go="zukan" type="button">📖 ずかん <span id="zukan-count"></span></button>
+        <button class="sub-btn" data-go="stamps" type="button">🎫 スタンプちょう <span id="stamp-count"></span></button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= パズル の メニュー ======================= -->
+  <section class="screen" id="screen-puzzle">
+    <header class="topbar"><button class="back" data-go="title" type="button">◀ もどる</button><h2>🔗 れんけつ パズル</h2><span></span></header>
+    <div class="scroll">
+      <h3 class="sec-title">🎯 おだい モード</h3>
+      <p class="sec-note">いわれた かんじ を つくる 2りょう を えらんで れんけつ！</p>
+      <div class="stage-grid" id="stage-grid"></div>
+      <h3 class="sec-title">🔍 はっけん モード</h3>
+      <p class="sec-note">わたされた しゃりょう で つくれる かんじ を ぜんぶ さがそう</p>
+      <button class="big-btn hakken-btn" id="btn-hakken" type="button">🔍 はっけん スタート <span id="hakken-count"></span></button>
+    </div>
+  </section>
+
+  <!-- ======================= あそぶ 画面（パズル・駅名・2かいだて） ======================= -->
+  <section class="screen" id="screen-play">
+    <header class="topbar"><button class="back" id="play-back" type="button">◀ もどる</button><h2 id="play-title"></h2><span class="prog" id="play-prog"></span></header>
+    <div class="play-body">
+      <div class="prompt" id="prompt"></div>
+      <div class="msg" id="msg" aria-live="polite"></div>
+      <div class="home-wrap">
+        <div class="yard" id="yard"></div>
+        <div class="rail" aria-hidden="true"></div>
+      </div>
+      <div class="shelf" id="shelf"></div>
+      <div class="play-tools" id="play-tools"></div>
+    </div>
+  </section>
+
+  <!-- ======================= クイズ ======================= -->
+  <section class="screen" id="screen-quiz">
+    <header class="topbar"><button class="back" data-go="title" type="button">◀ もどる</button><h2>🏷️ へん の なまえ クイズ</h2><span class="prog" id="quiz-prog"></span></header>
+    <div class="scroll quiz-body">
+      <div class="quiz-q" id="quiz-q"></div>
+      <div class="quiz-choices" id="quiz-choices"></div>
+      <div class="quiz-feedback" id="quiz-feedback" aria-live="polite"></div>
+      <div class="quiz-tools">
+        <button class="pill" id="quiz-hint" type="button">💡 ヒント</button>
+        <button class="big-btn" id="quiz-next" type="button" hidden>つぎ ▶</button>
+      </div>
+      <p class="quiz-srs" id="quiz-srs"></p>
+    </div>
+  </section>
+
+  <!-- ======================= 路線 を えらぶ ======================= -->
+  <section class="screen" id="screen-lines">
+    <header class="topbar"><button class="back" data-go="title" type="button">◀ もどる</button><h2>🚉 えきめい を つくろう</h2><span></span></header>
+    <div class="scroll">
+      <p class="sec-note">ろせん を えらんでね。つぎ の えき の えきめい を かんじ の しゃりょう で つくろう！</p>
+      <div class="line-grid" id="line-grid"></div>
+    </div>
+  </section>
+
+  <!-- ======================= ずかん ======================= -->
+  <section class="screen" id="screen-zukan">
+    <header class="topbar"><button class="back" data-go="title" type="button">◀ もどる</button><h2>📖 かんじ ずかん</h2><span class="prog" id="zukan-prog"></span></header>
+    <div class="scroll" id="zukan-body"></div>
+  </section>
+
+  <!-- ======================= スタンプちょう ======================= -->
+  <section class="screen" id="screen-stamps">
+    <header class="topbar"><button class="back" data-go="title" type="button">◀ もどる</button><h2>🎫 えきめい スタンプちょう</h2><span class="prog" id="stamps-prog"></span></header>
+    <div class="scroll" id="stamps-body"></div>
+  </section>
+
+  <!-- ======================= できた 漢字 の カード ======================= -->
+  <div class="overlay" id="kcard" role="dialog" aria-modal="true" aria-labelledby="kc-kanji">
+    <div class="kc">
+      <div class="kc-grade" id="kc-grade"></div>
+      <div class="kc-kanji" id="kc-kanji" lang="ja"></div>
+      <div class="kc-formula" id="kc-formula"></div>
+      <div class="kc-yomi" id="kc-yomi"></div>
+      <div class="kc-imi" id="kc-imi"></div>
+      <div class="kc-ex" id="kc-ex"></div>
+      <div class="kc-bushu" id="kc-bushu"></div>
+      <div class="kc-btns">
+        <button class="pill" id="kc-speak" type="button">🔊 きく</button>
+        <button class="big-btn" id="kc-next" type="button">つぎ ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= クリア ======================= -->
+  <div class="overlay" id="clear" role="dialog" aria-modal="true" aria-labelledby="clear-title">
+    <div class="clear-box">
+      <div class="clear-emoji" id="clear-emoji">🎉</div>
+      <h3 id="clear-title"></h3>
+      <p id="clear-text"></p>
+      <div class="clear-btns" id="clear-btns"></div>
+    </div>
+  </div>
+
+  <!-- ======================= スタンプ ======================= -->
+  <div class="overlay stamp-ov" id="stamp-ov" role="dialog" aria-modal="true">
+    <div class="stamp-wrap">
+      <div class="stamp-yomi" id="stamp-yomi"></div>
+      <div id="stamp-slot"></div>
+      <button class="big-btn" id="stamp-next" type="button">つぎ の えき へ ▶</button>
+    </div>
+  </div>
+
+</div>
+<script src="audio.js?v=d2fcdcb"></script>
+<script src="data-parts.js?v=d2fcdcb"></script>
+<script src="data-stations.js?v=d2fcdcb"></script>
+<script src="train.js?v=d2fcdcb"></script>
+<script src="app.js?v=d2fcdcb"></script>
+<script src="game.js?v=d2fcdcb"></script>
+<script src="quiz.js?v=d2fcdcb"></script>
+<script>App.init();</script>
+</body>
+</html>
