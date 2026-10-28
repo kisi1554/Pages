@@ -223,11 +223,15 @@ const Sound = (() => {
   /* ============================ よみあげ ============================ */
 
   let jaVoice = null;
+  let enVoice = null;
   function pickVoice() {
     if (!window.speechSynthesis) return;
     const vs = window.speechSynthesis.getVoices() || [];
+    const lang = (v) => (v.lang || '').replace('_', '-');
     jaVoice = vs.find((v) => v.lang === 'ja-JP' && /Kyoko|O-ren|Google|Nanami|Haruka/i.test(v.name))
-      || vs.find((v) => (v.lang || '').replace('_', '-').indexOf('ja') === 0) || null;
+      || vs.find((v) => lang(v).indexOf('ja') === 0) || null;
+    enVoice = vs.find((v) => lang(v) === 'en-US' && /Samantha|Google US|Aria|Jenny|Zira/i.test(v.name))
+      || vs.find((v) => lang(v) === 'en-US') || vs.find((v) => lang(v).indexOf('en') === 0) || null;
   }
   if (window.speechSynthesis) {
     pickVoice();
@@ -243,6 +247,7 @@ const Sound = (() => {
   /*
    * text を よむ。onEnd は こえ が でない たんまつ でも かならず よばれる。
    * opt.rate / opt.pitch で こえ を かえられる（うんとこしょ は げんきに）。
+   * opt.lang が 'en' なら えいご の こえ で よむ。
    */
   function speak(text, onEnd, opt) {
     const o = opt || {};
@@ -264,9 +269,11 @@ const Sound = (() => {
     }
     cur = rec;
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = 'ja-JP';
-    if (!jaVoice) pickVoice();
-    if (jaVoice) u.voice = jaVoice;
+    const en = o.lang === 'en';
+    u.lang = en ? 'en-US' : 'ja-JP';
+    if (!(en ? enVoice : jaVoice)) pickVoice();
+    const voice = en ? enVoice : jaVoice;
+    if (voice) u.voice = voice;
     u.rate = o.rate || 0.9;
     u.pitch = o.pitch || 1.1;
     let started = false;

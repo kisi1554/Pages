@@ -14,7 +14,7 @@
 
   /* ============================ ほぞん ============================ */
 
-  const save = { page: 0, done: [], sound: true, voice: true, finished: 0 };
+  const save = { page: 0, done: [], sound: true, voice: true, finished: 0, lang: 'ja' };
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) Object.assign(save, JSON.parse(raw));
@@ -22,6 +22,8 @@
     /* よめなくても あそべる */
   }
   if (!Array.isArray(save.done)) save.done = [];
+  if (save.lang !== 'en') save.lang = 'ja';
+  const say = () => Story.SAY[save.lang];
   function store() {
     try {
       localStorage.setItem(KEY, JSON.stringify(save));
@@ -245,15 +247,30 @@
   const hintEl = $('hint');
   let readToken = 0;
 
+  // 1ぎょう は { ja, en }。いま の ことば（save.lang）で かく
+  function renderLine(p) {
+    const s = p._line[save.lang];
+    p.lang = save.lang;
+    p.classList.toggle('serif', /^[「“]/.test(s));
+    p.innerHTML = Story.ruby(s);
+  }
+
   function addLines(lines, cls) {
-    return lines.map((s) => {
+    return lines.map((line) => {
       const p = document.createElement('p');
-      p.className = 'line' + (s.charAt(0) === '「' ? ' serif' : '') + (cls ? ' ' + cls : '');
-      p.innerHTML = Story.ruby(s);
-      p.dataset.raw = s;
+      p.className = 'line' + (cls ? ' ' + cls : '');
+      p._line = line;
+      renderLine(p);
       words.appendChild(p);
       return p;
     });
+  }
+
+  let hintLine = null;
+  function renderHint() {
+    if (!hintLine) return;
+    hintEl.lang = save.lang;
+    hintEl.innerHTML = Story.ruby(hintLine[save.lang]);
   }
 
   // 1ぎょう ずつ よみ、よんで いる ぎょう を ひからせる
@@ -270,7 +287,9 @@
       const el = els[i];
       i += 1;
       el.classList.add('reading');
-      Sound.speak(Story.plain(el.dataset.raw), next);
+      const raw = el._line[save.lang];
+      const en = save.lang === 'en';
+      Sound.speak(en ? Story.plainEn(raw) : Story.plain(raw), next, { lang: save.lang });
     };
     next();
   }
@@ -331,7 +350,8 @@
     const st = step();
     counter = 0;
     if (!st) return;
-    hintEl.innerHTML = Story.ruby(st.hint);
+    hintLine = st.hint;
+    renderHint();
     hintEl.classList.remove('is-hidden');
     showStepHint();
     if (st.kind === 'pull') {
@@ -451,7 +471,7 @@
       if (counter >= st.need) {
         busy = true;
         setPose('jiji', 'cheer');
-        bubbleOver('jiji', 'おおきい！', { ms: 1800 });
+        bubbleOver('jiji', say().big, { ms: 1800 });
         setTimeout(() => {
           busy = false;
           finishStep();
@@ -461,7 +481,7 @@
       busy = true;
       const id = st.who;
       Sound.sfx('call');
-      bubbleOver(id, Story.CALL[id], { ms: 1300 });
+      bubbleOver(id, Story.CALL[save.lang][id], { ms: 1300 });
       setTimeout(() => {
         S.chars[id].tx = Story.SLOT[id];
         Sound.sfx('walk');
@@ -497,9 +517,9 @@
     const before = st.goal === 'out' ? artEl._power || 0 : 0;
     const total = before + power;
     if (st.goal === 'out') artEl._power = total;
-    const word = counter % 2 ? 'うんとこしょ！' : 'どっこいしょ！';
+    const word = say().heave[counter % 2 ? 0 : 1];
     Sound.sfx('heave', counter);
-    Sound.speak(word.replace('！', ''), null, { rate: 1.25, pitch: 1.25 });
+    Sound.speak(word.replace(/[！!]/, ''), null, { rate: 1.25, pitch: 1.25, lang: save.lang });
     bubbleOver('jiji', word, { ms: 1100 });
     S.shake = 1;
     S.bump = 10 + power * 3;
@@ -518,7 +538,7 @@
       setTimeout(() => {
         Sound.sfx('nope');
         S.kabu.tlift = 0;
-        bubbleOver('jiji', 'ぬけない…', { ms: 1600 });
+        bubbleOver('jiji', say().nope, { ms: 1600 });
         fx('<text class="sweat" x="245" y="210" font-size="30">💦</text>', 1400);
         busy = false;
         finishStep();
@@ -589,6 +609,34 @@
     }
     openPage(pageNo + 1);
   });
+  /* ---------- 🇬🇧 えいご ⇄ 🇯🇵 にほんご（いつでも きりかえ） ---------- */
+
+  function syncLang() {
+    document.querySelectorAll('[data-lang-btn]').forEach((btn) => {
+      const en = save.lang === 'en';
+      btn.innerHTML = en ? '🇯🇵 <span>にほんご</span>' : '🇬🇧 <span>English</span>';
+      btn.setAttribute('aria-label', en ? 'にほんご で よむ' : 'えいご で よむ');
+      btn.classList.toggle('is-en', en);
+    });
+    document.documentElement.classList.toggle('lang-en', save.lang === 'en');
+  }
+  document.querySelectorAll('[data-lang-btn]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      Sound.unlock();
+      Sound.sfx('tap');
+      save.lang = save.lang === 'en' ? 'ja' : 'en';
+      store();
+      syncLang();
+      if (!$('screen-book').classList.contains('is-on')) return;
+      // いま でている ぶん を ぜんぶ かきかえて、あたらしい ことば で よみなおす
+      hush();
+      const els = Array.from(words.querySelectorAll('.line'));
+      els.forEach(renderLine);
+      renderHint();
+      read(els);
+    });
+  });
+
   $('btn-reread').addEventListener('click', () => {
     Sound.unlock();
     if (!Sound.isVoiceOn()) {
@@ -639,7 +687,7 @@
     store();
     Sound.sfx('fanfare');
     show('end');
-    Sound.speak('おしまい');
+    Sound.speak(say().end, null, { lang: save.lang });
   }
   $('btn-end-again').addEventListener('click', () => start(0));
   $('btn-end-home').addEventListener('click', showTitle);
@@ -673,5 +721,6 @@
   window.addEventListener('orientationchange', () => setTimeout(fit, 200));
 
   syncToggles();
+  syncLang();
   showTitle();
 })();
