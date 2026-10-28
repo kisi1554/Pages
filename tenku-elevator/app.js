@@ -202,78 +202,108 @@
     if (isBlue(view.floor)) askTrain();
   }
 
-  /* ---------- B9 ブルーライン のりば ----------
-   * しょうなんだい ゆき は ひだりへ、あざみの ゆき は みぎへ でて いく。
-   * train = { dir: 'shonandai'|'azamino', t0 } … アナウンス → はいって くる → ドア → でて いく
+  /* ---------- B9 ブルーライン のりば（blueline.js） ----------
+   * ホールで どっちに いくか きく → でんしゃが くる → ドアを タップして のる → いきさきを えらぶ →
+   * つく →「もどる」で よこはま（B9）へ かえって くる → おりる と ホールに もどる
    */
-  const LINE = { shonandai: { name: 'しょうなんだい ゆき', go: -1 }, azamino: { name: 'あざみの ゆき', go: 1 } };
-  const TRAIN = { ANN: 2.5, IN: 3, OPEN: 4.5, OUT: 3 };
-  let train = null;
+  let train = null, trainDoors = [];
   const isBlue = n => { const sp = Floors.get(n).special; return !!(sp && sp.line === 'blue'); };
+  const station = i => Blue.STATIONS[i];
+  const tetsuo = () => Friends.get('tetsuo');
   function askTrain() {
+    if (train && train.phase === 'open') { boardTrain(); return; }
     if (train) return;
     openDlg('#dTrain');
-    speak('しょうなんだい ゆき と あざみの ゆき、どっちに いく？', Friends.get('tetsuo'));
+    speak('しょうなんだい ゆき と あざみの ゆき、どっちに いく？', tetsuo());
   }
   function rideTrain(dir) {
     $('#dTrain').close();
-    const L = LINE[dir], f = Friends.get('tetsuo');
-    train = { dir, t0: performance.now() / 1000 };
+    train = Blue.create(dir);
+    const L = Blue.LINE[dir];
     $('#hMsg').textContent = `🚇 ${L.name} を まって いるよ。`;
     const msg = `まもなく、${L.name} が まいります。きいろい せんの うちがわで おまちください。`;
-    toast(`📢 ${msg}`, 3000); speak(msg, f);
+    toast(`📢 ${msg}`, 3000); speak(msg, tetsuo());
   }
-  function trainStep(now) {
+  function boardTrain() {
+    if (!train || !Blue.board(train)) return;
+    SND.beep();
+    view.mode = 'train'; setMode();
+    toast('🚃 でんしゃに のったよ！', 1600);
+    openStations();
+  }
+  /* いきさき えらび */
+  function openStations() {
+    const list = Blue.destinations(train.dir, train.cur);
+    const box = $('#stList'); box.innerHTML = '';
+    $('#stTitle').textContent = `${Blue.LINE[train.dir].name}。どの えきまで いく？`;
+    list.forEach(i => {
+      const s = station(i), b = document.createElement('button');
+      b.innerHTML = `<b>${Words.ruby(s.k)}</b>${s.no}${i === Blue.LINE[train.dir].end ? '（おわり）' : ''}`;
+      b.addEventListener('click', () => chooseStation(i));
+      box.appendChild(b);
+    });
+    openDlg('#dStation');
+    speak('どの えきまで いく？', tetsuo());
+  }
+  function chooseStation(i) {
+    if (!train || !Blue.choose(train, i)) return;
+    $('#dStation').close();
+    SND.door(false);
+    const m = `${station(i).yomi} まで いくよ。ドアが しまります。`;
+    toast(`🚃 ${m}`, 2200); speak(m, tetsuo());
+    updatePanels();
+  }
+  function trainBack() {
+    if (!train || !Blue.goBack(train)) return;
+    SND.door(false);
+    const m = `${Blue.LINE[train.dir].name} で よこはまへ もどるよ。`;
+    toast(`🔙 ${m}`, 2200); speak(m, tetsuo());
+    updatePanels();
+  }
+  function leaveTrain() {
+    if (!train || train.phase !== 'home') return;
+    train = null;
+    view.mode = 'hall'; setMode();
+    $('#hMsg').textContent = '🚇 よこはまに もどって きたよ。エレベーターは ▲▼ で よべるよ。';
+    toast('🛗 B9 ブルーライン のりばに もどって きたよ', 2200);
+  }
+  function trainStep(dt) {
     if (!train) return;
-    const t = now - train.t0, L = LINE[train.dir], f = Friends.get('tetsuo');
-    const t1 = TRAIN.ANN + TRAIN.IN, t2 = t1 + TRAIN.OPEN;
-    if (t >= t1 && !train.opened) {
-      train.opened = true; SND.door(true);
-      const m = `${L.name} です。ドアが ひらきます。`; toast(`🚇 ${m}`, 2500); speak(m, f);
-      $('#hMsg').textContent = `🚇 ${L.name} が きたよ！`;
+    for (const ev of Blue.step(train, dt * SPEED)) {
+      const L = Blue.LINE[train.dir];
+      if (ev.e === 'arrive-platform') {
+        SND.door(true);
+        const m = `${L.name} です。ドアを タップして のってね。`;
+        toast(`🚇 ${m}`, 2800); speak(m, tetsuo());
+        $('#hMsg').textContent = `🚇 ${L.name} が きたよ！ ひかって いる ドアを タップして のろう。`;
+      } else if (ev.e === 'gone') {
+        train = null; $('#hMsg').textContent = '🚇 でんしゃは いって しまったよ。また 🚇 で よべるよ。';
+      } else if (ev.e === 'next') {
+        const s = station(ev.i), last = ev.i === train.to;
+        $('#trMsg').innerHTML = `<span>${`つぎは ${Words.ruby(s.k)}${last ? '（おりる えき）' : ''}`}</span>`;
+        if (last || Math.abs(train.to - train.cur) <= 5) speak(`つぎは ${s.yomi}`, tetsuo());
+      } else if (ev.e === 'stop') {
+        $('#trMsg').innerHTML = `<span>${`${Words.ruby(station(ev.i).k)} に とまったよ`}</span>`;
+      } else if (ev.e === 'arrive') {
+        SND.chime(true); SND.door(true);
+        const s = station(ev.i);
+        $('#trMsg').innerHTML = `<span>${`${Words.ruby(s.k)} に ついた！ 🔙 で よこはまへ もどれるよ。`}</span>`;
+        speak(`${s.yomi}、${s.yomi} です。`, tetsuo());
+      } else if (ev.e === 'home') {
+        SND.chime(false); SND.door(true);
+        $('#trMsg').innerHTML = `<span>${`${Words.ruby(station(ev.i).k)} に もどって きた！ おりて エレベーターへ。`}</span>`;
+        speak('よこはま、よこはま です。てんくうエレベーターは こちら。', tetsuo());
+      }
     }
-    if (t >= t2 && !train.left) {
-      train.left = true; SND.door(false);
-      const m = `${L.name}、しゅっぱつ しんこう！ いってらっしゃい！`;
-      toast(`🚇 ${m}`, 3000); speak(m, f);
-      $('#hMsg').textContent = `🚇 ${L.name} に のったよ！ また のりたく なったら 🚇 を おしてね。`;
-    }
-    if (t >= t2 + TRAIN.OUT) train = null;
+    if (view.mode === 'train') updateTrainPanel();
   }
-  /* でんしゃの いち（がめんの よこ: 0 = まんなかに とまる）と ドアの ひらき */
-  function trainPose(now) {
-    if (!train) return null;
-    const t = now - train.t0, go = LINE[train.dir].go;
-    const t1 = TRAIN.ANN + TRAIN.IN, t2 = t1 + TRAIN.OPEN;
-    if (t < TRAIN.ANN) return null;
-    const ease = k => 1 - Math.pow(1 - Math.min(1, Math.max(0, k)), 3);
-    if (t < t1) return { x: -go * (1 - ease((t - TRAIN.ANN) / TRAIN.IN)) * 1.6, door: 0 };
-    if (t < t2) { const k = (t - t1) / TRAIN.OPEN; return { x: 0, door: Math.min(1, k * 4, (1 - k) * 4) }; }
-    const k = (t - t2) / TRAIN.OUT;
-    return { x: go * k * k * 1.6, door: 0 };
-  }
-  function drawTrain(now, wy) {
-    const p = trainPose(now);
-    if (!p) return;
-    const th = Math.min(H * .32, 150), tw = W * 1.15, x0 = W / 2 - tw / 2 + p.x * W, y0 = wy - th * .72;
-    ctx.save();
-    ctx.fillStyle = '#f8f9fa'; roundRect(x0, y0, tw, th, th * .18); ctx.fill();
-    ctx.fillStyle = '#0B78BE'; ctx.fillRect(x0, y0 + th * .62, tw, th * .14);
-    ctx.fillStyle = '#075E96'; ctx.fillRect(x0, y0 + th * .08, tw, th * .05);
-    const nd = 4;
-    for (let i = 0; i < nd; i++) {
-      const dx = x0 + tw * (i + .5) / nd, dw = th * .42, dh = th * .78, dy = y0 + th * .15;
-      ctx.fillStyle = '#343a40'; ctx.fillRect(dx - dw / 2, dy, dw, dh);
-      const o = p.door * dw * .45;
-      ctx.fillStyle = '#dee2e6'; ctx.fillRect(dx - dw / 2 - o, dy, dw / 2, dh); ctx.fillRect(dx + o, dy, dw / 2, dh);
-      ctx.fillStyle = '#a5d8ff'; ctx.fillRect(dx - dw / 2 - o + dw * .08, dy + dh * .1, dw * .34, dh * .35); ctx.fillRect(dx + o + dw * .08, dy + dh * .1, dw * .34, dh * .35);
-      if (i < nd - 1) { ctx.fillStyle = '#a5d8ff'; ctx.fillRect(dx + dw * .7, y0 + th * .2, tw / nd - dw * 1.4, th * .3); }
-    }
-    // いきさき ひょうじ
-    ctx.fillStyle = '#10202f'; ctx.fillRect(x0 + tw * .02, y0 + th * .18, th * .9, th * .2);
-    ctx.fillStyle = '#ffb84d'; ctx.font = `bold ${Math.round(th * .12)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(LINE[train.dir].name, x0 + tw * .02 + th * .45, y0 + th * .28);
-    ctx.restore();
+  function updateTrainPanel() {
+    const ph = train ? train.phase : '';
+    $('#trBack').hidden = ph !== 'arrive';
+    $('#trMore').hidden = !(ph === 'arrive' && Blue.destinations(train.dir, train.cur).length);
+    $('#trOff').hidden = ph !== 'home';
+    $('#trPick').hidden = ph !== 'pick';
+    if (train) $('#trNum').textContent = station(train.cur).no;
   }
 
   /* ---------- あいことばの とびら ---------- */
@@ -350,6 +380,9 @@
   function setMode() {
     $('#carPanel').hidden = view.mode !== 'car';
     $('#hallPanel').hidden = view.mode !== 'hall';
+    $('#trainPanel').hidden = view.mode !== 'train';
+    $('#app').classList.toggle('train', view.mode === 'train');
+    if (view.mode === 'train') updateTrainPanel();
     $('#app').classList.toggle('hall', view.mode === 'hall');
     hideBubble();
     updatePanels();
@@ -389,6 +422,7 @@
       const g = Floors.gate(n);
       $('#hGate').hidden = !g;
       $('#hTrain').hidden = !isBlue(n);
+      $('#hTrain').textContent = train && train.phase === 'open' ? '🚃 でんしゃに のる' : '🚇 ブルーラインに のる';
       if (g) $('#hGate').textContent = save.gates[n] ? '🔓 ひらいた とびら' : '🔑 あいことばの とびら';
     }
   }
@@ -536,10 +570,10 @@
       ctx.fillStyle = '#ffd43b'; ctx.font = `bold ${Math.round(gw * .16)}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
       ctx.fillText(save.gates[view.floor] ? 'ひらいた！' : 'あいことば', gx + gw / 2, gy - 8);
     }
-    if (isBlue(view.floor)) drawTrain(t, wy);
+    trainDoors = isBlue(view.floor) && train ? Blue.drawPlatform(ctx, W, H, wy, train) : [];
     // こもの と おともだち
     let fs = Math.min(H * .34, W * .3), fx = W * .8, fy = wy - fs * .2;
-    if (!trainPose(t)) Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
+    if (!(train && Blue.platformPose(train))) Props.draw(ctx, fl.prop, gt ? W * .64 : W * .58, wy + H * .12, Math.min(H * .16, 90), t);
     // はなして いる ときは ふきだしに かぶらない ばしょへ
     if (view.talking) ({ fs, fx, fy } = friendSpot(fs, fx, fy));
     const f = Friends.present(fl.friend, night(), fl.deco.seed);
@@ -575,7 +609,7 @@
     Floors.LANDMARKS.filter(l => l.h <= 2000).forEach(l => { const d = document.createElement('div'); d.className = 'lm'; d.style.top = `calc(${(1 - (l.h + 200) / 2200) * 100}% - 1px)`; d.title = l.name; meter.appendChild(d); });
   })();
   function updateHud() {
-    const h = sim.car.h, eye = view.mode === 'hall' ? Lift.alt(view.floor) : h;
+    const h = sim.car.h, eye = view.mode !== 'car' ? Lift.alt(view.floor) : h;
     $('#alt').textContent = `${Lift.label(Lift.floorAt(eye))}かい・たかさ ${Math.round(eye)}m`;
     $('#cmp').textContent = Floors.compare(eye);
     $('#mk').style.top = `calc(${(1 - (h + 200) / 2200) * 100}% - 2px)`;
@@ -588,8 +622,9 @@
     const now = ts / 1000, dt = last ? Math.min(.05, now - last) : .016; last = now;
     for (let i = 0; i < SPEED; i++) sim.tick(dt);
     resize();
-    trainStep(now);
-    if (view.mode === 'car') drawCar(now); else { if (view.talking) layoutTalk(); drawHall(now); }
+    trainStep(dt);
+    if (view.mode === 'train') { hits = []; Blue.drawInside(ctx, W, H, train, now, dt); }
+    else if (view.mode === 'car') drawCar(now); else { if (view.talking) layoutTalk(); drawHall(now); }
     updateHud();
     panelT -= dt; if (panelT <= 0) { panelT = .2; updatePanels(); }
     // おと
@@ -597,12 +632,12 @@
     ambT -= dt;
     if (ambT <= 0) {
       ambT = 2 + Math.random() * 4;
-      const h = view.mode === 'hall' ? Lift.alt(view.floor) : sim.car.h;
+      const h = view.mode !== 'car' ? Lift.alt(view.floor) : sim.car.h;
       if (h < -40 && Math.abs(sim.car.v) < 3) SND.drip();
       else if (h > 100 && h < 1600 && !night() && Math.random() < .5) SND.bird();
       else if (h > 100 && h < 420 && Math.random() < .4) SND.gull();
     }
-    const zf = view.mode === 'hall' ? view.floor : sim.floorNow();
+    const zf = view.mode !== 'car' ? view.floor : sim.floorNow();
     SND.bgm(Floors.zoneOf(zf).id);
   }
 
@@ -610,8 +645,10 @@
   function hideBubble() { $('#bubble').hidden = true; }
   cv.addEventListener('click', e => {
     SND.unlock();
-    if (view.mode !== 'car') return;
     const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    // ホームの でんしゃの ドアを タップ → のる
+    if (view.mode === 'hall' && !view.talking && trainDoors.some(d => x >= d.x && x <= d.x + d.w && y >= d.y && y <= d.y + d.h)) { boardTrain(); return; }
+    if (view.mode !== 'car') return;
     let hit = null;
     for (let i = hits.length - 1; i >= 0; i--) { const h = hits[i]; if (x >= h.x && x <= h.x + h.w && y >= h.y && y <= h.y + h.h) { hit = h; break; } }
     if (!hit) { hideBubble(); return; }
@@ -815,6 +852,10 @@
   $('#hGate').addEventListener('click', () => { SND.unlock(); openGate(); });
   $('#hTrain').addEventListener('click', () => { SND.unlock(); askTrain(); });
   $('#trS').addEventListener('click', () => { SND.unlock(); rideTrain('shonandai'); });
+  $('#trBack').addEventListener('click', () => { SND.unlock(); trainBack(); });
+  $('#trMore').addEventListener('click', () => { SND.unlock(); openStations(); });
+  $('#trPick').addEventListener('click', () => { SND.unlock(); openStations(); });
+  $('#trOff').addEventListener('click', () => { SND.unlock(); leaveTrain(); });
   $('#trA').addEventListener('click', () => { SND.unlock(); rideTrain('azamino'); });
   $('#tNext').addEventListener('click', nextLine);
   $('#tAgain').addEventListener('click', showLine);
@@ -839,5 +880,5 @@
   requestAnimationFrame(loop);
 
   // テストよう（tools/tenku-elevator/e2e.js が よむ）
-  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard, openGate, get train() { return train; } };
+  window.TE = { sim, view, save, riders, arrivals, Floors, Words, giveCard, openGate, get train() { return train; }, get trainDoors() { return trainDoors; } };
 })();
