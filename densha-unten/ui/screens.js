@@ -6,7 +6,7 @@ import { ruby } from "./staff.js";
 const KEY = "densha-unten:settings";
 
 export function loadSettings() {
-  const def = { assist: true, sound: true, announce: true, route: null, mode: "real", direction: "down" };
+  const def = { assist: true, sound: true, announce: true, route: null, mode: "real", direction: "down", view: "cab" };
   try { return Object.assign(def, JSON.parse(localStorage.getItem(KEY) || "{}")); }
   catch (e) { return def; }
 }
@@ -44,6 +44,7 @@ export function showStart(routes, settings, onStart) {
     drawDirs();
   }));
   document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = r.value === settings.mode; });
+  document.querySelectorAll('input[name="view"]').forEach(r => { r.checked = r.value === settings.view; });
   $("optAssist").checked = settings.assist;
   $("optSound").checked = settings.sound;
   $("optAnnounce").checked = settings.announce;
@@ -52,6 +53,8 @@ export function showStart(routes, settings, onStart) {
   btn.onclick = () => {
     const m = document.querySelector('input[name="mode"]:checked');
     settings.mode = m ? m.value : "real";
+    const v = document.querySelector('input[name="view"]:checked');
+    settings.view = v ? v.value : "cab";
     settings.assist = $("optAssist").checked;
     settings.sound = $("optSound").checked;
     settings.announce = $("optAnnounce").checked;

@@ -238,6 +238,15 @@ export class Renderer {
     return t;
   }
 
+  /** キャンバスの内容でテクスチャを書きかえる（案内表示など） */
+  updateTexture(t, canvas) {
+    const gl = this.gl;
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  }
+
   /** GeoBuilder → Mesh */
   mesh(geo, material, origin = [0, 0, 0]) {
     if (!geo.count) return null;

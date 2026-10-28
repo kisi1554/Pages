@@ -6,6 +6,7 @@ import { buildStation, createStationMaterials } from "./stations.js";
 import { buildCityChunk, buildRouteGrid, createCityGeometry, createCityMaterials } from "./city.js";
 import { createTrainSet, placeTrains } from "./trains.js";
 import { cabCamera } from "./camera.js";
+import { createInterior, carPose, placeInterior, passengerCamera, drawLcd } from "./interior.js";
 
 const AHEAD = 2300, BEHIND = 600;
 const OUT = { fog: [250, 1900], color: [0.74, 0.83, 0.93], ambient: 0.62, sun: 0.55, night: 0.05 };
@@ -35,6 +36,7 @@ export class Scene {
     this.underlay = R.mesh(g, material([0.42, 0.5, 0.36]), [0, -30, 0]);
     this.tunnelMix = 0;
     this.queue = [];
+    this.interior = null; // 乗客視点にしたときに作る
   }
 
   _instancedFor(origin) {
@@ -98,13 +100,22 @@ export class Scene {
     return built;
   }
 
-  /** 描く。train: 自列車, others: placeTrains の列車一覧 */
-  render(train, others, time, dt) {
+  /**
+   * 描く。train: 自列車, others: placeTrains の列車一覧
+   * pv: 乗客視点のとき { lookSide, yaw, open, doorSide, lcd }（null なら運転席）
+   */
+  render(train, others, time, dt, pv = null) {
     const al = this.al;
     const aspect = this.R.resize(1.5);
-    const cam = cabCamera(al, train.s, train.v, time, aspect);
+    let cam, pose = null;
+    if (pv) {
+      if (!this.interior) this.interior = createInterior(this.R, this.route, this.veh);
+      pose = carPose(al, this.veh, train.s);
+      cam = passengerCamera(pose, pv.lookSide, pv.yaw, time, train.v, aspect);
+      if (pv.lcd) drawLcd(this.R, this.interior, pv.lcd);
+    } else cam = cabCamera(al, train.s, train.v, time, aspect);
     // トンネルの内と外で、空・霧・明るさをなめらかに切りかえる
-    const sEye = train.s - 1.6;
+    const sEye = pose ? pose.s : train.s - 1.6;
     const inside = al.inTunnel(sEye) ? 1 : 0;
     const k = Math.min(1, dt * 2.5);
     this.tunnelMix += (inside - this.tunnelMix) * k;
@@ -120,6 +131,7 @@ export class Scene {
     for (const meshes of this.chunks.values()) list.push(...meshes);
     for (const r of this.stations.values()) list.push(...r.meshes);
     list.push(this.trains.body, this.trains.glass, this.trains.tail, this.trains.head);
+    if (pose) list.push(...placeInterior(this.interior, pose, cam.pos, pv.open, pv.doorSide));
     // マテリアルの切りかえを減らす
     list.sort((a, b) => (a.material.id || 0) - (b.material.id || 0));
     this.R.render(list, cam);

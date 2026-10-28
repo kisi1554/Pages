@@ -40,6 +40,13 @@ export class StationController {
     this.records[0].error = 0;
   }
 
+  /** ドアの開き具合 0〜1（開くのに2秒、閉まるのに2.5秒） */
+  doorOpenness(t) {
+    if (this.state === S.OPEN) return Math.min(1, (t - this.openedAt) / 2);
+    if (this.state === S.CLOSING) return Math.max(0, 1 - this.timer / 2.5);
+    return 0;
+  }
+
   get doorsClosed() { return this.state !== S.OPEN && this.state !== S.CLOSING; }
   get target() { return this.rows[this.idx]; }
 

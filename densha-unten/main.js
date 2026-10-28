@@ -48,6 +48,9 @@ class Game {
     this.staff = new Staff(route, this.rows, this.free);
     this.hud = new Hud(opts.assist, this.free);
     this.fps = { frames: 0, t0: performance.now(), value: 0 };
+    // 視点: "cab"（運転席・手で運転）/ "passenger"（客室の長いす・自動運転）
+    this.pv = { lookSide: route.stations[0].doors === "right" ? 1 : -1, yaw: 0 };
+    this.setView(opts.view === "passenger" ? "passenger" : "cab");
     // 車内アナウンス: 始発で行き先、発車したら「次は」、駅の手前で「まもなく」、終点で「ご乗車ありがとう」
     this.ann = { startAt: route.timetable.startTime + 3, next: null, soon: new Set() };
     document.documentElement.style.setProperty("--accent", route.meta.lineColor);
@@ -61,7 +64,7 @@ class Game {
 
   start() {
     this.scene.prepare(this.train.s, Infinity);
-    this.lever.enabled = true;
+    this.lever.enabled = this.view === "cab";
     this.last = performance.now();
     const loop = now => {
       if (this.stopped) return;
@@ -89,7 +92,7 @@ class Game {
       this.signal = sig;
       this.atcOn = updateAtcBrake(this.atcOn, train.v, sig);
     }
-    if (DEBUG.autopilot) this.autopilot();
+    if (DEBUG.autopilot || this.view === "passenger") this.autopilot();
     const prevBrake = train.brake, prevV = train.v;
     const env = st => {
       const mid = st.s - veh.length / 2;
@@ -154,6 +157,7 @@ class Game {
     if (this.finished) return;
     this.finished = true;
     this.lever.enabled = false;
+    this.cab.setNotch(this.train.notch);
     setTimeout(() => showResult(this.sc.records, () => location.reload(), this.free), 300);
   }
 
@@ -165,7 +169,7 @@ class Game {
     const lp = this.leader ? leaderPositionAt(this.leader, t) : null;
     if (lp != null) others.push({ head: lp, dir: 1, track: "down", lights: "tail" });
     for (const s of oncomingPositions(route, t, train.s - 400, train.s + 2300)) others.push({ head: s, dir: -1, track: "up", lights: "head" });
-    this.scene.render(train, others, t, dt);
+    this.scene.render(train, others, t, dt, this.view === "passenger" ? this.passengerView(t, dt) : null);
 
     this.cab.drawSpeedo(train.v, this.signal);
     this.cab.setLamps(sc.doorsClosed, this.atcOn, this.signal);
@@ -186,6 +190,31 @@ class Game {
     this.fps.frames++;
     const now = performance.now();
     if (now - this.fps.t0 > 1000) { this.fps.value = this.fps.frames * 1000 / (now - this.fps.t0); this.fps.frames = 0; this.fps.t0 = now; }
+  }
+
+  /** 視点を切りかえる。乗客視点のあいだは自動で運転する */
+  setView(v) {
+    this.view = v;
+    document.getElementById("app").classList.toggle("passenger", v === "passenger");
+    this.lever.enabled = v === "cab" && !this.finished;
+    $("viewBtn").textContent = v === "passenger" ? "🚆" : "👀";
+    $("viewBtn").setAttribute("aria-label", v === "passenger" ? "うんてんせきに もどる" : "きゃくしつから みる");
+    if (v === "cab") this.cab.setNotch(this.train.notch);
+  }
+
+  /** 乗客視点の情報: 見る向き（次に止まる駅のドアの側）、ドアの開き具合、ドア上の案内表示 */
+  passengerView(t, dt) {
+    const { sc, route, train, pv } = this;
+    const st = sc.target.station;
+    const side = st.doors === "right" ? 1 : -1;
+    pv.lookSide += (side - pv.lookSide) * Math.min(1, dt * 1.2);
+    const stopped = sc.state !== S.RUN;
+    const d = st.stop - train.s;
+    const kind = stopped ? "stop" : d < soonDistance(route, sc.idx) ? "soon" : "next";
+    const lang = Math.floor(t / 3) % 3;
+    const doorText = stopped ? "" : [side > 0 ? "みぎがわが ひらきます" : "ひだりがわが ひらきます", side > 0 ? "みぎがわ" : "ひだりがわ", side > 0 ? "Doors: right" : "Doors: left"][lang];
+    return { lookSide: pv.lookSide, yaw: pv.yaw, open: sc.doorOpenness(t), doorSide: side,
+      lcd: { kind, station: st, lineColor: route.meta.lineColor, lang, doorText } };
   }
 
   setPaused(p) {
@@ -224,6 +253,19 @@ async function startGame(entry, opts) {
 
 function updateSoundBtn() { $("soundBtn").textContent = settings.sound ? "🔊" : "🔇"; }
 
+$("viewBtn").addEventListener("click", () => game && game.setView(game.view === "passenger" ? "cab" : "passenger"));
+window.addEventListener("keydown", e => { if ((e.key === "v" || e.key === "V") && game) game.setView(game.view === "passenger" ? "cab" : "passenger"); });
+// 乗客視点では、画面を左右にドラッグして見まわせる
+{
+  let drag = null;
+  const view = $("view");
+  view.addEventListener("pointerdown", e => { if (game && game.view === "passenger" && !e.target.closest("button")) drag = { x: e.clientX, yaw: game.pv.yaw }; });
+  window.addEventListener("pointermove", e => {
+    if (!drag || !game) return;
+    game.pv.yaw = Math.max(-1.1, Math.min(1.1, drag.yaw + (e.clientX - drag.x) / view.clientWidth * 2.2 * -game.pv.lookSide));
+  });
+  window.addEventListener("pointerup", () => { drag = null; });
+}
 $("soundBtn").addEventListener("click", () => {
   settings.sound = !settings.sound;
   saveSettings(settings);
