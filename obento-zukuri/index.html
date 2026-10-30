@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fff4e6">
+<title>おべんとう づくり ― あか・きいろ・みどり の しょくいく あそび</title>
+<link rel="stylesheet" href="style.css?v=31d6095">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button id="btnBack" class="hbtn" hidden>← もどる</button>
+  <h1 id="hTitle">🍱 おべんとう づくり</h1>
+  <div class="toggles">
+    <button id="btnSound" class="hbtn" aria-pressed="true"><i aria-hidden="true">🔊</i><span>おと</span></button>
+    <button id="btnVoice" class="hbtn" aria-pressed="true"><i aria-hidden="true">🗣️</i><span>よみあげ</span></button>
+  </div>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section id="home" class="screen">
+    <div class="hero">
+      <div class="hero-txt">
+        <p class="lead">おべんとうばこ に おかず を つめて、<br><b class="cr">あか</b>・<b class="cy">きいろ</b>・<b class="cg">みどり</b> を そろえよう！</p>
+        <p class="sub-lead">いろどり も きれい だと「おいしそう！」</p>
+      </div>
+      <div class="hero-groups">
+        <span class="hg" style="--gc:#e03131">あか<small>からだ を つくる</small></span>
+        <span class="hg" style="--gc:#f59f00">きいろ<small>げんき の もと</small></span>
+        <span class="hg" style="--gc:#2f9e44">みどり<small>ちょうし を ととのえる</small></span>
+      </div>
+    </div>
+    <h2 class="sec-title">おだい を えらぼう</h2>
+    <div id="odaiList" class="odai-list"></div>
+    <div class="home-links">
+      <button data-go="zukan">📖 たべもの ずかん</button>
+      <button data-go="album">📷 アルバム</button>
+      <button data-go="parent">👪 おうち の かた へ</button>
+    </div>
+    <p class="allergy-note">🍀 アレルギー の ある ひと は、たべられない もの が あるよ。おうち の ひと と たしかめて ね。</p>
+  </section>
+
+  <!-- あそぶ -->
+  <section id="play" class="screen" hidden>
+    <div class="play-grid">
+      <div class="box-col">
+        <div class="odai-banner">
+          <span id="odaiEmoji" class="ob-emoji" aria-hidden="true"></span>
+          <div class="ob-txt"><b id="odaiTitle"></b><small id="odaiSize"></small></div>
+          <button id="btnStory" class="mini" aria-label="おだい を よむ">🔈</button>
+        </div>
+        <p id="odaiStory" class="odai-story"></p>
+        <div id="boxWrap" class="box-wrap"><svg id="boxSvg" role="img" aria-label="おべんとうばこ"></svg></div>
+        <p id="msg" class="msg" aria-live="polite"></p>
+        <div id="meters" class="meters"></div>
+      </div>
+      <div class="shelf-col">
+        <div id="tabs" class="tabs" role="tablist"></div>
+        <div id="shelf" class="shelf"></div>
+        <div class="actions">
+          <div id="pager" class="pager"><button id="pgPrev" aria-label="まえ">◀</button><span id="pgNum"></span><button id="pgNext" aria-label="つぎ">▶</button></div>
+          <button id="btnClear" class="sub-btn">🔄<span> ぜんぶ だす</span></button>
+          <button id="btnLid" class="main-btn">ふた を しめる</button>
+        </div>
+      </div>
+    </div>
+    <div id="ratio" class="ratio-box"></div>
+
+    <div id="eat" class="eat" hidden>
+      <div class="eat-card">
+        <div class="eat-stage">
+          <div class="char-wrap"><div id="charBox" class="char"></div><small id="charName"></small></div>
+          <svg id="eatSvg" class="eat-box"></svg>
+        </div>
+        <div id="bubble" class="bubble"></div>
+        <div id="eatResult" hidden>
+          <div id="badges" class="badges"></div>
+          <div id="eatMeters" class="eat-meters"></div>
+          <details id="eatParent" class="eat-parent"></details>
+          <div class="eat-actions">
+            <button id="btnAgain" class="main-btn">もういちど つくる</button>
+            <button id="btnHome" class="sub-btn">ほか の おだい</button>
+            <button id="btnAlbum" class="sub-btn">📷 アルバム</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section id="zukan" class="screen" hidden>
+    <p class="allergy-note">🍀 アレルギー の ある ひと は、たべられない もの が あるよ。おうち の ひと と たしかめて ね。</p>
+    <div id="zLegend" class="legends"></div>
+    <p class="z-tip">たべもの に「いい」「わるい」は ないよ。いろんな グループ を くみあわせて たべる のが だいじ。</p>
+    <div id="zFilters" class="chips"></div>
+    <div id="zMarks"></div>
+    <p id="zCount" class="z-count"></p>
+    <div id="zGrid" class="z-grid"></div>
+  </section>
+
+  <!-- アルバム -->
+  <section id="album" class="screen" hidden>
+    <p class="z-tip">「いただきます」 した おべんとう が のこるよ（あたらしい じゅん に 10こ まで）。</p>
+    <div id="albumGrid" class="album-grid"></div>
+  </section>
+
+  <!-- おうちのかたへ -->
+  <section id="parent" class="screen parent" hidden>
+    <h2>このアプリについて</h2>
+    <p>お弁当箱に料理を詰めながら、<b>3つの食品グループ（赤・黄・緑）</b>のバランスと、<b>主食・主菜・副菜</b>の割合、彩りを体験する食育あそびです（年長〜小学校中学年向け）。
+      食べ物に「良い・悪い」をつけず、組み合わせで考えることを大切にしています。バランスが偏っても叱らず、「つぎは〇〇を増やしてみよう」と声をかけます。</p>
+
+    <h2>3つの食品グループ</h2>
+    <table class="ptable">
+      <tr><th style="color:#e03131">赤</th><td>おもに体をつくるもとになる</td><td>肉・魚・卵・豆（大豆製品）・牛乳・乳製品・海藻・小魚</td></tr>
+      <tr><th style="color:#f59f00">黄</th><td>おもにエネルギーのもとになる</td><td>米・パン・めん・いも・砂糖・油脂</td></tr>
+      <tr><th style="color:#2f9e44">緑</th><td>おもに体の調子を整えるもとになる</td><td>野菜・果物・きのこ</td></tr>
+    </table>
+    <p>小学校の家庭科（5年）では「6つの基礎食品群」と対応させ、赤＝1群（魚・肉・卵・豆）＋2群（牛乳・乳製品・小魚・海藻）、緑＝3群（緑黄色野菜）＋4群（その他の野菜・果物・きのこ）、黄＝5群（穀類・いも類・砂糖）＋6群（油脂）として学びます。このアプリはこの分け方に合わせています。料理は主な材料で割合を決めています（例: からあげ＝赤8割・黄2割〈揚げ油〉）。</p>
+    <h3>資料によって分け方が分かれる食品</h3>
+    <ul>
+      <li><b>いも類</b>（じゃがいも・さつまいも）: 3色では<b>黄</b>（5群）。ビタミンCが多いので緑と説明する資料もありますが、小学校の教え方に合わせ黄にしています。料理としては「副菜」に入ります（ポテトサラダ等）。</li>
+      <li><b>海藻</b>（ひじき・わかめ・のり）: 家庭科では2群（カルシウム）なので<b>赤</b>。幼児向け資料では緑にすることがあります。</li>
+      <li><b>えだまめ</b>: 食品成分表では野菜類のため<b>緑</b>。大豆として赤にする資料もあります。</li>
+      <li><b>とうもろこし（コーン）</b>: スイートコーンは野菜として<b>緑</b>。穀類として黄にする資料もあります。</li>
+      <li><b>かぼちゃ・にんじん</b>: 甘みや色に関係なく野菜なので<b>緑</b>。<b>チーズ・ヨーグルト</b>は乳製品で<b>赤</b>。<b>ごま</b>は油脂が多いので<b>黄</b>としています。</li>
+    </ul>
+
+    <h2>主食・主菜・副菜と「3・1・2弁当箱法」</h2>
+    <p>NPO法人食生態学実践フォーラム（足立己幸 ほか）の「3・1・2弁当箱法」は、農林水産省の食育資料でも紹介されている、お弁当で1食分の量と組み合わせを考える方法です。</p>
+    <ol>
+      <li>食べる人にとってちょうどよい大きさの弁当箱を選ぶ（<b>容量 mL ≒ 1食のエネルギー kcal</b>）</li>
+      <li>動かないように、しっかり詰める</li>
+      <li><b>主食3：主菜1：副菜2</b> の割合（容積）に料理を詰める</li>
+      <li>同じ調理法の料理（特に油を多く使った料理）は1品だけ</li>
+      <li>全体をおいしそうに仕上げる（彩り・見た目）</li>
+    </ol>
+    <p>アプリでは、おだいごとに弁当箱の大きさ（400〜650mL）と仕切りが変わります。ごはんの場所が箱の約半分、残りがおかずの仕切りです。メーターの目盛りは 3:1:2 を色に当てはめた目安（黄 3/6・赤 1/6・緑 2/6）で、「6割以上」で「ちょうどいい」としています。厳密な栄養計算ではありません。くだもの・乳製品は 3:1:2 の計算に入れていません。</p>
+
+    <h2>食物アレルギーについて</h2>
+    <p>お子さんには「アレルギーのある人は食べられないものがある」ことを伝えています。ずかん・たなでは、保護者向けに<b>アレルギー表示の対象となる原材料</b>をマークで表示できます。</p>
+    <div id="parentMarks"></div>
+    <ul>
+      <li><b>特定原材料（表示義務）9品目</b>: えび、かに、くるみ、小麦、そば、卵、乳、落花生（ピーナッツ）、カシューナッツ（カシューナッツは 2026年4月1日施行の改正で追加。2028年3月31日までは経過措置）</li>
+      <li><b>特定原材料に準ずるもの（表示推奨）20品目</b>: アーモンド、あわび、いか、いくら、オレンジ、キウイフルーツ、牛肉、ごま、さけ、さば、ゼラチン、大豆、鶏肉、バナナ、ピスタチオ、豚肉、マカダミアナッツ、もも、やまいも、りんご</li>
+    </ul>
+    <p>マークは「よくある作り方」の例です（しょうゆ＝小麦・大豆、マヨネーズ＝卵 など）。実際の材料は商品の表示やレシピで確かめ、アレルギーのあるお子さんは主治医の指示に従ってください。</p>
+
+    <h2>小さな子のお弁当で気をつけたいこと</h2>
+    <p>ミニトマト・ぶどう・さくらんぼなど丸くてつるっとした食べ物は、のどに詰まりやすいので、小さな子には4等分などに切りましょう（消費者庁・こども家庭庁の注意喚起）。「ちいさな子」のおだいでは、丸い食べ物を入れるとこのことをお知らせします。</p>
+
+    <h2>出典・参考</h2>
+    <ul class="src">
+      <li>文部科学省「食生活学習教材（小学校低学年・中学年・高学年用）」／「たのしい食事つながる食育」 <a href="https://www.mext.go.jp/a_menu/shotou/eiyou/syokuseikatsu.htm" target="_blank" rel="noopener">mext.go.jp</a></li>
+      <li>小学校家庭科 教科書（6つの基礎食品群と3つのグループ）、各地の学校の給食だより（例: 調布市立小学校、大阪市立小学校）</li>
+      <li>農林水産省「食育」・食育白書 掲載の 3・1・2弁当箱法 <a href="https://www.maff.go.jp/j/syokuiku/" target="_blank" rel="noopener">maff.go.jp</a></li>
+      <li>NPO法人 食生態学実践フォーラム「3・1・2弁当箱法」 <a href="https://shokuseitaigaku.com/2014/bentobako" target="_blank" rel="noopener">shokuseitaigaku.com</a></li>
+      <li>消費者庁「食物アレルギー表示に関する情報」 <a href="https://www.caa.go.jp/policies/policy/food_labeling/food_sanitation/allergy/" target="_blank" rel="noopener">caa.go.jp</a></li>
+      <li>消費者庁・こども家庭庁「食品による子どもの窒息・誤嚥（ごえん）事故に注意！」</li>
+    </ul>
+    <p class="small">絵はすべてプログラムで描いた SVG、音は Web Audio の合成音です。進み具合とアルバム（10個まで）はこの端末のブラウザ（localStorage）にだけ保存されます。</p>
+  </section>
+</main>
+
+<div id="modal" class="modal" hidden><div id="modalCard" class="modal-card" role="dialog" aria-modal="true"></div></div>
+<div id="ghost" class="ghost" hidden></div>
+
+<script src="foods.js?v=31d6095"></script>
+<script src="render.js?v=31d6095"></script>
+<script src="audio.js?v=31d6095"></script>
+<script src="game.js?v=31d6095"></script>
+</body>
+</html>
