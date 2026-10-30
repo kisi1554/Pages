@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>しゅつどう！ 119</title>
+<meta name="description" content="しょうぼうしゃ・きゅうきゅうしゃで しゅつどう！ 119の かけかたも れんしゅう しよう">
+<meta name="theme-color" content="#e03131">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚒</text></svg>">
+<link rel="stylesheet" href="style.css?v=f13568d">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button class="pill back" id="back" type="button" hidden aria-label="もどる">◀</button>
+  <h1 class="title" id="title">🚒 しゅつどう！ 119</h1>
+  <button class="pill tog" id="tSound" type="button" aria-pressed="true" title="おと">🔊</button>
+  <button class="pill tog" id="tSiren" type="button" aria-pressed="true" title="サイレン の おと">🚨</button>
+  <button class="pill tog" id="tVoice" type="button" aria-pressed="true" title="よみあげ">🗣️</button>
+</header>
+
+<main>
+  <!-- メニュー -->
+  <section class="screen scroll" id="sMenu">
+    <canvas class="hero" id="hero" aria-hidden="true"></canvas>
+    <div class="menu">
+      <button class="mbtn red" type="button" data-go="sMissions"><span class="mi">🚨</span><span><b>しゅつどう！</b><small>しれい センター で でんわ を うけて、くるま で かけつけよう</small></span></button>
+      <button class="mbtn blue" type="button" data-go="sPlist"><span class="mi">📞</span><span><b>でんわ れんしゅう</b><small>119ばん・110ばん の かけかた を れんしゅう しよう</small></span></button>
+      <button class="mbtn yellow" type="button" data-go="sZukan"><span class="mi">📖</span><span><b>はたらく くるま ずかん</b><small>しょうぼうしゃ・きゅうきゅうしゃ・パトカー と サイレン の おと</small></span></button>
+      <button class="mbtn green" type="button" data-go="sSafe"><span class="mi">🦺</span><span><b>あんぜん の おやくそく</b><small>サイレン が きこえたら どう する？ ／ おうち の かたへ</small></span></button>
+    </div>
+    <p class="note">これは あそび と れんしゅう の アプリ です。ほんとう の でんわ は かかりません。<br>いたずら でんわ は ぜったい ダメ！</p>
+  </section>
+
+  <!-- しゅつどう いちらん -->
+  <section class="screen scroll" id="sMissions" hidden>
+    <h2 class="h2">どの しゅつどう に いく？</h2>
+    <div class="cards" id="mList"></div>
+  </section>
+
+  <!-- しれいセンター -->
+  <section class="screen" id="sCall" hidden>
+    <div class="callwrap" id="callRoot"></div>
+  </section>
+
+  <!-- うんてん -->
+  <section class="screen" id="sDrive" hidden>
+    <canvas id="driveCv" class="drivecv" aria-label="まち の ちず"></canvas>
+    <div class="hud">
+      <div class="hudrow">
+        <span class="chip dest" id="hDest">📍</span>
+        <span class="chip time" id="hTime">0.0びょう</span>
+        <button class="chip sirenbtn on" id="hSiren" type="button">🚨 サイレン ON</button>
+      </div>
+      <div class="navi" id="hNext">⬆ まっすぐ</div>
+    </div>
+    <div class="ctrl">
+      <button class="cbtn turn" id="cLeft" type="button" aria-label="ひだり に まがる"><span>◀</span><small>ひだり</small></button>
+      <button class="cbtn turn" id="cRight" type="button" aria-label="みぎ に まがる"><span>▶</span><small>みぎ</small></button>
+      <button class="cbtn gas" id="cGas" type="button" aria-label="アクセル"><span>⏩</span><small>アクセル</small></button>
+    </div>
+    <div class="start" id="dStart">
+      <div class="startbox">
+        <canvas id="startCv" class="startcv"></canvas>
+        <p id="startTxt"></p>
+        <ul class="howto">
+          <li>⏩ <b>アクセル</b> を おして いる あいだ すすむ。はなす と ブレーキ</li>
+          <li>◀ ▶ で つぎ の こうさてん で まがる（ちず を よこ に なぞっても OK）</li>
+          <li>🟨 こうさてん は <b>ゆっくり</b>。みぎ・ひだり を かくにん！</li>
+        </ul>
+        <button class="big go" id="startBtn" type="button">🚨 サイレン ON で しゅっぱつ！</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- げんば -->
+  <section class="screen" id="sScene" hidden>
+    <canvas id="sceneCv" class="scenecv"></canvas>
+    <div class="smsg" id="sMsg"></div>
+    <div class="sacts" id="sActs"></div>
+  </section>
+
+  <!-- けっか -->
+  <section class="screen scroll" id="sResult" hidden>
+    <div class="result">
+      <div class="rstars" id="rStars"></div>
+      <h2 id="rTitle">しゅつどう かんりょう！</h2>
+      <p id="rText"></p>
+      <div class="rbtns">
+        <button class="big go" id="rAgain" type="button">🔁 もういちど</button>
+        <button class="big" id="rList" type="button">📋 ほか の しゅつどう</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- でんわ れんしゅう いちらん -->
+  <section class="screen scroll" id="sPlist" hidden>
+    <div class="safe">
+      <b>⚠️ これは れんしゅう だよ。ほんとう の でんわ は かからないよ。</b>
+      <span>いたずら でんわ は ぜったい ダメ！ ほんとう に こまって いる ひと の でんわ が つながらなく なって しまうよ。</span>
+    </div>
+    <h2 class="h2">どの でんわ を れんしゅう する？</h2>
+    <div class="cards" id="pList"></div>
+    <label class="namebox">じぶん の なまえ（かかなくても OK）
+      <input id="nameIn" type="text" maxlength="12" autocomplete="off" placeholder="れい：ゆうき">
+    </label>
+  </section>
+  <section class="screen scroll" id="sPractice" hidden>
+    <div class="pwrap" id="pRoot"></div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="screen scroll" id="sZukan" hidden>
+    <h2 class="h2">はたらく くるま ずかん</h2>
+    <p class="sub">サイレン の おと は ほんもの に にせて つくった おと だよ。</p>
+    <div class="zgrid" id="zList"></div>
+  </section>
+
+  <!-- あんぜん・おうち の かたへ -->
+  <section class="screen scroll" id="sSafe" hidden>
+    <div class="safebox kids">
+      <h2>🚨 サイレン が きこえたら</h2>
+      <ul>
+        <li>🚶 みち を わたる の を やめて、<b>ほどう で まとう</b>。とおりすぎて、まわり が あんぜん に なって から わたろう。</li>
+        <li>🚗 くるま は <b>みち の ひだり に よって とまる</b> きまり。こうさてん の なか では とまらず、こうさてん を さけて から よるよ。</li>
+        <li>👀 きゅうきゅうしゃ や しょうぼうしゃ を みても、ちかく に よって いかない。はたらく ひと の じゃま を しない よう に しよう。</li>
+        <li>📞 119ばん・110ばん は ほんとう に こまった とき だけ。<b>いたずら でんわ は ぜったい ダメ</b>。</li>
+      </ul>
+    </div>
+    <div class="safebox kids">
+      <h2>📞 でんわ で いう こと</h2>
+      <ol>
+        <li>119ばん：「<b>かじ です</b>」か「<b>きゅうきゅう です</b>」</li>
+        <li>110ばん：「<b>じけん です</b>」か「<b>じこ です</b>」</li>
+        <li><b>ばしょ</b>（じゅうしょ。わからなければ ちかく の おみせ・こうえん・こうさてん）</li>
+        <li><b>なにが あったか</b>（だれ が どう なったか）</li>
+        <li>じぶん の <b>なまえ</b></li>
+      </ol>
+      <p>あわてて いい。ゆっくり で いい。でんわ の ひと が じゅんばん に きいて くれるよ。</p>
+    </div>
+    <div class="safebox adult">
+      <h2>おうちの方へ</h2>
+      <p>このアプリは遊びと練習用です。電話機能（tel: リンク）は使っておらず、実際に発信することはありません。</p>
+      <h3>119番通報の流れ</h3>
+      <p>指令員から「火事ですか、救急ですか」と聞かれ、続いて住所（市町村名から。わからなければ近くの大きな建物・交差点などの目印）、何があったか（救急なら誰がどうなったか、年齢）、通報者の名前・連絡先を順に聞かれます。緊急性が高い場合は、すべて聞き終える前に救急車が出動します。「あわてず、ゆっくりと答えてください」と案内されています。</p>
+      <h3>こどもで、ためらわず救急車を呼んでほしい症状の例（消防庁のマニュアルより抜粋）</h3>
+      <ul>
+        <li>くちびるの色が紫色で呼吸が弱い／激しいせきやゼーゼーして呼吸が苦しく顔色が悪い</li>
+        <li>けいれんが止まらない、止まっても意識が戻らない</li>
+        <li>痛みのひどいやけど・広範囲のやけど／変なものを飲み込んで意識がない</li>
+        <li>生まれて3か月未満の乳児の様子がおかしい　など</li>
+      </ul>
+      <h3>迷ったときの相談窓口</h3>
+      <ul>
+        <li><b>#7119（救急安心センター事業）</b>：救急車を呼ぶか、病院へ行くか迷うときの電話相談。実施地域は都道府県・市町村によって異なります（令和7年12月時点で神奈川県・東京都など。お住まいの地域の案内を確認してください）。</li>
+        <li><b>#8000（こども医療電話相談）</b>：休日・夜間のこどもの急な病気の相談。各都道府県に窓口があります。</li>
+        <li>総務省消防庁の全国版救急受診アプリ「Q助」でも緊急度を確かめられます。</li>
+        <li>緊急ではない警察への相談は <b>#9110</b>（警察相談専用電話）。</li>
+      </ul>
+      <h3>緊急自動車が近づいてきたら（道路交通法第40条）</h3>
+      <p>交差点やその付近では、車は交差点を避け、道路の左側に寄って一時停止します。それ以外の場所では道路の左側に寄って進路をゆずります。</p>
+      <p class="small">出典は README.md にまとめています。アプリ内の住所・人物・自治体名はすべて架空です。車両のデザインもオリジナルで、実在の自治体のロゴ・制服とは関係ありません。</p>
+    </div>
+  </section>
+</main>
+
+<script src="data.js?v=f13568d"></script>
+<script src="audio.js?v=f13568d"></script>
+<script src="art.js?v=f13568d"></script>
+<script src="render.js?v=f13568d"></script>
+<script src="drive.js?v=f13568d"></script>
+<script src="scene.js?v=f13568d"></script>
+<script src="call.js?v=f13568d"></script>
+<script src="app.js?v=f13568d"></script>
+</body>
+</html>
