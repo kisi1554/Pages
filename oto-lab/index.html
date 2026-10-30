@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>おとの ふしぎ ラボ</title>
+<meta name="description" content="わゴムや コップで じっけん！ おとの たかさや はやさの ひみつ。小3 りか「おとの せいしつ」の よしゅう。">
+<meta name="theme-color" content="#ae3ec9">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔊</text></svg>">
+<link rel="stylesheet" href="style.css?v=ee125e8">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <h1><button type="button" class="hbtn title" id="homeBtn">🔊 おとの ふしぎ ラボ</button></h1>
+  <div class="tools">
+    <label class="volbox" title="おとの おおきさ">🔈<input type="range" id="vol" min="0" max="100" step="5" aria-label="おとの おおきさ"></label>
+    <button type="button" class="hbtn icon" id="soundBtn" aria-label="おと オン/オフ">🔊</button>
+    <button type="button" class="hbtn icon" id="noteBtn" aria-label="じっけん ノート">📒</button>
+    <button type="button" class="hbtn icon" id="setBtn" aria-label="せってい">⚙️</button>
+  </div>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section id="v-home">
+    <p class="lead"><ruby>音<rt>おと</rt></ruby>って なんだろう？ 8つの じっけんで <ruby>音<rt>おと</rt></ruby>の ひみつを さがそう。<br>どの じっけんも「🤔 よそう → 🧪 ためす → 💡 わかった こと」の じゅんばん だよ。</p>
+    <p class="safety">👂 <ruby>音<rt>おと</rt></ruby>は ちいさめ から はじめよう。スピーカーや イヤホンを <ruby>耳<rt>みみ</rt></ruby>に くっつけないでね。</p>
+    <div class="exlist" id="expList"></div>
+  </section>
+
+  <!-- じっけん -->
+  <section id="v-exp" hidden>
+    <div class="exphead">
+      <button type="button" class="btn sub back" id="expBack">◀ もどる</button>
+      <h2 id="expTitle"></h2>
+    </div>
+    <nav class="steps" aria-label="じっけんの じゅんばん">
+      <button type="button" class="step" data-step="1"><span class="sn">1</span>🤔 よそう</button>
+      <button type="button" class="step" data-step="2"><span class="sn">2</span>🧪 ためす</button>
+      <button type="button" class="step" data-step="3"><span class="sn">3</span>💡 わかった</button>
+    </nav>
+    <div id="expBody"></div>
+  </section>
+
+  <!-- ノート -->
+  <section id="v-note" hidden>
+    <div class="exphead">
+      <button type="button" class="btn sub back" id="noteBack">◀ もどる</button>
+      <h2>📒 じっけん ノート</h2>
+    </div>
+    <p class="lead" id="noteSum"></p>
+    <div class="notelist" id="noteList"></div>
+  </section>
+</main>
+
+<!-- せってい（おうちの方へ） -->
+<div class="overlay" id="settings" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <h2 id="setTitle">⚙️ せってい</h2>
+    <h3>🎤 マイク（じっけん 7「<ruby>音<rt>おと</rt></ruby>の なみを <ruby>見<rt>み</rt></ruby>よう」）</h3>
+    <div class="parent">
+      <p><b>おうちの方へ</b></p>
+      <p>オンにすると、じっけん 7 で端末のマイクの音を <b>波の形と大きさのグラフ</b> にしてその場で表示します。</p>
+      <ul>
+        <li>音は <b>この端末の中だけ</b> で処理します。<b>録音・保存・送信はしません</b>（グラフを描いたら捨てます）。</li>
+        <li>マイクを使うのは「🎤 マイクで ためす」を押してから、じっけん 7 の画面を離れるまでの間だけです。</li>
+        <li>はじめて使うとき、ブラウザがマイクの許可をたずねます。いつでもブラウザの設定から取り消せます。</li>
+        <li>マイクを使わなくても、合成音の波で同じ体験ができます。</li>
+      </ul>
+      <label class="consent"><input type="checkbox" id="micOk"> 内容を確認し、マイクの利用に同意します（保護者）</label>
+    </div>
+    <h3>👂 <ruby>耳<rt>みみ</rt></ruby>を まもる</h3>
+    <div class="parent">
+      <p>このアプリの音量は上限を低めにしてあり、大きな音はリミッターで抑えます。端末の音量も控えめにし、スピーカーやイヤホンを耳に近づけすぎないようご注意ください。</p>
+    </div>
+    <h3>📒 ノート</h3>
+    <button type="button" class="btn sub" id="resetBtn">🗑 ノートを ぜんぶ けす</button>
+    <div class="row center"><button type="button" class="btn big" id="setClose">とじる</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="physics.js?v=ee125e8"></script>
+<script src="audio.js?v=ee125e8"></script>
+<script src="scope.js?v=ee125e8"></script>
+<script src="app.js?v=ee125e8"></script>
+<script src="experiments/gomu.js?v=ee125e8"></script>
+<script src="experiments/taiko.js?v=ee125e8"></script>
+<script src="experiments/koppu.js?v=ee125e8"></script>
+<script src="experiments/itodenwa.js?v=ee125e8"></script>
+<script src="experiments/kaminari.js?v=ee125e8"></script>
+<script src="experiments/yamabiko.js?v=ee125e8"></script>
+<script src="experiments/nami.js?v=ee125e8"></script>
+<script src="experiments/uchu.js?v=ee125e8"></script>
+</body>
+</html>
