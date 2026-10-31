@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ミツバチの いちにち ｜ 8のじ ダンスで なかまに おしえよう</title>
+<meta name="description" content="はたらきバチに なって 1にちを すごそう。はなの みつを あつめて じゅふん、すに もどって 8のじ ダンスで なかまに はなばたけの ばしょを おしえよう。">
+<meta name="theme-color" content="#b86e00">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐝</text></svg>">
+<link rel="stylesheet" href="style.css?v=d83c290">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<header class="topbar">
+  <button id="btnHome" class="icon-btn" type="button" aria-label="ホーム">🏠<span class="lbl">ホーム</span></button>
+  <h1><span class="hb">🐝 </span>ミツバチの いちにち</h1>
+  <button id="btnZukan" class="icon-btn" type="button" aria-label="ずかん">📖<span class="lbl">ずかん</span></button>
+  <button id="btnBgm" class="icon-btn" type="button" aria-label="BGM オン・オフ">🎵</button>
+  <button id="btnSound" class="icon-btn" type="button" aria-label="こうかおん オン・オフ">🔊</button>
+</header>
+
+<!-- ホーム -->
+<section id="home" class="home">
+  <div class="hero">
+    <canvas id="heroCv" width="300" height="150" aria-hidden="true"></canvas>
+    <div>
+      <p class="me" id="meLine"></p>
+      <p class="now" id="nowLine"></p>
+    </div>
+  </div>
+
+  <div class="jobs" id="jobLine" aria-label="はたらきバチの しごとの うつりかわり"></div>
+
+  <div class="menu">
+    <button type="button" class="mbtn big" id="goField"><span class="em">🌼</span><span><b>はなばたけへ</b><small id="fieldSub">みつを あつめて 8のじダンス</small></span></button>
+    <button type="button" class="mbtn" id="goHive"><span class="em" id="hiveEm">🧹</span><span><b>すの なかの しごと</b><small id="hiveSub"></small></span></button>
+    <button type="button" class="mbtn" id="goQuiz"><span class="em">💃</span><span><b>ダンス クイズ</b><small>なかまの ダンスを よんで ばしょを あてよう</small></span></button>
+    <button type="button" class="mbtn" id="goZukan"><span class="em">📖</span><span><b>ずかん</b><small>はなと み・からだ・なかま</small></span></button>
+  </div>
+
+  <div class="recs" id="recLine"></div>
+
+  <p class="safe">🐝 <span id="safeLine"></span></p>
+  <p class="note">
+    <button type="button" class="link" id="goHelp">❓ あそびかた</button>
+    おうちの方へ: 音が出ます（右上の 🔊 こうかおん・🎵 BGM でオフ）。日数・ずかん は この端末のブラウザに保存されます。
+    ダンスの向き・時間と距離・仕事の日齢は 研究機関や大学の一般向け資料にもとづく「だいたい」の値です（README に出典）。
+    <button type="button" class="link" id="btnReset">さいしょから</button>
+  </p>
+</section>
+
+<!-- あそぶ がめん -->
+<section id="play" class="play" hidden>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label="あそぶ ところ"></canvas>
+    <div id="bubble" class="bubble" hidden><span class="who" id="bubbleWho"></span><span id="bubbleText"></span></div>
+    <div id="toast" class="toast" hidden></div>
+  </div>
+  <aside class="panel" id="panel"></aside>
+</section>
+
+<!-- モーダル -->
+<div id="modal" class="modal" hidden>
+  <div class="sheet" id="sheet"></div>
+</div>
+
+<script src="data.js?v=d83c290"></script>
+<script src="dance.js?v=d83c290"></script>
+<script src="art.js?v=d83c290"></script>
+<script src="audio.js?v=d83c290"></script>
+<script src="app.js?v=d83c290"></script>
+<script src="field.js?v=d83c290"></script>
+<script src="dance-scene.js?v=d83c290"></script>
+<script src="quiz.js?v=d83c290"></script>
+<script src="hive.js?v=d83c290"></script>
+<script src="zukan.js?v=d83c290"></script>
+<script src="main.js?v=d83c290"></script>
+</body>
+</html>
