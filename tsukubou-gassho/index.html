@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>つくぼうの せみ がっしょう ｜ おなじ セミを 4ひき つなげて とばそう</title>
+<meta name="description" content="セミの つくぼうと なかまたちが 2ひき 1くみで おちてくる。おなじ セミを 4ひき つなげると なきごえを あげて とびたつ。れんさで みんなの こえが かさなって がっしょうに なる パズル。">
+<meta name="theme-color" content="#2b8a3e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎵</text></svg>">
+<link rel="stylesheet" href="style.css?v=7ef50c9">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body class="ph0">
+
+<!-- ======== タイトル ======== -->
+<section id="title" class="screen title">
+  <div class="corner">
+    <a class="ibtn" href="../" aria-label="あそびメニューへ">🏠</a>
+    <span class="sp"></span>
+    <button class="ibtn" data-toggle="bgm" aria-label="BGM">🎵</button>
+    <button class="ibtn" data-toggle="se" aria-label="こうかおん">🔊</button>
+  </div>
+  <div class="hero" id="hero"></div>
+  <h1>つくぼうの<br><span>せみ がっしょう</span></h1>
+  <p class="lead">おなじ セミを 4ひき つなげて とばそう。<br>れんさで みんなの こえが かさなるよ！</p>
+  <div class="big-btns">
+    <button class="big main" id="goModes">▶ はじめる</button>
+    <button class="big" id="goZukan">📖 ずかん</button>
+    <button class="big" id="goSettings">⚙️ せってい</button>
+  </div>
+</section>
+
+<!-- ======== モード えらび ======== -->
+<section id="modes" class="screen list" hidden>
+  <header class="bar"><button class="ibtn" data-back="title" aria-label="もどる">◀</button><h2>なにで あそぶ？</h2></header>
+  <div class="diff" role="group" aria-label="むずかしさ">
+    <button data-diff="easy">🌱 やさしい<small>3しゅ・おわらない</small></button>
+    <button data-diff="normal">🌳 ふつう<small>4しゅ</small></button>
+    <button data-diff="hard">🔥 むずかしい<small>5しゅ・はやい</small></button>
+  </div>
+  <div class="mode-list">
+    <button class="mode" id="mStory" style="--c:#2b8a3e"><span class="e">🌳</span><span><b>なつやすみ</b><small>1にち ずつ めあてに ちょうせん</small></span></button>
+    <button class="mode" id="mEndless" style="--c:#e8590c"><span class="e">♾️</span><span><b>えんえん</b><small>どこまで とくてんを とれるかな</small></span></button>
+    <button class="mode" id="mPractice" style="--c:#1971c2"><span class="e">🎓</span><span><b>れんさ れんしゅう</b><small>どこに おけば れんさ？ 10もん</small></span></button>
+    <button class="mode" id="mZukan" style="--c:#7048e8"><span class="e">📖</span><span><b>せみ ずかん</b><small>とばした セミが のるよ</small></span></button>
+  </div>
+</section>
+
+<!-- ======== なつやすみ（ステージ えらび） ======== -->
+<section id="story" class="screen list" hidden>
+  <header class="bar"><button class="ibtn" data-back="modes" aria-label="もどる">◀</button><h2>🌳 なつやすみ</h2></header>
+  <div class="cal" id="stageList"></div>
+</section>
+
+<!-- ======== れんしゅう（もんだい えらび） ======== -->
+<section id="practice" class="screen list" hidden>
+  <header class="bar"><button class="ibtn" data-back="modes" aria-label="もどる">◀</button><h2>🎓 れんさ れんしゅう</h2></header>
+  <p class="note">いちどだけ おいて、れんさを つくろう。わからない ときは 💡ヒント。</p>
+  <div class="cal" id="probList"></div>
+</section>
+
+<!-- ======== ずかん ======== -->
+<section id="zukan" class="screen list" hidden>
+  <header class="bar"><button class="ibtn" data-back="title" aria-label="もどる">◀</button><h2>📖 せみ ずかん</h2></header>
+  <p class="note" id="zukanNote"></p>
+  <div class="zukan" id="zukanList"></div>
+</section>
+
+<!-- ======== せってい ======== -->
+<section id="settings" class="screen list" hidden>
+  <header class="bar"><button class="ibtn" data-back="title" aria-label="もどる">◀</button><h2>⚙️ せってい</h2></header>
+  <div class="set">
+    <button class="row-btn" data-toggle="bgm">🎵 BGM <b class="sw"></b></button>
+    <button class="row-btn" data-toggle="se">🔊 こうかおん・なきごえ <b class="sw"></b></button>
+    <p class="lbl">むずかしさ</p>
+    <div class="diff" role="group" aria-label="むずかしさ">
+      <button data-diff="easy">🌱 やさしい<small>3しゅ・おわらない</small></button>
+      <button data-diff="normal">🌳 ふつう<small>4しゅ</small></button>
+      <button data-diff="hard">🔥 むずかしい<small>5しゅ・はやい</small></button>
+    </div>
+    <div class="howto">
+      <p class="lbl">あそびかた</p>
+      <ul>
+        <li>◀ ▶ で よこに うごかす。🔄 で まわす。⬇ で はやく おとす。</li>
+        <li>ばめんを よこに なぞっても うごく。ちょんと さわると まわる。したへ さっと なぞると すとん。</li>
+        <li>キーボード: ← → うごかす ／ ↑・スペース まわす ／ ↓ はやく ／ P とめる</li>
+        <li>おなじ セミが たて・よこに 4ひき つながると とびたつよ（ななめは つながらない）。</li>
+        <li>はいいろの ぬけがらは、となりで セミが とびたつと いっしょに きえる。</li>
+      </ul>
+    </div>
+    <button class="row-btn danger" id="resetData">🗑️ きろくを ぜんぶ けす</button>
+  </div>
+</section>
+
+<!-- ======== ゲーム ======== -->
+<section id="game" class="screen game" hidden>
+  <div class="g-info">
+    <div class="g-head">
+      <button class="ibtn" id="btnPause" aria-label="いちじ ていし">⏸</button>
+      <div class="score"><small id="scoreLbl">とくてん</small><b id="score">0</b></div>
+    </div>
+    <div class="gauge" id="gaugeBox" title="がっしょう ゲージ"><span>🎵</span><div class="bar"><i id="gaugeFill"></i></div></div>
+    <div class="sky" id="skyBox"><span>🌅</span><div class="skybar"><i id="sun">☀️</i></div><span>🌇</span></div>
+    <div class="goal" id="goal"></div>
+    <button class="hint-btn" id="btnHint" hidden>💡 ヒント</button>
+  </div>
+  <div class="g-next" id="nextBox">
+    <span class="lbl">つぎ</span>
+    <canvas id="next1" aria-hidden="true"></canvas>
+    <canvas id="next2" aria-hidden="true"></canvas>
+  </div>
+  <div class="g-board" id="boardWrap">
+    <canvas id="cv" aria-label="ばめん"></canvas>
+    <div class="chain" id="chainText" aria-live="polite"></div>
+    <div class="rainfx" id="rainFx"></div>
+  </div>
+  <div class="g-pad g-padL">
+    <button class="pad" data-act="left" aria-label="ひだりへ">◀</button>
+    <button class="pad" data-act="right" aria-label="みぎへ">▶</button>
+  </div>
+  <div class="g-pad g-padR">
+    <button class="pad" data-act="rot" aria-label="まわす">🔄</button>
+    <button class="pad" data-act="down" aria-label="はやく おとす">⬇</button>
+  </div>
+</section>
+
+<!-- ======== おしらせ・ダイアログ ======== -->
+<div class="toast" id="toast" hidden></div>
+<div class="ov" id="ov" hidden><div class="dlg" id="dlg" role="dialog" aria-modal="true"></div></div>
+
+<script src="chara.js?v=7ef50c9"></script>
+<script src="board.js?v=7ef50c9"></script>
+<script src="stages.js?v=7ef50c9"></script>
+<script src="audio.js?v=7ef50c9"></script>
+<script src="app.js?v=7ef50c9"></script>
+</body>
+</html>
