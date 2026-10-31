@@ -124,6 +124,13 @@ const FLAGS = {
   578: { vb: "0 0 22 16", draw: () => `<rect width="22" height="16" fill="#BA0C2F"/>` +
     `<rect x="6" width="4" height="16" fill="#fff"/><rect y="6" width="22" height="4" fill="#fff"/>` +
     `<rect x="7" width="2" height="16" fill="#00205B"/><rect y="7" width="22" height="2" fill="#00205B"/>` },
+  // ここから 2つは せかい いっしゅう りょこう で たした もの（kokki-tanken には ない）
+  352: { vb: "0 0 25 18", draw: () => `<rect width="25" height="18" fill="#02529C"/>` +
+    `<rect x="7" width="4" height="18" fill="#fff"/><rect y="7" width="25" height="4" fill="#fff"/>` +
+    `<rect x="8" width="2" height="18" fill="#DC1E35"/><rect y="8" width="25" height="2" fill="#DC1E35"/>` },
+  // ハワイ州の はた（左上に ユニオンジャック、しろ・あか・あおの 8ほんの しま）
+  9001: { vb: "0 0 60 30", draw: (u) => hStripes(60, 30, ["#fff", "#C8102E", "#012169", "#fff", "#C8102E", "#012169", "#fff", "#C8102E"]) +
+    `<g transform="scale(0.5)">${unionJack(u)}</g>` },
   208: { vb: "0 0 37 28", draw: () => `<rect width="37" height="28" fill="#C8102E"/>` +
     `<rect x="12" width="4" height="28" fill="#fff"/><rect y="12" width="37" height="4" fill="#fff"/>` },
   246: { vb: "0 0 18 11", draw: () => `<rect width="18" height="11" fill="#fff"/>` +

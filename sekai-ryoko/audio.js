@@ -78,6 +78,7 @@ const SCALES = {
   tango:  { n: [0, 2, 3, 5, 7, 8, 11],   w: "sawtooth", bpm: 108 },
   andes:  { n: [0, 3, 5, 7, 10],         w: "sine",     bpm: 100 },
   lydian: { n: [0, 2, 4, 6, 7, 9, 11],   w: "triangle", bpm: 104 },
+  aloha:  { n: [0, 2, 4, 7, 9],          w: "triangle", bpm: 84, drone: true },  // ハワイの ゆったりした ギター ふう
 };
 
 const BGM = (() => {

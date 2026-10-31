@@ -65,7 +65,7 @@ const GEO = (() => {
       while (lon - prev > 180) lon -= 360;
       while (prev - lon > 180) lon += 360;
       prev = lon;
-      if (lon < -22 || lon > 336 || lat > 76) ok = false;
+      if (lon < -27 || lon > 336 || lat > 76) ok = false;
       out.push([lon, my(lat)]);
     }
     if (ok) return out;
@@ -98,7 +98,7 @@ const GEO = (() => {
   return { my, wrap, pt, shapes, landD, viewOf, inside, km, route, nightD };
 })();
 
-const WORLD_BOX = [-22, 334, -56, 76];
+const WORLD_BOX = [-27, 334, -56, 76];
 
 /**
  * ちずを つくる
@@ -133,12 +133,14 @@ function makeMap(host, opts = {}) {
     else crop(1, v[3], Math.min(1.25, 1 / k));
   }
   const ids = COUNTRIES_DATA.map((c) => c.id);
+  const shaped = ids.filter((id) => GEO.shapes[id]), dotOnly = ids.filter((id) => !GEO.shapes[id]);
   const unit = v[2] / 100;   // ちずの ひろさに あわせた しるしの おおきさ
   let s = `<svg class="map" viewBox="${v.map((n) => n.toFixed(2)).join(" ")}" preserveAspectRatio="xMidYMid meet">` +
     `<rect x="-60" y="-200" width="440" height="400" class="sea"/>` +
     `<path class="land" d="${GEO.landD}" vector-effect="non-scaling-stroke"/>` +
     `<path class="nation home" d="${GEO.shapes[HOME.id].d}" vector-effect="non-scaling-stroke"/>`;
   for (const c of COUNTRIES_DATA) {
+    if (!GEO.shapes[c.id]) continue;   // ハワイ（州）は ● だけ
     const r = REGION[c.r], vis = opts.visited && opts.visited[c.id];
     s += `<path class="nation${vis ? " vis" : ""}" data-id="${c.id}" style="--fill:${vis ? r.tint : "#fbf6e8"};--edge:${r.col}" d="${GEO.shapes[c.id].d}" vector-effect="non-scaling-stroke"/>`;
   }
@@ -149,6 +151,11 @@ function makeMap(host, opts = {}) {
     for (const c of COUNTRIES_DATA) {
       const [x, y] = GEO.pt(c.ll), vis = opts.visited && opts.visited[c.id];
       s += `<circle class="dot${vis ? " vis" : ""}" data-id="${c.id}" cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${(unit * 0.9).toFixed(2)}" style="--c:${REGION[c.r].col}"/>`;
+      // ちずに かたちの ない ところ（ハワイ）は なまえを そえる
+      if (!GEO.shapes[c.id]) {
+        const fs = unit * 3.2, left = x + unit * 1.6 + c.n.length * fs > v[0] + v[2];   // みぎはしに はみだすなら ひだりに
+        s += `<text class="dotname" x="${(left ? x - unit * 1.6 : x + unit * 1.6).toFixed(2)}" y="${y.toFixed(2)}" font-size="${fs.toFixed(2)}" text-anchor="${left ? "end" : "start"}" dominant-baseline="central">${c.n}</text>`;
+      }
     }
     s += `</g>`;
   }
@@ -217,7 +224,13 @@ function makeMap(host, opts = {}) {
     svg.addEventListener("click", (e) => {
       const ctm = svg.getScreenCTM(); if (!ctm) return;
       const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
-      let hit = ids.find((id) => GEO.inside(p.x, p.y, GEO.shapes[id].xy));
+      const near = (id) => {
+        const [x, y] = GEO.pt(COUNTRY[id].ll), q = new DOMPoint(x, y).matrixTransform(ctm);
+        return Math.hypot(q.x - e.clientX, q.y - e.clientY);
+      };
+      // ハワイのような ●だけの ところを さきに（アメリカの かたちの なかに しまが あるため）
+      let hit = dotOnly.find((id) => near(id) < 30);
+      if (hit == null) hit = shaped.find((id) => GEO.inside(p.x, p.y, GEO.shapes[id].xy));
       if (hit == null) {
         // ちいさい 国は 首都の しるしの ちかくを タップしても えらべる（画面で 30px いない）
         let best = 30;

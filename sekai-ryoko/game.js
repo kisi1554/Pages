@@ -128,7 +128,7 @@ function selectDest(id, speak = true) {
   Sound.tap();
   bigMap.highlight(id);
   renderDest();
-  if (speak) Voice.say(`${c.y}。しゅとは ${c.cap.replace(/（.*?）/, "")}`);
+  if (speak) Voice.say(`${c.y}。${c.state ? c.state.replace(" ", "") + "。しゅうとは" : "しゅとは"} ${c.cap.replace(/（.*?）/, "")}`);
 }
 function renderDest() {
   const box = $("#dest");
@@ -142,7 +142,7 @@ function renderDest() {
     <div class="dest-flag">${flagSVG(c.id)}</div>
     <div class="dest-text">
       <b>${esc(c.n)}</b> ${been}<br>
-      <small><ruby>首都<rt>しゅと</rt></ruby>：${esc(c.cap)}　<span class="rg">${REGION[c.r].em} ${esc(REGION[c.r].n)}</span></small><br>
+      <small>${c.state ? `🇺🇸 ${esc(c.state)}・<ruby>州都<rt>しゅうと</rt></ruby>` : `<ruby>首都<rt>しゅと</rt></ruby>`}：${esc(c.cap)}　<span class="rg">${REGION[c.r].em} ${esc(REGION[c.r].n)}</span></small><br>
       <small>✈️ やく ${hoursWords(f.h)}（${f.km.toLocaleString()}km）・<ruby>時差<rt>じさ</rt></ruby> ${esc(Clock.diffWords(d))}</small>
     </div>
     <button type="button" class="btn primary go" id="btn-fly">しゅっぱつ！</button>
@@ -201,7 +201,7 @@ function arrive(id) {
   modal(`<div class="arrive">
       <p class="arr-top">🛬 ${esc(c.cap)}の くうこうに とうちゃく！</p>
       <div class="arr-flag">${flagSVG(c.id)}</div>
-      <h3>ようこそ ${esc(c.n)}へ</h3>
+      <h3>ようこそ ${esc(c.n)}へ</h3>${c.state ? `<p class="small">（${esc(c.state)}）</p>` : ""}
       <div class="arr-stamp">${stampSVG(c, prog.stamps[id].d, true)}</div>
       <p class="arr-time">いま ${esc(c.n)}は <b>${Clock.timeWords(lp.h, lp.mi)}</b>${rel ? `（にほんの <b>${Clock.relWords(rel)}</b>）` : ""}</p>
       ${first ? `<p class="arr-new">📕 パスポートに あたらしい スタンプ！</p>` : `<p class="arr-new">📕 ${prog.stamps[id].n}かいめの りょこう</p>`}
@@ -219,7 +219,7 @@ function openScene(id, music = true) {
   sceneId = id;
   const c = COUNTRY[id];
   show("scene");
-  $("#scene-title").innerHTML = `<span class="tflag">${flagSVG(c.id, "mini")}</span>${esc(c.n)}`;
+  $("#scene-title").innerHTML = `<span class="tflag">${flagSVG(c.id, "mini")}</span>${esc(c.n)}${c.state ? `<small>（${esc(c.state)}）</small>` : ""}`;
   drawScene();
   renderSceneInfo(null);
   if (music || !BGM.on) BGM.play(c.id, c.mus);
@@ -427,7 +427,7 @@ const MISSIONS = [
   { key: "far", em: "🕰️", n: "じさが いちばん おおきい くにへ", d: "にほんと じさが いちばん おおきい くにへ ひとっとび" },
   { key: "date", em: "🗓️", n: "ひづけが ちがう くにに つこう", d: "ついた とき、にほんと ちがう ひ（まえの ひ・つぎの ひ）の くにが ある" },
   { key: "quiz", em: "⏰", n: "じさ クイズに 5もん せいかい", d: "じさ とけいの クイズ" },
-  { key: "all", em: "🏆", n: "40かこく ぜんぶの スタンプ", d: "せかい いっしゅう たっせい！" },
+  { key: "all", em: "🏆", n: `${N}かしょ ぜんぶの スタンプ`, d: "せかい いっしゅう たっせい！" },
 ];
 function missionProgress(key) {
   if (key === "six") return `${new Set(COUNTRIES_DATA.filter((c) => prog.stamps[c.id]).map((c) => c.r)).size} / 6`;

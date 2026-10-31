@@ -102,6 +102,16 @@ const BUILDINGS = (() => {
       `<polygon points="${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => { const a = (i * 36 - 90) * Math.PI / 180, r = i % 2 ? 4 : 10; return (50 + r * Math.cos(a)).toFixed(1) + "," + (12 + r * Math.sin(a)).toFixed(1); }).join(" ")}" fill="#111"/>`,
     skytower: () => Rr(46, 30, 8, 70, "#d8dde3") + P("40,100 46,60 54,60 60,100", "#c4cbd3") + Rr(38, 26, 24, 10, "#b9c3cd") + Rr(41, 20, 18, 6, "#9aa7b4") +
       Rr(49, 0, 2, 20, "#9aa7b4") + Rr(4, 70, 20, 30, "#7b9cb5") + Rr(76, 60, 20, 40, "#8fb0c4"),
+    // アイスランド：かざんの いわの はしらのように だんだんに たかくなる きょうかい
+    hallgrim: () => [0, 1, 2, 3, 4, 5].map((i) => Rr(4 + i * 7, 100 - (24 + i * 9), 7, 24 + i * 9, i % 2 ? "#d9d9d4" : "#cfcfc9") +
+      Rr(89 - i * 7, 100 - (24 + i * 9), 7, 24 + i * 9, i % 2 ? "#d9d9d4" : "#cfcfc9")).join("") +
+      Rr(44, 6, 12, 94, "#e4e4df") + P("44,8 50,-6 56,8", "#bdbdb6") + C(50, 20, 3, "#6b7a90") +
+      `<path d="M42,100 v-14 a8,8 0 0 1 16,0 v14z" fill="#8a8a82"/>`,
+    // ハワイ：2かいだての ベランダと まんなかの とう
+    iolani: () => Rr(8, 46, 84, 54, "#efe6d2") + Rr(4, 44, 92, 4, "#c9b48a") + Rr(4, 70, 92, 4, "#c9b48a") +
+      rep(7, (i) => Rr(10 + i * 13, 48, 3, 52, "#fff")) + win(16, 52, 6, 2, 13, 26, 6, 12, "#7b5a3a") +
+      Rr(38, 20, 24, 26, "#efe6d2") + P("36,22 50,8 64,22", "#8a5a3a") + Rr(46, 30, 8, 12, "#7b5a3a") +
+      [8, 92].map((x) => Rr(x - 6, 32, 12, 14, "#efe6d2") + P(`${x - 8},34 ${x},26 ${x + 8},34`, "#8a5a3a")).join(""),
     onepillar: () => Rr(0, 82, 100, 18, "#6aa9c9") + Rr(46, 58, 8, 32, "#7a5b3a") + Rr(28, 44, 44, 16, "#b8473b") +
       curvedRoof(28, 30, 44, 14, "#3d4a5c") + C(50, 28, 3, "#d9a227") + `<path d="M10,86 q8,-4 16,0 M70,88 q8,-4 16,0" stroke="#3e7046" stroke-width="3" fill="none"/>`,
   };
@@ -188,8 +198,10 @@ function sceneSVG(c, hour, found = {}) {
   s += `<rect x="0" y="190" width="400" height="70" fill="${sc.ground}"/>`;
   if (c.sc === "tropic") s += [30, 370].map((x) => `<g transform="translate(${x} 190)"><path d="M0,0 q-4,-30 4,-52" stroke="#8a6d4a" stroke-width="5" fill="none"/><path d="M4,-52 q-20,-6 -30,8 M4,-52 q20,-8 30,6 M4,-52 q-8,-18 -22,-20 M4,-52 q10,-18 24,-16" stroke="#3e8a4a" stroke-width="6" fill="none" stroke-linecap="round"/></g>`).join("");
   if (c.sc === "snow") s += `<g fill="#fff" opacity=".9">${Array.from({ length: 18 }, (_, i) => `<circle cx="${(i * 71) % 400}" cy="${(i * 37) % 170 + 10}" r="1.8"/>`).join("")}</g>`;
-  // せんろ
-  s += `<rect x="0" y="236" width="400" height="5" fill="#8a8a8a"/><g fill="#7a5b3a">${Array.from({ length: 20 }, (_, i) => `<rect x="${i * 20 + 4}" y="234" width="8" height="10"/>`).join("")}</g>`;
+  // せんろ（でんしゃで ない のりものの 国は みち・うみ）
+  if (c.ride.e === "⛴️") s += `<rect x="0" y="222" width="400" height="38" fill="#5aa7d6"/>`;
+  else if (["🚌", "🚗", "🚲"].includes(c.ride.e)) s += `<rect x="0" y="226" width="400" height="22" fill="#8d8d8d"/><g fill="#fff">${Array.from({ length: 10 }, (_, i) => `<rect x="${i * 40 + 8}" y="236" width="20" height="2"/>`).join("")}</g>`;
+  else s += `<rect x="0" y="236" width="400" height="5" fill="#8a8a8a"/><g fill="#7a5b3a">${Array.from({ length: 20 }, (_, i) => `<rect x="${i * 20 + 4}" y="234" width="8" height="10"/>`).join("")}</g>`;
 
   const spot = (k, x, y, r, inner) =>
     `<g class="spot${found[k] ? " found" : ""}" data-k="${k}" transform="translate(${x} ${y})" role="button" aria-label="${SPOT_NAME[k]}">` +
