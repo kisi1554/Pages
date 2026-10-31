@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>しずくの だいぼうけん</title>
+<meta name="description" content="うみから そら、あめに なって かわへ。しずくの ぽたと ちきゅうを めぐろう。小4 りか「水の すがた」「天気の ようす」の よしゅう。">
+<meta name="theme-color" content="#1098ad">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>">
+<link rel="stylesheet" href="style.css?v=35a6145">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <h1><a href="#home" class="title">💧 しずくの だいぼうけん</a></h1>
+  <div class="tools">
+    <button type="button" class="hbtn" id="sndBtn" aria-label="おと オン/オフ">🔊</button>
+    <button type="button" class="hbtn" id="spkBtn" aria-label="よみあげ オン/オフ">🗣️</button>
+    <a class="hbtn" href="#stamps" aria-label="スタンプ">🏅</a>
+  </div>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section id="v-home" class="view">
+    <div class="hero">
+      <canvas id="heroCv" width="160" height="160" aria-hidden="true"></canvas>
+      <p class="lead">ぼく、<ruby>水<rt>みず</rt></ruby>の しずく「ぽた」！<br><ruby>海<rt>うみ</rt></ruby>から <ruby>空<rt>そら</rt></ruby>へ、<ruby>雨<rt>あめ</rt></ruby>に なって <ruby>川<rt>かわ</rt></ruby>へ。いっしょに <ruby>地球<rt>ちきゅう</rt></ruby>を めぐろう！</p>
+    </div>
+    <div class="menu">
+      <a class="mcard" href="#tabi" style="--c:#1098ad"><span class="em">🗺️</span><b>たび</b><span>しかけを うごかして ぽたを すすめよう。どの みちで <ruby>海<rt>うみ</rt></ruby>へ かえる？</span></a>
+      <a class="mcard" href="#lab" style="--c:#e8590c"><span class="em">🧪</span><b>じっけん<ruby>室<rt>しつ</rt></ruby></b><span>ビーカーの <ruby>水<rt>みず</rt></ruby>を あたためたり ひやしたり。<ruby>温度<rt>おんど</rt></ruby>と すがたは？</span></a>
+      <a class="mcard" href="#quiz" style="--c:#7048e8"><span class="em">❓</span><b>ふしぎ クイズ</b><span>コップの まわりの <ruby>水<rt>みず</rt></ruby>は どこから？ 10もん</span></a>
+    </div>
+    <p class="mini" id="homeStamps"></p>
+    <details class="parents">
+      <summary>おうちの<ruby>方<rt>かた</rt></ruby>へ</summary>
+      <ul>
+        <li>小学4年 理科「金属、水、空気と温度」（水の三態）、「雨水の行方と地面の様子」、「天気の様子」（蒸発と結露）の予習用です。雲・雨・雪のでき方は5年「天気の変化」につながる発展として扱っています。</li>
+        <li>水が沸騰する温度は <b>1気圧（海面くらいの気圧）で 100℃</b> です。気圧が低い高い山の上では、もっと低い温度で沸騰します（富士山頂ではおよそ 87℃）。</li>
+        <li>「湯気」は水蒸気そのものではなく、水蒸気が冷えてできた<b>小さな水の粒</b>です。水蒸気は目に見えません。</li>
+        <li>雨か雪かは地上付近の気温だけでなく湿度などでも変わります。アプリでは「地面近くがだいたい 1℃以下なら雪、2〜3℃はみぞれ、4℃以上は雨」という目安にしています。</li>
+        <li>実際に加熱実験をするときは、沸騰石を入れ、必ず大人と一緒に行ってください。</li>
+        <li>音・読み上げは右上のボタンでオン／オフできます。記録はこの端末のブラウザにだけ保存されます。</li>
+      </ul>
+    </details>
+  </section>
+
+  <!-- たび -->
+  <section id="v-tabi" class="view" hidden>
+    <div class="stage">
+      <canvas id="cv" aria-label="ぽたの たびの ちず"></canvas>
+      <button type="button" class="mapbtn" id="mapBtn">🗺️ ぜんたい</button>
+    </div>
+    <div class="panel">
+      <ol class="track" id="track"></ol>
+      <div class="ptitle"><h2 id="pTitle"></h2><button type="button" class="say" id="sayBtn" aria-label="よみあげ">🔈</button></div>
+      <p id="pText" class="ptext"></p>
+      <div id="pCtl" class="pctl"></div>
+    </div>
+  </section>
+
+  <!-- じっけん室 -->
+  <section id="v-lab" class="view" hidden>
+    <div class="labstage"><canvas id="labCv" aria-label="ビーカーの じっけん"></canvas></div>
+    <div class="labside">
+      <div class="readout">
+        <div><span><ruby>温度<rt>おんど</rt></ruby></span><b id="lT">20℃</b></div>
+        <div><span>かさ</span><b id="lV">100 mL</b></div>
+        <div><span>じかん</span><b id="lTime">0 ぷん</b></div>
+        <div class="wide"><span>すがた</span><b id="lS"></b></div>
+      </div>
+      <div class="labbtns">
+        <button type="button" class="btn heat" data-mode="heat">🔥 あたためる</button>
+        <button type="button" class="btn cool" data-mode="cool">❄️ ひやす</button>
+        <button type="button" class="btn sub" data-mode="off">⏹ とめる</button>
+        <button type="button" class="btn sub" id="spdBtn">⏩ はやおくり</button>
+        <button type="button" class="btn sub" id="spoonBtn">🥄 スプーンを かざす</button>
+        <button type="button" class="btn sub" id="resetBtn">🔄 はじめから</button>
+      </div>
+      <p class="note" id="labNote"></p>
+      <h3>📈 <ruby>温度<rt>おんど</rt></ruby>の グラフ <small>（よこ: じかん、たて: <ruby>温度<rt>おんど</rt></ruby>）</small></h3>
+      <canvas id="graphCv" class="graph"></canvas>
+      <h3>🔎 わかった こと</h3>
+      <ul class="found" id="labFound"></ul>
+    </div>
+  </section>
+
+  <!-- クイズ -->
+  <section id="v-quiz" class="view" hidden>
+    <div class="quiz" id="qBox">
+      <p class="qnum" id="qNum"></p>
+      <p class="qtext" id="qText"></p>
+      <div class="choices" id="qChoices"></div>
+      <p class="qexp" id="qExp" hidden></p>
+      <button type="button" class="btn big" id="qNext" hidden>つぎ ▶</button>
+    </div>
+    <div class="quiz" id="qResult" hidden>
+      <p class="qscore" id="qScore"></p>
+      <button type="button" class="btn big" id="qAgain">🔁 もう いちど</button>
+      <a class="btn sub" href="#home">🏠 ホームへ</a>
+    </div>
+  </section>
+
+  <!-- スタンプ -->
+  <section id="v-stamps" class="view" hidden>
+    <h2 class="sh">🏅 スタンプ ちょう</h2>
+    <div class="stamps" id="stampGrid"></div>
+    <p class="mini" id="lapCount"></p>
+    <h3 class="sh">🌍 <ruby>地球<rt>ちきゅう</rt></ruby>の <ruby>水<rt>みず</rt></ruby>は どこに ある？</h3>
+    <div class="earthwater">
+      <div class="ew-bar"><i style="width:97.5%">うみ など（しおみず）やく 97.5%</i><i class="fresh" style="width:2.5%"></i></div>
+      <p>しおみず では ない <ruby>水<rt>みず</rt></ruby>（たんすい）は やく 2.5%。その ほとんどは <ruby>南極<rt>なんきょく</rt></ruby>や <ruby>北極<rt>ほっきょく</rt></ruby>の <ruby>氷<rt>こおり</rt></ruby>。<ruby>川<rt>かわ</rt></ruby>や みずうみの <ruby>水<rt>みず</rt></ruby>は たった やく 0.01%！<br><small>（<ruby>国土交通省<rt>こくどこうつうしょう</rt></ruby>「<ruby>世界<rt>せかい</rt></ruby>の <ruby>水資源<rt>みずしげん</rt></ruby>」より）</small></p>
+    </div>
+  </section>
+</main>
+
+<script src="audio.js?v=35a6145"></script>
+<script src="pota.js?v=35a6145"></script>
+<script src="world.js?v=35a6145"></script>
+<script src="story.js?v=35a6145"></script>
+<script src="lab.js?v=35a6145"></script>
+<script src="quiz.js?v=35a6145"></script>
+<script src="app.js?v=35a6145"></script>
+</body>
+</html>
