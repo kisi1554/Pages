@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>あしあと たんてい</title>
+<meta name="description" content="あしあとや たべあと、ふんを しらべて、とおった どうぶつを すいりしよう。日本の みぢかな どうぶつ 12しゅるい、じけん 30こ。">
+<meta name="theme-color" content="#795548">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐾</text></svg>">
+<link rel="stylesheet" href="style.css?v=663d4fd">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <button class="hbtn" id="backBtn" aria-label="もどる" hidden>◀</button>
+  <h1><a class="title" href="#" id="homeLink">🐾 あしあと たんてい</a></h1>
+  <div class="tools">
+    <button class="hbtn" id="voiceBtn" aria-label="よみあげ オン/オフ" title="よみあげ">🗣️</button>
+    <button class="hbtn" id="soundBtn" aria-label="おと オン/オフ" title="おと">🔊</button>
+  </div>
+</header>
+
+<main>
+  <!-- ホーム -->
+  <section class="view" id="vHome">
+    <div class="hero">
+      <svg id="heroSvg" viewBox="-70 -70 140 140" aria-hidden="true"></svg>
+      <div>
+        <p class="lead">どうぶつ が のこした しるし を ルーペ で しらべて、だれ が きた か すいり しよう！</p>
+        <p class="sub" id="progressText"></p>
+      </div>
+    </div>
+    <div class="menu">
+      <button class="mcard" id="goCases"><span class="mi">🔍</span><b>じけん を えらぶ</b><small>30こ の じけん</small></button>
+      <button class="mcard" id="goZukan"><span class="mi">📗</span><b>どうぶつ ずかん</b><small>あしあと・ふん・たべあと</small></button>
+      <button class="mcard" id="goHow"><span class="mi">❓</span><b>あそびかた</b><small>たんてい の こころえ</small></button>
+    </div>
+    <p class="safety">🙅 やせい の どうぶつ には <b>ちかづかない・さわらない・えさ を あげない</b>。ふん は <b>て で さわらない</b> でね。</p>
+  </section>
+
+  <!-- じけん いちらん -->
+  <section class="view" id="vCases" hidden>
+    <div id="caseList"></div>
+  </section>
+
+  <!-- そうさ -->
+  <section class="view" id="vCase" hidden>
+    <div class="caseHead">
+      <div class="caseTitle"><span class="lv" id="caseLv"></span><b id="caseTitle"></b></div>
+      <p id="caseStory"></p>
+    </div>
+    <div class="caseBody">
+      <div class="sceneWrap">
+        <svg id="scene" viewBox="0 0 800 500" role="img" aria-label="げんば。ルーペ を うごかして しらべよう"></svg>
+        <div class="sceneTip" id="sceneTip">👆 ルーペ を うごかして しらべよう</div>
+      </div>
+      <aside class="side">
+        <div class="foundBar"><b>てがかり</b> <span id="foundCount"></span></div>
+        <div class="chips" id="foundChips"></div>
+        <div class="sideBtns">
+          <button class="btn" id="hintBtn">💡 ヒント</button>
+          <button class="btn primary" id="noteBtn">📒 たんてい ノート</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ノート -->
+  <section class="view" id="vNote" hidden>
+    <p class="noteLead">てがかり と どうぶつ を くらべて、マス を タップ。<b class="ok">○ あう</b> ／ <b class="ng">× あわない</b></p>
+    <div class="noteScroll"><table class="note" id="noteTable"></table></div>
+    <div class="noteBtns">
+      <button class="btn" id="checkBtn">✅ しるし を たしかめる</button>
+      <button class="btn" id="backSceneBtn">🔍 げんば に もどる</button>
+    </div>
+    <h2 class="accuseH">はんにん は だれ？</h2>
+    <div class="accuse" id="accuse"></div>
+    <p class="msg" id="noteMsg" aria-live="polite"></p>
+  </section>
+
+  <!-- かいけつ -->
+  <section class="view" id="vSolve" hidden>
+    <div class="solveTop">
+      <svg id="solveSvg" viewBox="-75 -75 150 150" aria-hidden="true"></svg>
+      <div class="bubble" id="solveHello"></div>
+    </div>
+    <h2 id="solveTitle"></h2>
+    <div class="stars" id="solveStars"></div>
+    <div class="reasons" id="reasons"></div>
+    <p class="safety">🙅 やせい の どうぶつ には <b>ちかづかない・さわらない・えさ を あげない</b>。ふん は <b>て で さわらない</b> でね。</p>
+    <div class="solveBtns">
+      <button class="btn primary" id="nextCaseBtn">つぎ の じけん ▶</button>
+      <button class="btn" id="solveZukanBtn">📗 ずかん で みる</button>
+      <button class="btn" id="solveListBtn">🔍 じけん いちらん</button>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="view" id="vZukan" hidden>
+    <p class="safety">🙅 やせい の どうぶつ には <b>ちかづかない・さわらない・えさ を あげない</b>。ふん は <b>て で さわらない</b> でね。</p>
+    <div class="zgrid" id="zgrid"></div>
+  </section>
+
+  <!-- あそびかた -->
+  <section class="view" id="vHow" hidden>
+    <ol class="how">
+      <li><b>🔍 しらべる</b>: げんば の え の うえ で <b>ルーペ</b> を うごかす と、かくれた てがかり が みつかる。ぜんぶ みつけよう。</li>
+      <li><b>📒 たんてい ノート</b>: みつけた てがかり と、ようぎしゃ（どうぶつ カード）を くらべて、マス に <b class="ok">○</b>（あう）か <b class="ng">×</b>（あわない）を つける。どうぶつ の かお を タップ すると とくちょう が みられる。</li>
+      <li><b>🕵️ しぼりこむ</b>: てがかり 1つ だけ では きまらない ことも おおい。ぜんぶ の てがかり に ○ が つく どうぶつ が はんにん！</li>
+      <li><b>🎉 かいけつ</b>: はんにん を えらぶ と、どうぶつ が でて きて あいさつ するよ。</li>
+      <li><b>📗 ずかん</b>: あしあと・ふん・たべあと・すみか・きせつ を いつでも みられる。</li>
+    </ol>
+    <h3>たんてい の こころえ</h3>
+    <ul class="how">
+      <li>あしあと は <b>ゆび の かず</b>・<b>つめ の あと</b>・<b>ひづめ</b>・<b>ならびかた</b> を みる。</li>
+      <li>イヌ は つめ を しまえない ので つめ の あと が のこる。ネコ は つめ を しまって あるく ので ふつう のこらない。</li>
+      <li>キツネ は まっすぐ 1れつ、タヌキ は ジグザグ。ウサギ は うしろあし が まえ に くる。</li>
+    </ul>
+    <p class="safety">🙅 ほんもの の しぜん で しらべる とき は、やせい の どうぶつ に <b>ちかづかない・さわらない・えさ を あげない</b>。ふん は <b>て で さわらない</b>。おとな と いっしょ に いこう。</p>
+  </section>
+</main>
+
+<!-- しょうさい（てがかり・どうぶつ） -->
+<div class="modal" id="modal" hidden>
+  <div class="mbox" role="dialog" aria-modal="true">
+    <button class="mclose" id="mclose" aria-label="とじる">✕</button>
+    <div id="mbody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="sil"><feColorMatrix type="matrix" values="0 0 0 0 .35  0 0 0 0 .3  0 0 0 0 .28  0 0 0 1 0"/></filter></svg>
+
+<script src="data.js?v=663d4fd"></script>
+<script src="cases.js?v=663d4fd"></script>
+<script src="draw.js?v=663d4fd"></script>
+<script src="audio.js?v=663d4fd"></script>
+<script src="game.js?v=663d4fd"></script>
+</body>
+</html>
