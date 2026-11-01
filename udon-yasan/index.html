@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fff4e6">
+<title>うどんやさん たいけん ― セルフの うどんやさんで はたらこう</title>
+<link rel="stylesheet" href="style.css?v=68f6a99">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+
+  <!-- ひょうし -->
+  <section id="title" class="screen">
+    <div class="snd-slot"></div>
+    <div class="title-wrap">
+      <svg id="title-art" viewBox="0 0 400 210" aria-hidden="true"></svg>
+      <h1>うどんやさん たいけん</h1>
+      <p class="sub">「てうち うどん こむぎや」の てんいんさんに なろう！</p>
+      <div class="modes">
+        <button class="big mode" id="go-shop" data-mode="shop"><span class="em">🍜</span><span><b>えいぎょう</b><small id="day-label">1にちめ</small></span></button>
+        <button class="big mode" id="go-menuchi" data-mode="menuchi"><span class="em">🥣</span><span><b>めんうち だけ</b><small>なんども あそべる</small></span></button>
+        <button class="big mode" id="go-reji" data-mode="reji"><span class="em">💴</span><span><b>レジ れんしゅう</b><small>たしざん・おつり</small></span></button>
+        <button class="big mode" id="go-zukan" data-mode="zukan"><span class="em">📒</span><span><b>おしごと ずかん</b><small>まめちしき</small></span></button>
+      </div>
+      <div class="row-set">
+        <div class="setbox">
+          <div class="lbl">むずかしさ</div>
+          <div class="seg" id="diff-seg">
+            <button data-diff="easy">やさしい</button><button data-diff="normal">ふつう</button><button data-diff="tencho">てんちょう</button>
+          </div>
+          <div class="diff-note" id="diff-note"></div>
+        </div>
+        <div class="setbox clerkbox">
+          <svg id="clerk-prev" viewBox="0 0 100 150" aria-hidden="true"></svg>
+          <div>
+            <div class="lbl">てんいんさん</div>
+            <div class="swatches" id="skin-set"></div>
+            <div class="seg small" id="hair-set">
+              <button data-hair="0">みじかい</button><button data-hair="1">ポニー</button><button data-hair="2">ボブ</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="stamps-mini" id="stamps-mini"></div>
+    </div>
+  </section>
+
+  <!-- めんうち -->
+  <section id="menuchi" class="screen hidden">
+    <div class="topbar"><button class="icon" data-home aria-label="おうちへ">🏠</button><div class="ttl">🥣 めんうち（かいてん まえ）</div><div class="snd-slot"></div></div>
+    <div class="k-guide" id="k-guide"></div>
+    <div class="k-steps" id="k-steps"></div>
+    <div class="k-stage"><svg id="k-svg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg></div>
+    <div class="acts" id="k-acts"></div>
+  </section>
+
+  <!-- おみせ -->
+  <section id="shop" class="screen hidden">
+    <div class="topbar">
+      <button class="icon" data-home aria-label="おうちへ">🏠</button>
+      <div class="ttl" id="shop-ttl"></div>
+      <div class="niko" id="niko" aria-label="ニコニコ"></div>
+      <div class="snd-slot"></div>
+    </div>
+    <aside id="orders" aria-label="ちゅうもん"></aside>
+    <main id="stage"><div id="track"></div></main>
+    <nav id="tabs"></nav>
+  </section>
+
+  <!-- へいてん -->
+  <section id="end" class="screen hidden">
+    <div class="end-wrap">
+      <h2 id="end-ttl">きょうの えいぎょう おしまい！</h2>
+      <div class="praise" id="praise"></div>
+      <div class="end-stats" id="end-stats"></div>
+      <div class="card-stamps" id="card-stamps"></div>
+      <div class="acts" id="end-acts"></div>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section id="zukan" class="screen hidden">
+    <div class="topbar"><button class="icon" data-home aria-label="おうちへ">🏠</button><div class="ttl">📒 おしごと ずかん</div><div class="snd-slot"></div></div>
+    <div class="zukan-wrap">
+      <h3>メニュー</h3>
+      <div class="menu-list" id="menu-list"></div>
+      <h3>ほんものの うどんやさんでは…</h3>
+      <div class="tips" id="tips"></div>
+    </div>
+  </section>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+</div>
+<script src="menu.js?v=68f6a99"></script>
+<script src="shop.js?v=68f6a99"></script>
+<script src="art.js?v=68f6a99"></script>
+<script src="audio.js?v=68f6a99"></script>
+<script src="app.js?v=68f6a99"></script>
+</body>
+</html>
