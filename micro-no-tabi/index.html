@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ミクロの たび ｜ ゆびで ひろげて げんしまで、すぼめて ぎんがまで</title>
+<meta name="description" content="ゆびで ひろげると てのひら → ひふ → さいぼう → DNA → げんし。すぼめると まち → にほん → ちきゅう → たいようけい → ぎんがけい。10ばい ごとに しらべる おおきさの たび。">
+<meta name="theme-color" content="#5f3dc4">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔬</text></svg>">
+<link rel="stylesheet" href="style.css?v=6bbb394">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section id="title" class="screen show">
+  <div class="title-box">
+    <div class="big-emoji" aria-hidden="true">🔬</div>
+    <h1>ミクロの たび</h1>
+    <p class="sub">ゆびで ひろげて <b>げんし</b>まで、すぼめて <b>ぎんが</b>まで！<br>10ばい ずつ すすむ おおきさの たび</p>
+    <div class="menu-btns">
+      <button class="mbtn" id="goTravel" style="--c:#5f3dc4"><span>🚀</span>たび に でる</button>
+      <button class="mbtn" id="goHide" style="--c:#e8590c"><span>🔎</span>かくれんぼ</button>
+      <button class="mbtn" id="goQuiz" style="--c:#2b8a3e"><span>⚖️</span>おおきさ くらべ</button>
+      <button class="mbtn" id="goPass" style="--c:#1971c2"><span>📕</span>パスポート</button>
+    </div>
+    <p class="stat" id="titleStat"></p>
+    <button class="snd" data-snd aria-label="おと">🔊</button>
+  </div>
+</section>
+
+<!-- たび（かくれんぼ も ここ） -->
+<section id="travel" class="screen">
+  <div id="stage">
+    <svg id="world" xmlns="http://www.w3.org/2000/svg" viewBox="-50 -50 100 100" preserveAspectRatio="xMidYMid meet">
+      <defs>
+        <radialGradient id="fadeG" cx="0.5" cy="0.5" r="0.5"><stop offset="0.7" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+        <mask id="fadeM" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="-50" y="-50" width="100" height="100"><circle r="50" fill="url(#fadeG)"/></mask>
+      </defs>
+      <g id="worldG"></g>
+    </svg>
+  </div>
+  <div class="topbar">
+    <button class="ibtn" id="home" aria-label="もどる">🏠</button>
+    <div class="chip" id="chip"><span id="chipEmoji">🧒</span><span id="chipName">こども</span></div>
+    <button class="ibtn snd" data-snd aria-label="おと">🔊</button>
+  </div>
+  <div class="mission" id="mission" hidden>
+    <div class="m-q"><span id="mEmoji">🕷️</span> <span id="mText"></span><span class="m-n" id="mNum"></span></div>
+    <div class="m-hint" id="mHint"></div>
+  </div>
+  <div class="track" id="track" aria-hidden="true">
+    <span class="t-top">🌌</span><div class="t-bar" id="tBar"><div class="t-me" id="tMe">🧒</div></div><span class="t-bot">⚛️</span>
+  </div>
+  <button class="pin" id="pin" aria-label="せつめい">📍</button>
+  <div class="info" id="info" hidden>
+    <button class="info-x" id="infoX" aria-label="とじる">✕</button>
+    <div class="info-h"><span id="iEmoji"></span><b id="iName"></b></div>
+    <div class="info-size" id="iSize"></div>
+    <p id="iDesc"></p>
+  </div>
+  <div class="toast" id="toast"></div>
+  <div class="ruler" id="ruler">
+    <div class="r-label" id="rLabel">10 cm</div>
+    <div class="r-bar" id="rBar"></div>
+    <div class="r-kid" id="rKid"></div>
+  </div>
+  <div class="zoom">
+    <button class="zbtn" id="zIn" aria-label="ちいさい せかいへ"><span>🔍＋</span><small>ちいさく</small></button>
+    <button class="zbtn" id="zOut" aria-label="おおきい せかいへ"><span>🔭−</span><small>おおきく</small></button>
+  </div>
+  <div class="result" id="hideResult" hidden>
+    <div class="r-box">
+      <div class="big-emoji">🏆</div>
+      <h2>ぜんぶ みつけた！</h2>
+      <p id="hideMsg"></p>
+      <button class="mbtn" id="hideAgain" style="--c:#e8590c"><span>🔎</span>もういちど</button>
+      <button class="mbtn" id="hideHome" style="--c:#5f3dc4"><span>🏠</span>タイトルへ</button>
+    </div>
+  </div>
+</section>
+
+<!-- おおきさ くらべ クイズ -->
+<section id="quiz" class="screen">
+  <div class="topbar static">
+    <button class="ibtn" data-home aria-label="もどる">🏠</button>
+    <div class="chip"><span>⚖️</span><span id="qNum">1 / 10</span></div>
+    <button class="ibtn snd" data-snd aria-label="おと">🔊</button>
+  </div>
+  <div class="q-body">
+    <p class="q-text" id="qText"></p>
+    <div class="q-choices" id="qChoices"></div>
+    <p class="q-feed" id="qFeed"></p>
+    <button class="mbtn" id="qNext" style="--c:#2b8a3e" hidden><span>➡️</span>つぎへ</button>
+  </div>
+</section>
+
+<!-- パスポート -->
+<section id="pass" class="screen">
+  <div class="topbar static">
+    <button class="ibtn" data-home aria-label="もどる">🏠</button>
+    <div class="chip"><span>📕</span><span id="pCount">0 / 32</span></div>
+    <button class="ibtn snd" data-snd aria-label="おと">🔊</button>
+  </div>
+  <div class="p-body">
+    <p class="p-title" id="pTitle"></p>
+    <div class="p-grid" id="pGrid"></div>
+    <p class="p-rec" id="pRec"></p>
+  </div>
+</section>
+
+<script src="scales.js?v=6bbb394"></script>
+<script src="quiz.js?v=6bbb394"></script>
+<script src="audio.js?v=6bbb394"></script>
+<script src="app.js?v=6bbb394"></script>
+</body>
+</html>
