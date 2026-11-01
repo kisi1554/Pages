@@ -332,7 +332,31 @@ const CHARS = {
   },
 };
 CHARS.turtle.skillIcon = '🌀';
-const CHAR_IDS = ['bunny', 'turtle', 'bird', 'cat', 'penguin', 'dog'];
+// ほかの アプリの なかまも あそびに きた
+Object.assign(CHARS, {
+  tsukubo: {
+    name: 'つくぼう', emoji: '🦗', jump: 9.8, speed: 4.2, pitch: 1.4, rate: 1.15, skillIcon: '🍃',
+    skill: 'かくれんぼ', desc: '「わざ」で すがたを けして、てきや ひのたまを すりぬける',
+    say: { start: 'つくぼう、 いくよ！ かくれんぼなら まけないぞ', miss: 'あいたっ… みつかっちゃった', grow: 'おおきく なったぞ！', boss: 'ボスだ！ かくれて すきを ねらうぞ',
+      bossDown: 'ボスを やっつけた！ オーシンツクツク！', clear: 'ゴール！ ウイヨース！', pipe: 'どかんに かくれるぞ', room: 'コインが いっぱい！', rice: 'チャーハン うまい！ ツクツク げんき！',
+      stomp: 'えいっ！', skill: 'かくれんぼ！ みつけられるかな？', swap: 'つくぼうに こうたい！' },
+  },
+  nyoko: {
+    name: 'にょこすけ', emoji: '🐛', jump: 9.4, speed: 4.0, pitch: 1.8, rate: 1.3, skillIcon: '💨',
+    skill: 'スーパーおなら', desc: '「わざ」で スーパーおなら！ ボスも いっぱつで たおせる',
+    say: { start: 'にょこすけ、 にょこにょこ いくよ！', miss: 'うわーん…', grow: 'おおきく なったよ！', boss: 'ボスだ！ スーパーおならで いっぱつだよ！',
+      bossDown: 'やったー！ おならで いっぱつ！', clear: 'ゴール！ にょこにょこ ばんざい！', pipe: 'どかんに にょこっと はいるよ', room: 'コインが いっぱいだー！', rice: 'チャーハン おいしい！ おならも パワーアップ！',
+      stomp: 'にょこっ！', skill: 'スーパーおなら！ ぷぅぅぅー！', swap: 'にょこすけに こうたい！' },
+  },
+  naoki: {
+    name: 'ナオキ', emoji: '🦁', jump: 9.6, speed: 4.1, pitch: 0.8, rate: 1.0, skillIcon: '💥',
+    skill: 'ドスン', desc: '「わざ」で とびあがって ドスン！ まわりの てきを ふっとばす。ちいさくても レンガを われる',
+    say: { start: 'ライオンの ナオキ、 いくぞ！ ガオー！', miss: 'ぐぬぬ… まだまだ！', grow: 'もっと つよく なったぞ！', boss: 'ボスか！ ナオキが あいてだ！',
+      bossDown: 'ガオー！ ボスを たおしたぞ！', clear: 'ゴール！ ナオキの かちだ！', pipe: 'どかんに はいるぞ', room: 'たからの やまだ！', rice: 'チャーハン うまい！ ちからが みなぎる！',
+      stomp: 'ガオッ！', skill: 'ドスーン！', swap: 'ナオキに こうたい！ ガオー！' },
+  },
+});
+const CHAR_IDS = ['bunny', 'turtle', 'bird', 'cat', 'penguin', 'dog', 'tsukubo', 'nyoko', 'naoki'];
 let charId = CHARS[save.char] ? save.char : 'bunny';
 // はじめて であった てきの ちゅうい
 const WARN = {
@@ -518,7 +542,8 @@ function loadLevel(i) {
   items = []; parts = []; bumps = []; shots = []; pshots = [];
   coins = 0; misses = 0;
   player = { x: lv.startX * T, y: 12 * T - 28, w: 22, h: 28, vx: 0, vy: 0, face: 1, onGround: false, big: false,
-    inv: 0, jbuf: 0, coyote: 0, walk: 0, hidden: false, dash: 0, dashCd: 0, extra: 0, power: 0, kick: 0, wall: 0, wallT: 0 };
+    inv: 0, jbuf: 0, coyote: 0, walk: 0, hidden: false, dash: 0, dashCd: 0, extra: 0, power: 0, kick: 0, wall: 0, wallT: 0,
+    sneak: 0, pound: false, poundArm: false };
   player.safe = { x: player.x, y: 12 * T };
   camX = 0; flagY = 2 * T + 4; pipe = null;
   $('stageName').textContent = (i + 1) + '. ' + def.name;
@@ -648,6 +673,12 @@ function sfx(name) {
       case 'bossdown': [392, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, 0, i === 6 ? 0.6 : 0.12, 'square', 0.06, i * 0.11)); break;
       case 'eat': [0, 0.13, 0.26].forEach(d => tone(260, 180, 0.08, 'square', 0.06, d)); [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0, 0.1, 'square', 0.05, 0.45 + i * 0.07)); break;
       case 'toss': tone(400, 900, 0.2, 'triangle', 0.1); break;
+      case 'fart':
+        for (let i = 0; i < 12; i++) tone(i % 2 ? 78 : 104, 60, 0.09, 'sawtooth', 0.13, i * 0.055);
+        tone(320, 140, 0.18, 'square', 0.08, 0.7);
+        break;
+      case 'sneak': [880, 1175, 1568].forEach((f, i) => tone(f, 0, 0.12, 'triangle', 0.06, i * 0.06)); break;
+      case 'pound': tone(140, 40, 0.35, 'triangle', 0.22); tone(300, 60, 0.25, 'sawtooth', 0.06); break;
       case 'snow': tone(900, 400, 0.12, 'triangle', 0.1); break;
       case 'bark': tone(520, 260, 0.09, 'square', 0.08); tone(560, 280, 0.12, 'square', 0.08, 0.14); break;
       case 'swap': tone(500, 1000, 0.1, 'square', 0.05); tone(800, 1600, 0.12, 'square', 0.05, 0.1); break;
@@ -787,7 +818,7 @@ function setChar(id, announce) {
   charId = id; save.char = id; writeSave();
   $('charBtn').textContent = CHARS[id].emoji;
   $('hero').textContent = CHARS[id].emoji;
-  if (player) { player.dash = 0; player.extra = 0; player.dashCd = 0; player.kick = 0; }
+  if (player) { player.dash = 0; player.extra = 0; player.dashCd = 0; player.kick = 0; player.sneak = 0; player.pound = false; player.poundArm = false; }
   if (CHARS[id].skillIcon) $('bS').querySelector('span').textContent = CHARS[id].skillIcon;
   if (announce) { sfx('swap'); say(line('swap')); }
 }
@@ -856,7 +887,7 @@ function hitBlock(c, r) {
     items.push({ x: c * T + 2, y: r * T, w: 28, h: 28, vx: 0, vy: 0, rise: 30, onGround: false });
     sfx('item');
   } else if (ch === 'B') {
-    if (player.big) {
+    if (player.big || charId === 'naoki') {
       grid[r][c] = ' '; sfx('break');
       for (let i = 0; i < 4; i++) parts.push({ kind: 'brick', x: c * T + (i % 2) * 16, y: r * T + (i > 1 ? 16 : 0), vx: (i % 2 ? 2 : -2), vy: i > 1 ? -6 : -9, t: 60 });
     } else { bumps.push({ c, r, t: 10 }); sfx('bump'); }
@@ -887,14 +918,14 @@ function eatRice() {
   parts.push({ kind: 'text', x: p.x - 24, y: p.y - 8, vy: -0.8, t: 70, s: 'チャーハン パワー!' });
 }
 function hurt() {
-  if (player.inv > 0 || player.dash > 0 || player.power > 0 || state !== 'play') return;
+  if (player.inv > 0 || player.dash > 0 || player.power > 0 || player.sneak > 0 || player.pound || state !== 'play') return;
   if (player.big) {
     player.big = false; player.y += 24; player.h = 28; player.inv = 120; sfx('shrink');
   } else miss(true);
 }
 function miss(pop) {
   misses++; updateHud(); bgmStop(); sfx('miss'); say(line('miss'));
-  player.dash = 0; player.power = 0;
+  player.dash = 0; player.power = 0; player.sneak = 0; player.pound = false; player.poundArm = false;
   // ぴたっと とまってから、ぴょーんと とびあがって おちていく
   state = 'miss'; missTimer = 160; player.missPop = pop;
   player.vx = 0; player.vy = 0; player.big = false;
@@ -927,7 +958,22 @@ function updatePlayer() {
     p.dashCd = 30; sfx('snow'); say(line('skill'), true);
   } else if (charId === 'dog' && wantS && p.dashCd <= 0) {
     bark(); p.dashCd = 200;
+  } else if (charId === 'tsukubo' && wantS && p.dashCd <= 0) {
+    // つくぼう: かくれんぼ（4びょう すがたを けす）
+    p.sneak = 240; p.dashCd = 480; sfx('sneak'); say(line('skill'));
+    for (let i = 0; i < 6; i++) parts.push({ kind: 'leaf', x: p.x + 11, y: p.y + 10, vx: (i - 2.5) * 0.8, vy: -2 - (i % 3), t: 40 });
+  } else if (charId === 'nyoko' && wantS && p.dashCd <= 0) {
+    superFart(); p.dashCd = 360;
+  } else if (charId === 'naoki' && wantS && p.dashCd <= 0 && !p.pound && !p.poundArm) {
+    // ナオキ: ドスン（じめんなら とびあがってから）
+    if (p.onGround) { p.vy = -9.5; p.onGround = false; p.poundArm = true; sfx('jump'); }
+    else { p.pound = true; p.vy = 14; p.vx = 0; say(line('skill'), true); }
   }
+  if (p.sneak > 0) {
+    p.sneak--;
+    if (p.sneak === 0) parts.push({ kind: 'text', x: p.x - 8, y: p.y - 6, vy: -1, t: 40, s: 'みーつけた!' });
+  }
+  if (p.poundArm && p.vy >= 0) { p.poundArm = false; p.pound = true; p.vy = 14; p.vx = 0; say(line('skill'), true); }
   if (p.wallT > 0) p.wallT--;
   if (p.dashCd > 0) p.dashCd--;
   if (p.power > 0) {
@@ -937,6 +983,8 @@ function updatePlayer() {
   const ax = (key('R') ? 1 : 0) - (key('L') ? 1 : 0);
   if (p.dash > 0) {
     p.dash--; p.vx = p.face * 7;
+  } else if (p.pound) {
+    p.vx = 0; p.vy = 14; // まっすぐ ドスン
   } else if (p.kick > 0) {
     p.kick--; // かべキックの すぐあとは かってに とんでいく
   } else {
@@ -984,6 +1032,7 @@ function updatePlayer() {
   p.y += p.vy;
   const hit = collideY(p);
   if (hit) hitBlock(hit[0], hit[1]);
+  if (p.pound && p.onGround) poundLand();
 
   p.walk = p.onGround && p.vx !== 0 ? p.walk + Math.abs(p.vx) * 0.12 : 0;
   if (p.inv > 0) p.inv--;
@@ -1086,6 +1135,40 @@ function bossAI(e) {
     shoot(dir < 0 ? e.x - 12 : e.x + e.w, e.y + 18, dir * 3.2);
   }
 }
+function superFart() {
+  // にょこすけの わざ: スーパーおなら（ボスも いっぱつ）
+  const p = player, cx = p.x + p.w / 2, cy = p.y + p.h / 2;
+  sfx('fart'); say(line('skill'));
+  for (let i = 0; i < 14; i++) {
+    const a = Math.PI * 2 * i / 14;
+    parts.push({ kind: 'gas', x: cx - p.face * 10, y: cy, vx: Math.cos(a) * 3 - p.face * 1.5, vy: Math.sin(a) * 2 - 0.5, r: 10, t: 50 });
+  }
+  parts.push({ kind: 'text', x: p.x - 30, y: p.y - 14, vy: -0.8, t: 70, s: 'スーパーおなら!' });
+  for (const e of enemies) {
+    if (!e.active || e.flip || e.squash || e.hidden) continue;
+    if (Math.hypot(e.x + e.w / 2 - cx, e.y + e.h / 2 - cy) > 6 * T) continue;
+    if (e.type === 'boss') { e.inv = 0; e.hp = 1; bossHit(e); parts.push({ kind: 'text', x: e.x, y: e.y - 30, vy: -0.6, t: 80, s: 'いっぱつ!!' }); }
+    else killEnemy(e, true);
+  }
+  for (const sh of shots) if (Math.hypot(sh.x - cx, sh.y - cy) < 6 * T) sh.dead = true;
+  // おならの いきおいで ぷわっと とぶ
+  p.vy = Math.min(p.vy, -7); p.onGround = false;
+}
+function poundLand() {
+  // ナオキの ドスン: じめんを ゆらして まわりの てきを ふっとばす
+  const p = player, cx = p.x + p.w / 2, fy = p.y + p.h;
+  p.pound = false; p.dashCd = 60; sfx('pound');
+  parts.push({ kind: 'ring', x: cx, y: fy - 4, t: 24 });
+  const r = Math.floor(fy / T);
+  for (let c = Math.floor(p.x / T); c <= Math.floor((p.x + p.w - 1) / T); c++) {
+    if ('B?M'.includes(tileAt(c, r))) hitBlock(c, r);
+  }
+  for (const e of enemies) {
+    if (!e.active || e.flip || e.squash || e.hidden) continue;
+    if (Math.abs(e.x + e.w / 2 - cx) > 3.5 * T || Math.abs(e.y + e.h - fy) > 2 * T) continue;
+    if (e.type === 'boss') bossHit(e); else killEnemy(e, true);
+  }
+}
 function bark() {
   // わんたの わざ: ほえて まわりの てきを ふきとばす（ボスは ひるむ）
   const p = player, cx = p.x + p.w / 2, cy = p.y + p.h / 2;
@@ -1137,8 +1220,9 @@ function bossHit(e) {
 }
 function touchEnemy(e) {
   const p = player;
-  if (p.dash > 0 || p.power > 0) {
-    // こうらアタック・チャーハンパワーの ときは さわるだけで はじきとばす
+  if (p.sneak > 0) return; // つくぼうが かくれている あいだは すりぬける
+  if (p.dash > 0 || p.power > 0 || p.pound) {
+    // こうらアタック・チャーハンパワー・ドスンの ときは さわるだけで はじきとばす
     if (e.type === 'boss') { bossHit(e); p.dash = 0; p.vx = -p.face * 4; p.vy = -6; }
     else { killEnemy(e, true); sfx('stomp'); }
     return;
@@ -1260,6 +1344,8 @@ function updateParts() {
     if (p.kind === 'coin') { p.y += p.vy; p.vy += 0.5; }
     else if (p.kind === 'brick') { p.x += p.vx; p.y += p.vy; p.vy += 0.5; }
     else if (p.kind === 'text') p.y += p.vy;
+    else if (p.kind === 'gas') { p.x += p.vx; p.y += p.vy; p.vx *= 0.94; p.vy *= 0.94; p.r += 0.9; }
+    else if (p.kind === 'leaf') { p.x += p.vx + Math.sin(p.t / 4) * 0.6; p.y += p.vy; p.vy += 0.12; }
     else if (p.kind === 'fly') { p.x += (player.x + player.w / 2 - p.x) * 0.3; p.y += (player.y + 10 - p.y) * 0.3; }
   }
   parts = parts.filter(p => p.t > 0);
@@ -1474,7 +1560,14 @@ function drawPlayer() {
     ctx.fillStyle = `hsla(${(frame * 9) % 360}, 100%, 60%, 0.45)`;
     ctx.beginPath(); ctx.ellipse(cx, y + h / 2, w / 2 + 10, h / 2 + 10, 0, 0, Math.PI * 2); ctx.fill();
   }
-  if (charId === 'cat') drawCat(p, x, y, w, h, cx);
+  if (p.sneak > 0) ctx.globalAlpha = p.sneak < 50 && Math.floor(p.sneak / 4) % 2 ? 0.7 : 0.28; // かくれんぼ ちゅう
+  if (charId === 'tsukubo' || charId === 'nyoko' || charId === 'naoki') {
+    // 22x28 の おおきさで かいて、おおきい ときは そのまま かくだい
+    const k = h / 28;
+    ctx.save(); ctx.translate(cx, y + h); ctx.scale(k, k);
+    if (charId === 'tsukubo') drawTsukubo(p); else if (charId === 'nyoko') drawNyokosuke(p); else drawNaoki(p);
+    ctx.restore();
+  } else if (charId === 'cat') drawCat(p, x, y, w, h, cx);
   else if (charId === 'penguin') drawPenguin(p, x, y, w, h, cx);
   else if (charId === 'dog') drawDog(p, x, y, w, h, cx);
   else if (charId === 'turtle') drawTurtle(p, x, y, w, h, cx);
@@ -1519,6 +1612,92 @@ function drawTurtle(p, x, y, w, h, cx) {
   ctx.fillStyle = '#ffe27a'; ctx.fillRect(cx - w / 2 - 5, sy + 1, w + 6, 4);
   ctx.strokeStyle = '#2a8a44'; ctx.lineWidth = 1.5;
   ctx.beginPath(); ctx.moveTo(cx - 8, sy); ctx.lineTo(cx - 5, sy - h * 0.2); ctx.lineTo(cx + 3, sy - h * 0.2); ctx.lineTo(cx + 6, sy); ctx.stroke();
+}
+// ここから 3にんは (0,0)=あしもとの まんなか、たかさ 28 で かく
+function drawTsukubo(p) {
+  // つくぼう（ツクツクボウシ）
+  const fl = (!p.onGround && state === 'play') ? Math.sin(frame * 0.9) * 0.25 : 0;
+  ctx.strokeStyle = '#5b7b8c'; ctx.lineWidth = 1;
+  for (const sg of [-1, 1]) {
+    ctx.save(); ctx.translate(-2, -18); ctx.rotate(sg * (0.35 + fl) - 0.25); ctx.scale(1, sg);
+    ctx.fillStyle = 'rgba(220,240,255,0.8)';
+    ctx.beginPath(); ctx.ellipse(-10, 4, 13, 5, 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+  const step = Math.sin(p.walk * 3) * 2;
+  ctx.strokeStyle = '#2f5d3a'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(-4, -5); ctx.lineTo(-6 + step, 0); ctx.moveTo(4, -5); ctx.lineTo(6 - step, 0); ctx.stroke();
+  ctx.fillStyle = '#2f5d3a'; ctx.beginPath(); ctx.ellipse(-1, -11, 7, 9, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#4a8f52'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.moveTo(-6, -14 + i * 4); ctx.lineTo(4, -14 + i * 4); ctx.stroke(); }
+  ctx.fillStyle = '#4a8f52'; ctx.beginPath(); ctx.ellipse(1, -22, 10, 7, 0, 0, Math.PI * 2); ctx.fill();
+  if (state === 'miss') { xEye(-3, -24); xEye(7, -24); }
+  else {
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(-3, -24, 3.6, 0, Math.PI * 2); ctx.arc(7, -24, 3.6, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(-2, -24, 1.8, 0, Math.PI * 2); ctx.arc(8, -24, 1.8, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, -19); ctx.quadraticCurveTo(3, -16, 6, -19.5); ctx.stroke(); // にやっ
+}
+function drawNyokosuke(p) {
+  // にょこすけ（いもむし）。しゃくとりむしの ように にょこにょこ
+  const O = '#3f7f25';
+  const hump = p.onGround ? (1 - Math.cos(p.walk * 3)) / 2 : 0.6;
+  const segs = [];
+  for (let i = 0; i < 4; i++) {
+    const r = 4.2 + i * 0.4;
+    segs.push([-14 + i * 6, -r - hump * 6 * Math.sin(Math.PI * i / 3), r]);
+  }
+  ctx.lineWidth = 1.5; ctx.strokeStyle = O;
+  segs.forEach(([sx, sy, r], i) => {
+    ctx.fillStyle = i % 2 ? '#8ad65a' : '#9fe36c';
+    ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (i % 2 === 0) { ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(sx, sy + 0.5, 1.4, 0, Math.PI * 2); ctx.fill(); }
+  });
+  const hx = 6, hy = -15, hr = 9;
+  const wob = Math.sin(frame / 6) * 1.5;
+  ctx.strokeStyle = O; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(hx - 3, hy - 7); ctx.quadraticCurveTo(hx - 6, hy - 13, hx - 7 - wob, hy - 16); ctx.moveTo(hx + 3, hy - 7); ctx.quadraticCurveTo(hx + 6, hy - 13, hx + 8 + wob, hy - 16); ctx.stroke();
+  ctx.fillStyle = '#ff8fab'; ctx.beginPath(); ctx.arc(hx - 7 - wob, hy - 16, 2, 0, Math.PI * 2); ctx.arc(hx + 8 + wob, hy - 16, 2, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#a8ea72'; ctx.beginPath(); ctx.arc(hx, hy, hr, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,0.45)'; ctx.beginPath(); ctx.arc(hx - 3, hy - 4, 2.6, 0, Math.PI * 2); ctx.fill();
+  if (state === 'miss') { xEye(hx - 1, hy - 1); xEye(hx + 5, hy - 1); }
+  else { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(hx - 1, hy - 1, 1.6, 0, Math.PI * 2); ctx.arc(hx + 5, hy - 1, 1.6, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = '#ff9ab0'; ctx.beginPath(); ctx.arc(hx - 4, hy + 3, 1.8, 0, Math.PI * 2); ctx.arc(hx + 7, hy + 3, 1.8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(hx + 2, hy + 2, 2.5, 0.2, Math.PI - 0.2); ctx.stroke();
+}
+function drawNaoki(p) {
+  // ライオンの ナオキ
+  const step = Math.sin(p.walk * 3) * 2;
+  ctx.strokeStyle = '#7a4a10'; ctx.lineWidth = 1.2;
+  // しっぽ
+  ctx.strokeStyle = '#e0a83a'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(-8, -8); ctx.quadraticCurveTo(-16, -10, -15, -18); ctx.stroke();
+  ctx.fillStyle = '#9a5a1a'; ctx.beginPath(); ctx.arc(-15, -19, 2.8, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#7a4a10'; ctx.lineWidth = 1.2;
+  // からだ・あし
+  ctx.fillStyle = '#f2c14e';
+  ctx.beginPath(); ctx.ellipse(-4 + step, -2, 4, 3, 0, 0, Math.PI * 2); ctx.ellipse(5 - step, -2, 4, 3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  rr(-9, -15, 18, 13, 6); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#fff1c9'; rr(-4, -12, 9, 9, 4); ctx.fill();
+  // たてがみ
+  ctx.fillStyle = '#c86a1a';
+  ctx.beginPath();
+  for (let i = 0; i < 12; i++) {
+    const a = Math.PI * 2 * i / 12, r = i % 2 ? 11 : 13.5;
+    const px = 1 + Math.cos(a) * r, py = -21 + Math.sin(a) * r;
+    i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
+  // かお
+  ctx.fillStyle = '#f2c14e'; ctx.beginPath(); ctx.arc(1, -21, 8, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.arc(-5, -28, 2.5, 0, Math.PI * 2); ctx.arc(7, -28, 2.5, 0, Math.PI * 2); ctx.fill();
+  if (state === 'miss') { xEye(-1, -23); xEye(5, -23); }
+  else { ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(-1, -23, 1.5, 0, Math.PI * 2); ctx.arc(5, -23, 1.5, 0, Math.PI * 2); ctx.fill(); }
+  ctx.fillStyle = '#fff1c9'; ctx.beginPath(); ctx.ellipse(3, -18, 4.5, 3, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#5a2a10'; ctx.beginPath(); ctx.moveTo(1.5, -20); ctx.lineTo(4.5, -20); ctx.lineTo(3, -18); ctx.fill();
+  ctx.strokeStyle = '#5a2a10'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(3, -18); ctx.lineTo(3, -16.5); ctx.stroke();
+  if (p.pound) { ctx.fillStyle = 'rgba(255,255,255,0.7)'; ctx.fillRect(-10, -40, 2, 10); ctx.fillRect(10, -42, 2, 12); ctx.fillRect(0, -46, 2, 10); }
 }
 function drawCat(p, x, y, w, h, cx) {
   ctx.strokeStyle = '#7a3d00'; ctx.lineWidth = 1.5;
@@ -1884,6 +2063,12 @@ function drawParts() {
       ctx.beginPath();
       for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + 0.6; ctx.moveTo(p.x + Math.cos(a) * k, p.y + Math.sin(a) * k); ctx.lineTo(p.x + Math.cos(a) * (k + 6), p.y + Math.sin(a) * (k + 6)); }
       ctx.stroke();
+    } else if (p.kind === 'gas') {
+      ctx.fillStyle = `rgba(${p.t % 2 ? '170,200,80' : '190,160,90'},${Math.min(0.75, p.t / 50)})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    } else if (p.kind === 'leaf') {
+      ctx.fillStyle = `rgba(90,180,80,${p.t / 40})`;
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, 5, 2.5, p.t / 5, 0, Math.PI * 2); ctx.fill();
     } else if (p.kind === 'ring') {
       ctx.strokeStyle = `rgba(255,190,60,${p.t / 24})`; ctx.lineWidth = 5;
       ctx.beginPath(); ctx.arc(p.x, p.y, (24 - p.t) * 6 + 10, 0, Math.PI * 2); ctx.stroke();
