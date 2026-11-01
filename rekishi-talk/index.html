@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>れきし じんぶつ トーク</title>
+<meta name="description" content="ひみこ・しょうとくたいし・のぶなが・エジソン・アインシュタイン など、れきしの じんぶつに なりきった キャラクターと おしゃべり。きろくを もとに した こたえで、れきしが すきに なる。">
+<meta name="theme-color" content="#7a4b2a">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📜</text></svg>">
+<link rel="stylesheet" href="style.css?v=a3585f4">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div class="app">
+  <!-- ============ えらぶ がめん ============ -->
+  <section id="listView" class="view" aria-label="じんぶつを えらぶ">
+    <header class="top">
+      <a class="back" href="../" aria-label="メニューへ もどる">←</a>
+      <h1>📜 れきし じんぶつ <span>トーク</span></h1>
+      <div class="tools">
+        <button class="tool js-voice" type="button" aria-pressed="true" aria-label="よみあげ オン/オフ">🗣️<small>こえ</small></button>
+        <button class="tool js-sound" type="button" aria-pressed="true" aria-label="こうかおん オン/オフ">🎵<small>おと</small></button>
+      </div>
+    </header>
+    <p class="lead">はなしたい ひとを えらんでね。むかしの じだいから じゅんばんに ならんで いるよ。</p>
+    <div class="tabs" role="tablist">
+      <button class="tab" type="button" role="tab" data-area="" aria-selected="true">ぜんぶ</button>
+      <button class="tab" type="button" role="tab" data-area="にほん" aria-selected="false">🗾 にほん</button>
+      <button class="tab" type="button" role="tab" data-area="せかい" aria-selected="false">🌍 せかい</button>
+    </div>
+    <ol id="cards" class="cards"></ol>
+    <p class="note">※ きろく（しりょう）を もとに した「なりきり」の おしゃべり です。ほんにんの ほんとうの ことば では ない ところも あります。
+      でんせつ は「…と いわれて いる」と わかる ように して います。</p>
+  </section>
+
+  <!-- ============ おしゃべり がめん ============ -->
+  <section id="chatView" class="view" aria-label="おしゃべり" hidden>
+    <header class="top">
+      <button id="btnList" class="back" type="button" aria-label="じんぶつを えらびなおす">←</button>
+      <h1 id="chatTitle" class="chat-title"></h1>
+      <div class="tools">
+        <button id="btnProfile" class="tool" type="button" aria-label="プロフィール">📜<small>しらべる</small></button>
+        <button class="tool js-voice" type="button" aria-pressed="true" aria-label="よみあげ オン/オフ">🗣️<small>こえ</small></button>
+        <button class="tool js-sound" type="button" aria-pressed="true" aria-label="こうかおん オン/オフ">🎵<small>おと</small></button>
+      </div>
+    </header>
+    <div class="stage">
+      <aside class="hero">
+        <div id="portrait" class="portrait"></div>
+        <div class="hero-info">
+          <b id="heroName"></b>
+          <span id="heroYears"></span>
+          <span id="heroTitle" class="hero-title"></span>
+        </div>
+      </aside>
+      <div class="chat">
+        <div id="log" class="log" aria-live="polite"></div>
+        <div id="chips" class="chips"></div>
+        <form id="form" class="input" autocomplete="off">
+          <button id="btnMic" class="mic" type="button" aria-label="こえで はなす" hidden>🎤</button>
+          <input id="text" type="text" placeholder="しつもんを かいてね" enterkeyhint="send" maxlength="80">
+          <button class="send" type="submit">おくる</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <dialog id="profile" class="profile">
+    <div id="profileBody"></div>
+    <form method="dialog"><button class="close" type="submit">とじる</button></form>
+  </dialog>
+</div>
+
+<script src="talk.js?v=a3585f4"></script>
+<script src="people.js?v=a3585f4"></script>
+<script src="art.js?v=a3585f4"></script>
+<script src="app.js?v=a3585f4"></script>
+</body>
+</html>
