@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e7f5ff">
+<title>ことばの せんたくき ― 1もじ かえて へんしん！</title>
+<link rel="stylesheet" href="style.css?v=d49b593">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="bar">
+  <button id="b-home" class="ico" aria-label="はじめの がめん">🏠</button>
+  <h1 id="ttl">🫧 ことばの せんたくき</h1>
+  <button id="b-snd" class="ico" aria-label="おと オン/オフ">🔊</button>
+  <button id="b-voice" class="ico" aria-label="よみあげ オン/オフ">🗣️</button>
+</header>
+
+<main>
+  <!-- はじめ -->
+  <section id="s-home" class="screen on">
+    <div class="logo" aria-hidden="true">
+      <div class="mini-machine"><div class="mini-panel"><i></i><i></i><b></b></div><div class="mini-door"><span>ねこ</span></div></div>
+    </div>
+    <p class="lead">ことばを せんたくきに いれて<br><b>1もじ だけ かえる</b>と、べつの ことばに へんしん！</p>
+    <div class="menu">
+      <button class="big" data-go="list" style="--c:#1971c2">🧺 もんだい<small>ゴールの ことばまで いけるかな？</small></button>
+      <button class="big" data-go="free" style="--c:#2f9e44">🌀 じゆう せんたく<small>すきな ことばから いくつ へんしん できる？</small></button>
+      <button class="big" data-go="zukan" style="--c:#e8590c">📗 ずかん<small>つくった ことばが あつまるよ</small></button>
+    </div>
+    <details class="how">
+      <summary>あそびかた</summary>
+      <ol>
+        <li>かえたい もじを タップ。</li>
+        <li>50おんの ボタンから あたらしい もじを えらぶ。</li>
+        <li>「まわす」を おすか、まどを ぐるぐる なぞって せんたく！</li>
+        <li>ほんとうに ある ことばなら へんしん。ない ことばなら あわが はじけて もとに もどるよ。</li>
+      </ol>
+    </details>
+  </section>
+
+  <!-- もんだい いちらん -->
+  <section id="s-list" class="screen">
+    <div class="tabs" id="list-tabs" role="tablist"></div>
+    <p class="sub" id="list-sum"></p>
+    <div class="grid" id="list-grid"></div>
+  </section>
+
+  <!-- じゆう せんたく：さいしょの ことば -->
+  <section id="s-free" class="screen">
+    <div class="tabs" id="free-tabs" role="tablist"></div>
+    <p class="sub">どの ことばから はじめる？</p>
+    <div class="grid words" id="free-grid"></div>
+    <button class="pill" id="b-shuffle">🔀 ほかの ことば</button>
+  </section>
+
+  <!-- ずかん -->
+  <section id="s-zukan" class="screen">
+    <div class="tabs" id="zukan-tabs" role="tablist"></div>
+    <p class="sub" id="zukan-sum"></p>
+    <div class="grid zukan" id="zukan-grid"></div>
+  </section>
+
+  <!-- あそぶ -->
+  <section id="s-play" class="screen">
+    <div class="info">
+      <div class="route" id="route"></div>
+      <div class="trail" id="trail" aria-label="とおった ことば"></div>
+    </div>
+    <div class="stage">
+      <div class="machine" id="machine">
+        <div class="panel" aria-hidden="true">
+          <i class="knob" id="knob"></i>
+          <span class="lcd" id="lcd">00</span>
+          <i class="lamp" id="lamp"></i>
+        </div>
+        <div class="door" id="door">
+          <div class="drum" id="drum">
+            <div class="water" aria-hidden="true"></div>
+          </div>
+          <div class="pic" id="pic" aria-hidden="true"></div>
+          <div class="tiles" id="tiles"></div>
+          <div class="foam" id="foam" aria-hidden="true"></div>
+          <div class="glass" aria-hidden="true"></div>
+        </div>
+        <div class="feet" aria-hidden="true"><i></i><i></i></div>
+      </div>
+      <div class="side">
+        <p class="msg" id="msg" aria-live="polite"></p>
+        <div class="acts">
+          <button class="act spin" id="b-spin">🌀 まわす</button>
+          <button class="act" id="b-hint">💡 ヒント</button>
+          <button class="act" id="b-undo">↩️ ひとつ もどる</button>
+          <button class="act" id="b-end">✅ おわる</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 50おん -->
+<div class="sheet" id="pal" aria-hidden="true">
+  <div class="sheet-in">
+    <div class="sheet-top">
+      <div class="tabs" id="pal-tabs"></div>
+      <button class="ico" id="pal-close" aria-label="とじる">✖️</button>
+    </div>
+    <div class="kana" id="kana"></div>
+  </div>
+</div>
+
+<!-- ゴール・おわり -->
+<div class="overlay" id="clear" aria-hidden="true">
+  <div class="card-in">
+    <h2 id="clear-ttl">ゴール！</h2>
+    <p id="clear-sub"></p>
+    <div class="line" id="line"></div>
+    <div class="btns" id="clear-btns"></div>
+  </div>
+</div>
+
+<script src="words.js?v=d49b593"></script>
+<script src="ladder.js?v=d49b593"></script>
+<script src="audio.js?v=d49b593"></script>
+<script src="app.js?v=d49b593"></script>
+</body>
+</html>
