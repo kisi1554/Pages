@@ -168,6 +168,43 @@ const FLAGS = {
   458: { vb: "0 0 28 14", draw: () => hStripes(28, 14, Array.from({ length: 14 }, (_, i) => i % 2 ? "#fff" : "#CC0001")) +
     `<rect width="14" height="8" fill="#010066"/><circle cx="5" cy="4" r="3" fill="#FFCC00"/><circle cx="6" cy="4" r="2.5" fill="#010066"/>` +
     star(9.6, 4, 2.2, "#FFCC00", 14, 0.45) },
+  // ---- 3かいめに たした くに ----
+  // スリランカ：ライオンは かんたんな え
+  144: { vb: "0 0 40 20", draw: () => `<rect width="40" height="20" fill="#FFBE29"/><rect x="1" y="1" width="4" height="18" fill="#00534E"/><rect x="5" y="1" width="4" height="18" fill="#EB7400"/>` +
+    `<rect x="10" y="1" width="29" height="18" fill="#8D153A"/><path d="M17,15 v-5 q0,-4 4,-4 q2,0 3,2 h4 q3,0 3,3 v4 h-2 v-2 h-6 v2z" fill="#FFBE29"/><path d="M29,7 l4,-3 v2z" fill="#FFBE29"/>` },
+  586: { vb: "0 0 30 20", draw: () => `<rect width="30" height="20" fill="#01411C"/><rect width="7.5" height="20" fill="#fff"/>` +
+    `<circle cx="19" cy="10" r="5" fill="#fff"/><circle cx="20.4" cy="8.8" r="4.4" fill="#01411C"/>` + star(21.8, 7.6, 1.8, "#fff", 5, 0.382, -50) },
+  // カザフスタン：たいようと わし（かんたんな え）
+  398: { vb: "0 0 40 20", draw: () => `<rect width="40" height="20" fill="#00AFCA"/>` + sun(20, 8, 2.6, 32, "#FEC50C", 1.6) +
+    `<path d="M13,13 q7,-3 14,0 q-7,1 -14,0z" fill="#FEC50C"/><rect x="2" y="1" width="2" height="18" fill="#FEC50C" opacity=".85"/>` },
+  462: { vb: "0 0 30 20", draw: () => `<rect width="30" height="20" fill="#D21034"/><rect x="5" y="5" width="20" height="10" fill="#007E3A"/>` +
+    `<circle cx="16" cy="10" r="3.4" fill="#fff"/><circle cx="17.2" cy="10" r="3" fill="#007E3A"/>` },
+  784: { vb: "0 0 40 20", draw: () => hStripes(40, 20, ["#00732F", "#fff", "#000"]) + `<rect width="10" height="20" fill="#FF0000"/>` },
+  // ブータン：りゅうは かんたんな え
+  64: { vb: "0 0 30 20", draw: () => `<polygon points="0,0 30,0 0,20" fill="#FFD520"/><polygon points="30,0 30,20 0,20" fill="#FF4E12"/>` +
+    `<path d="M7,14 q3,-6 8,-4 q4,1 8,-4 q-1,5 -6,6 q-5,1 -6,4 q-2,2 -4,-2z" fill="#fff"/>` },
+  642: { vb: "0 0 30 20", draw: () => vStripes(30, 20, ["#002B7F", "#FCD116", "#CE1126"]) },
+  // クロアチア：もんしょうは あかと しろの いちまつ もよう だけ
+  191: { vb: "0 0 40 20", draw: () => hStripes(40, 20, ["#FF0000", "#fff", "#171796"]) +
+    `<path d="M16,5 h8 v7 a4,4 0 0 1 -8,0z" fill="#fff" stroke="#171796" stroke-width=".3"/>` +
+    [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].filter((i) => ((i >> 2) + i) % 2 === 0).map((i) => `<rect x="${16 + (i % 4) * 2}" y="${5 + (i >> 2) * 2}" width="2" height="2" fill="#FF0000"/>`).join("") },
+  233: { vb: "0 0 33 21", draw: () => hStripes(33, 21, ["#0072CE", "#000", "#fff"]) },
+  12: { vb: "0 0 30 20", draw: () => vStripes(30, 20, ["#006633", "#fff"]) +
+    `<circle cx="15" cy="10" r="5" fill="#D21034"/><circle cx="16.3" cy="10" r="4" fill="#fff"/>` + star(17.3, 10, 2.2, "#D21034", 5, 0.382, 180) },
+  686: { vb: "0 0 30 20", draw: () => vStripes(30, 20, ["#00853F", "#FDEF42", "#E31B23"]) + star(15, 10.3, 3.2, "#00853F") },
+  646: { vb: "0 0 30 20", draw: () => `<rect width="30" height="20" fill="#20603D"/><rect width="30" height="15" fill="#FAD201"/><rect width="30" height="10" fill="#00A1DE"/>` +
+    sun(25, 4, 1.4, 24, "#E5BE01", 1.7) },
+  72: { vb: "0 0 36 24", draw: () => `<rect width="36" height="24" fill="#75AADB"/><rect y="9" width="36" height="6" fill="#fff"/><rect y="10" width="36" height="4" fill="#000"/>` },
+  388: { vb: "0 0 40 20", draw: () => `<rect width="40" height="20" fill="#009B3A"/><polygon points="0,0 20,10 0,20" fill="#000"/><polygon points="40,0 20,10 40,20" fill="#000"/>` +
+    `<path d="M0,0 L40,20 M40,0 L0,20" stroke="#FED100" stroke-width="2.6"/>` },
+  // コスタリカ・グアテマラ・エクアドルは もんしょう なしの 民間旗
+  188: { vb: "0 0 30 18", draw: () => hStripes(30, 18, ["#002B7F", "#fff", "#CE1126", "#CE1126", "#fff", "#002B7F"]) },
+  320: { vb: "0 0 32 20", draw: () => vStripes(32, 20, ["#4997D0", "#fff", "#4997D0"]) },
+  218: { vb: "0 0 30 20", draw: () => `<rect width="30" height="10" fill="#FFDD00"/><rect y="10" width="30" height="5" fill="#034EA2"/><rect y="15" width="30" height="5" fill="#ED1C24"/>` },
+  585: { vb: "0 0 40 25", draw: () => `<rect width="40" height="25" fill="#4AADD6"/><circle cx="18" cy="12.5" r="7.5" fill="#FFDE00"/>` },
+  776: { vb: "0 0 40 20", draw: () => `<rect width="40" height="20" fill="#C10000"/><rect width="16" height="10" fill="#fff"/><rect x="6.5" y="1.5" width="3" height="7" fill="#C10000"/><rect x="4.5" y="3.5" width="7" height="3" fill="#C10000"/>` },
+  882: { vb: "0 0 40 20", draw: () => `<rect width="40" height="20" fill="#CE1126"/><rect width="20" height="10" fill="#002B7F"/>` +
+    [[10, 2.2, 1.4], [6.4, 5, 1.4], [13.6, 4.4, 1.2], [10, 8, 1.6], [11.8, 6.2, 0.7]].map(([x, y, r]) => star(x, y, r, "#fff")).join("") },
   208: { vb: "0 0 37 28", draw: () => `<rect width="37" height="28" fill="#C8102E"/>` +
     `<rect x="12" width="4" height="28" fill="#fff"/><rect y="12" width="37" height="4" fill="#fff"/>` },
   246: { vb: "0 0 18 11", draw: () => `<rect width="18" height="11" fill="#fff"/>` +

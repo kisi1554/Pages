@@ -137,6 +137,27 @@ const BUILDINGS = (() => {
       Rr(42, 84, 16, 16, "#3e2c22"),
     bure: () => Rr(16, 64, 68, 36, "#c9a46a") + P("6,66 50,20 94,66", "#9c7a48") + rep(6, (i) => `<path d="M${14 + i * 14},62 L50,24" stroke="#86683a" stroke-width="1.2"/>`) +
       Rr(42, 76, 16, 24, "#5a3d27"),
+    sigiriya: () => `<path d="M14,100 V40 Q16,14 50,12 Q84,14 86,40 V100Z" fill="#9b6a4a"/><path d="M30,100 V60 h40 V100" fill="#b5835e"/>` +
+      Rr(24, 8, 52, 6, "#c9a46a") + rep(6, (i) => Rr(44, 64 + i * 6, 12, 3, "#e0c38c")) + `<path d="M34,100 q4,-14 8,-14 M66,100 q-4,-14 -8,-14" stroke="#e0c38c" stroke-width="5" fill="none"/>`,
+    baiterek: () => Rr(30, 90, 40, 10, "#ddd6c6") + `<path d="M44,90 L48,40 L40,26 M56,90 L52,40 L60,26 M48,40 L52,40" stroke="#f4f1ea" stroke-width="5" fill="none"/>` +
+      C(50, 24, 12, "#e7b43a") + C(46, 20, 4, "#fff3c4"),
+    overwater: () => Rr(0, 78, 100, 22, "#45b3d9") + rep(3, (i) => Rr(8 + i * 32, 64, 4, 24, "#7a5b3a") + Rr(22 + i * 32, 64, 4, 24, "#7a5b3a") +
+      Rr(6 + i * 32, 48, 22, 16, "#d9b98a") + P(`${2 + i * 32},50 ${17 + i * 32},34 ${32 + i * 32},50`, "#a5794a")) + Rr(0, 62, 100, 3, "#a5794a"),
+    burj: () => P("38,100 46,40 49,0 51,0 54,40 62,100", "#c4cbd3") + P("46,100 49,10 51,10 50,100", "#9aa7b4") +
+      Rr(4, 70, 18, 30, "#b9c3cd") + Rr(78, 60, 18, 40, "#a8b5c2") + rep(6, (i) => Rr(40 + i, 92 - i * 12, 20 - i * 2, 2, "#9aa7b4")),
+    dzong: () => P("4,100 10,46 90,46 96,100", "#f4f1ea") + Rr(10, 50, 80, 8, "#8d1f1f") + win(16, 66, 6, 2, 12, 14, 6, 8, "#5a3d27") +
+      Rr(34, 22, 32, 26, "#f4f1ea") + Rr(34, 28, 32, 5, "#8d1f1f") + curvedRoof(30, 12, 40, 10, "#c9a227") + curvedRoof(6, 38, 88, 8, "#5c4a36"),
+    walls: () => Rr(0, 70, 100, 30, "#d9c9a3") + rep(10, (i) => Rr(i * 10, 64, 6, 6, "#d9c9a3")) +
+      rep(5, (i) => Rr(10 + i * 18, 40 + (i % 2) * 8, 14, 30, "#efe1c0") + P(`${8 + i * 18},${42 + (i % 2) * 8} ${17 + i * 18},${30 + (i % 2) * 8} ${26 + i * 18},${42 + (i % 2) * 8}`, "#c8553d")) +
+      Rr(80, 20, 14, 50, "#d9c9a3") + Rr(0, 94, 100, 6, "#3d8fc4"),
+    conetowers: () => Rr(10, 60, 80, 40, "#d7cbb3") + [[14, 38], [40, 26], [70, 34]].map(([x, y]) => Rr(x, y, 16, 100 - y, "#e8dfcc") +
+      P(`${x - 2},${y} ${x + 8},${y - 22} ${x + 18},${y}`, "#b5452f") + Rr(x + 6, y + 8, 4, 7, "#5a3d27")).join(""),
+    casbah: () => rep(4, (r) => rep(5 - r, (c) => Rr(4 + c * 18 + r * 9, 100 - (r + 1) * 20, 16, 20, ["#fff", "#f4f1ea", "#eef2f4"][(r + c) % 3]) +
+      Rr(9 + c * 18 + r * 9, 106 - (r + 1) * 20, 5, 6, "#3a7bd5"))) + Rr(46, 8, 8, 20, "#f4f1ea") + C(50, 8, 4, "#4f9a7a"),
+    kigali: () => Rr(0, 84, 100, 16, "#c9c1b2") + `<path d="M14,84 Q14,20 50,14 Q86,20 86,84Z" fill="#e8e4dc"/>` +
+      rep(5, (i) => `<path d="M${20 + i * 3},84 Q${30 + i * 5},${30 + i * 4} 50,${16 + i * 2}" stroke="${["#d2464b", "#f2c94c", "#2f9e5b", "#3a7bd5", "#8a55c9"][i]}" stroke-width="3" fill="none"/>`),
+    mitad: () => Rr(10, 94, 80, 6, "#cfc7b4") + P("34,94 40,34 60,34 66,94", "#e0d6c0") + C(50, 22, 12, "#c9a227") +
+      `<path d="M38,22 h24 M50,10 v24" stroke="#8a6d1f" stroke-width="1.5"/>` + `<path d="M0,96 H100" stroke="#d2464b" stroke-width="2" stroke-dasharray="4 3"/>`,
     onepillar: () => Rr(0, 82, 100, 18, "#6aa9c9") + Rr(46, 58, 8, 32, "#7a5b3a") + Rr(28, 44, 44, 16, "#b8473b") +
       curvedRoof(28, 30, 44, 14, "#3d4a5c") + C(50, 28, 3, "#d9a227") + `<path d="M10,86 q8,-4 16,0 M70,88 q8,-4 16,0" stroke="#3e7046" stroke-width="3" fill="none"/>`,
   };
@@ -224,8 +245,8 @@ function sceneSVG(c, hour, found = {}) {
   if (c.sc === "tropic") s += [30, 370].map((x) => `<g transform="translate(${x} 190)"><path d="M0,0 q-4,-30 4,-52" stroke="#8a6d4a" stroke-width="5" fill="none"/><path d="M4,-52 q-20,-6 -30,8 M4,-52 q20,-8 30,6 M4,-52 q-8,-18 -22,-20 M4,-52 q10,-18 24,-16" stroke="#3e8a4a" stroke-width="6" fill="none" stroke-linecap="round"/></g>`).join("");
   if (c.sc === "snow") s += `<g fill="#fff" opacity=".9">${Array.from({ length: 18 }, (_, i) => `<circle cx="${(i * 71) % 400}" cy="${(i * 37) % 170 + 10}" r="1.8"/>`).join("")}</g>`;
   // せんろ（でんしゃで ない のりものの 国は みち・うみ）
-  if (c.ride.e === "⛴️") s += `<rect x="0" y="222" width="400" height="38" fill="#5aa7d6"/>`;
-  else if (["🚌", "🚗", "🚲", "🛺", "✈️"].includes(c.ride.e)) s += `<rect x="0" y="226" width="400" height="22" fill="#8d8d8d"/><g fill="#fff">${Array.from({ length: 10 }, (_, i) => `<rect x="${i * 40 + 8}" y="236" width="20" height="2"/>`).join("")}</g>`;
+  if (["⛴️", "🛩️", "🛶", "🛥️"].includes(c.ride.e)) s += `<rect x="0" y="222" width="400" height="38" fill="#5aa7d6"/>`;
+  else if (["🚌", "🚗", "🚲", "🛺", "✈️", "🚚", "🛵", "🚀"].includes(c.ride.e)) s += `<rect x="0" y="226" width="400" height="22" fill="#8d8d8d"/><g fill="#fff">${Array.from({ length: 10 }, (_, i) => `<rect x="${i * 40 + 8}" y="236" width="20" height="2"/>`).join("")}</g>`;
   else s += `<rect x="0" y="236" width="400" height="5" fill="#8a8a8a"/><g fill="#7a5b3a">${Array.from({ length: 20 }, (_, i) => `<rect x="${i * 20 + 4}" y="234" width="8" height="10"/>`).join("")}</g>`;
 
   const spot = (k, x, y, r, inner) =>
