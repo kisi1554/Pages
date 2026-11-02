@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#fff0f6">
+<title>でんごん おえかき ― かぞくで まわす おえかき でんごんゲーム</title>
+<link rel="stylesheet" href="style.css?v=e83f045">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ひょうし -->
+<section class="screen" id="s-title">
+  <div class="title-box">
+    <div class="logo" aria-hidden="true">🖍️</div>
+    <h1>でんごん おえかき</h1>
+    <p class="sub">え → ことば → え …<br>かぞくで まわすと どうなる？</p>
+    <div class="flow" aria-hidden="true"><span>🐘</span><b>→</b><span>🖍️</span><b>→</b><span>💬</span><b>→</b><span>🖍️</span><b>→</b><span>❓</span></div>
+    <div class="big-btns">
+      <button class="btn main" id="b-start">▶ あそぶ</button>
+      <button class="btn" id="b-album">📒 アルバム</button>
+      <button class="btn" id="b-howto">❔ あそびかた</button>
+    </div>
+    <div class="toggles">
+      <button class="tg" id="t-sfx" aria-pressed="true">🔊 おと</button>
+      <button class="tg" id="t-pen" aria-pressed="true">✏️ ペンの おと</button>
+      <button class="tg" id="t-voice" aria-pressed="true">🗣️ よみあげ</button>
+    </div>
+    <p class="tiny">ネットは つかいません。え は この きかいの なかだけに のこります。</p>
+  </div>
+</section>
+
+<!-- じゅんび -->
+<section class="screen hidden" id="s-setup">
+  <div class="scroll">
+    <h2>じゅんび</h2>
+    <div class="row-label">なんにん？</div>
+    <div class="seg" id="seg-n">
+      <button data-n="3">3にん</button><button data-n="4">4にん</button><button data-n="5">5にん</button><button data-n="6">6にん</button>
+    </div>
+    <div class="row-label">まわす じゅんばん（うえ から）</div>
+    <div id="plist"></div>
+    <p class="hint">🐣 を つけた ひとは、おだいを よみあげ・うすい ヒント つき。ことば は えらぶ だけで OK。</p>
+    <div class="row-label">おだい</div>
+    <div class="seg" id="seg-lv">
+      <button data-lv="easy">やさしい<small>どうぶつ・たべもの</small></button><button data-lv="normal">ふつう<small>〜する ○○</small></button>
+    </div>
+    <div class="row-label">まわる かず</div>
+    <div class="seg" id="seg-laps"><button data-laps="1">1しゅう</button><button data-laps="2">2しゅう</button></div>
+    <div class="row-label">え を かく じかん</div>
+    <div class="seg" id="seg-time"><button data-time="40">40びょう</button><button data-time="60">60びょう</button><button data-time="0">なし</button></div>
+    <div class="foot">
+      <button class="btn" id="b-setup-back">◀ もどる</button>
+      <button class="btn main" id="b-go">はじめる！</button>
+    </div>
+  </div>
+</section>
+
+<!-- まわす -->
+<section class="screen hidden" id="s-pass">
+  <div class="pass-box">
+    <div class="pass-step" id="p-step"></div>
+    <div class="pass-icon" id="p-icon">🐶</div>
+    <div class="pass-name" id="p-name"></div>
+    <div class="pass-msg" id="p-msg">ほかの ひとは <ruby>見<rt>み</rt></ruby>ないでね 🙈</div>
+    <button class="btn main hold" id="b-me"><span class="fill"></span><span class="lbl">✋ わたしだよ</span></button>
+    <div class="tiny" id="p-holdhint">ボタンを ぎゅっと ながおし（1びょう）</div>
+    <button class="btn main hidden" id="b-show">🎉 はっぴょう！</button>
+    <button class="link" id="b-pass-quit">やめる</button>
+  </div>
+</section>
+
+<!-- おだい くじびき -->
+<section class="screen hidden" id="s-odai">
+  <div class="odai-box">
+    <div class="row-label">おだいの くじびき</div>
+    <div class="kuji" id="o-card"><div class="kuji-e" id="o-e">❓</div><div class="kuji-w" id="o-w"></div></div>
+    <div class="odai-msg" id="o-msg">…</div>
+    <div class="foot">
+      <button class="btn" id="b-reroll">🔄 べつの おだい</button>
+      <button class="btn main" id="b-draw">🖍️ かく！</button>
+    </div>
+    <button class="link" id="b-say-odai">🔈 もういちど きく</button>
+  </div>
+</section>
+
+<!-- え の ばん -->
+<section class="screen hidden" id="s-draw">
+  <header class="bar">
+    <span class="who" id="d-who"></span>
+    <span class="task">「<b id="d-word"></b>」を かこう <button class="mini" id="b-say-word" aria-label="よみあげ">🔈</button></span>
+    <span class="timer" id="d-timer"></span>
+  </header>
+  <div class="draw-main">
+    <div class="pad-wrap" id="pad-wrap">
+      <div class="pad-box" id="pad-box">
+        <canvas id="pad" width="800" height="600"></canvas>
+        <div class="pad-hint" id="pad-hint" aria-hidden="true"></div>
+        <div class="pad-msg hidden" id="pad-msg">じかん！</div>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="cols" id="cols"></div>
+      <div class="tool-row">
+        <button class="tool wid" data-w="7" aria-label="ほそい ペン"><i style="--d:7px"></i></button>
+        <button class="tool wid" data-w="22" aria-label="ふとい ペン"><i style="--d:18px"></i></button>
+        <button class="tool" id="b-eraser" aria-label="けしごむ">🧽</button>
+        <button class="tool" id="b-undo" aria-label="やりなおし">↩️</button>
+      </div>
+      <button class="btn main" id="b-done">できた！</button>
+      <button class="link" id="b-draw-quit">やめる</button>
+    </div>
+  </div>
+</section>
+
+<!-- ことば の ばん -->
+<section class="screen hidden" id="s-word">
+  <header class="bar">
+    <span class="who" id="w-who"></span>
+    <span class="task">なにの え かな？</span>
+    <span></span>
+  </header>
+  <div class="word-main">
+    <div class="pic-box"><img id="w-img" alt="まえの ひとの え"></div>
+    <div class="word-side">
+      <div class="seg small" id="seg-how">
+        <button data-how="type">⌨️ もじで かく</button><button data-how="pick">🃏 えらぶ</button>
+      </div>
+      <div class="how-type" id="how-type">
+        <input id="w-input" type="text" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ひらがなで かいてね" enterkeyhint="done">
+        <button class="btn main" id="w-ok">これで OK</button>
+      </div>
+      <div class="how-pick hidden" id="w-choices"></div>
+      <button class="link" id="b-word-quit">やめる</button>
+    </div>
+  </div>
+  <div class="overlay hidden" id="w-confirm">
+    <div class="ov-box">
+      <div class="tiny">この ことばで いい？</div>
+      <div class="confirm-word" id="w-final"></div>
+      <div class="foot">
+        <button class="btn" id="w-no">✏️ なおす</button>
+        <button class="btn main" id="w-yes">はい！</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- はっぴょう -->
+<section class="screen hidden" id="s-reveal">
+  <div class="rev-top"><span id="r-count"></span><button class="link" id="b-rev-skip">ぜんぶ みる ▶▶</button></div>
+  <div class="rev-stage">
+    <div class="slide" id="r-slide"></div>
+    <div class="boom hidden" id="r-boom">ええーっ！</div>
+  </div>
+  <div class="foot"><button class="btn main" id="r-next">つぎ ▶</button></div>
+</section>
+
+<!-- まとめ -->
+<section class="screen hidden" id="s-sum">
+  <div class="scroll">
+    <h2 id="sum-title">ぜんぶ ならべると…</h2>
+    <p class="hint">いちばん すきな 1まいに ❤️ を つけよう</p>
+    <div class="sum-list" id="sum-list"></div>
+    <div class="foot wrap">
+      <button class="btn" id="b-saveimg">🖼️ がぞう を ほぞん</button>
+      <button class="btn" id="b-replay">🎬 もういちど はっぴょう</button>
+      <button class="btn main" id="b-again">🔁 もういちど あそぶ</button>
+      <button class="btn" id="b-del">🗑️ けす</button>
+      <button class="btn" id="b-sum-home">🏠 おわる</button>
+    </div>
+  </div>
+</section>
+
+<!-- アルバム -->
+<section class="screen hidden" id="s-album">
+  <div class="scroll">
+    <h2>📒 アルバム</h2>
+    <p class="hint">はっぴょう した ゲームが あたらしい じゅんに 10かい ぶん のこります。</p>
+    <div class="album-list" id="album-list"></div>
+    <div class="foot"><button class="btn" id="b-album-back">◀ もどる</button></div>
+  </div>
+</section>
+
+<!-- あいこん えらび -->
+<div class="overlay hidden" id="m-icon">
+  <div class="ov-box">
+    <div class="row-label">あいこんを えらんでね</div>
+    <div class="icon-grid" id="icon-grid"></div>
+  </div>
+</div>
+<!-- やめる？ -->
+<div class="overlay hidden" id="m-quit">
+  <div class="ov-box">
+    <div class="confirm-word small">やめる？</div>
+    <p class="hint">ここまでの え と ことば は きえるよ</p>
+    <div class="foot">
+      <button class="btn" id="b-quit-no">つづける</button>
+      <button class="btn main" id="b-quit-yes">やめる</button>
+    </div>
+  </div>
+</div>
+<!-- あそびかた -->
+<div class="overlay hidden" id="m-howto">
+  <div class="ov-box howto">
+    <div class="row-label">あそびかた</div>
+    <ol>
+      <li>1だいを みんなで じゅんばんに まわすよ。</li>
+      <li>さいしょの ひとは おだいを <b>え</b> に かく。</li>
+      <li>つぎの ひとは その えだけ みて <b>ことば</b> に する。</li>
+      <li>つぎの ひとは その ことばを <b>え</b> に … と つづける。</li>
+      <li>じぶんの ばん いがいは がめんを みないでね 🙈</li>
+      <li>さいごに みんなで はっぴょう！ どう かわったかな？</li>
+    </ol>
+    <div class="foot"><button class="btn main" id="b-howto-ok">わかった！</button></div>
+  </div>
+</div>
+
+<script src="odai.js?v=e83f045"></script>
+<script src="game.js?v=e83f045"></script>
+<script src="audio.js?v=e83f045"></script>
+<script src="app.js?v=e83f045"></script>
+</body>
+</html>
