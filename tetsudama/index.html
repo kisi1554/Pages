@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>てつだま ガタンゴトン</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2147;
+    font-family: "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Hiragino Sans", "Meiryo", sans-serif;
+    user-select: none; -webkit-user-select: none; touch-action: none; }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hud { position: fixed; top: 0; left: 0; right: 0; display: flex; gap: 8px; align-items: center;
+    padding: calc(8px + env(safe-area-inset-top)) 10px 8px; pointer-events: none; }
+  .hud .pill { background: rgba(255,255,255,.88); border-radius: 999px; padding: 6px 12px;
+    font-size: 17px; font-weight: bold; color: #3b2f5c; box-shadow: 0 3px 0 rgba(0,0,0,.2); white-space: nowrap; }
+  .hud .sp { flex: 1; }
+  .hud button { pointer-events: auto; }
+  .ibtn { width: 48px; height: 48px; border-radius: 50%; border: 3px solid #3b2f5c; background: #fff;
+    font-size: 22px; box-shadow: 0 3px 0 rgba(0,0,0,.25); cursor: pointer; padding: 0; }
+
+  @media (max-width: 480px) {
+    .hud { gap: 5px; padding-left: 6px; padding-right: 6px; }
+    .hud .pill { font-size: 14px; padding: 5px 8px; }
+    .ibtn { width: 42px; height: 42px; font-size: 19px; }
+  }
+  .ctrl { position: fixed; bottom: calc(12px + env(safe-area-inset-bottom)); display: flex; gap: 14px; }
+  .ctrl.l { left: 14px; } .ctrl.r { right: 14px; }
+  .cbtn { width: 84px; height: 84px; border-radius: 26px; border: 4px solid #3b2f5c; background: rgba(255,255,255,.9);
+    font-size: 38px; font-weight: bold; color: #3b2f5c; box-shadow: 0 5px 0 rgba(0,0,0,.3);
+    touch-action: none; cursor: pointer; padding: 0; }
+  .cbtn.on { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.3); background: #ffe066; }
+  .cbtn.jump { width: 110px; font-size: 22px; background: rgba(255,214,102,.95); }
+
+  .ov { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: rgba(30,20,60,.55); padding: 16px; z-index: 10; overflow-y: auto; }
+  .ov.hide { display: none; }
+  .panel { background: #fffaf0; border: 5px solid #3b2f5c; border-radius: 28px; padding: 22px 20px;
+    max-width: 520px; width: 100%; text-align: center; color: #3b2f5c; box-shadow: 0 8px 0 rgba(0,0,0,.3); margin: auto; }
+  .panel h1 { margin: 0 0 6px; font-size: 32px; line-height: 1.25; }
+  .panel p { font-size: 18px; line-height: 1.6; margin: 8px 0; }
+  .art { font-size: 44px; letter-spacing: 4px; margin: 6px 0; }
+  .stages { display: grid; gap: 10px; margin-top: 14px; }
+  .big { display: block; width: 100%; min-height: 64px; border-radius: 20px; border: 4px solid #3b2f5c;
+    background: #ffd166; color: #3b2f5c; font-size: 21px; font-weight: bold; cursor: pointer;
+    box-shadow: 0 5px 0 rgba(0,0,0,.25); font-family: inherit; padding: 8px; }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .big.sub { background: #e7f5ff; }
+  .big small { display: block; font-size: 15px; font-weight: normal; }
+  .stars { font-size: 46px; margin: 8px 0; letter-spacing: 6px; }
+  .howto { text-align: left; background: #f3f0ff; border-radius: 16px; padding: 10px 14px; font-size: 16px; line-height: 1.7; }
+  .row { display: flex; gap: 10px; margin-top: 10px; }
+  .row .big { flex: 1; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="hud" id="hud">
+  <button class="ibtn" id="btnHome" aria-label="メニュー">🏠</button>
+  <span class="pill" id="hudStage">ステージ1</span>
+  <span class="pill" id="hudZ">🧟 0/0</span>
+  <span class="pill" id="hudT">🧸 0/0</span>
+  <span class="sp"></span>
+  <button class="ibtn" id="btnRetry" aria-label="やりなおし">↺</button>
+  <button class="ibtn" id="btnSound" aria-label="おと">🔊</button>
+</div>
+
+<div class="ctrl l">
+  <button class="cbtn" id="bL" aria-label="ひだり">◀</button>
+  <button class="cbtn" id="bR" aria-label="みぎ">▶</button>
+</div>
+<div class="ctrl r">
+  <button class="cbtn jump" id="bJ" aria-label="ジャンプ">ジャンプ</button>
+</div>
+
+<div class="ov" id="ovTitle">
+  <div class="panel">
+    <div class="art">📦⚫🧟🧸🏁</div>
+    <h1>てつだま<br>ガタンゴトン</h1>
+    <p>はこの うえの おもい てつだま。<br>ガタン！ゴトン！と おとして、<br>ゾンビを たおして ゴールを めざそう！</p>
+    <div class="howto">
+      ◀ ▶ … ころがす　／　ジャンプ … ぴょん<br>
+      はやく ぶつかると ゾンビが たおれる！<br>
+      まんなかの おおきい ゾンビは、さかを ころがって いきおいを つけよう。<br>
+      とおくの おもちゃを あつめて 🏁 ゴール！
+    </div>
+    <div class="stages" id="stageList"></div>
+  </div>
+</div>
+
+<div class="ov hide" id="ovClear">
+  <div class="panel">
+    <h1>🏁 ゴール！</h1>
+    <div class="stars" id="clearStars">⭐⭐⭐</div>
+    <p id="clearMsg"></p>
+    <div class="row">
+      <button class="big sub" id="cRetry">もういちど</button>
+      <button class="big" id="cNext">つぎへ ▶</button>
+    </div>
+    <div class="row"><button class="big sub" id="cMenu">🏠 メニュー</button></div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+// ---------- ほぞん ----------
+const SAVE_KEY = 'tetsudama-v1';
+let save = { best: {}, sound: true };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s) save = Object.assign(save, s); } catch (e) {}
+function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+
+// ---------- ステージ ----------
+// ground: じめんの おれせん [x,y] / boxes: [x, うえのy, はば, たかさ]
+// zombies: {x, min, max, big} / toys: [x, y, えもじ] / goal: x
+const STAGES = [
+  {
+    name: 'はじめての てつだま', w: 3300, need: 450,
+    ground: [[-200,520],[1050,520],[1350,420],[1450,420],[1700,520],[3500,520]],
+    boxes: [[60,220,140,300],[200,300,100,220],[300,380,100,140],[400,450,100,70],[2380,440,80,80]],
+    start: [130, 190],
+    zombies: [{x:620,min:560,max:760},{x:900,min:820,max:1010},{x:1880,min:1860,max:1900,big:true},
+              {x:2150,min:2060,max:2300},{x:2620,min:2520,max:2720}],
+    toys: [[760,360,'🎈'],[1400,330,'🚗'],[2800,470,'🧸'],[2930,470,'🤖'],[3060,470,'🪀']],
+    goal: 3180,
+  },
+  {
+    name: 'はこの かいだん', w: 3700, need: 480,
+    ground: [[-200,520],[1500,520],[1800,410],[1900,410],[2150,520],[3900,520]],
+    boxes: [[40,140,130,380],[170,210,90,310],[260,280,90,240],[350,350,90,170],[440,420,90,100],
+            [900,450,90,70],[990,380,90,140],[1080,450,90,70],[2700,440,80,80],[2780,370,80,150]],
+    start: [105, 110],
+    zombies: [{x:640,min:580,max:840},{x:760,min:600,max:850},{x:1250,min:1200,max:1460},
+              {x:2350,min:2330,max:2370,big:true},{x:2550,min:2450,max:2660},{x:3050,min:2920,max:3200}],
+    toys: [[1035,300,'🚂'],[1850,320,'🎈'],[3250,470,'🧸'],[3380,470,'🦖'],[3480,470,'🪁']],
+    goal: 3600,
+  },
+  {
+    name: 'ゾンビの おしろ', w: 4200, need: 520,
+    ground: [[-200,520],[700,520],[900,560],[1300,560],[1600,440],[1750,440],[2050,560],[2500,560],
+             [2650,520],[4400,520]],
+    boxes: [[40,100,120,420],[160,170,80,350],[240,240,80,280],[320,310,80,210],[400,380,80,140],[480,450,80,70],
+            [2900,450,90,70],[2990,380,90,140],[3080,310,90,210],[3170,380,90,140],[3260,450,90,70]],
+    start: [100, 70],
+    zombies: [{x:620,min:575,max:690},{x:1000,min:930,max:1150},{x:1200,min:1100,max:1290},
+              {x:2250,min:2230,max:2270,big:true},{x:2420,min:2330,max:2490},{x:2780,min:2680,max:2880},
+              {x:3480,min:3380,max:3620}],
+    toys: [[1675,350,'🎈'],[3125,220,'👑'],[3750,470,'🧸'],[3870,470,'🚀'],[3990,470,'🎁']],
+    goal: 4100,
+  },
+];
+
+// ---------- じょうたい ----------
+const G = 1400, R = 28, VIEW_H = 640;
+let st, stIndex = 0, ball, segs, boxes, zombies, toys, texts, parts, camX = 0, mode = 'title';
+let groundTimer = 0, impactCool = 0, gatanFlip = false, hintT = 0, clearT = 0, shakeScr = 0;
+const input = { l: false, r: false, j: false, jEdge: false };
+
+function groundY(x) {
+  const g = st.ground;
+  for (let i = 0; i < g.length - 1; i++) {
+    if (x >= g[i][0] && x <= g[i+1][0]) {
+      const t = (x - g[i][0]) / (g[i+1][0] - g[i][0]);
+      return g[i][1] + (g[i+1][1] - g[i][1]) * t;
+    }
+  }
+  return 520;
+}
+
+function loadStage(i) {
+  stIndex = i; st = STAGES[i];
+  segs = [];
+  const g = st.ground;
+  for (let k = 0; k < g.length - 1; k++) segs.push({ ax: g[k][0], ay: g[k][1], bx: g[k+1][0], by: g[k+1][1], box: -1 });
+  segs.push({ ax: 0, ay: -400, bx: 0, by: 700, box: -1 });                 // ひだりの かべ
+  segs.push({ ax: st.w, ay: -400, bx: st.w, by: 700, box: -1 });           // みぎの かべ
+  boxes = st.boxes.map(b => ({ x: b[0], y: b[1], w: b[2], h: b[3], shake: 0 }));
+  boxes.forEach((b, idx) => {
+    const x0 = b.x, x1 = b.x + b.w, y0 = b.y, y1 = b.y + b.h;
+    segs.push({ ax: x0, ay: y0, bx: x1, by: y0, box: idx });
+    segs.push({ ax: x0, ay: y0, bx: x0, by: y1, box: idx });
+    segs.push({ ax: x1, ay: y0, bx: x1, by: y1, box: idx });
+  });
+  ball = { x: st.start[0], y: st.start[1], vx: 0, vy: 0, rot: 0 };
+  zombies = st.zombies.map(z => ({ x: z.x, min: z.min, max: z.max, big: !!z.big,
+    w: z.big ? 86 : 46, h: z.big ? 156 : 88, dir: Math.random() < .5 ? -1 : 1,
+    t: Math.random() * 10, state: 'walk', cool: 0, say: '', sayT: 0, vx: 0, vy: 0, rot: 0, dy: 0, fade: 1 }));
+  toys = st.toys.map(t => ({ x: t[0], y: t[1], e: t[2], got: false, t: Math.random() * 6 }));
+  texts = []; parts = [];
+  camX = 0; groundTimer = 0; impactCool = 0; gatanFlip = false; hintT = 6; shakeScr = 0;
+  mode = 'play';
+  updateHud();
+}
+
+function updateHud() {
+  const zd = zombies.filter(z => z.state !== 'walk').length;
+  const tg = toys.filter(t => t.got).length;
+  $('hudStage').textContent = 'ステージ' + (stIndex + 1);
+  $('hudZ').textContent = '🧟 ' + zd + '/' + zombies.length;
+  $('hudT').textContent = '🧸 ' + tg + '/' + toys.length;
+}
+
+// ---------- おと（WebAudio の ごうせいおん） ----------
+let ac = null, noiseBuf = null;
+function audio() {
+  if (!save.sound) return null;
+  if (!ac) {
+    try {
+      ac = new (window.AudioContext || window.webkitAudioContext)();
+      noiseBuf = ac.createBuffer(1, ac.sampleRate * 0.6, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    } catch (e) { return null; }
+  }
+  if (ac.state === 'suspended') ac.resume();
+  return ac;
+}
+function tone(freq, dur, type, vol, slideTo, delay) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + (delay || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t0 + dur);
+  g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  o.connect(g).connect(a.destination); o.start(t0); o.stop(t0 + dur + 0.02);
+}
+function noise(dur, vol, freq, delay) {
+  const a = audio(); if (!a) return;
+  const t0 = a.currentTime + (delay || 0);
+  const s = a.createBufferSource(); s.buffer = noiseBuf;
+  const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = freq || 600;
+  const g = a.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+  s.connect(f).connect(g).connect(a.destination); s.start(t0); s.stop(t0 + dur);
+}
+const SND = {
+  gatan(power, flip) {           // ガタン（ひくい）/ ゴトン（もっと ひくい）
+    const v = Math.min(1, power / 600);
+    tone(flip ? 120 : 160, 0.22, 'triangle', 0.5 * v + 0.15, flip ? 50 : 70);
+    noise(0.16, 0.5 * v + 0.1, 900);
+    tone(flip ? 320 : 420, 0.06, 'square', 0.06 * v, null, 0.01);
+  },
+  uu() { tone(150, 0.5, 'sawtooth', 0.12, 110); tone(156, 0.5, 'sawtooth', 0.08, 105); },
+  don() { tone(90, 0.5, 'sine', 0.7, 35); noise(0.35, 0.6, 1400); tone(880, 0.12, 'square', 0.08, 1320, 0.08); },
+  bigDon() { tone(70, 0.8, 'sine', 0.8, 28); noise(0.6, 0.7, 1000); [523,659,784].forEach((f,i)=>tone(f,0.15,'square',0.07,null,0.15+i*0.08)); },
+  toy() { [880, 1175, 1568].forEach((f, i) => tone(f, 0.14, 'sine', 0.22, null, i * 0.07)); },
+  jump() { tone(300, 0.15, 'sine', 0.15, 600); },
+  goal() { [523,659,784,1047,784,1047].forEach((f,i)=>tone(f, i===5?0.5:0.16, 'square', 0.09, null, i*0.13)); },
+};
+
+// ---------- ぶつり ----------
+function step(dt) {
+  const dir = (input.r ? 1 : 0) - (input.l ? 1 : 0);
+  const grounded = groundTimer > 0;
+  const accel = grounded ? 900 : 380;
+  if (dir && ball.vx * dir < 430) ball.vx += dir * accel * dt;
+  if (grounded && !dir) ball.vx *= (1 - 0.35 * dt);
+  if (input.jEdge && grounded) { ball.vy = -640; groundTimer = 0; SND.jump(); }
+  input.jEdge = false;
+  ball.vy += G * dt;
+  const sp = Math.hypot(ball.vx, ball.vy);
+  if (sp > 1100) { ball.vx *= 1100 / sp; ball.vy *= 1100 / sp; }
+  ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+  ball.rot += ball.vx * dt / R;
+
+  let maxImp = 0, impBox = -1, ix = 0, iy = 0;
+  for (let pass = 0; pass < 2; pass++) {
+    for (const s of segs) {
+      const ex = s.bx - s.ax, ey = s.by - s.ay;
+      const L2 = ex * ex + ey * ey;
+      let t = ((ball.x - s.ax) * ex + (ball.y - s.ay) * ey) / L2;
+      t = Math.max(0, Math.min(1, t));
+      const qx = s.ax + ex * t, qy = s.ay + ey * t;
+      const dx = ball.x - qx, dy = ball.y - qy;
+      const d2 = dx * dx + dy * dy;
+      if (d2 >= R * R || d2 === 0) continue;
+      const d = Math.sqrt(d2), nx = dx / d, ny = dy / d;
+      ball.x += nx * (R - d); ball.y += ny * (R - d);
+      const vn = ball.vx * nx + ball.vy * ny;
+      if (vn < 0) {
+        const imp = -vn;
+        const e = imp > 180 ? 0.28 : 0;
+        ball.vx -= (1 + e) * vn * nx; ball.vy -= (1 + e) * vn * ny;
+        if (imp > maxImp) { maxImp = imp; impBox = s.box; ix = qx; iy = qy; }
+      }
+      if (ny < -0.5) groundTimer = 0.12;
+    }
+  }
+  if (maxImp > 170 && impactCool <= 0) {
+    impactCool = 0.12;
+    gatanFlip = !gatanFlip;
+    SND.gatan(maxImp, gatanFlip);
+    addText(gatanFlip ? 'ガタン！' : 'ゴトン！', ix, iy - 40, gatanFlip ? '#ff922b' : '#fcc419', 30 + Math.min(16, maxImp / 40));
+    for (let k = 0; k < 8; k++) parts.push({ x: ix, y: iy, vx: (Math.random() - .5) * 260, vy: -Math.random() * 200, life: .5, c: '#c9a37a', r: 4 + Math.random() * 4 });
+    if (impBox >= 0) boxes[impBox].shake = Math.min(10, maxImp / 50);
+    shakeScr = Math.min(8, maxImp / 90);
+  }
+
+  // ゾンビ
+  for (const z of zombies) {
+    z.t += dt; if (z.cool > 0) z.cool -= dt; if (z.sayT > 0) z.sayT -= dt;
+    if (z.state === 'walk') {
+      const spd = z.big ? 12 : 34;
+      z.x += z.dir * spd * dt;
+      if (z.x < z.min) { z.x = z.min; z.dir = 1; }
+      if (z.x > z.max) { z.x = z.max; z.dir = -1; }
+      const fy = groundY(z.x);
+      const x0 = z.x - z.w / 2, x1 = z.x + z.w / 2, y0 = fy - z.h, y1 = fy;
+      const qx = Math.max(x0, Math.min(x1, ball.x)), qy = Math.max(y0, Math.min(y1, ball.y));
+      const dx = ball.x - qx, dy = ball.y - qy;
+      if (dx * dx + dy * dy < R * R) {
+        const power = Math.abs(ball.vx) + Math.max(0, ball.vy) * 0.6;
+        const need = z.big ? st.need : 200;
+        const side = ball.x < z.x ? -1 : 1;
+        if (power >= need) {
+          z.state = 'down';
+          z.vx = -side * (z.big ? 260 : 380) * (Math.abs(ball.vx) > 50 ? 1 : (Math.random() < .5 ? -1 : 1));
+          z.vy = z.big ? -380 : -520; z.dy = 0; z.rot = 0;
+          ball.vx *= z.big ? 0.55 : 0.8;
+          if (z.big) { SND.bigDon(); shakeScr = 14; addText('ドッカーン！！', z.x, fy - z.h - 30, '#ff6b6b', 48); }
+          else { SND.don(); shakeScr = 7; addText('ドーン！', z.x, fy - z.h - 20, '#ff6b6b', 38); }
+          for (let k = 0; k < (z.big ? 26 : 14); k++) {
+            const a = Math.random() * Math.PI * 2, v = 120 + Math.random() * 260;
+            parts.push({ x: z.x, y: fy - z.h / 2, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 100, life: 1, c: ['#ffd43b','#ff8787','#74c0fc','#b2f2bb'][k % 4], r: 5 + Math.random() * 5, star: true });
+          }
+          updateHud();
+        } else if (z.cool <= 0) {
+          z.cool = 0.6;
+          ball.vx = side * (z.big ? 300 : 220); ball.vy = Math.min(ball.vy, -180);
+          ball.x = side < 0 ? Math.min(ball.x, x0 - R) : Math.max(ball.x, x1 + R);
+          SND.uu();
+          z.say = z.big ? 'もっと いきおいを つけて！' : 'うー…';
+          z.sayT = 1.8;
+          if (z.big) addText('びくともしない！', z.x, fy - z.h - 50, '#e599f7', 26);
+        }
+      }
+    } else if (z.state === 'down') {
+      z.x += z.vx * dt; z.dy += z.vy * dt; z.vy += G * dt; z.rot += (z.vx > 0 ? 1 : -1) * 7 * dt;
+      if (z.dy > 120) z.fade -= dt * 1.5;
+      if (z.fade <= 0) z.state = 'gone';
+    }
+  }
+
+  // おもちゃ
+  for (const t of toys) {
+    t.t += dt;
+    if (!t.got && Math.hypot(ball.x - t.x, ball.y - t.y) < R + 40) {
+      t.got = true; SND.toy();
+      addText(t.e + ' ゲット！', t.x, t.y - 40, '#51cf66', 30);
+      for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; parts.push({ x: t.x, y: t.y, vx: Math.cos(a) * 200, vy: Math.sin(a) * 200, life: .7, c: '#fff3bf', r: 5, star: true }); }
+      updateHud();
+    }
+  }
+
+  if (ball.x > st.goal - 6 && mode === 'play') finish();
+  if (ball.y > 900) { ball.x = st.start[0]; ball.y = st.start[1]; ball.vx = ball.vy = 0; }
+}
+
+function addText(s, x, y, c, size) { texts.push({ s, x, y, c, size, life: 1.1 }); }
+
+function finish() {
+  mode = 'clear'; clearT = 0;
+  SND.goal();
+  const allZ = zombies.every(z => z.state !== 'walk');
+  const allT = toys.every(t => t.got);
+  const stars = 1 + (allZ ? 1 : 0) + (allT ? 1 : 0);
+  const prev = save.best[stIndex] || 0;
+  if (stars > prev) { save.best[stIndex] = stars; persist(); }
+  for (let k = 0; k < 50; k++) parts.push({ x: st.goal, y: 300, vx: (Math.random() - .5) * 700, vy: -Math.random() * 600, life: 1.6, c: ['#ffd43b','#ff8787','#74c0fc','#b2f2bb','#e599f7'][k % 5], r: 6, star: true });
+  setTimeout(() => {
+    $('clearStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+    const msgs = [];
+    msgs.push(allZ ? 'ゾンビを ぜんぶ たおした！' : 'ゾンビ ' + zombies.filter(z => z.state !== 'walk').length + '/' + zombies.length + ' たい');
+    msgs.push(allT ? 'おもちゃも ぜんぶ あつめた！' : 'おもちゃ ' + toys.filter(t => t.got).length + '/' + toys.length + ' こ');
+    $('clearMsg').innerHTML = msgs.join('<br>');
+    $('cNext').style.display = stIndex < STAGES.length - 1 ? '' : 'none';
+    show('ovClear');
+  }, 1400);
+}
+
+// ---------- びょうが ----------
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1, scale = 1, offY = 0, viewW = 0;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  scale = Math.min(H / VIEW_H, W / 520);
+  offY = H - VIEW_H * scale;
+  viewW = W / scale;
+}
+window.addEventListener('resize', resize); resize();
+
+const stars = Array.from({ length: 60 }, () => ({ x: Math.random(), y: Math.random() * 0.6, r: Math.random() * 1.6 + .4, t: Math.random() * 6 }));
+
+function draw(time) {
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // そら
+  const sky = ctx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#2b2147'); sky.addColorStop(0.55, '#6c4fa3'); sky.addColorStop(1, '#f4a3a8');
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+  for (const s of stars) { ctx.globalAlpha = .5 + .5 * Math.sin(time / 600 + s.t); ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, 7); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  // つき
+  ctx.fillStyle = '#fff4c2'; ctx.beginPath(); ctx.arc(W * 0.8, offY + 110 * scale, 42 * scale, 0, 7); ctx.fill();
+  ctx.fillStyle = 'rgba(230,210,150,.6)'; ctx.beginPath(); ctx.arc(W * 0.8 - 12 * scale, offY + 100 * scale, 8 * scale, 0, 7); ctx.fill();
+  if (!st) return;
+
+  let sx = 0, sy = 0;
+  if (shakeScr > 0.2) { sx = (Math.random() - .5) * shakeScr; sy = (Math.random() - .5) * shakeScr; }
+  ctx.setTransform(DPR * scale, 0, 0, DPR * scale, sx * DPR, (offY + sy) * DPR);
+
+  // とおくの やま（パララックス）
+  const topY = -offY / scale;
+  for (let layer = 0; layer < 2; layer++) {
+    const f = layer ? 0.5 : 0.25;
+    ctx.fillStyle = layer ? '#4b3a78' : '#3b2d63';
+    ctx.beginPath(); ctx.moveTo(0, 600);
+    for (let x = 0; x <= viewW + 40; x += 40) {
+      const wx = x + camX * f;
+      ctx.lineTo(x, (layer ? 430 : 380) + Math.sin(wx / (layer ? 140 : 220)) * 40 + Math.sin(wx / 63) * 12);
+    }
+    ctx.lineTo(viewW + 40, 600); ctx.closePath(); ctx.fill();
+    if (layer === 0) { // とおくの おばけやしき
+      const hx = 600 - (camX * f) % 1400;
+      ctx.fillStyle = '#2a1f47';
+      for (const off of [0, 1400]) {
+        const x = hx + off; if (x < -200 || x > viewW + 200) continue;
+        ctx.fillRect(x, 300, 90, 120); ctx.beginPath(); ctx.moveTo(x - 10, 300); ctx.lineTo(x + 45, 250); ctx.lineTo(x + 100, 300); ctx.fill();
+        ctx.fillStyle = '#ffd43b'; ctx.fillRect(x + 18, 330, 16, 18); ctx.fillRect(x + 56, 330, 16, 18); ctx.fillStyle = '#2a1f47';
+      }
+    }
+  }
+
+  ctx.save(); ctx.translate(-camX, 0);
+
+  // じめん
+  const g = st.ground;
+  ctx.beginPath(); ctx.moveTo(g[0][0], 900);
+  for (const p of g) ctx.lineTo(p[0], p[1]);
+  ctx.lineTo(g[g.length - 1][0], 900); ctx.closePath();
+  const gg = ctx.createLinearGradient(0, 420, 0, 720); gg.addColorStop(0, '#7b5a3a'); gg.addColorStop(1, '#4a3322');
+  ctx.fillStyle = gg; ctx.fill();
+  ctx.strokeStyle = '#5fbf4a'; ctx.lineWidth = 12; ctx.lineJoin = 'round';
+  ctx.beginPath(); g.forEach((p, i) => i ? ctx.lineTo(p[0], p[1] + 4) : ctx.moveTo(p[0], p[1] + 4)); ctx.stroke();
+  // くさ と はか
+  ctx.fillStyle = '#8a8fa3';
+  for (let x = 300; x < st.w; x += 470) {
+    if (boxes.some(b => x > b.x - 40 && x < b.x + b.w + 40)) continue;
+    const y = groundY(x + 15);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 34); ctx.arc(x + 15, y - 34, 15, Math.PI, 0); ctx.lineTo(x + 30, y); ctx.fill();
+    ctx.fillStyle = '#6b7088'; ctx.fillRect(x + 8, y - 36, 14, 4); ctx.fillRect(x + 13, y - 42, 4, 16); ctx.fillStyle = '#8a8fa3';
+  }
+
+  // はこ
+  for (const b of boxes) {
+    const jx = b.shake > 0.1 ? (Math.random() - .5) * b.shake : 0;
+    drawCrate(b.x + jx, b.y, b.w, b.h);
+  }
+
+  // ゴール
+  const gy = groundY(st.goal);
+  ctx.fillStyle = '#ddd'; ctx.fillRect(st.goal - 3, gy - 190, 6, 190);
+  ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.arc(st.goal, gy - 194, 8, 0, 7); ctx.fill();
+  const wave = Math.sin(time / 200) * 6;
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 6; c++) {
+    ctx.fillStyle = (r + c) % 2 ? '#222' : '#fff';
+    ctx.fillRect(st.goal + 3 + c * 13, gy - 186 + r * 12 + Math.sin(time / 200 + c * .6) * 3 * (c / 5), 13, 12);
+  }
+  ctx.font = 'bold 26px sans-serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#3b2f5c'; ctx.lineWidth = 6;
+  ctx.strokeText('ゴール', st.goal + 10, gy - 210 + wave * 0); ctx.fillText('ゴール', st.goal + 10, gy - 210);
+
+  // おもちゃ
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  for (const t of toys) {
+    if (t.got) continue;
+    const y = t.y + Math.sin(t.t * 3) * 6;
+    ctx.fillStyle = 'rgba(255,243,191,.35)'; ctx.beginPath(); ctx.arc(t.x, y, 30 + Math.sin(t.t * 5) * 3, 0, 7); ctx.fill();
+    ctx.font = '40px sans-serif'; ctx.fillText(t.e, t.x, y + 2);
+  }
+
+  // ゾンビ
+  for (const z of zombies) if (z.state !== 'gone') drawZombie(z, time);
+
+  // てつだま
+  drawBall();
+
+  // つぶ
+  for (const p of parts) {
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.life * 2));
+    ctx.fillStyle = p.c;
+    if (p.star) drawStar(p.x, p.y, p.r); else { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+  }
+  ctx.globalAlpha = 1;
+  // もじ
+  for (const t of texts) {
+    ctx.globalAlpha = Math.min(1, t.life * 2);
+    const sc = 1 + Math.max(0, (t.life - 0.9)) * 3;
+    ctx.font = 'bold ' + Math.round(t.size * sc) + 'px "Hiragino Maru Gothic ProN", sans-serif';
+    ctx.lineWidth = 7; ctx.strokeStyle = '#2b2147'; ctx.strokeText(t.s, t.x, t.y);
+    ctx.fillStyle = t.c; ctx.fillText(t.s, t.x, t.y);
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+
+  // ヒント
+  if (mode === 'play' && hintT > 0) {
+    ctx.globalAlpha = Math.min(1, hintT);
+    ctx.font = 'bold 24px "Hiragino Maru Gothic ProN", sans-serif'; ctx.textAlign = 'center';
+    const msg = '▶ を おして てつだまを おとそう！';
+    const x = viewW / 2, y = topY + 120 > 90 ? topY + 120 : 90;
+    ctx.lineWidth = 7; ctx.strokeStyle = '#2b2147'; ctx.strokeText(msg, x, y); ctx.fillStyle = '#fff'; ctx.fillText(msg, x, y);
+    ctx.globalAlpha = 1;
+  }
+  // おおきい ゾンビの ちかくで いきおいメーター
+  if (mode === 'play') {
+    const bz = zombies.find(z => z.big && z.state === 'walk');
+    if (bz && Math.abs(bz.x - ball.x) < 700 && ball.x < bz.x) {
+      const p = Math.min(1, Math.abs(ball.vx) / st.need);
+      const x = viewW / 2 - 110, y = Math.max(topY + 80, 80);
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; roundRect(x - 8, y - 26, 236, 52, 14); ctx.fill();
+      ctx.fillStyle = '#3b2f5c'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('いきおい', x, y - 10);
+      ctx.fillStyle = '#ddd'; roundRect(x, y, 220, 16, 8); ctx.fill();
+      ctx.fillStyle = p >= 1 ? '#ff6b6b' : '#ffa94d'; roundRect(x, y, Math.max(16, 220 * p), 16, 8); ctx.fill();
+      if (p >= 1) { ctx.fillStyle = '#e03131'; ctx.textAlign = 'right'; ctx.fillText('いまだ！', x + 220, y - 10); }
+    }
+  }
+}
+
+function roundRect(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function drawStar(x, y, r) {
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const a = i * Math.PI / 5 - Math.PI / 2, rr = i % 2 ? r * .45 : r; ctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
+  ctx.closePath(); ctx.fill();
+}
+function drawCrate(x, y, w, h) {
+  ctx.fillStyle = '#c98b4e'; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = '#7a4a22'; ctx.lineWidth = 5; ctx.strokeRect(x + 2.5, y + 2.5, w - 5, h - 5);
+  const n = Math.max(1, Math.round(h / w));
+  const ch = h / n;
+  ctx.lineWidth = 4;
+  for (let i = 0; i < n; i++) {
+    const yy = y + i * ch;
+    ctx.strokeStyle = '#7a4a22'; ctx.strokeRect(x + 8, yy + 8, w - 16, ch - 16);
+    ctx.beginPath(); ctx.moveTo(x + 10, yy + 10); ctx.lineTo(x + w - 10, yy + ch - 10); ctx.moveTo(x + w - 10, yy + 10); ctx.lineTo(x + 10, yy + ch - 10); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fillRect(x + 4, y + 4, w - 8, 5);
+}
+function drawBall() {
+  const { x, y, rot } = ball;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, groundY(x) + 2, R * .9, 6, 0, 0, 7);
+  if (Math.abs(groundY(x) - y) < 200) ctx.fill();
+  const gr = ctx.createRadialGradient(x - R * .4, y - R * .45, R * .1, x, y, R);
+  gr.addColorStop(0, '#f1f3f5'); gr.addColorStop(0.35, '#868e96'); gr.addColorStop(1, '#212529');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill();
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot);
+  ctx.strokeStyle = 'rgba(20,20,25,.55)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(0, 0, R * .62, 0.3, 1.5); ctx.stroke();
+  ctx.beginPath(); ctx.arc(0, 0, R * .62, 3.4, 4.6); ctx.stroke();
+  ctx.fillStyle = 'rgba(20,20,25,.5)'; ctx.beginPath(); ctx.arc(R * .3, -R * .3, 3, 0, 7); ctx.arc(-R * .35, R * .25, 3, 0, 7); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.beginPath(); ctx.ellipse(x - R * .38, y - R * .45, R * .22, R * .13, -0.6, 0, 7); ctx.fill();
+}
+function drawZombie(z, time) {
+  const fy = groundY(z.x);
+  const s = z.h / 88;
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, z.fade);
+  ctx.translate(z.x, fy + z.dy);
+  if (z.state === 'down') { ctx.translate(0, -z.h / 2); ctx.rotate(z.rot); ctx.translate(0, z.h / 2); }
+  const walk = z.state === 'walk' ? Math.sin(z.t * (z.big ? 3 : 6)) : 0;
+  ctx.scale(z.dir * s, s);
+  ctx.rotate(walk * 0.06);
+  // あし
+  ctx.fillStyle = '#4c6ef5';
+  ctx.fillRect(-14 + walk * 3, -30, 11, 30); ctx.fillRect(3 - walk * 3, -30, 11, 30);
+  ctx.fillStyle = '#5c4033'; ctx.fillRect(-16 + walk * 3, -6, 15, 6); ctx.fillRect(1 - walk * 3, -6, 15, 6);
+  // からだ（ふく）
+  ctx.fillStyle = z.big ? '#a61e4d' : '#e8590c';
+  roundRect(-20, -62, 40, 36, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,.15)'; ctx.fillRect(-6, -50, 8, 6);
+  // うで（まえに のばす）
+  const arm = z.state === 'walk' ? Math.sin(z.t * 4) * 3 : -10;
+  ctx.fillStyle = '#8ce99a';
+  roundRect(8, -58 + arm, 30, 10, 5); ctx.fill();
+  roundRect(4, -48 - arm, 32, 10, 5); ctx.fill();
+  // あたま
+  ctx.fillStyle = '#8ce99a'; roundRect(-18, -92, 36, 34, 12); ctx.fill();
+  ctx.fillStyle = '#495057'; ctx.fillRect(-18, -92, 36, 7); ctx.fillRect(-18, -92, 7, 14);
+  if (z.state === 'walk') {
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(3, -76, 6, 0, 7); ctx.arc(14, -76, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(5, -76, 2.6, 0, 7); ctx.arc(15, -76, 2.2, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#2b8a3e'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(2, -66); ctx.lineTo(6, -64); ctx.lineTo(10, -66); ctx.lineTo(14, -64); ctx.stroke();
+  } else {
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 2.5;
+    for (const ex of [3, 14]) { ctx.beginPath(); ctx.moveTo(ex - 4, -80); ctx.lineTo(ex + 4, -72); ctx.moveTo(ex + 4, -80); ctx.lineTo(ex - 4, -72); ctx.stroke(); }
+  }
+  ctx.fillStyle = 'rgba(255,135,135,.6)'; ctx.beginPath(); ctx.arc(-6, -68, 4, 0, 7); ctx.fill();
+  if (z.big) { // おうかん
+    ctx.fillStyle = '#ffd43b'; ctx.beginPath(); ctx.moveTo(-14, -92); ctx.lineTo(-14, -104); ctx.lineTo(-6, -97); ctx.lineTo(0, -108); ctx.lineTo(6, -97); ctx.lineTo(14, -104); ctx.lineTo(14, -92); ctx.fill();
+  }
+  ctx.restore();
+  if (z.sayT > 0 && z.state === 'walk') {
+    ctx.font = 'bold 18px "Hiragino Maru Gothic ProN", sans-serif'; ctx.textAlign = 'center';
+    const tw = ctx.measureText(z.say).width + 20, bx = z.x, by = fy - z.h - 34;
+    ctx.fillStyle = '#fff'; roundRect(bx - tw / 2, by - 18, tw, 34, 14); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(bx - 6, by + 15); ctx.lineTo(bx + 6, by + 15); ctx.lineTo(bx, by + 26); ctx.fill();
+    ctx.fillStyle = '#2b8a3e'; ctx.fillText(z.say, bx, by);
+  }
+}
+
+// ---------- ループ ----------
+let last = 0;
+function frame(time) {
+  const dt = Math.min(0.05, (time - last) / 1000 || 0); last = time;
+  if (st && (mode === 'play' || mode === 'clear')) {
+    if (mode === 'play') {
+      const sub = 4;
+      for (let i = 0; i < sub; i++) { step(dt / sub); groundTimer -= dt / sub; }
+      impactCool -= dt; hintT -= dt * (input.r || input.l ? 3 : 0.4);
+    } else { clearT += dt; ball.vx *= 0.95; ball.rot += ball.vx * dt / R; }
+    boxes.forEach(b => b.shake *= Math.pow(0.02, dt));
+    shakeScr *= Math.pow(0.01, dt);
+    for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 700 * dt; p.life -= dt; }
+    parts = parts.filter(p => p.life > 0);
+    for (const t of texts) { t.y -= 40 * dt; t.life -= dt; }
+    texts = texts.filter(t => t.life > 0);
+    const target = Math.max(0, Math.min(st.w - viewW, ball.x - viewW * 0.38));
+    camX += (target - camX) * Math.min(1, dt * 5);
+    if (st.w < viewW) camX = (st.w - viewW) / 2;
+  }
+  draw(time);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+// ---------- UI ----------
+function $(id) { return document.getElementById(id); }
+function show(id) { $(id).classList.remove('hide'); }
+function hide(id) { $(id).classList.add('hide'); }
+
+function renderStageList() {
+  const el = $('stageList'); el.innerHTML = '';
+  STAGES.forEach((s, i) => {
+    const b = document.createElement('button'); b.className = 'big';
+    const best = save.best[i] || 0;
+    b.innerHTML = 'ステージ' + (i + 1) + '　' + s.name + '<small>' + (best ? '⭐'.repeat(best) + '☆'.repeat(3 - best) : 'まだ あそんでないよ') + '</small>';
+    b.addEventListener('click', () => { audio(); hide('ovTitle'); loadStage(i); });
+    el.appendChild(b);
+  });
+}
+function toTitle() { mode = 'title'; renderStageList(); hide('ovClear'); show('ovTitle'); }
+
+$('btnHome').addEventListener('click', toTitle);
+$('btnRetry').addEventListener('click', () => { if (st) { hide('ovClear'); loadStage(stIndex); } });
+function refreshSound() { $('btnSound').textContent = save.sound ? '🔊' : '🔇'; }
+$('btnSound').addEventListener('click', () => { save.sound = !save.sound; persist(); refreshSound(); if (save.sound) SND.toy(); });
+$('cRetry').addEventListener('click', () => { hide('ovClear'); loadStage(stIndex); });
+$('cNext').addEventListener('click', () => { hide('ovClear'); loadStage(Math.min(STAGES.length - 1, stIndex + 1)); });
+$('cMenu').addEventListener('click', toTitle);
+
+function bindHold(id, key) {
+  const el = $(id);
+  const on = e => { e.preventDefault(); audio(); if (key === 'j' && !input.j) input.jEdge = true; input[key] = true; el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const off = e => { input[key] = false; el.classList.remove('on'); };
+  el.addEventListener('pointerdown', on);
+  el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+bindHold('bL', 'l'); bindHold('bR', 'r'); bindHold('bJ', 'j');
+
+const KEYS = { ArrowLeft: 'l', a: 'l', ArrowRight: 'r', d: 'r', ' ': 'j', ArrowUp: 'j', w: 'j' };
+window.addEventListener('keydown', e => {
+  const k = KEYS[e.key]; if (!k) return; e.preventDefault(); audio();
+  if (k === 'j' && !input.j) input.jEdge = true; input[k] = true;
+});
+window.addEventListener('keyup', e => { const k = KEYS[e.key]; if (k) input[k] = false; });
+window.addEventListener('blur', () => { input.l = input.r = input.j = false; });
+
+refreshSound();
+renderStageList();
+// タイトルの うしろに ステージ1を かざる
+st = STAGES[0]; loadStage(0); mode = 'title';
+})();
+</script>
+</body>
+</html>
