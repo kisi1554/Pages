@@ -131,6 +131,43 @@ const FLAGS = {
   // ハワイ州の はた（左上に ユニオンジャック、しろ・あか・あおの 8ほんの しま）
   9001: { vb: "0 0 60 30", draw: (u) => hStripes(60, 30, ["#fff", "#C8102E", "#012169", "#fff", "#C8102E", "#012169", "#fff", "#C8102E"]) +
     `<g transform="scale(0.5)">${unionJack(u)}</g>` },
+  56: { vb: "0 0 30 26", draw: () => vStripes(30, 26, ["#000", "#FDDA24", "#EF3340"]) },
+  40: { vb: "0 0 30 20", draw: () => hStripes(30, 20, ["#C8102E", "#fff", "#C8102E"]) },
+  616: { vb: "0 0 32 20", draw: () => hStripes(32, 20, ["#fff", "#DC143C"]) },
+  203: { vb: "0 0 30 20", draw: () => hStripes(30, 20, ["#fff", "#D7141A"]) + `<polygon points="0,0 15,10 0,20" fill="#11457E"/>` },
+  372: { vb: "0 0 40 20", draw: () => vStripes(40, 20, ["#169B62", "#fff", "#FF883E"]) },
+  348: { vb: "0 0 40 20", draw: () => hStripes(40, 20, ["#CE2939", "#fff", "#477050"]) },
+  // ボリビアは もんしょう なしの 民間旗
+  68: { vb: "0 0 22 15", draw: () => hStripes(22, 15, ["#D52B1E", "#F9E300", "#007934"]) },
+  418: { vb: "0 0 30 20", draw: () => hStripes(30, 20, ["#CE1126", "#002868", "#002868", "#CE1126"]) + `<circle cx="15" cy="10" r="4" fill="#fff"/>` },
+  702: { vb: "0 0 30 20", draw: () => hStripes(30, 20, ["#EF3340", "#fff"]) +
+    `<circle cx="7.2" cy="5" r="3.3" fill="#fff"/><circle cx="8.4" cy="5" r="3.1" fill="#EF3340"/>` +
+    [0, 1, 2, 3, 4].map((i) => { const a = (i * 72 - 90) * Math.PI / 180; return star(10.4 + 1.7 * Math.cos(a), 5 + 1.7 * Math.sin(a), 0.65, "#fff"); }).join("") },
+  // カンボジア：まんなかに アンコール・ワット（かんたんな え）
+  116: { vb: "0 0 30 20", draw: () => hStripes(30, 20, ["#032EA1", "#E00025", "#E00025", "#032EA1"]) +
+    `<g fill="#fff"><rect x="8" y="12.4" width="14" height="1.6"/><rect x="9.5" y="10" width="11" height="2.4"/>` +
+    [[10.5, 8.2], [13, 7.4], [15, 5.8], [17, 7.4], [19.5, 8.2]].map(([x, y]) => `<polygon points="${x - 0.9},10 ${x},${y} ${x + 0.9},10"/>`).join("") + `</g>` },
+  // ポルトガル：みどりと あか、こんてんぎ（かんたんな え）
+  620: { vb: "0 0 30 20", draw: () => `<rect width="12" height="20" fill="#006600"/><rect x="12" width="18" height="20" fill="#FF0000"/>` +
+    `<circle cx="12" cy="10" r="4.2" fill="none" stroke="#FFE000" stroke-width="1.2"/>` +
+    `<path d="M10,7.6 h4 v3.2 a2,2 0 0 1 -4,0z" fill="#fff" stroke="#FF0000" stroke-width=".6"/>` },
+  404: { vb: "0 0 30 20", draw: () => `<rect width="30" height="20" fill="#fff"/><rect width="30" height="5.6" fill="#000"/>` +
+    `<rect y="7" width="30" height="6" fill="#BB0000"/><rect y="14.4" width="30" height="5.6" fill="#006600"/>` +
+    `<path d="M10,16.5 L20,3.5 M20,16.5 L10,3.5" stroke="#fff" stroke-width=".7"/>` +
+    `<ellipse cx="15" cy="10" rx="2.6" ry="5.6" fill="#BB0000"/><path d="M15,4.4 a2.6,5.6 0 0 0 0,11.2 a1.2,5.6 0 0 1 0,-11.2z" fill="#000"/>` +
+    `<path d="M15,4.4 a2.6,5.6 0 0 1 0,11.2 a1.2,5.6 0 0 0 0,-11.2z" fill="#000"/><ellipse cx="15" cy="10" rx=".7" ry="2" fill="#fff"/>` },
+  // パプアニューギニア：みなみじゅうじせいと ゴクラクチョウ（かんたんな え）
+  598: { vb: "0 0 40 30", draw: () => `<polygon points="0,0 40,0 40,30" fill="#CE1126"/><polygon points="0,0 40,30 0,30" fill="#000"/>` +
+    [[9, 14, 1.6], [6, 20, 1.6], [12, 20, 1.6], [9, 26, 1.8], [10.8, 22.6, 1]].map(([x, y, r]) => star(x, y, r, "#fff")).join("") +
+    `<path d="M22,8 q6,-4 10,1 q-3,0 -4,2 q4,3 6,9 q-5,-5 -9,-5 q-2,-3 -3,-7z" fill="#FCD116"/>` },
+  // フィジー：みずいろ、ユニオンジャック、しろい たて（かんたんな え）
+  242: { vb: "0 0 60 30", draw: (u) => `<rect width="60" height="30" fill="#68BFE5"/><g transform="scale(0.5)">${unionJack(u)}</g>` +
+    `<path d="M39,8 h12 v9 a6,6 0 0 1 -12,0z" fill="#fff" stroke="#CE1126" stroke-width=".4"/><path d="M45,8 v15 M39,13 h12" stroke="#CE1126" stroke-width="1.2"/>` +
+    `<rect x="39" y="8" width="12" height="3.4" fill="#CE1126"/>` },
+  // マレーシア：14ほんの しま、つきと 14の とげの ほし
+  458: { vb: "0 0 28 14", draw: () => hStripes(28, 14, Array.from({ length: 14 }, (_, i) => i % 2 ? "#fff" : "#CC0001")) +
+    `<rect width="14" height="8" fill="#010066"/><circle cx="5" cy="4" r="3" fill="#FFCC00"/><circle cx="6" cy="4" r="2.5" fill="#010066"/>` +
+    star(9.6, 4, 2.2, "#FFCC00", 14, 0.45) },
   208: { vb: "0 0 37 28", draw: () => `<rect width="37" height="28" fill="#C8102E"/>` +
     `<rect x="12" width="4" height="28" fill="#fff"/><rect y="12" width="37" height="4" fill="#fff"/>` },
   246: { vb: "0 0 18 11", draw: () => `<rect width="18" height="11" fill="#fff"/>` +

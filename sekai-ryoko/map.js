@@ -229,7 +229,10 @@ function makeMap(host, opts = {}) {
         return Math.hypot(q.x - e.clientX, q.y - e.clientY);
       };
       // ハワイのような ●だけの ところを さきに（アメリカの かたちの なかに しまが あるため）
-      let hit = dotOnly.find((id) => near(id) < 30);
+      // いちばん ちかい ● が ●だけの ところ なら それ（シンガポールの となりの クアラルンプールを おしても まちがえない）
+      let hit = null, nd = 24;
+      for (const id of ids) { const dd = near(id); if (dd < nd) { nd = dd; hit = id; } }
+      if (hit != null && GEO.shapes[hit]) hit = null;
       if (hit == null) hit = shaped.find((id) => GEO.inside(p.x, p.y, GEO.shapes[id].xy));
       if (hit == null) {
         // ちいさい 国は 首都の しるしの ちかくを タップしても えらべる（画面で 30px いない）
