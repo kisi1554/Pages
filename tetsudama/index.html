@@ -42,6 +42,10 @@
   .panel p { font-size: 18px; line-height: 1.6; margin: 8px 0; }
   .art { font-size: 44px; letter-spacing: 4px; margin: 6px 0; }
   .stages { display: grid; gap: 10px; margin-top: 14px; }
+  .stages h2 { margin: 10px 0 0; font-size: 20px; }
+  .hardgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .big.hard { background: #ffc9c9; font-size: 17px; min-height: 76px; }
+  .big.hard small { font-size: 14px; }
   .big { display: block; width: 100%; min-height: 64px; border-radius: 20px; border: 4px solid #3b2f5c;
     background: #ffd166; color: #3b2f5c; font-size: 21px; font-weight: bold; cursor: pointer;
     box-shadow: 0 5px 0 rgba(0,0,0,.25); font-family: inherit; padding: 8px; }
@@ -203,39 +207,130 @@ const STAGES = [
   },
 ];
 
+// ---------- むずかしい コース（ブロックを つなげて つくる） ----------
+// ['flat', ながさ, ゾンビのかず] ['pit', はば] ['hill', おおきいゾンビに ひつような いきおい]
+// ['wall', たかさ] ['wall2'] ['stones', かず, すきま] ['movers', かず, すきま] ['check'] (さいごに ゴールを つける)
+function buildCourse(name, tower, list) {
+  const Y = 520, grounds = [], boxes = [], movers = [], zombies = [], toys = [], checks = [];
+  let cur = [[-200, Y]], cx = 0;
+  const steps = 4, sw = 100;
+  boxes.push([40, Y - tower, 120, tower]);
+  for (let i = 0; i < steps; i++) {
+    const h = Math.round(tower * (steps - i) / (steps + 1));
+    boxes.push([160 + i * sw, Y - h, sw, h]);
+  }
+  cx = 160 + steps * sw + 40;
+  const flat = (len) => { cx += len; cur.push([cx, Y]); };
+  const toyE = ['🎈','🚗','🧸','🤖','🪀','🚂','🦖','🪁','👑','🚀','🎁','⚽','🛸','🎨','🐻'];
+  let ti = name.length;
+  const toy = (x, y) => toys.push([Math.round(x), Math.round(y), toyE[(ti++) % toyE.length]]);
+  const endCur = () => { const l = cur[cur.length - 1]; if (l[0] !== cx) cur.push([cx, Y]); grounds.push(cur); };
+  const pitTo = (w) => { if (cur.length < 2 && cur[0][0] === cx) flat(160); endCur(); cx += w; cur = [[cx, Y]]; };
+  for (const b of list) {
+    const k = b[0];
+    if (k === 'flat') {
+      const len = b[1], n = b[2] || 0, x0 = cx;
+      for (let i = 0; i < n; i++) {
+        const zx = x0 + len * (i + 0.5) / n, half = Math.max(10, len / n / 2 - 45);
+        zombies.push({ x: zx, min: zx - half, max: zx + half });
+      }
+      flat(len);
+    } else if (k === 'pit') {
+      const w = b[1]; toy(cx + w / 2, 380); pitTo(w);
+    } else if (k === 'hill') {
+      cur.push([cx + 320, Y - 120], [cx + 440, Y - 120], [cx + 760, Y]);
+      toy(cx + 380, Y - 210);
+      cx += 760;
+      flat(170);
+      zombies.push({ x: cx, min: cx - 15, max: cx + 15, big: true, need: b[1] });
+      flat(260);
+    } else if (k === 'wall') {
+      flat(150); boxes.push([cx, Y - b[1], 80, b[1]]); toy(cx + 40, Y - b[1] - 70); flat(80 + 160);
+    } else if (k === 'wall2') {
+      flat(150); boxes.push([cx, Y - 80, 80, 80], [cx + 80, Y - 150, 80, 150]); toy(cx + 120, Y - 230); flat(160 + 170);
+    } else if (k === 'stones' || k === 'movers') {
+      const n = b[1], gap = b[2], bw = k === 'movers' ? 150 : 160;
+      checks.push(cx - 60);   // あしばの まえは かならず チェックポイント
+      flat(180);
+      checks[checks.length - 1] = cx - 175;
+      endCur();
+      const x0 = cx;
+      for (let i = 0; i < n; i++) {
+        const bx = x0 + gap + i * (bw + gap), by = Y - 40 - (i % 2) * 35;
+        if (k === 'movers') movers.push([bx, by, bw, 26, i % 2 ? 0 : 55, i % 2 ? 55 : 0, 3 + (i % 3) * 0.6, i * 1.3]);
+        else boxes.push([bx, by, bw, 30]);
+        if (i === Math.floor(n / 2)) toy(bx + bw / 2, by - 70);
+      }
+      cx = x0 + gap + n * (bw + gap);
+      cur = [[cx, Y]];
+    } else if (k === 'check') {
+      checks.push(cx + 40); flat(220);
+    }
+  }
+  flat(250);
+  toy(cx - 120, 470);
+  const toy2 = cx + 60; flat(260); toy(toy2, 470);
+  const goal = cx + 100; flat(260);
+  cur.push([cx + 400, Y]); grounds.push(cur);
+  return { name, hard: true, w: cx, need: 500, ground: grounds, boxes, movers, start: [100, Y - tower - 30],
+           zombies, toys, checks, goal };
+}
+const HARD = [
+  ['あなぼこ みち', 260, [['flat',400,1],['pit',180],['flat',400,1],['pit',220],['flat',300],['check'],['hill',500],['flat',300,1],['pit',240]]],
+  ['ジャンプ ジャンプ', 280, [['flat',350,1],['wall',110],['wall2'],['pit',200],['flat',300,2],['check'],['wall',130],['hill',520],['wall2']]],
+  ['うかぶ いし', 300, [['flat',400,2],['stones',3,260],['flat',300,1],['check'],['hill',540],['stones',4,280]]],
+  ['うごく はこ', 300, [['flat',400,1],['movers',2,220],['flat',300,1],['check'],['movers',3,240],['hill',540]]],
+  ['ゾンビ だらけ', 320, [['flat',900,5],['pit',200],['flat',700,4],['check'],['hill',540],['flat',800,5]]],
+  ['おおきい ゾンビ 3きょうだい', 320, [['flat',300,1],['hill',520],['check'],['hill',560],['check'],['hill',600]]],
+  ['がけっぷち', 340, [['flat',300,1],['pit',260],['flat',200],['pit',260],['check'],['stones',3,280],['pit',280],['hill',560]]],
+  ['てつだま マスター', 360, [['flat',400,2],['wall2'],['pit',240],['check'],['movers',3,240],['flat',300,2],['hill',580],['check'],['stones',4,280],['wall',130],['flat',500,3]]],
+  ['さいごの おしろ', 380, [['flat',400,3],['pit',260],['wall2'],['check'],['movers',4,250],['hill',580],['check'],['stones',5,290],['flat',600,4],['hill',620],['pit',280]]],
+];
+HARD.forEach(h => STAGES.push(buildCourse(h[0], h[1], h[2])));
+
 // ---------- じょうたい ----------
 const G = 1400, R = 28, VIEW_H = 640;
 let st, stIndex = 0, ball, segs, boxes, zombies, toys, texts, parts, camX = 0, mode = 'title';
+let jumpBuf = 0, checkX = null, standBox = -1, simT = 0, falls = 0;
 let groundTimer = 0, impactCool = 0, gatanFlip = false, hintT = 0, clearT = 0, shakeScr = 0;
 const input = { l: false, r: false, j: false, jEdge: false };
 
-function groundY(x) {
-  const g = st.ground;
-  for (let i = 0; i < g.length - 1; i++) {
-    if (x >= g[i][0] && x <= g[i+1][0]) {
-      const t = (x - g[i][0]) / (g[i+1][0] - g[i][0]);
-      return g[i][1] + (g[i+1][1] - g[i][1]) * t;
+function grounds() { return typeof st.ground[0][0] === 'number' ? [st.ground] : st.ground; }
+function groundY(x) {   // あなの うえは 2000
+  for (const g of grounds()) {
+    for (let i = 0; i < g.length - 1; i++) {
+      if (x >= g[i][0] && x <= g[i+1][0] && g[i+1][0] > g[i][0]) {
+        const t = (x - g[i][0]) / (g[i+1][0] - g[i][0]);
+        return g[i][1] + (g[i+1][1] - g[i][1]) * t;
+      }
     }
   }
-  return 520;
+  return 2000;
 }
 
 function loadStage(i) {
   stIndex = i; st = STAGES[i];
   segs = [];
-  const g = st.ground;
-  for (let k = 0; k < g.length - 1; k++) segs.push({ ax: g[k][0], ay: g[k][1], bx: g[k+1][0], by: g[k+1][1], box: -1 });
+  const gs = grounds();
+  gs.forEach((g, gi) => {
+    for (let k = 0; k < g.length - 1; k++) if (g[k][0] !== g[k+1][0] || g[k][1] !== g[k+1][1]) segs.push({ ax: g[k][0], ay: g[k][1], bx: g[k+1][0], by: g[k+1][1], box: -1 });
+    const a = g[0], z = g[g.length - 1];
+    if (gi > 0) segs.push({ ax: a[0], ay: a[1], bx: a[0], by: 1200, box: -1 });          // あなの かべ
+    if (gi < gs.length - 1) segs.push({ ax: z[0], ay: z[1], bx: z[0], by: 1200, box: -1 });
+  });
   segs.push({ ax: 0, ay: -400, bx: 0, by: 700, box: -1 });                 // ひだりの かべ
   segs.push({ ax: st.w, ay: -400, bx: st.w, by: 700, box: -1 });           // みぎの かべ
   boxes = st.boxes.map(b => ({ x: b[0], y: b[1], w: b[2], h: b[3], shake: 0 }));
+  (st.movers || []).forEach(m => boxes.push({ x: m[0], y: m[1], w: m[2], h: m[3], shake: 0,
+    mv: { bx: m[0], by: m[1], dx: m[4], dy: m[5], per: m[6], ph: m[7] } }));
   boxes.forEach((b, idx) => {
-    const x0 = b.x, x1 = b.x + b.w, y0 = b.y, y1 = b.y + b.h;
-    segs.push({ ax: x0, ay: y0, bx: x1, by: y0, box: idx });
-    segs.push({ ax: x0, ay: y0, bx: x0, by: y1, box: idx });
-    segs.push({ ax: x1, ay: y0, bx: x1, by: y1, box: idx });
+    b.segs = [{ box: idx }, { box: idx }, { box: idx }, { box: idx }];
+    b.segs.forEach(sg => segs.push(sg));
+    boxSegs(b);
   });
+  checkX = null; standBox = -1; simT = 0; falls = 0;
   ball = { x: st.start[0], y: st.start[1], vx: 0, vy: 0, rot: 0 };
-  zombies = st.zombies.map(z => ({ x: z.x, min: z.min, max: z.max, big: !!z.big,
+  zombies = st.zombies.map(z => ({ x: z.x, min: z.min, max: z.max, big: !!z.big, need: z.need || st.need,
     w: z.big ? 86 : 46, h: z.big ? 156 : 88, dir: Math.random() < .5 ? -1 : 1,
     t: Math.random() * 10, state: 'walk', cool: 0, say: '', sayT: 0, vx: 0, vy: 0, rot: 0, dy: 0, fade: 1 }));
   toys = st.toys.map(t => ({ x: t[0], y: t[1], e: t[2], got: false, t: Math.random() * 6 }));
@@ -243,6 +338,19 @@ function loadStage(i) {
   camX = 0; groundTimer = 0; impactCool = 0; gatanFlip = false; hintT = 6; shakeScr = 0;
   mode = 'play';
   updateHud();
+}
+
+function boxSegs(b) {   // はこの 4へん（うごく はこは まいかい つくりなおす）
+  const x0 = b.x, x1 = b.x + b.w, y0 = b.y, y1 = b.y + b.h, s = b.segs;
+  Object.assign(s[0], { ax: x0, ay: y0, bx: x1, by: y0 });
+  Object.assign(s[1], { ax: x0, ay: y0, bx: x0, by: y1 });
+  Object.assign(s[2], { ax: x1, ay: y0, bx: x1, by: y1 });
+  Object.assign(s[3], { ax: x0, ay: y1, bx: x1, by: y1 });
+}
+function respawn() {
+  const x = checkX != null ? checkX : st.start[0];
+  ball.x = x; ball.y = checkX != null ? groundY(x) - R - 6 : st.start[1]; ball.vx = ball.vy = 0;
+  camX = Math.max(0, Math.min(st.w - viewW, ball.x - viewW * 0.38));
 }
 
 function updateHud() {
@@ -297,18 +405,30 @@ const SND = {
   bigDon() { tone(70, 0.8, 'sine', 0.8, 28); noise(0.6, 0.7, 1000); [523,659,784].forEach((f,i)=>tone(f,0.15,'square',0.07,null,0.15+i*0.08)); },
   toy() { [880, 1175, 1568].forEach((f, i) => tone(f, 0.14, 'sine', 0.22, null, i * 0.07)); },
   jump() { tone(300, 0.15, 'sine', 0.15, 600); },
+  check() { [660, 880].forEach((f, i) => tone(f, 0.18, 'triangle', 0.25, null, i * 0.1)); },
+  fall() { tone(700, 0.6, 'sine', 0.2, 120); },
   goal() { [523,659,784,1047,784,1047].forEach((f,i)=>tone(f, i===5?0.5:0.16, 'square', 0.09, null, i*0.13)); },
 };
 
 // ---------- ぶつり ----------
 function step(dt) {
+  simT += dt;
+  for (let i = 0; i < boxes.length; i++) {
+    const b = boxes[i]; if (!b.mv) continue;
+    const m = b.mv, a = Math.sin((simT / m.per + m.ph) * Math.PI * 2);
+    const nx = m.bx + m.dx * a, ny = m.by + m.dy * a;
+    if (i === standBox && groundTimer > 0) { ball.x += nx - b.x; ball.y += ny - b.y; }
+    b.x = nx; b.y = ny; boxSegs(b);
+  }
+  standBox = -1;
   const dir = (input.r ? 1 : 0) - (input.l ? 1 : 0);
   const grounded = groundTimer > 0;
   const accel = grounded ? 900 : 380;
   if (dir && ball.vx * dir < 430) ball.vx += dir * accel * dt;
   if (grounded && !dir) ball.vx *= (1 - 0.35 * dt);
-  if (input.jEdge && grounded) { ball.vy = -640; groundTimer = 0; SND.jump(); }
-  input.jEdge = false;
+  if (input.jEdge) { jumpBuf = 0.15; input.jEdge = false; }   // すこし はやく おしても ジャンプできる
+  if (jumpBuf > 0) jumpBuf -= dt;
+  if (jumpBuf > 0 && grounded) { ball.vy = -640; groundTimer = 0; jumpBuf = 0; SND.jump(); }
   ball.vy += G * dt;
   const sp = Math.hypot(ball.vx, ball.vy);
   if (sp > 1100) { ball.vx *= 1100 / sp; ball.vy *= 1100 / sp; }
@@ -331,11 +451,11 @@ function step(dt) {
       const vn = ball.vx * nx + ball.vy * ny;
       if (vn < 0) {
         const imp = -vn;
-        const e = imp > 180 ? 0.28 : 0;
+        const e = imp > 180 ? 0.18 : 0;
         ball.vx -= (1 + e) * vn * nx; ball.vy -= (1 + e) * vn * ny;
         if (imp > maxImp) { maxImp = imp; impBox = s.box; ix = qx; iy = qy; }
       }
-      if (ny < -0.5) groundTimer = 0.12;
+      if (ny < -0.5) { groundTimer = 0.18; if (s.box >= 0) standBox = s.box; }
     }
   }
   if (maxImp > 170 && impactCool <= 0) {
@@ -362,7 +482,7 @@ function step(dt) {
       const dx = ball.x - qx, dy = ball.y - qy;
       if (dx * dx + dy * dy < R * R) {
         const power = Math.abs(ball.vx) + Math.max(0, ball.vy) * 0.6;
-        const need = z.big ? st.need : 200;
+        const need = z.big ? z.need : 200;
         const side = ball.x < z.x ? -1 : 1;
         if (power >= need) {
           z.state = 'down';
@@ -405,7 +525,16 @@ function step(dt) {
   }
 
   if (ball.x > st.goal - 6 && mode === 'play') finish();
-  if (ball.y > 900) { ball.x = st.start[0]; ball.y = st.start[1]; ball.vx = ball.vy = 0; }
+  for (const c of (st.checks || [])) {
+    if (ball.x > c && (checkX == null || c > checkX) && groundTimer > 0) {
+      checkX = c; SND.check(); addText('チェックポイント！', c, groundY(c) - 120, '#69db7c', 28);
+    }
+  }
+  if (ball.y > 780) {
+    falls++; SND.fall();
+    respawn();
+    addText('あっ！ おちた！', ball.x, ball.y - 70, '#ffa8a8', 30);
+  }
 }
 
 function addText(s, x, y, c, size) { texts.push({ s, x, y, c, size, life: 1.1 }); }
@@ -424,6 +553,7 @@ function finish() {
     const msgs = [];
     msgs.push(allZ ? 'ゾンビを ぜんぶ たおした！' : 'ゾンビ ' + zombies.filter(z => z.state !== 'walk').length + '/' + zombies.length + ' たい');
     msgs.push(allT ? 'おもちゃも ぜんぶ あつめた！' : 'おもちゃ ' + toys.filter(t => t.got).length + '/' + toys.length + ' こ');
+    if (st.hard) msgs.push(falls ? 'おちた かい: ' + falls : 'いちども おちなかった！すごい！');
     $('clearMsg').innerHTML = msgs.join('<br>');
     $('cNext').style.display = stIndex < STAGES.length - 1 ? '' : 'none';
     show('ovClear');
@@ -487,19 +617,34 @@ function draw(time) {
   ctx.save(); ctx.translate(-camX, 0);
 
   // じめん
-  const g = st.ground;
-  ctx.beginPath(); ctx.moveTo(g[0][0], 900);
-  for (const p of g) ctx.lineTo(p[0], p[1]);
-  ctx.lineTo(g[g.length - 1][0], 900); ctx.closePath();
+  const gs = grounds();
+  for (let gi = 0; gi < gs.length - 1; gi++) {   // あな（まっくら）
+    const x0 = gs[gi][gs[gi].length - 1][0], x1 = gs[gi + 1][0][0];
+    const pg = ctx.createLinearGradient(0, 520, 0, 640); pg.addColorStop(0, 'rgba(20,12,40,.55)'); pg.addColorStop(1, '#140c28');
+    ctx.fillStyle = pg; ctx.fillRect(x0, 520, x1 - x0, 400);
+  }
   const gg = ctx.createLinearGradient(0, 420, 0, 720); gg.addColorStop(0, '#7b5a3a'); gg.addColorStop(1, '#4a3322');
-  ctx.fillStyle = gg; ctx.fill();
-  ctx.strokeStyle = '#5fbf4a'; ctx.lineWidth = 12; ctx.lineJoin = 'round';
-  ctx.beginPath(); g.forEach((p, i) => i ? ctx.lineTo(p[0], p[1] + 4) : ctx.moveTo(p[0], p[1] + 4)); ctx.stroke();
+  for (const g of gs) {
+    ctx.beginPath(); ctx.moveTo(g[0][0], 900);
+    for (const p of g) ctx.lineTo(p[0], p[1]);
+    ctx.lineTo(g[g.length - 1][0], 900); ctx.closePath();
+    ctx.fillStyle = gg; ctx.fill();
+    ctx.strokeStyle = '#5fbf4a'; ctx.lineWidth = 12; ctx.lineJoin = 'round';
+    ctx.beginPath(); g.forEach((p, i) => i ? ctx.lineTo(p[0], p[1] + 4) : ctx.moveTo(p[0], p[1] + 4)); ctx.stroke();
+  }
+  // チェックポイントの はた
+  for (const c of (st.checks || [])) {
+    const cy = groundY(c), on = checkX != null && checkX >= c;
+    ctx.fillStyle = '#ced4da'; ctx.fillRect(c - 2, cy - 90, 4, 90);
+    ctx.fillStyle = on ? '#40c057' : '#fa5252';
+    ctx.beginPath(); ctx.moveTo(c + 2, cy - 90); ctx.lineTo(c + 44, cy - 76 + Math.sin(time / 250) * 3); ctx.lineTo(c + 2, cy - 62); ctx.fill();
+  }
   // くさ と はか
   ctx.fillStyle = '#8a8fa3';
   for (let x = 300; x < st.w; x += 470) {
     if (boxes.some(b => x > b.x - 40 && x < b.x + b.w + 40)) continue;
     const y = groundY(x + 15);
+    if (groundY(x) > 1000 || groundY(x + 30) > 1000 || (st.checks || []).some(c => Math.abs(c - x - 15) < 70)) continue;
     ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y - 34); ctx.arc(x + 15, y - 34, 15, Math.PI, 0); ctx.lineTo(x + 30, y); ctx.fill();
     ctx.fillStyle = '#6b7088'; ctx.fillRect(x + 8, y - 36, 14, 4); ctx.fillRect(x + 13, y - 42, 4, 16); ctx.fillStyle = '#8a8fa3';
   }
@@ -507,7 +652,9 @@ function draw(time) {
   // はこ
   for (const b of boxes) {
     const jx = b.shake > 0.1 ? (Math.random() - .5) * b.shake : 0;
-    drawCrate(b.x + jx, b.y, b.w, b.h);
+    if (b.mv) { ctx.fillStyle = '#74c0fc'; roundRect(b.x, b.y, b.w, b.h, 8); ctx.fill(); ctx.strokeStyle = '#1c7ed6'; ctx.lineWidth = 4; ctx.stroke();
+      ctx.fillStyle = '#1c7ed6'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.mv.dx ? '⇔' : '⇕', b.x + b.w / 2, b.y + b.h / 2 + 1); }
+    else drawCrate(b.x + jx, b.y, b.w, b.h);
   }
 
   // ゴール
@@ -559,16 +706,16 @@ function draw(time) {
   if (mode === 'play' && hintT > 0) {
     ctx.globalAlpha = Math.min(1, hintT);
     ctx.font = 'bold 24px "Hiragino Maru Gothic ProN", sans-serif'; ctx.textAlign = 'center';
-    const msg = '▶ を おして てつだまを おとそう！';
+    const msg = st.hard ? 'あなに おちないように ジャンプ！' : '▶ を おして てつだまを おとそう！';
     const x = viewW / 2, y = topY + 120 > 90 ? topY + 120 : 90;
     ctx.lineWidth = 7; ctx.strokeStyle = '#2b2147'; ctx.strokeText(msg, x, y); ctx.fillStyle = '#fff'; ctx.fillText(msg, x, y);
     ctx.globalAlpha = 1;
   }
   // おおきい ゾンビの ちかくで いきおいメーター
   if (mode === 'play') {
-    const bz = zombies.find(z => z.big && z.state === 'walk');
-    if (bz && Math.abs(bz.x - ball.x) < 700 && ball.x < bz.x) {
-      const p = Math.min(1, Math.abs(ball.vx) / st.need);
+    const bz = zombies.filter(z => z.big && z.state === 'walk' && z.x > ball.x).sort((a, b) => a.x - b.x)[0];
+    if (bz && bz.x - ball.x < 700) {
+      const p = Math.min(1, Math.abs(ball.vx) / bz.need);
       const x = viewW / 2 - 110, y = Math.max(topY + 80, 80);
       ctx.fillStyle = 'rgba(255,255,255,.85)'; roundRect(x - 8, y - 26, 236, 52, 14); ctx.fill();
       ctx.fillStyle = '#3b2f5c'; ctx.font = 'bold 15px sans-serif'; ctx.textAlign = 'left'; ctx.fillText('いきおい', x, y - 10);
@@ -604,7 +751,7 @@ function drawCrate(x, y, w, h) {
 function drawBall() {
   const { x, y, rot } = ball;
   ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(x, groundY(x) + 2, R * .9, 6, 0, 0, 7);
-  if (Math.abs(groundY(x) - y) < 200) ctx.fill();
+  if (groundY(x) - y < 200 && groundY(x) - y > 0) ctx.fill();
   const gr = ctx.createRadialGradient(x - R * .4, y - R * .45, R * .1, x, y, R);
   gr.addColorStop(0, '#f1f3f5'); gr.addColorStop(0.35, '#868e96'); gr.addColorStop(1, '#212529');
   ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill();
@@ -696,13 +843,17 @@ function hide(id) { $(id).classList.add('hide'); }
 
 function renderStageList() {
   const el = $('stageList'); el.innerHTML = '';
+  const h = document.createElement('h2'); h.textContent = '🔥 むずかしい コース'; 
+  const grid = document.createElement('div'); grid.className = 'hardgrid';
   STAGES.forEach((s, i) => {
-    const b = document.createElement('button'); b.className = 'big';
+    const b = document.createElement('button'); b.className = s.hard ? 'big hard' : 'big';
     const best = save.best[i] || 0;
-    b.innerHTML = 'ステージ' + (i + 1) + '　' + s.name + '<small>' + (best ? '⭐'.repeat(best) + '☆'.repeat(3 - best) : 'まだ あそんでないよ') + '</small>';
+    const starTxt = best ? '⭐'.repeat(best) + '☆'.repeat(3 - best) : (s.hard ? 'まだ' : 'まだ あそんでないよ');
+    b.innerHTML = (s.hard ? (i + 1) + '. ' : 'ステージ' + (i + 1) + '　') + s.name + '<small>' + starTxt + '</small>';
     b.addEventListener('click', () => { audio(); hide('ovTitle'); loadStage(i); });
-    el.appendChild(b);
+    (s.hard ? grid : el).appendChild(b);
   });
+  el.appendChild(h); el.appendChild(grid);
 }
 function toTitle() { mode = 'title'; renderStageList(); hide('ovClear'); show('ovTitle'); }
 
