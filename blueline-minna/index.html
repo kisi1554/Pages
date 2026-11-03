@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ブルーライン みんなで のろう</title>
+<meta name="description" content="はこの うえの ブルーラインが しょうなんだい ⇄ あざみの を はしるよ。にょこくんと つくぼうも のってくる！ スタンプちょうと ろせんずつき。">
+<link rel="stylesheet" href="style.css?v=b283140">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <button id="homeBtn" class="ib" type="button" aria-label="はじめに もどる">🏠</button>
+    <div class="dest" id="dest">ブルーライン</div>
+    <button id="todBtn" class="ib" type="button" aria-label="じかんを かえる">☀️</button>
+    <button id="fastBtn" class="ib" type="button" aria-label="はやおくり">⏩</button>
+    <button id="mapBtn" class="ib" type="button" aria-label="ろせんず">🗺️</button>
+    <button id="bookBtn" class="ib" type="button" aria-label="スタンプちょう">📖</button>
+    <button id="sndBtn" class="ib" type="button" aria-label="おと">🔊</button>
+  </header>
+
+  <main id="stage">
+    <canvas id="cv"></canvas>
+    <div id="cap" class="cap hidden"></div>
+    <div id="pop" class="pop hidden"></div>
+    <button id="booBtn" class="boo hidden" type="button">💨 おなら ブー！</button>
+
+    <section id="setup" class="sheet">
+      <h1>ブルーライン <span>みんなで のろう</span> 🚇</h1>
+      <p class="lead">ブルーラインが はこの うえで まってるよ。<br>どっちへ いく？</p>
+      <div class="seg two" id="dirSeg">
+        <button type="button" data-v="1"><ruby>湘南台<rt>しょうなんだい</rt></ruby> → <b><ruby>あざみ野<rt>あざみの</rt></ruby></b> ゆき</button>
+        <button type="button" data-v="-1"><b><ruby>湘南台<rt>しょうなんだい</rt></ruby></b> ゆき ← <ruby>あざみ野<rt>あざみの</rt></ruby></button>
+      </div>
+      <div class="lbl">じかん</div>
+      <div class="seg four" id="todSeg">
+        <button type="button" data-v="asa">🌅<br>あさ</button>
+        <button type="button" data-v="hiru">☀️<br>ひる</button>
+        <button type="button" data-v="yuu">🌇<br>ゆうがた</button>
+        <button type="button" data-v="yoru">🌙<br>よる</button>
+      </div>
+      <div class="lbl">とまる えき</div>
+      <div class="seg two" id="modeSeg">
+        <button type="button" data-v="special">⭐ とくべつな えき<small><ruby>高島町<rt>たかしまちょう</rt></ruby>・<ruby>横浜<rt>よこはま</rt></ruby>・<ruby>新羽<rt>にっぱ</rt></ruby>・<ruby>仲町台<rt>なかまちだい</rt></ruby></small></button>
+        <button type="button" data-v="all">🚉 ぜんぶの えき<small>32こ ぜんぶ とまる</small></button>
+      </div>
+      <button id="goBtn" class="go" type="button">しゅっぱつ しんこう！</button>
+      <div class="sub">
+        <button id="bookBtn2" type="button">📖 スタンプちょう</button>
+        <button id="mapBtn2" type="button">🗺️ ろせんず</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="line" id="line" role="button" aria-label="ろせんずを ひらく">
+    <span class="end l">しょうなんだい</span>
+    <div class="rail" id="rail"><div class="train" id="mini">🚇</div></div>
+    <span class="end r">あざみの</span>
+  </footer>
+</div>
+
+<div id="book" class="ov hidden">
+  <div class="panel">
+    <div class="ph"><h2>📖 スタンプちょう <span id="bookCount"></span></h2><button class="x" data-close type="button" aria-label="とじる">✕</button></div>
+    <div id="bookDetail" class="detail hidden"></div>
+    <div id="bookGrid" class="grid"></div>
+  </div>
+</div>
+
+<div id="map" class="ov hidden">
+  <div class="panel">
+    <div class="ph"><h2>🗺️ ブルーライン ろせんず</h2><button class="x" data-close type="button" aria-label="とじる">✕</button></div>
+    <p class="note">⭐ = とくべつな えき　● = いま とまる えき　✅ = スタンプ もってる</p>
+    <ol id="mapList" class="map"></ol>
+  </div>
+</div>
+
+<div id="end" class="ov hidden">
+  <div class="panel endp">
+    <h2 id="endTitle">とうちゃく！</h2>
+    <p id="endMsg"></p>
+    <div id="endStamps" class="mini-stamps"></div>
+    <button id="backRide" class="go" type="button">かえりも のる</button>
+    <div class="sub">
+      <button id="endBook" type="button">📖 スタンプちょう</button>
+      <button id="endHome" type="button">🏠 はじめに もどる</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js?v=b283140"></script>
+</body>
+</html>
