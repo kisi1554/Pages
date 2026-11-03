@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ゆうびん はいたつ</title>
+<meta name="description" content="ゆうびんやさんに なって、てがみの じゅうしょを よみ、まちの ちずで いえを さがして とどけよう。くばる じゅんばんを くふうして、さいたん ルートに ちょうせん。">
+<meta name="theme-color" content="#e03131">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📮</text></svg>">
+<link rel="stylesheet" href="style.css?v=7304c68">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <a class="home" href="../" aria-label="あそびメニューへ">🏠</a>
+  <button id="backBtn" class="icon-btn" type="button" aria-label="もどる" hidden>◀</button>
+  <h1 id="title">📮 ゆうびん はいたつ</h1>
+  <button id="soundBtn" class="icon-btn" type="button" aria-label="おと オン/オフ">🔊</button>
+</header>
+
+<main id="main">
+  <!-- ホーム -->
+  <section id="vHome" class="view">
+    <div class="hero card-box">
+      <div class="hero-art" aria-hidden="true">🛵📮</div>
+      <p>ゆうびんやさんに なって、<b>じゅうしょ</b>を よんで てがみを とどけよう！<br>
+      どの じゅんばんで くばると はやいかな？</p>
+    </div>
+    <div class="modes">
+      <button class="mode" type="button" data-go="day" style="--c:#e03131">
+        <span class="m-emoji">🛵</span><span class="m-name">まいにち はいたつ</span>
+        <span class="m-sub" id="dayLabel">1にちめ</span>
+      </button>
+      <button class="mode" type="button" data-go="quiz" style="--c:#1971c2">
+        <span class="m-emoji">❓</span><span class="m-name">じゅうしょ クイズ</span>
+        <span class="m-sub">ちずと じゅうしょ を むすぼう</span>
+      </button>
+      <button class="mode" type="button" data-go="write" style="--c:#2f9e44">
+        <span class="m-emoji">✏️</span><span class="m-name">てがみを かこう</span>
+        <span class="m-sub" id="writeLabel">かいて、じぶんで とどける</span>
+      </button>
+    </div>
+    <details class="howto card-box" open>
+      <summary>じゅうしょの よみかた</summary>
+      <div class="addr-demo">
+        <span class="ad ad-town">さくらまち<small>まち</small></span>
+        <span class="ad ad-chome">2ちょうめ<small>まちを 4つに わけた ところ。いろで わかる</small></span>
+        <span class="ad ad-ban">3ばん<small>ブロック。かどの かんばんを みる</small></span>
+        <span class="ad ad-go">1ごう<small>いえ。ひだりうえ から とけいまわり</small></span>
+      </div>
+      <p class="small">おおきい ほうから ちいさい ほうへ よむと、いえが みつかるよ。
+        ほんものの じゅうしょも「まち → ちょうめ → ばん → ごう」の じゅんばん。</p>
+    </details>
+  </section>
+
+  <!-- しわけ -->
+  <section id="vSort" class="view" hidden>
+    <p class="guide"><b id="sortDay">1にちめ</b>　てがみを <b>ちょうめ</b> ごとの ポケットに いれよう<br><small>ドラッグ か、てがみ → ポケット の じゅんに タップ</small></p>
+    <div id="sortBag" class="bag"></div>
+    <div id="pockets" class="pockets"></div>
+    <button id="goBtn" class="big-btn" type="button" disabled>🛵 はいたつに しゅっぱつ！</button>
+  </section>
+
+  <!-- はいたつ -->
+  <section id="vMap" class="view" hidden>
+    <div class="status">
+      <span class="st">⏱ <b id="stTime">0</b>びょう</span>
+      <span class="st">🛣 <b id="stDist">0</b>マス</span>
+      <span class="st">✉️ のこり <b id="stLeft">0</b></span>
+    </div>
+    <div class="map-area">
+      <div id="mapWrap" class="map-wrap">
+        <svg id="map" class="map" xmlns="http://www.w3.org/2000/svg" aria-label="まちの ちず"></svg>
+        <div class="map-btns">
+          <button id="hintBtn" class="sbtn" type="button" aria-label="ヒント">💡</button>
+          <button id="zoomIn" class="sbtn" type="button" aria-label="おおきく">＋</button>
+          <button id="zoomOut" class="sbtn" type="button" aria-label="ちいさく">－</button>
+        </div>
+        <div id="msg" class="msg" hidden></div>
+        <div id="panel" class="panel" hidden></div>
+      </div>
+      <div class="side">
+        <p class="tray-guide">いえを タップ か みちを なぞって すすむ → いえの まえで てがみを ポストへ</p>
+        <div id="tray" class="tray"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- おわり -->
+  <section id="vResult" class="view" hidden>
+    <div class="res-grid">
+      <div class="card-box res-head">
+        <div id="resStars" class="stars">⭐⭐⭐</div>
+        <h2 id="resTitle">はいたつ おわり！</h2>
+        <div class="res-nums">
+          <div><small>じかん</small><b id="resTime">0</b>びょう</div>
+          <div><small>きみの きょり</small><b id="resDist">0</b>マス</div>
+          <div><small>さいたん</small><b id="resBest">0</b>マス</div>
+        </div>
+        <p id="resMsg" class="res-msg"></p>
+        <ol id="resOrder" class="res-order"></ol>
+        <div class="btn-row">
+          <button id="nextBtn" class="big-btn" type="button">つぎの ひ ▶</button>
+          <button id="againBtn" class="big-btn sub" type="button">もういちど</button>
+          <button id="replayBtn" class="big-btn sub" type="button">🔁 ルートを みる</button>
+        </div>
+      </div>
+      <div class="card-box res-map">
+        <div class="legend"><span class="lg lg-me">きみの みち</span><span class="lg lg-best">さいたん ルート</span></div>
+        <svg id="resMap" class="map" xmlns="http://www.w3.org/2000/svg" aria-label="ルートの くらべっこ"></svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- クイズ -->
+  <section id="vQuiz" class="view" hidden>
+    <div class="quiz-top">
+      <div id="qTowns" class="chips"></div>
+      <span class="q-score">⭕ <b id="qScore">0</b> / <b id="qNum">0</b></span>
+    </div>
+    <p id="qText" class="q-text"></p>
+    <div class="quiz-body">
+      <div class="map-wrap q-map"><svg id="qMap" class="map" xmlns="http://www.w3.org/2000/svg" aria-label="クイズの ちず"></svg></div>
+      <div id="qChoices" class="choices"></div>
+    </div>
+  </section>
+
+  <!-- てがみを かこう -->
+  <section id="vWrite" class="view" hidden>
+    <div id="wStep1" class="wstep">
+      <h2 class="w-h">① だれに かく？</h2>
+      <div id="wWho" class="who"></div>
+      <h2 class="w-h">かいた てがみ</h2>
+      <div id="wList" class="wlist"></div>
+    </div>
+    <div id="wStep2" class="wstep" hidden>
+      <h2 class="w-h">② <span id="wWhoName"></span> の いえは どこ？ <small>ちずの いえを タップ</small></h2>
+      <div id="wTowns" class="chips"></div>
+      <div class="map-wrap w-map"><svg id="wMap" class="map" xmlns="http://www.w3.org/2000/svg" aria-label="いえを えらぶ ちず"></svg></div>
+      <p id="wPicked" class="w-picked">まだ えらんで いないよ</p>
+      <button id="wPickBtn" class="big-btn" type="button" disabled>この いえに する ▶</button>
+    </div>
+    <div id="wStep3" class="wstep" hidden>
+      <h2 class="w-h">③ ふうとうを かこう</h2>
+      <div class="envelope">
+        <div class="zip">
+          <span class="zip-mark">〒</span>
+          <input id="zip1" class="zip-in" inputmode="numeric" maxlength="3" autocomplete="off" aria-label="ゆうびんばんごう まえの 3けた">
+          <span>-</span>
+          <input id="zip2" class="zip-in zip4" inputmode="numeric" maxlength="4" autocomplete="off" aria-label="ゆうびんばんごう うしろの 4けた">
+        </div>
+        <div id="wAddr" class="env-addr"></div>
+        <div id="wTo" class="env-to"></div>
+        <textarea id="wBody" class="env-body" maxlength="60" rows="3" placeholder="ここに てがみを かこう（60もじ まで）"></textarea>
+      </div>
+      <details class="card-box zip-table" open>
+        <summary>ゆうびんばんごう ひょう</summary>
+        <p class="small">まえの 3けた ＝ まち、うしろの 4けた ＝ ちょうめ。7けたで まちと ちょうめ が わかる！</p>
+        <table id="zipTable"></table>
+      </details>
+      <p id="wErr" class="w-err" hidden></p>
+      <button id="wSendBtn" class="big-btn" type="button">📮 ポストに いれて、とどけに いく！</button>
+    </div>
+  </section>
+</main>
+
+<div id="toast" class="toast" hidden></div>
+<div id="modal" class="modal" hidden><div class="modal-box"><div id="modalBody"></div><button id="modalClose" class="big-btn" type="button">とじる</button></div></div>
+
+<script src="town.js?v=7304c68"></script>
+<script src="route.js?v=7304c68"></script>
+<script src="audio.js?v=7304c68"></script>
+<script src="app.js?v=7304c68"></script>
+</body>
+</html>
