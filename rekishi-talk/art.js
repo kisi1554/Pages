@@ -3,7 +3,8 @@
 /*
  * にがおえ（オリジナルの イラスト。しゃしんや ほんものの にがおえ は つかわない）
  *   Art.face(look, opts) → SVG の もじれつ（viewBox 0 0 200 220）
- *   look: { skin, hair, hairColor, beard, beardColor, cloth, clothColor, hat, item, bow, round }
+ *   look: { skin, hair, hairColor, beard, beardColor, cloth, clothColor, layers, hat, item, bow, round }
+ *   hair: himiko / kanmuri / heian / chonmage / ryoma / parted / longwhite / bun / shortgray / side（あたまの うえは はげ）/ wild
  *   しゃべる ときは .mouth-open が みえる（style.css の .talking）。まばたき は .eyes
  */
 const Art = (() => {
@@ -65,6 +66,8 @@ const Art = (() => {
         return `<path d="M50 104 Q50 60 100 58 Q150 60 150 104 Q140 82 100 80 Q60 82 50 104 Z" fill="${c}"/>`;
       case 'bun':
         return `<path d="M50 106 Q48 58 100 56 Q152 58 150 106 Q136 76 102 74 L100 82 L98 74 Q64 76 50 106 Z" fill="${c}"/>`;
+      case 'side':
+        return `<path d="M50 112 Q46 84 62 78 Q60 92 64 104 Z M150 112 Q154 84 138 78 Q140 92 136 104 Z" fill="${c}"/>`;
       case 'shortgray':
         return `<path d="M50 98 Q48 58 100 56 Q152 58 150 98 Q142 76 100 74 Q58 76 50 98 Z" fill="${c}"/>`;
       case 'wild':
@@ -107,7 +110,7 @@ const Art = (() => {
         return `<path d="M28 220 Q32 170 100 162 Q168 170 172 220 Z" fill="${c}" stroke="${d}" stroke-width="3"/>
           <path d="M76 168 Q100 186 124 168" fill="none" stroke="#f1ece0" stroke-width="7"/>`;
       case 'juni':
-        return ['#9c36b5', '#e64980', '#f59f00', '#2b8a3e'].map((col, i) =>
+        return (l.layers || ['#9c36b5', '#e64980', '#f59f00', '#2b8a3e']).map((col, i) =>
           `<path d="M${22 + i * 6} 220 Q${30 + i * 4} 172 100 ${162 + i * 4} Q${170 - i * 4} 172 ${178 - i * 6} 220 Z" fill="${col}"/>`).join('');
       case 'tunic':
         return `<path d="M30 220 Q34 172 100 166 Q166 172 170 220 Z" fill="${c}" stroke="${d}" stroke-width="3"/>
@@ -141,7 +144,7 @@ const Art = (() => {
   <ellipse cx="100" cy="114" rx="${rx}" ry="54" fill="${skin}" stroke="${LINE}" stroke-width="3"/>
   ${hairFront(l)}
   ${hat(l)}
-  <path d="M70 96 Q80 90 90 96 M110 96 Q120 90 130 96" fill="none" stroke="${l.hair === 'wild' || l.hair === 'longwhite' || l.hair === 'shortgray' ? '#8a8a8a' : '#2b2118'}" stroke-width="4" stroke-linecap="round"/>
+  <path d="M70 96 Q80 90 90 96 M110 96 Q120 90 130 96" fill="none" stroke="${l.hair === 'wild' || l.hair === 'longwhite' || l.hair === 'shortgray' || l.hair === 'side' ? '#8a8a8a' : '#2b2118'}" stroke-width="4" stroke-linecap="round"/>
   <g class="eyes">
     <ellipse cx="80" cy="112" rx="6" ry="8" fill="#2b2118"/>
     <ellipse cx="120" cy="112" rx="6" ry="8" fill="#2b2118"/>
