@@ -221,6 +221,7 @@ void main(){
 
   // --- じめん ---
   land(-110, -60, -8, 100);       // ランドマーク・さくらぎちょう がわ
+  land(-110, -100, 32, -60);      // ミッドスクエア・マークイズ がわ（きた）
   land(-8, -60, 32, 0);           // クイーンズ がわ
   land(12, 0, 32, 100);           // ドックの ひがし
   land(-8, 45, 12, 100);          // ドックの みなみ
@@ -233,7 +234,7 @@ void main(){
 
   // --- みち ---
   flat(-110, -12, 32, -6, 0.02, C.road); flat(-110, -9.15, 32, -8.85, 0.03, C.line);
-  flat(-16, -60, -10, 100, 0.02, C.road);
+  flat(-16, -100, -10, 100, 0.02, C.road); flat(-110, -66, 32, -61, 0.02, C.road); flat(-110, -63.65, 32, -63.35, 0.03, C.line);
   flat(-110, 48, 12, 53, 0.02, C.road);
   flat(46, 78, 125, 82, 0.02, C.road);
   flat(58, 8, 63, 105, 0.02, C.road);
@@ -270,6 +271,20 @@ void main(){
   // ドックヤードガーデン の ふち
   B(-14, 0, 40, -8, 1.2, 44, C.wall, 0, C.wall, { nomap: true });
 
+  // --- マークイズ みなとみらい（めじるし）---
+  B(-33, 0, -44, -11, 7, -26, hex('#f1e3c8'), 1, hex('#c9b896'));
+  G.box(-33.02, 5.4, -44.02, -10.98, 6.2, -25.98, hex('#ff922b'));
+  // --- みなとみらいミッドスクエア（くもん みなとみらい きょうしつ は 3かい）---
+  // ばしょ: よこはましにしく みなとみらい4ちょうめ7-1。ランドマークタワーの やく 110m にし・410m きた
+  //（こくどちりいん の じゅうしょけんさく で たしかめた いち を、この せかいの しゅくしゃく に なおした）
+  const KUMON = { x: -51, z: -66.6, door: { x0: -52.4, x1: -49.6 } };
+  B(-57, 0, -80, -45, 6, -68, hex('#e9ecef'), 1, hex('#ced4da')).door = KUMON.door; // いりぐちの ところは のぼらない
+  B(-55.5, 6, -78.5, -46.5, 34, -70.5, hex('#dde3ea'), 1, hex('#adb5bd'));
+  G.box(-57.03, 4, -80.03, -44.97, 5.6, -67.97, hex('#74c0fc'));          // 3かい（きょうしつ）の まど
+  G.box(-52.4, 0, -68.06, -49.6, 2.7, -67.9, hex('#20b26b'));             // いりぐち
+  G.box(-53.6, 2.9, -68.4, -48.4, 3.15, -67.6, hex('#2b8a3e'));           // ひさし
+  G.box(-53, 3.3, -68.12, -49, 3.9, -67.9, C.white);                      // かんばん
+  [[-60, -70], [-60, -78], [-42, -70], [-42, -78]].forEach(([x, z]) => tree(x, z));
   // --- さくらぎちょう えき ---
   B(-48, 0, 64, -24, 4.5, 74, C.white, 1, hex('#5c6b7a'));
   B(-50, 4.5, 63, -22, 5, 75, hex('#5c6b7a'), 0, hex('#495057'), { nomap: true });
@@ -425,6 +440,7 @@ void main(){
     { x: -17, z: 95, y: 0, col: C.green, who: 'えきいんさん', say: 'かいだんを のぼると エアキャビン！ ゴンドラの やねに のって うみを わたれるよ。' },
     { x: 104, z: 91, y: 0, col: C.red, who: 'パンやさん', say: 'たかい ところから とびおりたら、そらで もういちど ジャンプ！ かさで ふわふわ とべるよ ☂️' },
     { x: 136, z: 178, y: 1, col: C.yellow, who: 'つりびと', say: 'うみに おちても およげるよ。かべに むかって およぐと よじのぼれるんだ。' },
+    { x: -40, z: -52, y: 0, col: C.orange, who: 'おかあさん', say: 'くもんの みなとみらい きょうしつは、ミッドスクエアの 3かい。みどりの いりぐちから はいれるよ ✏️' },
     { x: 54, z: -40, y: 0, col: C.blue, who: 'ガイドさん', say: 'ふうせん 🎈 を つかうと そらに ぷかぷか うかぶよ。ホテルの てっぺんにも ほしが あるみたい。' },
   ];
   const ZONES = [
@@ -441,6 +457,7 @@ void main(){
     { id: 'kishamichi', name: 'きしゃみち', x: 39, z: 59, r: 8 },
     { id: 'akarenga', name: 'あかレンガそうこ', x: 106, z: 91, r: 18 },
     { id: 'osanbashi', name: 'おおさんばし', x: 136, z: 160, r: 32 },
+    { id: 'kumon', name: 'くもん みなとみらい きょうしつ', x: -51, z: -70, r: 9 },
   ];
   $('stampT').textContent = ZONES.length;
 
@@ -542,6 +559,7 @@ void main(){
     if (e.code === 'KeyE') useOni();
     if (e.code === 'KeyQ') useBal();
     if (e.code === 'KeyM') openMap();
+    if (e.code === 'Enter' && nearDoor()) enterKumon();
     if (e.code === 'Escape') { show('ovMenu', true); setPaused(); }
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
@@ -683,7 +701,7 @@ void main(){
   }
 
   // ================= ゲームの すすみ =================
-  let time = 0, saveT = 0, climbSnd = 0, lastTalk = null, lastLab = '';
+  let time = 0, saveT = 0, climbSnd = 0, lastTalk = null, lastLab = '', lastDoor = false;
   function update(dt) {
     time += dt;
     updatePlats(time);
@@ -730,7 +748,8 @@ void main(){
 
       // かべ のぼり の はじまり
       const hit = hx || hz;
-      if (hit && hit.b.climb && mag > 0.3 && !P.tired && P.cool <= 0 && P.bal <= 0) {
+      const atDoorway = hit && hit.b.door && P.x > hit.b.door.x0 - 0.3 && P.x < hit.b.door.x1 + 0.3 && P.y < 0.5;
+      if (hit && hit.b.climb && !atDoorway && mag > 0.3 && !P.tired && P.cool <= 0 && P.bal <= 0) {
         const nx = hit.axis === 'x' ? hit.side : 0, nz = hit.axis === 'z' ? hit.side : 0;
         if ((dx * -nx + dz * -nz) / mag > 0.55 && hit.b.y1 - P.y > STEP) {
           P.state = 'climb'; P.wall = hit; P.vx = P.vy = P.vz = 0; P.glide = false; P.ground = false; P.plat = null; faceWall(hit);
@@ -794,6 +813,8 @@ void main(){
       if (near) { t.dataset.who = near.who; t.textContent = near.say; t.style.display = 'block'; } else t.style.display = 'none';
     }
     if (P.y < -40) respawn();
+    const atDoor = nearDoor();
+    if (atDoor !== lastDoor) { lastDoor = atDoor; $("bEnter").hidden = !atDoor; }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
     const lab = P.state === 'climb' ? 'うえへ<br>ジャンプ' : (P.state === 'air' && P.bal <= 0) ? (P.glide ? 'かさを<br>とじる' : '☂️<br>かさ') : 'ジャンプ';
@@ -1022,6 +1043,7 @@ void main(){
       const big = s.big;
       draw(mCube, M(T(s.x, s.y + 30, s.z), S(big ? 0.9 : 0.45, 60, big ? 0.9 : 0.45)), big ? C.gold : C.yellow, 1, big ? 0.32 : 0.2);
     });
+    draw(mCube, M(T(KUMON.x, 20, KUMON.z), S(0.8, 40, 0.8)), [0.25, 0.85, 0.45], 1, 0.16 + 0.06 * Math.sin(time * 3)); // くもん の めじるし
     gl.depthMask(true); gl.disable(gl.BLEND);
 
     // スタミナの わ
@@ -1077,7 +1099,23 @@ void main(){
 
   // ================= がめん の きりかえ =================
   function show(id, on) { $(id).classList.toggle('show', on); }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu'].some((i) => $(i).classList.contains('show')); }
+  // ---- くもん きょうしつ に はいる ----
+  function nearDoor() { return P.state === 'ground' && Math.abs(P.y) < 0.2 && Math.abs(P.x - KUMON.x) < 2.2 && P.z > -68.5 && P.z < -64.5; }
+  function enterKumon() {
+    if (!window.Kumon) return;
+    SFX.stamp(); show('ovKumon', true); setPaused();
+    window.Kumon.open({
+      sfx: (n) => { if (n === 'tap') tone(660, 0.04, 'triangle', 0.05); else if (n === 'ng') SFX.tired(); else if (n === 'good') SFX.star(); else if (n === 'pass') { SFX.big(); confetti(); } },
+      onReward: (r) => {
+        if (r.type === 'print') { if (save.oni >= 9) return 'おにぎりは もう いっぱい！'; save.oni++; store(); refreshHud(); return 'ごほうびに 🍙 おにぎり を 1こ もらった！'; }
+        save.bal = Math.min(5, save.bal + 2); save.oni = Math.min(9, save.oni + 2); store(); refreshHud();
+        return 'ごうかくの ごほうびに 🎈 ふうせん と 🍙 おにぎり を 2こずつ もらった！';
+      },
+      onClose: () => { show('ovKumon', false); P.x = KUMON.x; P.z = -65.2; P.face = 0; cam.yaw = Math.PI; P.vx = P.vz = 0; lastDoor = null; setPaused(); banner('🏫 また きてね！<small>いまは ' + window.Kumon.level + ' きょうざい</small>', 2); },
+    });
+  }
+  holdBtn($('bEnter'), enterKumon);
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon'].some((i) => $(i).classList.contains('show')); }
   function setPaused() { paused = anyOv(); if (paused) { joy.id = null; joy.x = joy.y = 0; $('joy').style.display = 'none'; } }
   function openMap() { drawMap(); show('ovMap', true); setPaused(); }
   $('bStart').addEventListener('click', () => { ac(); show('ovTitle', false); setPaused(); if (!save.seenTitle) { save.seenTitle = true; store(); banner('🧢 あおちゃんの だいぼうけん スタート！<small>まずは ランドマークタワーへ</small>', 3.5); } });
