@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ケロたんの たしざん とっくん</title>
+<style>
+  :root {
+    --bg1: #dff7e4; --bg2: #c5ecff;
+    --ink: #24402c; --sub: #5d7a64;
+    --green: #2fb65a; --green-d: #1f8a42;
+    --pink: #ff6f91; --yellow: #ffd23f; --blue: #3d8bfd; --orange: #ff9f1c;
+    --card: #ffffff; --line: #b9dcc3;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(180deg, var(--bg2), var(--bg1));
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(12px, env(safe-area-inset-top)) 16px max(12px, env(safe-area-inset-bottom)); overflow-y: auto; }
+  .screen.on { display: flex; }
+  .screen > * { flex-shrink: 0; }
+
+  /* ---------- タイトル ---------- */
+  #title { justify-content: center; gap: 14px; text-align: center; }
+  .logo { font-size: clamp(26px, 7vw, 44px); font-weight: 900; line-height: 1.25; margin: 0;
+    text-shadow: 0 3px 0 #fff; }
+  .logo small { display: block; font-size: .5em; color: var(--sub); font-weight: 700; }
+  .frog-big { font-size: clamp(72px, 20vw, 120px); animation: bob 1.6s ease-in-out infinite; line-height: 1; }
+  @keyframes bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-12px) } }
+  .menu { display: grid; gap: 12px; width: min(440px, 100%); }
+  .big-btn { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-radius: 22px;
+    background: var(--card); box-shadow: 0 6px 0 var(--line); text-align: left; min-height: 84px;
+    border: 3px solid var(--line); transition: transform .08s; }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--line); }
+  .big-btn .ic { font-size: 40px; }
+  .big-btn b { display: block; font-size: 22px; }
+  .big-btn span span { font-size: 14px; color: var(--sub); }
+  .big-btn.main { background: var(--green); color: #fff; border-color: var(--green-d); box-shadow: 0 6px 0 var(--green-d); }
+  .big-btn.main span span { color: #e8ffe9; }
+  .row-mini { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .chip { padding: 10px 16px; border-radius: 999px; background: #fff; border: 2px solid var(--line); font-size: 16px; min-height: 48px; }
+  .best-line { font-size: 15px; color: var(--sub); }
+
+  /* ---------- プレイ ---------- */
+  #play { gap: 10px; }
+  .topbar { width: min(560px, 100%); display: flex; align-items: center; gap: 10px; }
+  .topbar .back { width: 52px; height: 52px; border-radius: 16px; background: #fff; border: 2px solid var(--line); font-size: 24px; }
+  .dots { flex: 1; display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .dots i { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--line); }
+  .dots i.ok { background: var(--green); border-color: var(--green-d); }
+  .dots i.now { background: var(--yellow); border-color: var(--orange); transform: scale(1.25); }
+  .timer { min-width: 86px; text-align: center; font-weight: 900; font-size: 22px; background: #fff;
+    border-radius: 14px; padding: 8px 10px; border: 2px solid var(--line); font-variant-numeric: tabular-nums; }
+  .timer.hide { visibility: hidden; }
+
+  .stage { width: min(560px, 100%); display: flex; align-items: center; gap: 10px; min-height: 64px; }
+  .frog { font-size: 54px; line-height: 1; transition: transform .2s; }
+  .frog.jump { animation: jump .5s ease; }
+  @keyframes jump { 0% { transform: translateY(0) } 40% { transform: translateY(-26px) rotate(-10deg) } 100% { transform: translateY(0) } }
+  .bubble { flex: 1; background: #fff; border-radius: 18px; padding: 10px 14px; font-size: 18px; font-weight: 700;
+    border: 2px solid var(--line); position: relative; min-height: 48px; display: flex; align-items: center; }
+  .bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -8px;
+    border: 8px solid transparent; border-right-color: var(--line); border-left: 0; }
+  .combo { font-weight: 900; color: var(--orange); font-size: 18px; white-space: nowrap; }
+
+  .qcard { width: min(560px, 100%); background: #fff; border-radius: 28px; border: 4px solid var(--line);
+    box-shadow: 0 8px 0 var(--line); padding: 16px 10px; text-align: center; position: relative; }
+  .qcard.shake { animation: shake .4s; }
+  @keyframes shake { 20%,60% { transform: translateX(-10px) } 40%,80% { transform: translateX(10px) } }
+  .q { font-size: clamp(54px, 15vw, 96px); font-weight: 900; letter-spacing: .02em; line-height: 1.1;
+    display: flex; justify-content: center; align-items: center; gap: .18em; font-variant-numeric: tabular-nums; }
+  .q .op { color: var(--pink); }
+  .q .eq { color: var(--sub); }
+  .ans { min-width: 1.5em; height: 1.2em; border-radius: 16px; border: 4px dashed var(--blue); color: var(--blue);
+    display: inline-flex; align-items: center; justify-content: center; padding: 0 .1em; }
+  .ans.good { border-style: solid; border-color: var(--green); color: var(--green); background: #e9fbee; }
+  .ans.bad { border-style: solid; border-color: var(--pink); color: var(--pink); background: #fff0f4; }
+  .stamp { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 150px; pointer-events: none; opacity: 0; }
+  .stamp.show { animation: stamp .6s ease forwards; }
+  @keyframes stamp { 0% { opacity: 0; transform: scale(2) } 40% { opacity: .9; transform: scale(1) } 100% { opacity: 0; transform: scale(1) } }
+
+  /* すうじの せん（ヒント） */
+  .hint { width: min(560px, 100%); min-height: 96px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .line { display: flex; gap: 6px; align-items: flex-end; justify-content: center; position: relative; padding-top: 34px; padding-bottom: 26px; }
+  .cell { width: 52px; height: 52px; border-radius: 14px; background: #fff; border: 3px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 24px; position: relative; }
+  .cell.start { background: #fff8d6; border-color: var(--yellow); }
+  .cell.lit { background: #e9fbee; border-color: var(--green); }
+  .cell .cnt { position: absolute; bottom: -26px; font-size: 18px; color: var(--pink); font-weight: 900; opacity: 0; }
+  .cell.lit .cnt { opacity: 1; }
+  .cell .hop { position: absolute; top: -40px; font-size: 32px; }
+  .cell.mystery { color: transparent; }
+  .cell.mystery::after { content: "?"; color: var(--blue); position: absolute; }
+  .hint-txt { font-size: 15px; color: var(--sub); }
+  .hint-btn { padding: 10px 18px; border-radius: 999px; background: #fff8d6; border: 2px solid var(--yellow); font-size: 18px; font-weight: 700; min-height: 52px; }
+
+  .pad { width: min(420px, 100%); display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: auto; }
+  .key { height: clamp(58px, 9.5vh, 76px); border-radius: 18px; background: #fff; border: 3px solid var(--line);
+    box-shadow: 0 5px 0 var(--line); font-size: 32px; font-weight: 900; transition: transform .06s; }
+  .key:active, .key.press { transform: translateY(4px); box-shadow: 0 1px 0 var(--line); }
+  .key.del { background: #fff0f4; border-color: #ffc2d1; box-shadow: 0 5px 0 #ffc2d1; font-size: 24px; }
+
+  /* ---------- けっか ---------- */
+  #result { justify-content: center; gap: 14px; text-align: center; }
+  .res-card { width: min(460px, 100%); background: #fff; border-radius: 28px; border: 4px solid var(--line); padding: 20px; }
+  .res-card h2 { margin: 0 0 6px; font-size: 30px; }
+  .res-big { font-size: 56px; font-weight: 900; color: var(--green); font-variant-numeric: tabular-nums; }
+  .res-sub { font-size: 18px; color: var(--sub); margin: 4px 0; }
+  .newrec { display: inline-block; background: var(--pink); color: #fff; padding: 4px 14px; border-radius: 999px; font-weight: 900; animation: bob 1s infinite; }
+  .stars { font-size: 46px; letter-spacing: 6px; }
+  .getsticker { margin-top: 10px; font-size: 18px; }
+  .getsticker .em { display: block; font-size: 70px; animation: pop .7s ease; }
+  @keyframes pop { 0% { transform: scale(0) rotate(-30deg) } 70% { transform: scale(1.3) rotate(10deg) } 100% { transform: scale(1) } }
+
+  /* ---------- マスターひょう ---------- */
+  #book { gap: 12px; }
+  .book-head { width: min(560px, 100%); display: flex; align-items: center; gap: 10px; }
+  .book-head h2 { margin: 0; font-size: 24px; flex: 1; }
+  .mgrid { width: min(560px, 100%); display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .mitem { background: #fff; border-radius: 18px; border: 3px solid var(--line); padding: 10px; text-align: center; }
+  .mitem .f { font-size: 26px; font-weight: 900; }
+  .mitem .s { font-size: 22px; letter-spacing: 2px; }
+  .mitem .t { font-size: 13px; color: var(--sub); }
+  .mitem.m3 { border-color: var(--yellow); background: #fffbe6; }
+  .sgrid { width: min(560px, 100%); display: grid; grid-template-columns: repeat(auto-fill, minmax(58px, 1fr)); gap: 8px;
+    background: #fff; border-radius: 18px; border: 3px solid var(--line); padding: 12px; }
+  .sgrid div { font-size: 38px; text-align: center; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 12px; background: #f3faf5; }
+  .sgrid div.no { filter: grayscale(1) opacity(.25); }
+  .sec { width: min(560px, 100%); font-weight: 900; font-size: 18px; margin: 4px 0 -4px; }
+
+  .confetti { position: fixed; top: -20px; font-size: 26px; pointer-events: none; z-index: 50; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+  @media (orientation: landscape) and (max-height: 720px) and (min-width: 640px) {
+    #play { display: none; }
+    #play.on { display: grid; grid-template-columns: 1fr minmax(260px, 380px); grid-template-rows: auto auto auto 1fr;
+      column-gap: 18px; align-items: start; justify-items: center; }
+    #play .topbar, #play .stage, #play .qcard, #play .hint { grid-column: 1; }
+    #play .pad { grid-column: 2; grid-row: 1 / span 4; align-self: center; margin-top: 0; }
+    .q { font-size: 64px; }
+    .frog { font-size: 40px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section class="screen on" id="title">
+  <div class="frog-big" aria-hidden="true">🐸</div>
+  <h1 class="logo">ケロたんの<br>たしざん とっくん<small>くもん 2A へ すすもう！</small></h1>
+  <div class="menu">
+    <button class="big-btn main" id="goPractice"><span class="ic">🐾</span><span><b>れんしゅう</b><span>ケロたんが ぴょんぴょん ヒントを くれるよ（10もん）</span></span></button>
+    <button class="big-btn" id="goAttack"><span class="ic">⏱️</span><span><b>タイムアタック</b><span>9もん ぜんぶ！ なんびょうで できるかな？</span></span></button>
+    <button class="big-btn" id="goBook"><span class="ic">📒</span><span><b>マスターひょう</b><span>どの もんだいが とくい？ あつめた シールも みられるよ</span></span></button>
+  </div>
+  <div class="best-line" id="bestLine"></div>
+  <div class="row-mini"><button class="chip" id="sndBtn">🔊 おと オン</button></div>
+</section>
+
+<!-- プレイ -->
+<section class="screen" id="play">
+  <div class="topbar">
+    <button class="back" id="backBtn" aria-label="もどる">🏠</button>
+    <div class="dots" id="dots"></div>
+    <div class="timer" id="timer">0.0</div>
+  </div>
+  <div class="stage">
+    <div class="frog" id="frog">🐸</div>
+    <div class="bubble" id="bubble">がんばろう！</div>
+    <div class="combo" id="combo"></div>
+  </div>
+  <div class="qcard" id="qcard">
+    <div class="q"><span id="qa">14</span><span class="op">＋</span><span id="qb">3</span><span class="eq">＝</span><span class="ans" id="ans"></span></div>
+    <div class="stamp" id="stamp">⭕</div>
+  </div>
+  <div class="hint" id="hint"></div>
+  <div class="pad" id="pad"></div>
+</section>
+
+<!-- けっか -->
+<section class="screen" id="result">
+  <div class="res-card" id="resCard"></div>
+  <div class="menu">
+    <button class="big-btn main" id="againBtn"><span class="ic">🔁</span><span><b>もういちど</b></span></button>
+    <button class="big-btn" id="homeBtn"><span class="ic">🏠</span><span><b>メニューへ</b></span></button>
+  </div>
+</section>
+
+<!-- マスターひょう -->
+<section class="screen" id="book">
+  <div class="book-head">
+    <button class="chip" id="bookBack">🏠 もどる</button>
+    <h2>📒 マスターひょう</h2>
+  </div>
+  <div class="sec">⭐ 3つ ＝ 3びょう いないで せいかい！</div>
+  <div class="mgrid" id="mgrid"></div>
+  <div class="sec" id="stickerTitle">🌟 シールちょう</div>
+  <div class="sgrid" id="sgrid"></div>
+</section>
+
+<script>
+(() => {
+  "use strict";
+
+  // ===== もんだい（くもん 2A へむけた とっくん） =====
+  const PROBLEMS = [
+    [14, 3], [7, 3], [9, 3], [4, 3], [15, 3],
+    [3, 2], [10, 2], [7, 2], [10, 3],
+  ].map(([a, b]) => ({ a, b, ans: a + b, key: a + "+" + b }));
+
+  const STICKERS = ["🍎","🍓","🍉","🍩","🍦","🚃","🚀","🚒","🦖","🦁","🐼","🐧",
+                    "🦄","🐙","🦋","🌻","🌈","⭐","🎈","🎁","🏆","👑","💎","🍀",
+                    "🐬","🦕","🚅","🍰","🐞","🎸"];
+  const PRAISE = ["すごい！","やったね！","はやい！","てんさい！","ばっちり！","かんぺき！","その ちょうし！","ケロケロ〜♪"];
+  const PRAISE_FAST = ["はやっ！⚡","いなずま みたい！","めにも とまらない！","2Aでも いけるよ！"];
+
+  // ===== ほぞん =====
+  const SAVE_KEY = "tashizan-tokkun-v1";
+  let save = { best: null, stats: {}, stickers: [], sound: true, plays: 0 };
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (raw) save = Object.assign(save, JSON.parse(raw));
+  } catch (e) {}
+  function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+  function stat(k) { return save.stats[k] || (save.stats[k] = { ok: 0, miss: 0, bestMs: null }); }
+  function starsOf(k) {
+    const s = save.stats[k];
+    if (!s || !s.ok) return 0;
+    if (s.bestMs != null && s.bestMs <= 3000) return 3;
+    if (s.bestMs != null && s.bestMs <= 6000) return 2;
+    return 1;
+  }
+
+  // ===== おと（WebAudio） =====
+  let ac = null;
+  function audio() {
+    if (!save.sound) return null;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === "suspended") ac.resume();
+    } catch (e) { return null; }
+    return ac;
+  }
+  function tone(freq, dur, type = "sine", vol = .18, delay = 0) {
+    const c = audio(); if (!c) return;
+    const t = c.currentTime + delay;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01);
+    g.gain.exponentialRampToValueAtTime(.001, t + dur);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .02);
+  }
+  const sfx = {
+    tap: () => tone(660, .06, "triangle", .12),
+    ok: () => { tone(784, .12, "sine", .2); tone(1047, .2, "sine", .2, .1); },
+    fast: () => { [784, 988, 1175, 1568].forEach((f, i) => tone(f, .12, "triangle", .16, i * .06)); },
+    ng: () => { tone(220, .18, "square", .08); tone(180, .25, "square", .08, .14); },
+    hop: (i) => tone(523 * Math.pow(1.12246, i * 2), .14, "sine", .18),
+    fanfare: () => { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, .2, "triangle", .16, i * .13)); },
+  };
+
+  // ===== がめん =====
+  const $ = (id) => document.getElementById(id);
+  function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); }
+
+  function refreshTitle() {
+    $("sndBtn").textContent = save.sound ? "🔊 おと オン" : "🔇 おと オフ";
+    const m = PROBLEMS.filter(p => starsOf(p.key) === 3).length;
+    $("bestLine").textContent = (save.best ? `⏱️ タイムアタック さいこう ${fmt(save.best)}びょう　` : "") +
+      `⭐ マスター ${m}/${PROBLEMS.length}　🌟 シール ${save.stickers.length}まい`;
+  }
+  $("sndBtn").onclick = () => { save.sound = !save.sound; persist(); refreshTitle(); sfx.tap(); };
+
+  // ===== テンキー =====
+  const pad = $("pad");
+  ["1","2","3","4","5","6","7","8","9","0"].forEach(d => {
+    const b = document.createElement("button"); b.className = "key"; b.textContent = d; b.dataset.k = d; pad.appendChild(b);
+  });
+  {
+    const del = document.createElement("button"); del.className = "key del"; del.textContent = "けす"; del.dataset.k = "del";
+    pad.appendChild(del);
+    // 1-5 / 6-0 の 2だん + けす を はばひろく
+    del.style.gridColumn = "1 / -1";
+  }
+  pad.addEventListener("pointerdown", (e) => {
+    const b = e.target.closest(".key"); if (!b) return;
+    e.preventDefault(); press(b.dataset.k);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (!$("play").classList.contains("on")) return;
+    if (/^[0-9]$/.test(e.key)) press(e.key);
+    else if (e.key === "Backspace") press("del");
+  });
+
+  // ===== ゲーム =====
+  let mode = "practice", queue = [], idx = 0, input = "", locked = false;
+  let startAt = 0, qStart = 0, tick = null, combo = 0, misses = 0, firstTry = true, hintUsed = false;
+  let sessionFast = 0, firstOk = 0;
+
+  function fmt(ms) { return (ms / 1000).toFixed(1); }
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  function buildPractice() {
+    // にがてな もんだい ほど でやすい（ぜんぶ 1かいは でる）
+    const base = shuffle(PROBLEMS.slice());
+    const w = PROBLEMS.map(p => ({ p, w: 4 - starsOf(p.key) + (stat(p.key).miss > stat(p.key).ok ? 2 : 0) }));
+    const total = w.reduce((s, x) => s + x.w, 0);
+    let r = Math.random() * total, extra = w[0].p;
+    for (const x of w) { if ((r -= x.w) < 0) { extra = x.p; break; } }
+    const out = base.concat([extra]);
+    // おなじ もんだいが つづかないように
+    for (let i = 1; i < out.length; i++) if (out[i].key === out[i - 1].key) { [out[i], out[(i + 2) % out.length]] = [out[(i + 2) % out.length], out[i]]; }
+    return out;
+  }
+
+  function start(m) {
+    mode = m; idx = 0; combo = 0; misses = 0; sessionFast = 0; firstOk = 0;
+    queue = m === "attack" ? shuffle(PROBLEMS.slice()) : buildPractice();
+    $("timer").classList.toggle("hide", m !== "attack");
+    $("dots").innerHTML = queue.map(() => "<i></i>").join("");
+    show("play");
+    audio();
+    startAt = performance.now();
+    clearInterval(tick);
+    if (m === "attack") tick = setInterval(() => { $("timer").textContent = fmt(performance.now() - startAt); }, 100);
+    say(m === "attack" ? "よーい、スタート！" : "ゆっくりで いいよ。かぞえてみよう！");
+    nextQ();
+  }
+
+  function nextQ() {
+    const q = queue[idx];
+    input = ""; locked = false; firstTry = true; hintUsed = false;
+    $("qa").textContent = q.a; $("qb").textContent = q.b;
+    const ans = $("ans"); ans.textContent = ""; ans.className = "ans";
+    [...$("dots").children].forEach((d, i) => d.className = i < idx ? "ok" : i === idx ? "now" : "");
+    $("combo").textContent = combo >= 2 ? `🔥${combo}れんぞく` : "";
+    renderHint(q, false);
+    qStart = performance.now();
+  }
+
+  function press(k) {
+    if (locked) return;
+    sfx.tap();
+    const q = queue[idx];
+    if (k === "del") { input = input.slice(0, -1); }
+    else if (input.length < 2) { input += k; if (input === "0") input = ""; }
+    const ans = $("ans"); ans.textContent = input; ans.className = "ans";
+    if (input.length === String(q.ans).length) judge(q);
+  }
+
+  function judge(q) {
+    const ms = performance.now() - qStart;
+    const s = stat(q.key);
+    if (Number(input) === q.ans) {
+      locked = true;
+      $("ans").className = "ans good";
+      const fast = firstTry && !hintUsed && ms <= 3000;
+      if (firstTry) { s.ok++; firstOk++; if (!hintUsed && (s.bestMs == null || ms < s.bestMs)) s.bestMs = Math.round(ms); }
+      if (fast) sessionFast++;
+      combo = firstTry ? combo + 1 : 0;
+      persist();
+      fast ? sfx.fast() : sfx.ok();
+      stampShow("⭕");
+      frogJump();
+      say(fast ? pick(PRAISE_FAST) : pick(PRAISE));
+      if (combo > 0 && combo % 5 === 0) { confetti(14); say(`${combo}れんぞく せいかい！🔥`); }
+      renderHint(q, true);
+      setTimeout(() => { idx++; idx >= queue.length ? finish() : nextQ(); }, mode === "attack" ? 450 : 900);
+    } else {
+      locked = true;
+      if (firstTry) { s.miss++; persist(); }
+      firstTry = false; misses++; combo = 0;
+      $("ans").className = "ans bad";
+      $("qcard").classList.remove("shake"); void $("qcard").offsetWidth; $("qcard").classList.add("shake");
+      sfx.ng();
+      say(`おしい！ ${q.a}から ${q.b}つ すすんで みよう`);
+      setTimeout(() => {
+        input = ""; $("ans").textContent = ""; $("ans").className = "ans"; locked = false;
+        if (mode === "practice") playHops(q);
+      }, 600);
+    }
+  }
+
+  // ===== ヒント（すうじの せんを ぴょんぴょん） =====
+  function renderHint(q, solved) {
+    const h = $("hint");
+    if (mode === "attack") { h.innerHTML = ""; return; }
+    let cells = "";
+    for (let n = q.a; n <= q.ans; n++) {
+      const cls = n === q.a ? "cell start" : "cell" + (solved ? " lit" : " mystery");
+      const cnt = n > q.a ? `<span class="cnt">${n - q.a}</span>` : "";
+      cells += `<div class="${cls}" data-n="${n}">${n}${cnt}</div>`;
+    }
+    h.innerHTML = `<div class="line" id="line">${cells}</div>` +
+      (solved ? `<div class="hint-txt">${q.a} から ${q.b}つ すすむと ${q.ans}！</div>`
+              : `<button class="hint-btn" id="hintBtn">🐸 ヒント：ぴょんぴょん かぞえる</button>`);
+    if (!solved) $("hintBtn").onclick = () => playHops(q);
+  }
+  let hopTimer = null;
+  function playHops(q) {
+    hintUsed = true;
+    clearTimeout(hopTimer);
+    const line = $("line"); if (!line) return;
+    const cells = [...line.children];
+    cells.forEach(c => { c.classList.remove("lit"); const f = c.querySelector(".hop"); if (f) f.remove(); });
+    const btn = $("hintBtn"); if (btn) btn.disabled = true;
+    let i = 0;
+    const putFrog = (c) => { line.querySelectorAll(".hop").forEach(f => f.remove()); const f = document.createElement("span"); f.className = "hop"; f.textContent = "🐸"; c.appendChild(f); };
+    putFrog(cells[0]);
+    say(`${q.a} から スタート！`);
+    const step = () => {
+      i++;
+      if (i >= cells.length) { if (btn) btn.disabled = false; say("こたえは いくつかな？"); return; }
+      const c = cells[i];
+      c.classList.add("lit"); c.classList.remove("mystery");
+      putFrog(c); sfx.hop(i);
+      say(`ぴょん ${i}！ → ${c.dataset.n}`);
+      hopTimer = setTimeout(step, 650);
+    };
+    hopTimer = setTimeout(step, 650);
+  }
+
+  // ===== おわり =====
+  function finish() {
+    clearInterval(tick); clearTimeout(hopTimer);
+    const total = performance.now() - startAt;
+    save.plays = (save.plays || 0) + 1;
+    let html = "", newRec = false;
+    if (mode === "attack") {
+      if (misses === 0 && (save.best == null || total < save.best)) { newRec = true; save.best = Math.round(total); }
+      const stars = misses === 0 ? (total <= 20000 ? 3 : total <= 35000 ? 2 : 1) : (misses <= 2 ? 1 : 0);
+      html += `<h2>${stars >= 2 ? "🎉 クリア！" : "よく がんばったね！"}</h2>`;
+      html += `<div class="stars">${"⭐".repeat(stars)}${"☆".repeat(3 - stars)}</div>`;
+      html += `<div class="res-big">${fmt(total)}<small style="font-size:24px">びょう</small></div>`;
+      if (newRec && misses === 0) html += `<div class="newrec">しんきろく！</div>`;
+      html += `<div class="res-sub">まちがい ${misses}こ　${misses ? "（ノーミスで きろくに なるよ）" : "ノーミス！"}</div>`;
+      html += `<div class="res-sub">🎯 めざせ 20びょう！　さいこう ${save.best ? fmt(save.best) + "びょう" : "ー"}</div>`;
+    } else {
+      html += `<h2>🐸 れんしゅう おわり！</h2>`;
+      html += `<div class="res-big">${queue.length}もん クリア</div>`;
+      html += `<div class="res-sub">いっぱつ せいかい：${firstOk}もん　⚡はやわざ：${sessionFast}もん</div>`;
+      html += `<div class="res-sub">なれてきたら タイムアタックに ちょうせん！</div>`;
+    }
+    // シール
+    const earn = mode === "practice" || misses <= 2;
+    let got = [];
+    if (earn) got.push(drawSticker());
+    if (newRec && misses === 0) got.push(drawSticker());
+    got = got.filter(Boolean);
+    if (got.length) html += `<div class="getsticker">シール ゲット！<span class="em">${got.join(" ")}</span></div>`;
+    else if (save.stickers.length >= STICKERS.length) html += `<div class="getsticker">シール ぜんぶ コンプリート！👑</div>`;
+    persist();
+    $("resCard").innerHTML = html;
+    show("result");
+    sfx.fanfare(); confetti(newRec ? 40 : 22);
+  }
+  function drawSticker() {
+    const left = STICKERS.filter(s => !save.stickers.includes(s));
+    if (!left.length) return null;
+    const s = pick(left); save.stickers.push(s); return s;
+  }
+
+  // ===== マスターひょう =====
+  function renderBook() {
+    $("mgrid").innerHTML = PROBLEMS.map(p => {
+      const st = starsOf(p.key), s = save.stats[p.key];
+      const t = s && s.bestMs != null ? `いちばん はやい ${fmt(s.bestMs)}びょう` : s && s.ok ? "せいかい したよ" : "まだ だよ";
+      return `<div class="mitem m${st}"><div class="f">${p.a}＋${p.b}＝${st ? p.ans : "？"}</div>` +
+             `<div class="s">${"⭐".repeat(st)}${"☆".repeat(3 - st)}</div><div class="t">${t}</div></div>`;
+    }).join("");
+    $("stickerTitle").textContent = `🌟 シールちょう（${save.stickers.length}/${STICKERS.length}）`;
+    $("sgrid").innerHTML = STICKERS.map(s => `<div class="${save.stickers.includes(s) ? "" : "no"}">${save.stickers.includes(s) ? s : "❔"}</div>`).join("");
+  }
+
+  // ===== えんしゅつ =====
+  function pick(a) { return a[Math.random() * a.length | 0]; }
+  function say(t) { $("bubble").textContent = t; }
+  function frogJump() { const f = $("frog"); f.classList.remove("jump"); void f.offsetWidth; f.classList.add("jump"); }
+  function stampShow(t) { const s = $("stamp"); s.textContent = t; s.classList.remove("show"); void s.offsetWidth; s.classList.add("show"); }
+  function confetti(n) {
+    const em = ["🎉","⭐","🌟","🍀","🐸","💮"];
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement("div"); d.className = "confetti"; d.textContent = pick(em);
+      d.style.left = Math.random() * 100 + "vw";
+      d.style.animationDuration = (1.6 + Math.random() * 1.6) + "s";
+      d.style.animationDelay = (Math.random() * .4) + "s";
+      document.body.appendChild(d); setTimeout(() => d.remove(), 3800);
+    }
+  }
+
+  // ===== ボタン =====
+  $("goPractice").onclick = () => { sfx.tap(); start("practice"); };
+  $("goAttack").onclick = () => { sfx.tap(); start("attack"); };
+  $("goBook").onclick = () => { sfx.tap(); renderBook(); show("book"); };
+  $("bookBack").onclick = () => { sfx.tap(); refreshTitle(); show("title"); };
+  $("backBtn").onclick = () => { clearInterval(tick); clearTimeout(hopTimer); refreshTitle(); show("title"); };
+  $("againBtn").onclick = () => start(mode);
+  $("homeBtn").onclick = () => { refreshTitle(); show("title"); };
+
+  refreshTitle();
+})();
+</script>
+</body>
+</html>
