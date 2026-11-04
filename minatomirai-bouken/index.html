@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#2f6fe0">
+<title>あおちゃんの みなとみらい だいぼうけん</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #bfe3ff; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Rounded Mplus 1c", "Yu Gothic", system-ui, sans-serif;
+    color: #1c2b4a; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    overscroll-behavior: none;
+  }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: fixed; inset: 0; pointer-events: none; }
+  #hud button, #hud a { pointer-events: auto; }
+  button { font-family: inherit; cursor: pointer; }
+
+  .bar { position: absolute; top: max(8px, env(safe-area-inset-top)); display: flex; gap: 6px; align-items: center; }
+  #topL { left: max(8px, env(safe-area-inset-left)); }
+  #topR { right: max(8px, env(safe-area-inset-right)); }
+  .pill { background: rgba(255,255,255,.88); border-radius: 999px; padding: 6px 12px; font-weight: 800; font-size: 17px;
+          box-shadow: 0 2px 6px rgba(0,0,0,.15); white-space: nowrap; }
+  .hbtn { width: 46px; height: 46px; border-radius: 50%; border: none; background: rgba(255,255,255,.9); font-size: 22px;
+          display: grid; place-items: center; text-decoration: none; box-shadow: 0 2px 6px rgba(0,0,0,.18); color: inherit; }
+  #goal { position: absolute; top: calc(max(8px, env(safe-area-inset-top)) + 54px); left: 50%; transform: translateX(-50%);
+          width: max-content; max-width: calc(100vw - 24px); font-size: 15px; text-align: center; white-space: normal; background: rgba(28,43,74,.72); color: #fff; }
+
+  #stam { position: absolute; width: 58px; height: 58px; left: 0; top: 0; transition: opacity .3s; opacity: 0; }
+  #stam circle { fill: none; stroke-width: 8; }
+  #stam .bg { stroke: rgba(0,0,0,.25); }
+  #stam .fg { stroke: #3ddc6a; stroke-linecap: round; transform: rotate(-90deg); transform-origin: 50% 50%; }
+  #stam.tired .fg { stroke: #ff5a4c; }
+
+  #joy { position: absolute; width: 130px; height: 130px; border-radius: 50%; background: rgba(255,255,255,.22);
+         border: 3px solid rgba(255,255,255,.6); transform: translate(-50%,-50%); display: none; }
+  #joy i { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%;
+           background: rgba(255,255,255,.85); box-shadow: 0 2px 8px rgba(0,0,0,.25); }
+  #joyHint { position: absolute; left: max(24px, env(safe-area-inset-left)); bottom: max(24px, env(safe-area-inset-bottom));
+             width: 110px; height: 110px; border-radius: 50%; border: 3px dashed rgba(255,255,255,.75);
+             display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px; text-shadow: 0 1px 3px rgba(0,0,0,.5);
+             text-align: center; line-height: 1.3; }
+
+  #btns { position: absolute; right: max(14px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+          display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; gap: 10px; align-items: end; justify-items: center; }
+  .rbtn { border: none; border-radius: 50%; font-weight: 900; color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.25), 0 4px 10px rgba(0,0,0,.2); }
+  .rbtn:active, .rbtn.on { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.25); }
+  #bJump { width: 96px; height: 96px; background: #2f6fe0; font-size: 18px; grid-column: 2; grid-row: 2; line-height: 1.15; }
+  #bLet { width: 70px; height: 70px; background: #f08c00; font-size: 15px; grid-column: 2; grid-row: 1; }
+  #items { grid-column: 1; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 10px; }
+  .ibtn { width: 66px; height: 66px; border-radius: 18px; border: none; background: rgba(255,255,255,.92); font-size: 30px; position: relative;
+          box-shadow: 0 4px 0 rgba(0,0,0,.2); }
+  .ibtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+  .ibtn b { position: absolute; right: 4px; bottom: 2px; font-size: 16px; color: #1c2b4a; }
+  .ibtn.zero { opacity: .45; }
+
+  #talk { position: absolute; left: 50%; bottom: calc(max(16px, env(safe-area-inset-bottom)) + 140px); transform: translateX(-50%);
+          width: min(560px, calc(100% - 32px)); background: #fff; border-radius: 18px; padding: 12px 16px; font-size: 18px; font-weight: 700;
+          line-height: 1.6; box-shadow: 0 4px 14px rgba(0,0,0,.25); display: none; }
+  #talk::before { content: attr(data-who); display: block; font-size: 14px; color: #2f6fe0; }
+  #banner { position: absolute; left: 50%; top: 34%; transform: translate(-50%,-50%) scale(.8); opacity: 0; transition: all .35s;
+            background: rgba(255,255,255,.95); border-radius: 22px; padding: 14px 26px; font-size: 26px; font-weight: 900; text-align: center;
+            box-shadow: 0 6px 20px rgba(0,0,0,.25); width: max-content; max-width: calc(100vw - 32px); line-height: 1.4; }
+  #banner.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  #banner small { display: block; font-size: 16px; color: #5a6b8c; }
+
+  .ov { position: fixed; inset: 0; display: none; place-items: center; background: rgba(20,40,80,.55); padding: 16px; z-index: 10; }
+  .ov.show { display: grid; }
+  .card { background: #fff; border-radius: 26px; padding: 22px; width: min(560px, 100%); max-height: calc(100vh - 32px);
+          overflow: auto; box-shadow: 0 10px 30px rgba(0,0,0,.3); text-align: center; }
+  .card h1 { margin: 4px 0 6px; font-size: clamp(24px, 6vw, 34px); color: #1d4fb0; line-height: 1.3; }
+  .card h2 { margin: 0 0 10px; font-size: 22px; }
+  .card p { font-size: 17px; line-height: 1.7; margin: 8px 0; }
+  .big { display: block; width: 100%; margin: 10px 0 0; padding: 16px; font-size: 21px; font-weight: 900; border: none; border-radius: 18px;
+         background: #2f6fe0; color: #fff; box-shadow: 0 4px 0 #1d4fb0; }
+  .big:active { transform: translateY(3px); box-shadow: 0 1px 0 #1d4fb0; }
+  .big.sub { background: #e6f0ff; color: #1d4fb0; box-shadow: 0 4px 0 #b9cdf3; }
+  .big.warn { background: #fff0ee; color: #c63f33; box-shadow: 0 4px 0 #f3c3bd; }
+  .how { text-align: left; font-size: 16px; line-height: 1.7; padding-left: 1.2em; margin: 8px 0; }
+  .hero { font-size: 64px; line-height: 1; }
+  #mapCv { width: 100%; height: auto; border-radius: 16px; background: #3d8fd6; display: block; touch-action: none; }
+  #stamps { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 10px; }
+  #stamps span { font-size: 14px; font-weight: 800; padding: 5px 10px; border-radius: 999px; background: #eef1f6; color: #9aa7bf; }
+  #stamps span.got { background: #fff3bf; color: #8a5a00; }
+  [hidden] { display: none !important; }
+  #nogl { position: fixed; inset: 0; display: grid; place-items: center; background: #fff; font-size: 20px; padding: 24px; text-align: center; z-index: 20; }
+  .confetti { position: fixed; top: -20px; width: 12px; height: 16px; z-index: 5; pointer-events: none; animation: fall 2.6s linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  @media (max-width: 480px) {
+    .pill { font-size: 15px; padding: 5px 9px; }
+    .hbtn { width: 42px; height: 42px; font-size: 20px; }
+    #banner { font-size: 21px; padding: 12px 18px; }
+    #talk { font-size: 16px; }
+  }
+  @media (max-height: 480px) {
+    #bJump { width: 80px; height: 80px; font-size: 16px; }
+    .ibtn { width: 56px; height: 56px; font-size: 26px; }
+    #talk { bottom: 12px; font-size: 16px; width: min(460px, calc(100% - 330px)); min-width: 240px; }
+    #joyHint { width: 90px; height: 90px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="bar" id="topL">
+    <a class="hbtn" href="../" aria-label="メニューに もどる">🏠</a>
+    <span class="pill">⭐ <span id="starN">0</span>/<span id="starT">0</span></span>
+    <span class="pill">📍 <span id="stampN">0</span>/<span id="stampT">0</span></span>
+  </div>
+  <div class="bar" id="topR">
+    <button class="hbtn" id="bMap" aria-label="ちず">🗺️</button>
+    <button class="hbtn" id="bSound" aria-label="おと">🔊</button>
+    <button class="hbtn" id="bMenu" aria-label="とめる">⏸️</button>
+  </div>
+  <div class="pill" id="goal"></div>
+  <svg id="stam" viewBox="0 0 58 58"><circle class="bg" cx="29" cy="29" r="23"/><circle class="fg" id="stamFg" cx="29" cy="29" r="23"/></svg>
+  <div id="joyHint">ここを<br>ゆびで<br>うごかす</div>
+  <div id="joy"><i></i></div>
+  <div id="btns">
+    <div id="items">
+      <button class="ibtn" id="bBal" aria-label="ふうせん">🎈<b id="balN">0</b></button>
+      <button class="ibtn" id="bOni" aria-label="おにぎり">🍙<b id="oniN">0</b></button>
+    </div>
+    <button class="rbtn" id="bLet" hidden>はなす</button>
+    <button class="rbtn" id="bJump">ジャンプ</button>
+  </div>
+  <div id="talk" data-who=""></div>
+  <div id="banner"></div>
+</div>
+
+<div class="ov show" id="ovTitle">
+  <div class="card">
+    <div class="hero">🧢🌉</div>
+    <h1>あおちゃんの<br>みなとみらい だいぼうけん</h1>
+    <p>ランドマークタワーの てっぺんに、<b>きんいろの ほし</b>が ひかっているって！<br>
+       かべを よじのぼって、かさで そらを とんで、みなとみらいを たんけんしよう。</p>
+    <button class="big" id="bStart">はじめる</button>
+    <button class="big sub" id="bHow1">あそびかた</button>
+  </div>
+</div>
+
+<div class="ov" id="ovHow">
+  <div class="card">
+    <h2>あそびかた</h2>
+    <ul class="how">
+      <li>🕹️ ひだりがわを ゆびで なぞると <b>あるく</b>。みぎがわを なぞると <b>カメラ</b>が まわるよ。</li>
+      <li>🧗 <b>かべに むかって すすむと よじのぼれる</b>。みどりの わが なくなると おちちゃう。</li>
+      <li>⬆️ のぼっている ときに ジャンプで ぐいっと うえへ。「はなす」で てを はなす。</li>
+      <li>☂️ そらで もういちど ジャンプ → <b>かさ</b>で ふわふわ とべる。</li>
+      <li>🍙 おにぎりで げんき まんたん。🎈 ふうせんで そらへ うかぶ。</li>
+      <li>⭐ ほしを あつめると、のぼれる ながさが のびるよ。</li>
+      <li>🌊 うみに おちても およげるよ。</li>
+    </ul>
+    <p style="font-size:14px;color:#5a6b8c">キーボード: やじるし/WASD あるく・スペース ジャンプ・X はなす・E おにぎり・Q ふうせん・M ちず・マウスを ドラッグで カメラ</p>
+    <button class="big" id="bHowOk">わかった！</button>
+  </div>
+</div>
+
+<div class="ov" id="ovMap">
+  <div class="card">
+    <h2>🗺️ みなとみらいの ちず</h2>
+    <canvas id="mapCv" width="600" height="600"></canvas>
+    <div id="stamps"></div>
+    <button class="big" id="bMapOk">とじる</button>
+  </div>
+</div>
+
+<div class="ov" id="ovMenu">
+  <div class="card">
+    <h2>⏸️ ひとやすみ</h2>
+    <button class="big" id="bResume">つづける</button>
+    <button class="big sub" id="bHow2">あそびかた</button>
+    <button class="big sub" id="bHome">さくらぎちょう えきに もどる</button>
+    <button class="big warn" id="bReset">さいしょから やりなおす</button>
+  </div>
+</div>
+
+<div id="nogl" hidden>この きかいでは 3D が うごかないみたい…（WebGL が つかえません）</div>
+
+<script src="game.js?v=5c06526"></script>
+</body>
+</html>
