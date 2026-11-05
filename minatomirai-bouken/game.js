@@ -859,8 +859,7 @@ void main(){
   if (SHIP) npc(SHIP.cx + 6, SHIP.cz + 6, C.teal, 'ふなのりさん', 'にっぽんまるの まんなかの マストの うえに ほしが ひかっているよ。');
   npc(FW.cx + 8, FW.cz + 6, C.purple, 'かんらんしゃの ひと', 'きいろい だいから はこの やねに とびのってごらん。そらの てっぺんまで はこんでくれるよ。');
   npc(MARKP.x + 4, MARKP.bb[3] + 5, C.red, 'おもちゃやさん', 'マークイズの 3かいに トイザらスが あるよ。プラレールが いっぱい！ 🚄');
-  if (MAMA) NPCS.push({ x: MAMA.x, z: MAMA.z, y: -0.17, col: hex('#f783ac'), who: 'ママ', say: 'あおちゃん、ママは くもんの いりぐちの イスで まってるね 🪑 プリント 1まいで 1000えん！ のどが かわいたら おみず あるよ 🥤', sit: true, face: MAMA.face, mama: true });
-  else npc(MIDP.x - 4, MIDP.bb[3] + 4, C.orange, 'ママ', 'くもんの みなとみらい きょうしつは ミッドスクエアの 3かい。プリントを 1まい やると 1000えん もらえるよ ✏️');
+  // ママ は いつも あおちゃんに ついてくる（下の MOM）。くもんの まえの ベンチ だけ のこす
   npc(HOSP.x + 6, HOSP.bb[3] + 4, C.white, 'かんごしさん', 'ここは けいゆう びょういん。たかい ところから とびおりる ときは パラシュート 🪂 を わすれずにね！');
   npc(WPP.x - 3, WPP.bb[1] - 4, C.blue, 'ガイドさん', 'ワールドポーターズには ガチャガチャと えいがかんが あるよ。100えんだまが いるから りょうがえきを つかってね。');
   npc(poi('横浜赤レンガ倉庫1号館').x + 4, poi('横浜赤レンガ倉庫1号館').bb[3] + 4, C.yellow, 'パンやさん', 'スーパーおなら 💨 で そらへ！ おちる ときは ジャンプで パラシュート 🪂 を ひらいてね。');
@@ -915,6 +914,7 @@ void main(){
     }
     g.box(-0.18, -0.34, -th - 0.02, 0.18, 0.02, th + 0.02, C.black);
   });
+  const mHalo = mk((g) => { for (let i = 0; i < 20; i++) { const a0 = i / 20 * Math.PI * 2, a1 = (i + 1) / 20 * Math.PI * 2; g.beam([Math.cos(a0) * 0.3, 0, Math.sin(a0) * 0.3], [Math.cos(a1) * 0.3, 0, Math.sin(a1) * 0.3], 0.035, W); } });
   const mCone = mk((g) => g.cone(0, 0, 0, 1, 1, 10, W));
   const mImo = mk((g) => { g.sphere(0, 0, 0, 0.5, 6, hex('#a64ca6')); g.cyl(0.42, -0.08, 0, 0.12, 0.16, 5, hex('#f5d76e')); });
   const mWheel = mk((g) => {
@@ -1253,7 +1253,118 @@ void main(){
     afterUpdate(dt);
   }
 
+  // ================= ママ（いつも いっしょ。そらでは てんし 👼）=================
+  const MOM = { x: P.x - 1.6, y: P.y, z: P.z + 1.2, face: P.face, fly: 0, phase: 0, speed: 0, airT: 0, sit: false, cup: 0,
+    talkT: 10, waterT: 45, sayT: 0, prev: P.state, stars: save.stars.length, stamps: save.stamps.length, money: 0, wasFart: false, wasGlide: false };
+  const MOMCOL = hex('#f783ac');
+  function momSay(t, sec) { MOM.sayT = sec || 3.8; const b = $('momTalk'); b.textContent = t; b.style.display = 'block'; }
+  const pickL = (a) => a[Math.floor(Math.random() * a.length)];
+  const MOM_LINES = {
+    ground: ['あおちゃん、てを つないで いこうね 🤝', 'おなか すいてない？ 🍙', 'くるまに きを つけてね 🚗', 'ランドマークタワー、おおきいね〜', 'くもんの プリント、1まい やると 1000えん だよ ✏️',
+      'つぎは どこへ いく？', 'ママ、あおちゃんと おさんぽ たのしい！', 'ほしは あと いくつ かな？ ⭐', 'ちずを みてみよう 🗺️', 'かんらんしゃ のってみたいね 🎡', 'うみの かぜが きもちいいね 🌊', 'おばけやしき、こわくないかな？ 👻'],
+    climb: ['がんばれ〜！ あおちゃん！ 💪', 'しっかり つかまってね', 'みどりの わが へったら バルコニーで ひとやすみ してね'],
+    fly: ['ママも とぶよ〜 👼', 'たかいね〜！ ふわふわ', 'おりる まえに パラシュート ひらこうね 🪂', 'とおくまで みえるね！'],
+    swim: ['じょうずに およげてる！ 🏊', 'かべに むかって およぐと あがれるよ'],
+  };
+  const MOM_STATE = {
+    coaster: 'ママも うしろの せきに のるよ！ キャー！ 🎢', ghost: 'ママの てを はなさないでね… 👻', wheel: 'ママと いっしょに かんらんしゃ 🎡',
+    ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
+  };
+  function momUpdate(dt) {
+    const m = MOM; m.phase += dt * 6;
+    if (m.sayT > 0) { m.sayT -= dt; if (m.sayT <= 0) $('momTalk').style.display = 'none'; }
+    if (m.cup > 0) m.cup -= dt;
+    // できごと に あわせて はなす
+    if (P.state !== m.prev) { const L = MOM_STATE[P.state]; if (L) momSay(L, 3.5); if (m.prev === 'ghost') momSay('こわかったね〜！ よく がんばった 👏', 3.5); m.prev = P.state; }
+    if (P.farting && !m.wasFart) momSay('あおちゃんの おなら パワー！ ママも とぶよ 👼', 3); m.wasFart = P.farting;
+    if (P.glide && !m.wasGlide) momSay('パラシュート じょうず！ 🪂', 2.5); m.wasGlide = P.glide;
+    if (save.stars.length > m.stars) momSay('すごーい！ ほしを みつけたね ⭐', 3); m.stars = save.stars.length;
+    if (save.stamps.length > m.stamps) { const z = ZONES.find((q) => q.id === save.stamps[save.stamps.length - 1]); if (z) momSay(`${z.name} に ついたね！`, 3); } m.stamps = save.stamps.length;
+    const mon = walletTotal(); if (m.money && mon > m.money) momSay('おこづかい ふえたね！ だいじに つかおうね 💴', 3); m.money = mon;
+    // ときどき はなしかける
+    m.talkT -= dt;
+    if (m.talkT < 0 && m.sayT <= 0) {
+      m.talkT = 22 + Math.random() * 25;
+      const pool = P.state === 'climb' ? MOM_LINES.climb : P.state === 'swim' ? MOM_LINES.swim : (m.fly > 0.5 || P.state === 'heli') ? MOM_LINES.fly : MOM_LINES.ground;
+      if (P.st < maxSt() * 0.35 && P.state === 'climb') momSay('つかれたら ひとやすみ しようね', 3); else momSay(pickL(pool), 3.8);
+    }
+    // ときどき おみず
+    m.waterT -= dt;
+    if (m.waterT < 0 && P.state === 'ground' && m.fly < 0.3 && Math.hypot(m.x - P.x, m.z - P.z) < 5) {
+      m.waterT = 80; m.cup = 2.5; P.st = maxSt(); P.tired = false; SFX.drink(); momSay('のど かわいてない？ おみず どうぞ 🥤 ごくごく… ぷはー！', 3.5);
+    }
+    // どこへ いくか
+    const st = P.state; let tx, ty, tz, wantFly = false, sit = false;
+    if (st === 'ride' || st === 'wheel') { tx = P.x + Math.cos(P.face) * 0.75; tz = P.z - Math.sin(P.face) * 0.75; ty = P.y; sit = true; }
+    else if (st === 'coaster') { const q = CO.at(P.co.s - 2.6); tx = q.x; ty = q.y + 0.2; tz = q.z; sit = true; m.face = Math.atan2(q.tx, q.tz); }
+    else if (st === 'heli') { tx = HELI.x + Math.cos(HELI.yaw) * 3.4; tz = HELI.z - Math.sin(HELI.yaw) * 3.4; ty = HELI.y + 0.6; wantFly = true; }
+    else if (st === 'ghost') { tx = GH.door.x + 1.2; tz = GH.door.z; ty = 0; }
+    else {
+      tx = P.x - Math.sin(P.face) * 0.5 + Math.cos(P.face) * 1.3; tz = P.z - Math.cos(P.face) * 0.5 - Math.sin(P.face) * 1.3; ty = P.y; // みぎどなり
+      m.airT = (st === 'ground' || st === 'hurt') ? 0 : m.airT + dt;
+      if (m.airT > 0.6) wantFly = true;
+    }
+    const d = Math.hypot(tx - m.x, tz - m.z);
+    if (d > 70 || Math.abs(ty - m.y) > 60) { m.x = tx; m.y = ty; m.z = tz; }  // とおすぎたら すぐ そばへ
+    if (sit) { m.x = tx; m.y = ty; m.z = tz; m.sit = true; m.fly = Math.max(0, m.fly - dt * 3); m.speed = 0; if (st !== 'coaster') m.face = P.face; return; }
+    m.sit = false;
+    if (!wantFly) {
+      const sp = d > 1.6 ? Math.min(13, 2.5 + d * 1.6) : 0;
+      if (sp > 0) {
+        const nx = m.x + (tx - m.x) / d * Math.min(d, sp * dt), nz = m.z + (tz - m.z) / d * Math.min(d, sp * dt);
+        if (m.fly < 0.5 && blockedAt(nx, m.y + 0.05, nz)) wantFly = true; else { m.x = nx; m.z = nz; }
+      }
+      m.speed = sp;
+      if (!wantFly) {
+        const gy = groundBelow(m.x, Math.max(m.y, ty) + 0.6, m.z);
+        if (Math.abs(gy - ty) > 0.8) wantFly = true;          // ちがう たかさ → とんで いく
+        else { m.y += (gy - m.y) * Math.min(1, dt * 6); if (Math.abs(m.y - gy) < 0.2) m.fly = Math.max(0, m.fly - dt * 2.5); }
+      }
+    }
+    if (wantFly) {
+      m.fly = Math.min(1, m.fly + dt * 2.5);
+      const k = Math.min(1, dt * 2.6), fy = ty + 1.1 + Math.sin(time * 2) * 0.25;
+      m.x += (tx - m.x) * k; m.y += (fy - m.y) * k; m.z += (tz - m.z) * k; m.speed = 0;
+    }
+    const fd = Math.hypot(P.x - m.x, P.z - m.z);
+    if (d > 0.4 && m.speed > 0) m.face = Math.atan2(tx - m.x, tz - m.z); else if (fd > 0.3) m.face = Math.atan2(P.x - m.x, P.z - m.z);
+  }
+  function drawMomAt(x, y, z, face, fly, sit, speed) {
+    const pose = sit ? 'sit' : fly > 0.5 ? 'air' : speed > 0.5 ? 'walk' : 'stand';
+    const b = person(x, y - (sit ? 0.17 : 0), z, face, MOMCOL, pose, MOM.phase);
+    part(b, 0, 1.45, -0.18, 0.56, 0.75, 0.2, C.hair);                       // ながい かみ
+    part(b, 0, 1.78, -0.05, 0.56, 0.14, 0.5, C.hair);
+    if (!sit) part(b, 0, 0.62, 0, 0.66, 0.36, 0.44, hex('#ffd8e4'));       // スカート
+    part(b, -0.18, 1.41, 0.245, 0.08, 0.05, 0.02, C.pink); part(b, 0.18, 1.41, 0.245, 0.08, 0.05, 0.02, C.pink);
+    if (MOM.cup > 0) draw(mCube, M(b, T(0.36, 1.1, 0.3), S(0.14, 0.3, 0.14)), hex('#74c0fc'));
+    if (fly > 0.03) { // てんしの はね と わっか
+      const fl = Math.sin(time * 7) * 0.45;
+      [-1, 1].forEach((sd) => {
+        const w0 = M(b, T(sd * 0.16, 1.22, -0.24), RY(-sd * 0.25), RZ(sd * (0.45 + fl)));
+        draw(mCube, M(w0, T(sd * 0.85 * fly, 0.2, 0), S(1.7 * fly, 0.62 * fly, 0.08)), C.white, 0.8);
+        draw(mCube, M(w0, T(sd * 0.7 * fly, -0.18, 0.02), S(1.35 * fly, 0.42 * fly, 0.07)), hex('#e7f5ff'), 0.8);
+        draw(mCube, M(w0, T(sd * 0.55 * fly, -0.48, 0.04), S(0.95 * fly, 0.3 * fly, 0.06)), hex('#d0ebff'), 0.8);
+        draw(mCube, M(w0, T(sd * 1.62 * fly, 0.36, 0), RZ(sd * 0.5), S(0.45 * fly, 0.32 * fly, 0.08)), C.white, 0.8);
+      });
+      draw(mHalo, M(b, T(0, 2.05, -0.02), RX(0.15), S(fly * 1.15)), C.yellow, 1);
+    }
+    return b;
+  }
+  function drawMom() {
+    if (P.state === 'ghost') return;
+    drawMomAt(MOM.x, MOM.y, MOM.z, MOM.face, MOM.fly, MOM.sit, MOM.speed);
+  }
+  function placeMomTalk() {
+    const b = $('momTalk'); if (MOM.sayT <= 0) return;
+    let sp = null;
+    if (P.state === 'ghost') { const q = GHM.at(Math.max(0, P.gh.s - 1.6)); sp = project(q.x, GHM.Y + 2.4, q.z); }
+    else sp = project(MOM.x, MOM.y + 2.5, MOM.z);
+    const ok = sp && sp[0] > 90 && sp[0] < innerWidth - 90 && sp[1] > 120 && sp[1] < innerHeight - 40;
+    b.classList.toggle('fixed', !ok);
+    if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
+  }
   function afterUpdate(dt) {
+    momUpdate(dt);
     const MS = maxSt();
     if (P.state === 'ground') {
       P.st = Math.min(MS, P.st + MS * 0.45 * dt); if (P.tired && P.st >= MS * 0.5) P.tired = false;
@@ -1666,6 +1777,7 @@ void main(){
   function drawGhostScene() {
     gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     draw(GHM.mesh, T(0, GHM.Y, 0), W);
+    { const q = GHM.at(Math.max(0, P.gh.s - 1.6)); drawMomAt(q.x, GHM.Y, q.z, Math.atan2(q.ux, q.uz), 0, false, P.gh.cur ? 0 : 1); placeMomTalk(); }
     const h = P.gh, Y = GHM.Y, ev = h.cur, et = h.et, s0 = GHM.EV[Math.max(0, h.ev - 1)][0];
     const ghost = (x, y, z, sc, a) => {
       const f = Math.atan2(eye[0] - x, eye[2] - z), b = M(T(x, y, z), RY(f), S(sc));
@@ -1862,7 +1974,7 @@ void main(){
       draw(mCube, M(base, RZ(fl), T(0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
       draw(mCube, M(base, RZ(-fl), T(-0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
     }
-    drawAo();
+    drawAo(); drawMom();
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s)), [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
@@ -1878,7 +1990,7 @@ void main(){
     { const hb = M(T(HELI.x, HELI.y, HELI.z), RY(HELI.yaw)); draw(mCube, M(hb, T(0, 1.55, 0.9), S(1.85, 0.95, 1.5)), [0.7, 0.88, 1], 0.2, 0.4); }
     gl.depthMask(true); gl.disable(gl.BLEND);
 
-    drawTags();
+    drawTags(); placeMomTalk();
     const MS = maxSt(), sv = $('stam');
     const showSt = P.st < MS - 0.01 || P.state === 'climb';
     sv.style.opacity = showSt ? 1 : 0;
@@ -2028,5 +2140,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
