@@ -365,6 +365,6 @@
       else if (kind === 'ticket') attractionTicket(a.arg);
       else walletView();
     },
-    TOYS, PRIZES,
+    TOYS, PRIZES, toySvg,
   };
 })();

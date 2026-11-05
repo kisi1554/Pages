@@ -296,7 +296,7 @@ void main(){
   const NAMECOL = { '横浜ランドマークタワー': '#d9d2c4', 'ヨコハマ グランド インターコンチネンタル ホテル': '#f4f7fa', 'Yokohama World Porters': '#efe2c9', 'MARK IS minatomirai': '#f1e3c8', 'Cupnoodles Museum': '#f3f3f3' };
   const BLD = [];   // ちず と ドアさがし よう
   const LM_HEIGHT = 110; // ほんとうは 74（295.8m）。ゲームでは もっと たかく
-  MAP.bld.forEach((b) => { if (b.n === '横浜ランドマークタワー') b.y1 = LM_HEIGHT; });
+  MAP.bld.forEach((b) => { if (b.n === '横浜ランドマークタワー') b.y1 = LM_HEIGHT; if (b.n === 'プラウド横浜桜木町') b.y1 = 8.4; }); // プラウドは 10かいだて
   MAP.bld.forEach((b, bi) => {
     const p = b.p, n = p.length / 2;
     let base = NAMECOL[b.n] || (b.c && /^#[0-9a-f]{6}$/i.test(b.c) ? b.c : null) || BCOL[b.k] || BCOL.yes;
@@ -349,6 +349,7 @@ void main(){
       let cx = 0, cz = 0; const n = b.p.length / 2; for (let i = 0; i < n; i++) { cx += b.p[i * 2]; cz += b.p[i * 2 + 1]; }
       cx /= n; cz /= n; return cx > bb[0] && cx < bb[2] && cz > bb[1] && cz < bb[3] && b.y1 > 2;
     };
+    const cands = [];
     BLD.forEach((b) => {
       if (!mine(b)) return;
       const p = b.p, n = p.length / 2;
@@ -356,14 +357,23 @@ void main(){
         const xa = p[i * 2], za = p[i * 2 + 1], xb = p[((i + 1) % n) * 2], zb = p[((i + 1) % n) * 2 + 1];
         const dx = xb - xa, dz = zb - za, L2 = dx * dx + dz * dz; if (L2 < 4) continue;
         const t = clamp(((tx - xa) * dx + (tz - za) * dz) / L2, 0.2, 0.8);
-        const x = xa + dx * t, z = za + dz * t, d = Math.hypot(tx - x, tz - z);
-        if (!best || d < best.d) { const L = Math.sqrt(L2); best = { d, x, z, nx: dz / L, nz: -dx / L, ux: dx / L, uz: dz / L }; }
+        const x = xa + dx * t, z = za + dz * t, d = Math.hypot(tx - x, tz - z), L = Math.sqrt(L2);
+        cands.push({ d, x, z, nx: dz / L, nz: -dx / L, ux: dx / L, uz: dz / L });
       }
     });
-    if (!best) return null;
-    let k = 1.1;
-    while (k < 6 && (blockedAt(best.x + best.nx * k, 0, best.z + best.nz * k) || !isLand(best.x + best.nx * k, best.z + best.nz * k))) k += 0.4;
-    best.ox = best.x + best.nx * k; best.oz = best.z + best.nz * k;
+    // ドアの まえが ひろく あいている かべ（みち がわ）を ゆうせん する
+    const open = (c) => { let n = 0; for (const k of [2.5, 4, 5.5]) for (const sd of [-1.2, 0, 1.2]) { const x = c.x + c.nx * k + c.ux * sd, z = c.z + c.nz * k + c.uz * sd; if (!blockedAt(x, 0, z) && isLand(x, z)) n++; } return n; };
+    cands.forEach((c) => { c.score = c.d + (9 - open(c)) * 6; });
+    cands.sort((a, b) => a.score - b.score);
+    // ドアの そとが ほんとうに あいている かべ を えらぶ（となりの たてものの なか は だめ）
+    for (const c of cands) {
+      for (let k = 1.1; k < 6; k += 0.4) {
+        const ox = c.x + c.nx * k, oz = c.z + c.nz * k;
+        if (!blockedAt(ox, 0, oz) && isLand(ox, oz)) { best = Object.assign(c, { ox, oz }); return best; }
+      }
+    }
+    if (!cands.length) return null;
+    best = cands[0]; best.ox = best.x + best.nx * 1.1; best.oz = best.z + best.nz * 1.1;
     return best;
   }
 
@@ -509,7 +519,7 @@ void main(){
     return c;
   }
   // ちずの そと の よこはまの まち（だいたいの かたち）。ちずの はんい（BBOX）の ふちに ぴったり つなぐ
-  const BBX = { la0: 35.4489, la1: 35.4631, lo0: 139.6259, lo1: 139.6491 };
+  const BBX = { la0: 35.4489, la1: 35.4631, lo0: 139.6179, lo1: 139.6491 }; // tools/minatomirai-map.py の BBOX の うちがわ
   const OUTER = [[BBX.la1, 139.6320], [35.4660, 139.6330], [35.4720, 139.6390], [35.4820, 139.6480], [35.5000, 139.6700], [35.5600, 139.7300],
     [35.5600, 139.3800], [35.2800, 139.3800], [35.2800, 139.6600], [35.4200, 139.6700], [35.4380, 139.6620], [35.4440, 139.6560],
     [35.4470, 139.6520], [BBX.la0, BBX.lo1], [BBX.la0, BBX.lo0], [BBX.la1, BBX.lo0]].map(([a, b]) => GEO(a, b));
@@ -527,7 +537,7 @@ void main(){
   {
     const OUTCOL = shade(C.land, 0.93);
     // ちかく（あるける）: 2 ます、あたりはんてい つき
-    const NB = 2, nx0 = -360, nx1 = 640, nz0 = -480, nz1 = 520;
+    const NB = 2, nx0 = -560, nx1 = 640, nz0 = -560, nz1 = 520;
     for (let z = nz0; z < nz1; z += NB) {
       let run = null;
       for (let x = nx0; x <= nx1; x += NB) {
@@ -790,6 +800,96 @@ void main(){
     }
     return null;
   })();
+  // ================= おうち（プラウド横浜桜木町）・ようちえん・ようちえんバス =================
+  const PROWD = POI['プラウド横浜桜木町'] || { x: -92, z: -92, bb: [-96, -96, -90, -87] };
+  const YOCHI = POI['戸部幼稚園'] || { x: -192, z: -98, bb: [-197, -104, -187, -94] };
+  // いわかめよこちょう（みち）の いちばん おうちに ちかい ところ に「いわかめどおり」の のりば
+  const ROAD_GANKI = MAP.roads.find((r) => r.n === '岩亀横丁');
+  function nearestOnLine(p, x, z) {
+    let best = null;
+    for (let k = 0; k + 3 < p.length; k += 2) {
+      const ax = p[k], az = p[k + 1], bx = p[k + 2], bz = p[k + 3], dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1), qx = ax + dx * t, qz = az + dz * t, d = Math.hypot(qx - x, qz - z);
+      if (!best || d < best.d) { const L = Math.sqrt(L2); best = { d, x: qx, z: qz, ux: dx / L, uz: dz / L }; }
+    }
+    return best;
+  }
+  const HOMEDOOR = (() => {
+    const g = ROAD_GANKI ? nearestOnLine(ROAD_GANKI.p, PROWD.x, PROWD.z) : null;
+    const d = doorOn('プラウド横浜桜木町', g ? g.x : PROWD.x, g ? g.z : PROWD.bb[3] + 5);
+    return d || { ox: PROWD.x, oz: PROWD.bb[3] + 2, x: PROWD.x, z: PROWD.bb[3], nx: 0, nz: 1, ux: 1, uz: 0 };
+  })();
+  addDoor('home', HOMEDOOR, '🏠<br>おうち', hex('#f59f00'), () => openPlace('home'));
+  G.obox([HOMEDOOR.x + HOMEDOOR.nx * 0.1, 4.2, HOMEDOOR.z + HOMEDOOR.nz * 0.1], [HOMEDOOR.ux, 0, HOMEDOOR.uz], [0, 1, 0], [HOMEDOOR.nx, 0, HOMEDOOR.nz], 2.4, 0.45, 0.06, hex('#495057'));
+  const STOP = (() => {
+    const g = ROAD_GANKI ? nearestOnLine(ROAD_GANKI.p, HOMEDOOR.ox, HOMEDOOR.oz) : null;
+    if (!g) return freeSpot(HOMEDOOR.ox + 6, HOMEDOOR.oz);
+    // みちの はし（おうち がわ）
+    const nx = -g.uz, nz = g.ux, sg = ((HOMEDOOR.ox - g.x) * nx + (HOMEDOOR.oz - g.z) * nz) > 0 ? 1 : -1;
+    const f = freeSpot(g.x + nx * sg * 2.6, g.z + nz * sg * 2.6);
+    return { x: f.x, z: f.z, rx: g.x, rz: g.z, ux: g.ux, uz: g.uz };
+  })();
+  // バスていの かんばん（ようちえんバスの のりば）
+  G.cyl(STOP.x, 0, STOP.z, 0.09, 2.6, 6, C.gray);
+  G.cyl(STOP.x, 2.6, STOP.z, 0.55, 0.12, 14, hex('#ffd43b'));
+  G.box(STOP.x - 0.2, 1.2, STOP.z - 0.06, STOP.x + 0.2, 2.2, STOP.z + 0.06, C.white);
+  // とべ ようちえん: ちずに たてものが なければ つくる
+  const YDOOR = (() => {
+    let d = doorOn('戸部幼稚園', STOP.x, STOP.z);
+    if (!d) {
+      const [x0, z0, x1, z1] = YOCHI.bb, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, hx = Math.max(2.5, (x1 - x0) / 2 - 1), hz = Math.max(2, (z1 - z0) / 2 - 1);
+      B(cx - hx, 0, cz - hz, cx + hx, 2.6, cz + hz, hex('#ffe8cc'), 0, hex('#ff922b'));
+      BLD.push({ n: '戸部幼稚園', p: [cx - hx, cz - hz, cx + hx, cz - hz, cx + hx, cz + hz, cx - hx, cz + hz], y1: 2.6, col: hex('#ffe8cc') });
+      d = doorOn('戸部幼稚園', STOP.x, STOP.z);
+    }
+    return d;
+  })();
+  if (YDOOR) {
+    addDoor('yochien', YDOOR, '🎒<br>ようちえん', hex('#e64980'), () => openPlace('yochien'));
+    // ようちえんの しるし: にじいろの かんばん と チューリップ
+    const c = [YDOOR.x + YDOOR.nx * 0.12, 3.4, YDOOR.z + YDOOR.nz * 0.12];
+    ['#ff6b6b', '#ffd43b', '#51cf66', '#4dabf7', '#cc5de8'].forEach((h, i) => G.obox([c[0] + YDOOR.ux * (i - 2) * 0.7, c[1], c[2] + YDOOR.uz * (i - 2) * 0.7], [YDOOR.ux, 0, YDOOR.uz], [0, 1, 0], [YDOOR.nx, 0, YDOOR.nz], 0.34, 0.34, 0.06, hex(h)));
+    for (let i = -3; i <= 3; i++) if (i) { const x = YDOOR.ox + YDOOR.ux * i * 0.9 + YDOOR.nx * 0.6, z = YDOOR.oz + YDOOR.uz * i * 0.9 + YDOOR.nz * 0.6; G.cyl(x, 0, z, 0.03, 0.5, 4, C.leaf); G.sphere(x, 0.6, z, 0.16, 4, hex(['#ff6b6b', '#ffd43b', '#f783ac'][(i + 3) % 3])); }
+  }
+  // --- ようちえんバスの みち（ほんものの みちを たどる）---
+  const BUSR = (() => {
+    const DRIVE = { trunk: 1, primary: 1, secondary: 1, tertiary: 1, tertiary_link: 1, unclassified: 1, residential: 1, service: 1, living_street: 1 };
+    const key = (x, z) => x.toFixed(1) + ',' + z.toFixed(1), nodes = new Map();
+    const node = (x, z) => { const k = key(x, z); let n = nodes.get(k); if (!n) { n = { x, z, e: [] }; nodes.set(k, n); } return n; };
+    MAP.roads.forEach((r) => {
+      if (r.a || !DRIVE[r.c]) return;
+      for (let k = 0; k + 3 < r.p.length; k += 2) {
+        const a = node(r.p[k], r.p[k + 1]), b = node(r.p[k + 2], r.p[k + 3]), w = Math.hypot(a.x - b.x, a.z - b.z);
+        a.e.push([b, w]); b.e.push([a, w]);
+      }
+    });
+    const all = [...nodes.values()];
+    const nearest = (x, z) => { let b = null, bd = 1e9; for (const n of all) { const d = Math.hypot(n.x - x, n.z - z); if (d < bd && n.e.length) { bd = d; b = n; } } return b; };
+    if (!YDOOR) return null;
+    const s0 = nearest(STOP.rx || STOP.x, STOP.rz || STOP.z), t0 = nearest(YDOOR.ox, YDOOR.oz);
+    if (!s0 || !t0) return null;
+    // ダイクストラ（ちいさい ので かんたんに）
+    const dist = new Map([[s0, 0]]), prev = new Map(), H2 = [[0, s0]];
+    const push = (it) => { H2.push(it); let i = H2.length - 1; while (i) { const q = (i - 1) >> 1; if (H2[q][0] <= H2[i][0]) break; [H2[q], H2[i]] = [H2[i], H2[q]]; i = q; } };
+    const pop = () => { const top = H2[0], last = H2.pop(); if (H2.length) { H2[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < H2.length && H2[l][0] < H2[m][0]) m = l; if (r < H2.length && H2[r][0] < H2[m][0]) m = r; if (m === i) break; [H2[m], H2[i]] = [H2[i], H2[m]]; i = m; } } return top; };
+    while (H2.length) {
+      const [ud, u] = pop(); if (ud > dist.get(u)) continue; if (u === t0) break;
+      for (const [v, w] of u.e) { const nd = ud + w; if (nd < (dist.has(v) ? dist.get(v) : 1e18)) { dist.set(v, nd); prev.set(v, u); push([nd, v]); } }
+    }
+    const pts = []; let n = t0; if (n !== s0 && !prev.has(n)) return null;
+    while (n) { pts.unshift([n.x, n.z]); n = prev.get(n); }
+    pts.unshift([STOP.x, STOP.z]); pts.push([YDOOR.ox, YDOOR.oz]);
+    const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = L[L.length - 1];
+    function at(s) {
+      s = clamp(s, 0, total); let i = 1; while (i < L.length - 1 && L[i] < s) i++;
+      const t = (s - L[i - 1]) / ((L[i] - L[i - 1]) || 1), [ax, az] = pts[i - 1], [bx, bz] = pts[i], l = Math.hypot(bx - ax, bz - az) || 1;
+      return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, ux: (bx - ax) / l, uz: (bz - az) / l };
+    }
+    return { pts, total, at };
+  })();
+  const BUS = { s: 0, dir: 1, park: 'stop', yaw: STOP.ux !== undefined ? Math.atan2(STOP.ux, STOP.uz) : 0 };
+  DOORS.push({ id: 'busstop', x: STOP.x, z: STOP.z, label: '🚌<br>のる', color: hex('#fab005'), run: () => startBus(1) });
   const staticMesh = G.upload();
 
   // ================= うごく あしば（かんらんしゃ）=================
@@ -850,10 +950,10 @@ void main(){
   pick('imo', poi('横浜ハンマーヘッド').x, poi('横浜ハンマーヘッド').bb[3] + 4); pick('imo', poi('パシフィコ横浜').x, poi('パシフィコ横浜').bb[3] + 4);
 
   const STA = poi('桜木町駅');
-  const START = (() => { const f = freeSpot(STA.bb[2] + 8, STA.z - 8); const dx = LMC.x - f.x, dz = LMC.z - f.z; return { x: f.x, y: 0, z: f.z, yaw: Math.atan2(-dx, -dz), face: Math.atan2(dx, dz) }; })();
+  const START = (() => { const f = { x: HOMEDOOR.ox, z: HOMEDOOR.oz }, nx = HOMEDOOR.nx, nz = HOMEDOOR.nz; return { x: f.x, y: 0, z: f.z, yaw: Math.atan2(nx, nz), face: Math.atan2(-nx, -nz) }; })(); // おうちを みて たつ（カメラは みち がわ） // おうち（プラウド）の まえ から
   const NPCS = [];
   function npc(x, z, col, who, say, y) { const f = y ? { x, z } : freeSpot(x, z); NPCS.push({ x: f.x, z: f.z, y: y || 0, col, who, say }); }
-  npc(START.x + 3, START.z - 2, C.orange, 'えきの おにいさん', 'あおちゃん！ ランドマークタワーの てっぺんに きんいろの ほしが あるんだって。かべに むかって すすむと よじのぼれるよ！');
+  npc(START.x + 3, START.z - 2, C.orange, 'となりの おにいさん', 'あおちゃん！ ランドマークタワーの てっぺんに きんいろの ほしが あるんだって。かべに むかって すすむと よじのぼれるよ！');
   npc(LMC.x + 6, LMB[3] + 4, C.pink, 'おねえさん', 'みどりの わが へったら、しろい バルコニーで ひとやすみ。🍙 を たべると げんき まんたん！');
   if (CAB) npc(CAB.ends[1].door.x + 2, CAB.ends[1].door.z + 1, C.green, 'えきいんさん', 'エアキャビンは こども 500えん。うみの うえを とんで、ワールドポーターズの ちかくまで いけるよ 🚡');
   if (SHIP) npc(SHIP.cx + 6, SHIP.cz + 6, C.teal, 'ふなのりさん', 'にっぽんまるの まんなかの マストの うえに ほしが ひかっているよ。');
@@ -884,6 +984,9 @@ void main(){
     zp('hammerhead', 'ハンマーヘッド', '横浜ハンマーヘッド'),
     zp('osanbashi', 'おおさんばし', '大さん橋', { r: 40 }),
     zp('zounohana', 'ぞうのはなパーク', '象の鼻パーク', { r: 25 }),
+    { id: 'home', name: 'あおちゃんの おうち（プラウド）', x: PROWD.x, z: PROWD.z, r: 12 },
+    { id: 'gankiro', name: 'いわかめどおり（バスてい）', x: STOP.x, z: STOP.z, r: 5 },
+    { id: 'yochien', name: 'とべ ようちえん', x: YOCHI.x, z: YOCHI.z, r: 14 },
   ].filter(Boolean);
   $('stampT').textContent = ZONES.length;
 
@@ -1174,7 +1277,7 @@ void main(){
     time += dt;
     updatePlats(time);
     if (P.state === 'ride') { rideUpdate(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
-    const SP = { coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
+    const SP = { bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
     if (SP) { SP(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
     if (P.plat) { P.x += P.plat.dx; P.y += P.plat.dy; P.z += P.plat.dz; }
     readMove();
@@ -1268,7 +1371,7 @@ void main(){
   };
   const MOM_STATE = {
     coaster: 'ママも うしろの せきに のるよ！ キャー！ 🎢', ghost: 'ママの てを はなさないでね… 👻', wheel: 'ママと いっしょに かんらんしゃ 🎡',
-    ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
+    bus: 'ママも いっしょに ようちえんバス 🚌 シートベルト よし！', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
   };
   function momUpdate(dt) {
     const m = MOM; m.phase += dt * 6;
@@ -1295,7 +1398,8 @@ void main(){
     }
     // どこへ いくか
     const st = P.state; let tx, ty, tz, wantFly = false, sit = false;
-    if (st === 'ride' || st === 'wheel') { tx = P.x + Math.cos(P.face) * 0.75; tz = P.z - Math.sin(P.face) * 0.75; ty = P.y; sit = true; }
+    if (st === 'bus') { tx = P.x + Math.cos(P.face) * 0.9; tz = P.z - Math.sin(P.face) * 0.9; ty = P.y; sit = true; }
+    else if (st === 'ride' || st === 'wheel') { tx = P.x + Math.cos(P.face) * 0.75; tz = P.z - Math.sin(P.face) * 0.75; ty = P.y; sit = true; }
     else if (st === 'coaster') { const q = CO.at(P.co.s - 2.6); tx = q.x; ty = q.y + 0.2; tz = q.z; sit = true; m.face = Math.atan2(q.tx, q.tz); }
     else if (st === 'heli') { tx = HELI.x + Math.cos(HELI.yaw) * 3.4; tz = HELI.z - Math.sin(HELI.yaw) * 3.4; ty = HELI.y + 0.6; wantFly = true; }
     else if (st === 'ghost') { tx = GH.door.x + 1.2; tz = GH.door.z; ty = 0; }
@@ -1424,7 +1528,7 @@ void main(){
     if (did !== lastDoorId) { lastDoorId = did; const b = $('bEnter'); b.hidden = !curDoor; if (curDoor) { b.innerHTML = curDoor.label; b.style.background = `rgb(${curDoor.color.map((v) => v * 255 | 0).join(',')})`; } }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z, yaw: cam.yaw }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
-    const lab = { ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
+    const lab = { bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
       ((P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ');
     const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
     if (lab + letLab !== lastLab) { lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
@@ -1620,6 +1724,62 @@ void main(){
       draw();
     };
     draw(); show('ovHosp', true); setPaused();
+  }
+  // --- ようちえんバス ---
+  function busPose() {
+    if (!BUSR) return { x: STOP.x, z: STOP.z, yaw: BUS.yaw };
+    if (P.state === 'bus') return { x: BUS.x, z: BUS.z, yaw: BUS.yaw };
+    const s0 = BUS.park === 'stop' ? 0.01 : BUSR.total - 0.01, q = BUSR.at(BUS.park === 'stop' ? Math.min(9, BUSR.total * 0.3) : BUSR.total - Math.min(9, BUSR.total * 0.3)); // いりぐちの まえ には とめない
+    return { x: q.x, z: q.z, yaw: Math.atan2(q.ux, q.uz) + (BUS.park === 'stop' ? 0 : Math.PI) + 0 * s0 };
+  }
+  let busSnd = 0;
+  function startBus(dir) {
+    if (!BUSR) { banner('🚌 バスの みちが みつからないよ', 2); return; }
+    BUS.dir = dir; BUS.s = dir > 0 ? 0 : BUSR.total; const q = BUSR.at(BUS.s); BUS.x = q.x; BUS.z = q.z; BUS.yaw = Math.atan2(q.ux * dir, q.uz * dir);
+    P.state = 'bus'; P.vx = P.vy = P.vz = 0; P.glide = false; P.wall = null; lastDoorId = '-';
+    $('talk').style.display = 'none'; lastTalk = null; SFX.door();
+    banner(dir > 0 ? '🚌 ようちえんバス しゅっぱつ！<small>いわかめどおり → とべ ようちえん</small>' : '🚌 かえりの バス しゅっぱつ！<small>とべ ようちえん → いわかめどおり</small>', 3);
+  }
+  function busUpdate(dt) {
+    const b = BUS; b.s += b.dir * 6 * dt; const q = BUSR.at(b.s);
+    b.x = q.x; b.z = q.z;
+    const want = Math.atan2(q.ux * b.dir, q.uz * b.dir); let d = want - b.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; b.yaw += d * Math.min(1, 5 * dt);
+    P.x = b.x - Math.cos(b.yaw) * 0.6; P.z = b.z + Math.sin(b.yaw) * 0.6; P.y = 0.55; P.face = b.yaw; P.speed = 0;
+    if ((busSnd -= dt) < 0) { busSnd = 0.22; tone(65 + Math.random() * 6, 0.22, 'sawtooth', 0.025); }
+    if (b.s <= 0 || b.s >= BUSR.total) {
+      const toY = b.dir > 0, d2 = toY ? { x: YDOOR.ox, z: YDOOR.oz } : { x: STOP.x, z: STOP.z };
+      b.park = toY ? 'yochien' : 'stop'; P.x = d2.x; P.z = d2.z; P.y = 0; P.state = 'ground'; P.ground = true; lastDoorId = '-';
+      P.face = b.yaw; cam.yaw = b.yaw + Math.PI; cam.pitch = 0.45; // カメラは みちに そって うしろ
+      tone(880, 0.15, 'sine', 0.1); tone(660, 0.25, 'sine', 0.1, null, 0.18);
+      banner(toY ? '🎒 とべ ようちえん に ついたよ！<small>ピンクの ひかりの いりぐちから はいろう</small>' : '🏠 いわかめどおり に ついたよ！<small>おうちは すぐ そこ</small>', 3);
+      if (!toY) momSay('おかえり、あおちゃん！ ようちえん たのしかった？', 4);
+    }
+  }
+  function drawBus() {
+    const q = busPose(), b = M(T(q.x, 0, q.z), RY(q.yaw)), Y2 = hex('#ffd43b');
+    draw(mCube, M(b, T(0, 1.05, 0), S(3.0, 1.3, 6.4)), Y2);
+    draw(mCube, M(b, T(0, 1.0, 0), S(3.04, 0.18, 6.44)), hex('#f76707'));
+    [[-1.5, 2.05], [1.5, 2.05]].forEach(([x]) => { draw(mCube, M(b, T(x * 0.98, 2.05, 3.0), S(0.12, 0.8, 0.12)), Y2); draw(mCube, M(b, T(x * 0.98, 2.05, -2.8), S(0.12, 0.8, 0.12)), Y2); });
+    draw(mCube, M(b, T(0, 2.55, 0), S(3.0, 0.2, 6.4)), Y2);
+    draw(mCube, M(b, T(0, 2.75, 0.4), S(1.6, 0.25, 0.9)), C.white);
+    [-0.6, 0.6].forEach((x) => { draw(mSphere, M(b, T(x, 1.55, 3.21), S(0.32, 0.32, 0.05)), C.white); draw(mSphere, M(b, T(x, 1.55, 3.25), S(0.15, 0.17, 0.04)), C.black); });
+    draw(mCube, M(b, T(0, 1.1, 3.22), S(0.6, 0.1, 0.04)), hex('#e03131'));
+    [[-1.4, 2.1], [1.4, 2.1], [-1.4, -2.1], [1.4, -2.1]].forEach(([x, z]) => draw(mCube, M(b, T(x, 0.42, z), S(0.32, 0.84, 0.84)), C.black));
+    if (P.state === 'bus') for (let k = 0; k < 3; k++) person(q.x + Math.cos(q.yaw) * 0.7 - Math.sin(q.yaw) * (k * 1.6 - 2.4), 0.55, q.z - Math.sin(q.yaw) * 0.7 - Math.cos(q.yaw) * (k * 1.6 - 2.4), q.yaw, [C.green, C.orange, C.purple][k], 'sit', 0);
+  }
+  function openPlace(kind) {
+    if (!window.Places) return;
+    SFX.door(); show('ovPlace', true); setPaused();
+    window.Places.open(kind, {
+      wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
+      onClose: (res) => {
+        if (res && res.rest) { P.st = maxSt(); P.tired = false; }
+        if (res && res.stay) { window.Places.again(res.stay); return; }
+        show('ovPlace', false); setPaused(); stepOut();
+        if (res && res.bus) startBus(res.bus);
+        else if (kind === 'home') momSay(res && res.rest ? 'よく ねたね！ さあ でかけよう' : 'いってきます！ ママも いっしょ', 3);
+      },
+    });
   }
   function heliEnter() {
     P.state = 'heli'; P.glide = false; P.vx = P.vy = P.vz = 0; HELI.vx = HELI.vy = HELI.vz = 0; HELI.home = false; lastDoorId = '-';
@@ -1822,7 +1982,7 @@ void main(){
     else if (P.glide) pose = 'up';
     else if (P.state === 'air') pose = 'air';
     else if (P.speed > 0.5) pose = 'walk';
-    if (P.state === 'heli' || P.state === 'coaster') pose = 'sit';
+    if (P.state === 'heli' || P.state === 'coaster' || P.state === 'bus') pose = 'sit';
     if (P.state === 'coaster' || P.state === 'wheel') return; // じぶんの め で みている
     const base = P.state === 'hurt' ? M(T(P.x, P.y + 0.33, P.z), RY(P.face), RX(-Math.PI / 2)) : M(T(P.x, P.y, P.z), RY(P.face)); const { lg, ar, al } = poseAngles(pose, P.phase);
     const sitP = pose === 'sit';
@@ -1857,7 +2017,7 @@ void main(){
       let a = (lo - o[i]) / d[i], c = (hi - o[i]) / d[i]; if (a > c) { const s = a; a = c; c = s; }
       t0 = Math.max(t0, a); t1 = Math.min(t1, c); if (t0 > t1) return 2;
     }
-    return t0;
+    return t0 <= 0.0001 ? 2 : t0; // すぐ そばの かべ（はじめから なか）は むし
   }
   function project(x, y, z) {
     const v = mul(proj, view);
@@ -1896,10 +2056,10 @@ void main(){
       eye = [ex, ey, ez]; tgt = [ex + Math.sin(yw) * Math.cos(pt), ey + Math.sin(pt), ez + Math.cos(yw) * Math.cos(pt)];
     }
     if (!FP[P.state]) {
-    tgt = P.state === 'heli' ? [HELI.x, HELI.y + 1.6, HELI.z] : [P.x, P.y + 1.2, P.z];
+    tgt = P.state === 'heli' ? [HELI.x, HELI.y + 1.6, HELI.z] : P.state === 'bus' ? [P.x, 2.4, P.z] : [P.x, P.y + 1.2, P.z];
     const cp = Math.cos(cam.pitch);
     const dir = [Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), Math.cos(cam.yaw) * cp];
-    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0) + (P.state === 'heli' ? 8 : 0) + (P.state === 'hurt' ? 4 : 0);
+    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0) + (P.state === 'heli' ? 8 : 0) + (P.state === 'hurt' ? 4 : 0) + (P.state === 'bus' ? 6 : 0);
     const d = [dir[0] * dist, dir[1] * dist, dir[2] * dist];
     let tm = 1;
     if (P.state !== 'ride') {
@@ -1941,7 +2101,7 @@ void main(){
       draw(mCube, M(T(p.cx, p.cy - 0.8, p.cz), S(2.2, 1.6, 2.2)), CAB_COL[i % CAB_COL.length]);
       draw(mCube, M(T(p.cx, p.cy - 0.75, p.cz), S(2.26, 0.6, 1.6)), [0.6, 0.85, 1]);
     });
-    drawCoaster(); drawHeli(); if (P.state === 'hurt') drawAmb();
+    drawCoaster(); drawHeli(); drawBus(); if (P.state === 'hurt') drawAmb();
     // エアキャビンの ゴンドラ
     if (CAB) {
       const n = 12, cyc = CAB.total * 2;
@@ -1982,7 +2142,7 @@ void main(){
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s)), [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
-    const gy = { climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
+    const gy = { bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
     if (gy !== null && P.y - gy < 30) draw(mDisc, M(T(P.x, gy + 0.03, P.z), S(0.45 * Math.max(0.4, 1 - (P.y - gy) / 30))), C.black, 1, 0.3);
     STARS.forEach((s) => {
@@ -1992,6 +2152,7 @@ void main(){
     });
     DOORS.forEach((dd) => { if (dd.id === 'heli' && P.state === 'heli') return; draw(mCube, M(T(dd.x, (dd.y || 0) + 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)); });
     { const hb = M(T(HELI.x, HELI.y, HELI.z), RY(HELI.yaw)); draw(mCube, M(hb, T(0, 1.55, 0.9), S(1.85, 0.95, 1.5)), [0.7, 0.88, 1], 0.2, 0.4); }
+    { const bq = busPose(), bb = M(T(bq.x, 0, bq.z), RY(bq.yaw)); draw(mCube, M(bb, T(0, 2.05, 0.1), S(2.86, 0.8, 5.6)), [0.75, 0.9, 1], 0.2, 0.35); }
     gl.depthMask(true); gl.disable(gl.BLEND);
 
     drawTags(); placeMomTalk();
@@ -2103,7 +2264,7 @@ void main(){
       },
     });
   }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp'].some((i) => $(i).classList.contains('show')); }
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
     paused = anyOv();
     if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
@@ -2144,5 +2305,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
