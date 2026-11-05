@@ -1303,10 +1303,11 @@ void main(){
       tx = P.x - Math.sin(P.face) * 0.5 + Math.cos(P.face) * 1.3; tz = P.z - Math.cos(P.face) * 0.5 - Math.sin(P.face) * 1.3; ty = P.y; // みぎどなり
       m.airT = (st === 'ground' || st === 'hurt') ? 0 : m.airT + dt;
       if (m.airT > 0.6) wantFly = true;
+      else if (st !== 'ground' && st !== 'hurt') ty = groundBelow(P.x, P.y + 0.3, P.z); // ちょっと ジャンプ では とばない
     }
     const d = Math.hypot(tx - m.x, tz - m.z);
     if (d > 70 || Math.abs(ty - m.y) > 60) { m.x = tx; m.y = ty; m.z = tz; }  // とおすぎたら すぐ そばへ
-    if (sit) { m.x = tx; m.y = ty; m.z = tz; m.sit = true; m.fly = Math.max(0, m.fly - dt * 3); m.speed = 0; if (st !== 'coaster') m.face = P.face; return; }
+    if (sit) { m.x = tx; m.y = ty; m.z = tz; m.sit = true; m.fly = 0; m.flying = false; m.speed = 0; if (st !== 'coaster') m.face = P.face; return; }
     m.sit = false;
     if (!wantFly) {
       const sp = d > 1.6 ? Math.min(13, 2.5 + d * 1.6) : 0;
@@ -1326,6 +1327,9 @@ void main(){
       const k = Math.min(1, dt * 2.6), fy = ty + 1.1 + Math.sin(time * 2) * 0.25;
       m.x += (tx - m.x) * k; m.y += (fy - m.y) * k; m.z += (tz - m.z) * k; m.speed = 0;
     }
+    // ほんとうに そらに いる ときだけ「とんでいる」（はね と わっか は この とき だけ）
+    m.flying = wantFly || m.y - groundBelow(m.x, m.y + 0.3, m.z) > 0.4;
+    if (!m.flying) m.fly = 0;
     const fd = Math.hypot(P.x - m.x, P.z - m.z);
     if (d > 0.4 && m.speed > 0) m.face = Math.atan2(tx - m.x, tz - m.z); else if (fd > 0.3) m.face = Math.atan2(P.x - m.x, P.z - m.z);
   }
@@ -1352,7 +1356,7 @@ void main(){
   }
   function drawMom() {
     if (P.state === 'ghost') return;
-    drawMomAt(MOM.x, MOM.y, MOM.z, MOM.face, MOM.fly, MOM.sit, MOM.speed);
+    drawMomAt(MOM.x, MOM.y, MOM.z, MOM.face, MOM.flying ? MOM.fly : 0, MOM.sit, MOM.speed);
   }
   function placeMomTalk() {
     const b = $('momTalk'); if (MOM.sayT <= 0) return;
