@@ -356,6 +356,61 @@
     root.appendChild(btn('🎫 チケットを かう', 'sbig tall', () => pay(t.price, t.what, () => api.onClose({ go: t.go }), () => attractionTicket(t))));
     root.appendChild(btn('← やめる', 'sout', () => api.onClose()));
   }
+  // ---------------- コンビニ（セブン-イレブン・ローソン）----------------
+  // ねだん は ゲームの めやす。からあげクン は ローソンの しょうひん。
+  const KONBINI = {
+    lawson: { title: '🏪 ローソン', sub: 'とべちょう 3ちょうめ ・ レジの よこに からあげクン', cls: 'lw', items: [
+      { id: 'kr', e: '🍗', name: 'からあげクン レギュラー', price: 260, karaage: 1 },
+      { id: 'kred', e: '🌶️', name: 'からあげクン レッド', price: 260, karaage: 1 },
+      { id: 'kch', e: '🧀', name: 'からあげクン チーズ', price: 260, karaage: 1 },
+      { id: 'oni', e: '🍙', name: 'おにぎり', price: 160, oni: 1 },
+      { id: 'tea', e: '🍵', name: 'おちゃ', price: 140, drink: 1 },
+    ] },
+    seven: { title: '🏪 セブン-イレブン', sub: 'とべちょう 4ちょうめ', cls: 'sv', items: [
+      { id: 'oni', e: '🍙', name: 'おにぎり', price: 160, oni: 1 },
+      { id: 'pan', e: '🥐', name: 'パン', price: 150, snack: 1 },
+      { id: 'ice', e: '🍦', name: 'ソフトクリーム', price: 300, snack: 1 },
+      { id: 'juice', e: '🧃', name: 'りんごジュース', price: 130, drink: 1 },
+    ] },
+  };
+  function konbini(kind) {
+    const K = KONBINI[kind] || KONBINI.seven;
+    clear(K.title, K.sub, K.cls);
+    root.appendChild(el('div', 'tlabel', `👛 ${yen(api.wallet.total())}`));
+    const g = el('div', 'kgrid2');
+    K.items.forEach((it) => {
+      const c = el('button', 'kitem' + (it.karaage ? ' hot' : ''), `<i>${it.e}</i><span>${it.name}</span><b>${yen(it.price)}</b>${it.karaage ? '<em>あつあつ</em>' : ''}`);
+      c.addEventListener('click', () => pay(it.price, it.name, () => eat(kind, it), () => konbini(kind)));
+      g.appendChild(c);
+    });
+    root.appendChild(g);
+    root.appendChild(el('p', 'desc', 'ねだん は ゲームの めやす だよ'));
+    root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
+  }
+  function eat(kind, it) {
+    const K = KONBINI[kind] || KONBINI.seven;
+    clear('😋 ' + it.name, 'かったよ！', K.cls);
+    if (it.oni) {
+      api.reward && api.reward({ oni: 1 });
+      root.appendChild(el('div', 'prize', '<i>🍙</i><b>おにぎりを もちものに いれたよ</b><span>つかれたら たべてね</span>'));
+      root.appendChild(btn('← おみせに もどる', 'sbig', () => konbini(kind))); return;
+    }
+    const n = it.karaage ? 5 : 1, box = el('div', 'bento'); let left = n;
+    if (it.karaage) root.appendChild(el('p', 'desc', 'からあげクンが 5こ はいってる！ タップして たべよう'));
+    for (let i = 0; i < n; i++) {
+      const b = el('button', 'food', it.karaage ? '🍗' : it.e);
+      b.addEventListener('click', () => {
+        if (b.classList.contains('eaten')) return; b.classList.add('eaten'); b.textContent = '✨'; sfx('pick'); left--;
+        if (!left) {
+          sfx('big'); api.reward && api.reward({ full: 1, gas: it.karaage ? 1 : 0, karaage: it.karaage ? 1 : 0 });
+          box.after(el('p', 'desc', it.karaage ? 'おいしかった！ げんき まんたん、おならパワーも まんたん 💨' : 'おいしかった！ げんき まんたん'));
+          box.after(btn('← おみせに もどる', 'sbig', () => konbini(kind)));
+        }
+      });
+      box.appendChild(b);
+    }
+    root.appendChild(box);
+  }
   window.Shops = {
     open(kind, a) {
       api = a; root = document.getElementById('shopRoot');
@@ -363,6 +418,7 @@
       else if (kind === 'wp') wp();
       else if (kind === 'cabin') cabin(a.arg);
       else if (kind === 'ticket') attractionTicket(a.arg);
+      else if (kind === 'konbini') konbini(a.arg);
       else walletView();
     },
     TOYS, PRIZES, toySvg,

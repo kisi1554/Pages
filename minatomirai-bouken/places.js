@@ -75,7 +75,8 @@
       root.appendChild(el('div', 'tlabel', '🖼️ かざってある あおちゃんの え'));
       const gl = el('div', 'gallery'); Y.pics.forEach((src) => { const im = el('img'); im.src = src; gl.appendChild(im); }); root.appendChild(gl);
     }
-    root.appendChild(btn('🚌 かえりの バスに のる（いわかめどおり まで）', 'sbig tall', () => api.onClose({ bus: -1 })));
+    root.appendChild(btn('🛝 おにわで すべりだい', 'sbig sub', () => api.onClose({ slide: true })));
+    root.appendChild(btn('🌸 かえりの さくらごうに のる（いわかめどおり まで）', 'sbig tall', () => api.onClose({ bus: -1 })));
     root.appendChild(btn('🚶 そとに でる', 'sout', () => api.onClose()));
   }
   function draw() {
