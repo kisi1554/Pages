@@ -61,7 +61,7 @@ void main(){
   const FS = `
 precision mediump float;
 varying vec3 vCol; varying vec3 vNor; varying vec3 vW; varying float vKind;
-uniform vec3 uSun; uniform vec3 uFog; uniform vec3 uCam; uniform float uTime; uniform float uEmit; uniform float uAlpha;
+uniform vec3 uSun; uniform vec3 uFog; uniform vec3 uCam; uniform float uTime; uniform float uEmit; uniform float uAlpha; uniform float uFogN; uniform float uFogF;
 void main(){
   vec3 n = normalize(vNor); vec3 col = vCol;
   if (vKind > 0.5 && vKind < 1.5) {          // まど
@@ -78,14 +78,15 @@ void main(){
     float bx = fract((vW.x + vW.z) * 1.4 + mod(row, 2.0) * 0.5);
     float by = fract(vW.y * 3.0);
     col *= 1.0 - 0.25 * (step(0.88, by) + step(0.92, bx)) * (1.0 - abs(n.y));
-  } else if (vKind > 3.5) {                  // しばふ
+  } else if (vKind > 3.5 && vKind < 4.5) {   // しばふ
     col *= 0.94 + 0.08 * sin(vW.x * 1.7) * sin(vW.z * 1.3);
   }
   float d = max(dot(n, uSun), 0.0);
   vec3 lit = col * (0.5 + 0.12 * n.y + 0.55 * d);
   lit = mix(lit, col, uEmit);
+  if (vKind > 4.5) lit = col;                // ひかる もの（ちょうちん など）
   float dist = length(vW - uCam);
-  float f = clamp((dist - 70.0) / 280.0, 0.0, 1.0);
+  float f = clamp((dist - uFogN) / (uFogF - uFogN), 0.0, 1.0);
   gl_FragColor = vec4(mix(lit, uFog, f * f), uAlpha);
 }`;
   function sh(type, src) {
@@ -98,7 +99,7 @@ void main(){
   gl.linkProgram(prog); gl.useProgram(prog);
   const A = {}, U = {};
   ['aPos', 'aNor', 'aCol', 'aKind'].forEach((n) => { A[n] = gl.getAttribLocation(prog, n); gl.enableVertexAttribArray(A[n]); });
-  ['uProj', 'uView', 'uModel', 'uTint', 'uSun', 'uFog', 'uCam', 'uTime', 'uEmit', 'uAlpha'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
+  ['uProj', 'uView', 'uModel', 'uTint', 'uSun', 'uFog', 'uCam', 'uTime', 'uEmit', 'uAlpha', 'uFogN', 'uFogF'].forEach((n) => { U[n] = gl.getUniformLocation(prog, n); });
 
   // ================= かたち づくり =================
   class Geo {
@@ -232,7 +233,6 @@ void main(){
   }
   function hash01(a, b) { const s = Math.sin(a * 12.9898 + b * 78.233) * 43758.5453; return s - Math.floor(s); }
   // うみ
-  G.quad([-1500, WATER, -1500], [1500, WATER, -1500], [1500, WATER, 1500], [-1500, WATER, 1500], [0, 1, 0], C.water, 2);
   // りくち（はこ）と うみぞいの かべ
   const CELL = MAP.cell, OX = MAP.o[0], OZ = MAP.o[1];
   MAP.land.forEach(([i0, j0, i1, j1]) => {
@@ -295,6 +295,8 @@ void main(){
   };
   const NAMECOL = { '横浜ランドマークタワー': '#d9d2c4', 'ヨコハマ グランド インターコンチネンタル ホテル': '#f4f7fa', 'Yokohama World Porters': '#efe2c9', 'MARK IS minatomirai': '#f1e3c8', 'Cupnoodles Museum': '#f3f3f3' };
   const BLD = [];   // ちず と ドアさがし よう
+  const LM_HEIGHT = 110; // ほんとうは 74（295.8m）。ゲームでは もっと たかく
+  MAP.bld.forEach((b) => { if (b.n === '横浜ランドマークタワー') b.y1 = LM_HEIGHT; });
   MAP.bld.forEach((b, bi) => {
     const p = b.p, n = p.length / 2;
     let base = NAMECOL[b.n] || (b.c && /^#[0-9a-f]{6}$/i.test(b.c) ? b.c : null) || BCOL[b.k] || BCOL.yes;
@@ -366,9 +368,9 @@ void main(){
   }
 
   // --- ランドマークタワー: ひとやすみ バルコニー ---
-  const LMP = poi('横浜ランドマークタワー'), LMH = LMP.h || 74;
+  const LMP = poi('横浜ランドマークタワー'), LMH = LM_HEIGHT;
   const LMB = LMP.bb; const LMC = { x: (LMB[0] + LMB[2]) / 2, z: (LMB[1] + LMB[3]) / 2 };
-  const BALC = [14, 28, 42, 56];
+  const BALC = [14, 28, 42, 56, 70, 84, 98];
   BALC.forEach((y) => {
     const e = 1.3, t = 0.5, [x0, z0, x1, z1] = LMB;
     B(x0 - e, y - t, z0 - e, x1 + e, y, z0, C.white, 0, C.white);
@@ -419,14 +421,15 @@ void main(){
   // --- コスモクロック21（かんらんしゃ）---
   const FWP = POI['コスモクロック21'] || { x: 114, z: 46, bb: [109, 41, 119, 52] };
   const FW = { cx: FWP.x, cz: FWP.z, R: 12.5, N: 16, period: 80, axis: (FWP.bb[2] - FWP.bb[0]) < (FWP.bb[3] - FWP.bb[1]) ? 'x' : 'z' };
-  FW.hub = FW.R + 2.2;
+  FW.Rc = FW.R + 1.9;            // はこ は わの そとがわに ぶらさがる
+  FW.hub = FW.Rc + 2.2;
   // ほうこう: axis='x' なら わは YZ めん
   const fwPos = (u, y, w) => FW.axis === 'x' ? [FW.cx + w, y, FW.cz + u] : [FW.cx + u, y, FW.cz + w];
   {
     const box = (u0, y0, w0, u1, y1, w1, col) => { const a = fwPos(u0, y0, w0), b = fwPos(u1, y1, w1); return B(Math.min(a[0], b[0]), y0, Math.min(a[2], b[2]), Math.max(a[0], b[0]), y1, Math.max(a[2], b[2]), col, 0, col); };
     box(-1, 0, -3.2, 1, FW.hub + 1, -1.8, C.white); box(-1, 0, 1.8, 1, FW.hub + 1, 3.2, C.white);
     box(-1, FW.hub - 1, -3.2, 1, FW.hub + 1, 3.2, C.white);
-    box(-7, 0, -1.7, 7, 0.5, 1.7, hex('#ffe066'));
+    box(-7, 0, -1.7, 7, 1.0, 1.7, hex('#ffe066'));
     [-2.5, 2.5].forEach((w) => { G.beam(fwPos(-7, 0, w), fwPos(0, FW.hub, w), 0.4, C.white); G.beam(fwPos(7, 0, w), fwPos(0, FW.hub, w), 0.4, C.white); });
   }
 
@@ -490,6 +493,265 @@ void main(){
   })();
   B(BUOY.x - 1, -2, BUOY.z - 1, BUOY.x + 1, 0.6, BUOY.z + 1, C.red, 0, C.white);
 
+  // ================= とおくの けしき（かんらんしゃ・ヘリから みえる）=================
+  // ちずの いち（いど・けいど）→ ゲームの いち（tools/minatomirai-map.py と おなじ けいさん）
+  const GEO = (() => {
+    const la0 = MAP.origin[0], lo0 = MAP.origin[1], kx = Math.cos(la0 * Math.PI / 180) * 111320, kz = 110574;
+    const r = -MAP.rot * Math.PI / 180, cr = Math.cos(r), sr = Math.sin(r), S0 = MAP.scale;
+    return (lat, lon) => { const x = (lon - lo0) * kx, z = -(lat - la0) * kz; return [(x * cr - z * sr) * S0, (x * sr + z * cr) * S0]; };
+  })();
+  function pip(x, z, poly) {
+    let c = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      const [xi, zi] = poly[i], [xj, zj] = poly[j];
+      if ((zi > z) !== (zj > z) && x < (xj - xi) * (z - zi) / (zj - zi) + xi) c = !c;
+    }
+    return c;
+  }
+  // ちずの そと の よこはまの まち（だいたいの かたち）。ちずの はんい（BBOX）の ふちに ぴったり つなぐ
+  const BBX = { la0: 35.4489, la1: 35.4631, lo0: 139.6259, lo1: 139.6491 };
+  const OUTER = [[BBX.la1, 139.6320], [35.4660, 139.6330], [35.4720, 139.6390], [35.4820, 139.6480], [35.5000, 139.6700], [35.5600, 139.7300],
+    [35.5600, 139.3800], [35.2800, 139.3800], [35.2800, 139.6600], [35.4200, 139.6700], [35.4380, 139.6620], [35.4440, 139.6560],
+    [35.4470, 139.6520], [BBX.la0, BBX.lo1], [BBX.la0, BBX.lo0], [BBX.la1, BBX.lo0]].map(([a, b]) => GEO(a, b));
+  const DAIKOKU = [[35.4600, 139.6760], [35.4720, 139.6760], [35.4720, 139.6950], [35.4600, 139.6950]].map(([a, b]) => GEO(a, b));
+  const INNER = [[BBX.la0, BBX.lo0], [BBX.la0, BBX.lo1], [BBX.la1, BBX.lo1], [BBX.la1, BBX.lo0]].map(([a, b]) => GEO(a, b));
+  const onOuter = (x, z) => (pip(x, z, OUTER) || pip(x, z, DAIKOKU)) && !pip(x, z, INNER);
+  function distInner(x, z) {
+    if (pip(x, z, INNER)) return 0; let d = 1e9;
+    for (let i = 0; i < 4; i++) {
+      const [ax, az] = INNER[i], [bx, bz] = INNER[(i + 1) % 4], dx = bx - ax, dz = bz - az;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1); d = Math.min(d, Math.hypot(x - ax - dx * t, z - az - dz * t));
+    }
+    return d;
+  }
+  {
+    const OUTCOL = shade(C.land, 0.93);
+    // ちかく（あるける）: 2 ます、あたりはんてい つき
+    const NB = 2, nx0 = -360, nx1 = 640, nz0 = -480, nz1 = 520;
+    for (let z = nz0; z < nz1; z += NB) {
+      let run = null;
+      for (let x = nx0; x <= nx1; x += NB) {
+        const inside = x < nx1 && onOuter(x + NB / 2, z + NB / 2);
+        if (inside && run === null) run = x;
+        if (!inside && run !== null) {
+          flat(run, z, x, z + NB, -0.015, OUTCOL);
+          if (distInner(run, z) < 140 || distInner(x, z) < 140) addSolid({ x0: run, y0: -4, z0: z, x1: x, y1: 0, z1: z + NB });
+          run = null;
+        }
+      }
+    }
+    // とおく（みため だけ）: 24 ます
+    const FB = 24;
+    for (let z = -3000; z < 3000; z += FB) {
+      let run = null;
+      for (let x = -3000; x <= 3000; x += FB) {
+        const near2 = x >= nx0 - FB && x <= nx1 && z >= nz0 - FB && z <= nz1;
+        const inside = x < 3000 && !near2 && onOuter(x + FB / 2, z + FB / 2);
+        if (inside && run === null) run = x;
+        if (!inside && run !== null) { flat(run, z, x, z + FB, -0.02, OUTCOL); run = null; }
+      }
+    }
+    // まちの たてもの（とおくは ひくく まばらに）
+    for (let gx = -900; gx < 900; gx += 18) for (let gz = -900; gz < 900; gz += 18) {
+      const x = gx + hash01(gx, gz) * 8, z = gz + hash01(gz, gx) * 8, di = distInner(x, z);
+      if (di < 25 || !onOuter(x, z) || !onOuter(x + 8, z + 8) || !onOuter(x - 8, z - 8)) continue;
+      if (hash01(gx * 3, gz * 7) < Math.min(0.85, di / 300)) continue;
+      const w = 5 + hash01(gx, 9) * 7, d = 5 + hash01(9, gz) * 7, h = 2 + hash01(gx * 5, gz * 3) ** 2 * (di < 200 ? 16 : 9);
+      const col = shade(hex(['#d9d3c7', '#cfd6dc', '#e4dccf', '#c9c3b8', '#dfe5ea'][(hash01(gx, gz * 2) * 5) | 0]), 0.95);
+      if (di < 140) B(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, col, h > 4 ? 1 : 0, shade(col, 0.8));
+      else G.box(x - w / 2, 0, z - d / 2, x + w / 2, h, z + d / 2, col, h > 4 ? 1 : 0, shade(col, 0.8));
+    }
+    // よこはま えき の ビル
+    [[35.4657, 139.6213, 185, 14], [35.4662, 139.6203, 170, 12], [35.4651, 139.6237, 50, 22], [35.4688, 139.6265, 99, 16], [35.4672, 139.6250, 40, 26], [35.4640, 139.6230, 80, 14]].forEach(([la, lo, hm, wm]) => {
+      const [x, z] = GEO(la, lo), h = hm * 0.25, w = wm * 0.25 * 2.2;
+      G.box(x - w, 0, z - w, x + w, h, z + w, hex('#c3ccd6'), 1, hex('#9aa5b1'));
+    });
+  }
+  // うみ（ひろく）
+  G.quad([-3600, WATER - 0.01, -3600], [3600, WATER - 0.01, -3600], [3600, WATER - 0.01, 3600], [-3600, WATER - 0.01, 3600], [0, 1, 0], C.water, 2);
+  // マリンタワー（106m）
+  const MARINE = (() => { const [x, z] = GEO(35.44375, 139.65055); return { x, z, h: 26.5 }; })();
+  G.cyl(MARINE.x, 0, MARINE.z, 2.6, 22, 10, C.red, 0, 1.0); G.cyl(MARINE.x, 22, MARINE.z, 2.4, 2.2, 10, C.white); G.cyl(MARINE.x, 24.2, MARINE.z, 0.5, 2.6, 6, C.red);
+  for (let k = 0; k < 22; k += 4) G.cyl(MARINE.x, k, MARINE.z, 2.62 - k * 0.07, 0.7, 10, C.white);
+  // ひかわまる
+  { const [x, z] = GEO(35.4450, 139.6495); G.box(x - 10, -1, z - 1.6, x + 10, 2.2, z + 1.6, C.black, 0, C.white); G.box(x - 3, 2.2, z - 1.2, x + 4, 4, z + 1.2, C.white); G.cyl(x, 4, z, 0.8, 3, 8, C.red); }
+  // よこはま ベイブリッジ（ほんとうの いち・おおきさ）
+  const BAYB = (() => {
+    const a = GEO(35.4475, 139.6705), b = GEO(35.4620, 139.6790), Y = 13, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    const ux = (b[0] - a[0]) / L, uz = (b[1] - a[1]) / L, nx = -uz, nz = ux, at = (t, s, y) => [a[0] + ux * L * t + nx * s, y, a[1] + uz * L * t + nz * s];
+    G.obox(at(0.5, 0, Y), [ux, 0, uz], [0, 1, 0], [nx, 0, nz], L / 2, 1.2, 5, C.white);
+    [0.3, 0.7].forEach((t) => {
+      [-4.2, 4.2].forEach((s) => G.obox(at(t, s, 21.5), [ux, 0, uz], [0, 1, 0], [nx, 0, nz], 1.2, 21.5, 1, C.white));
+      G.obox(at(t, 0, 41), [ux, 0, uz], [0, 1, 0], [nx, 0, nz], 1.2, 1.2, 5, C.white);
+      for (let k = 1; k <= 8; k++) [-1, 1].forEach((sd) => {
+        const t2 = t + sd * k * 0.025; [-4.2, 4.2].forEach((s) => G.beam(at(t, s, 42), at(t2, s, Y + 1.2), 0.1, C.white));
+      });
+    });
+    for (let t = 0.05; t < 1; t += 0.05) if (Math.abs(t - 0.3) > 0.03 && Math.abs(t - 0.7) > 0.03) [-3, 3].forEach((s) => G.obox(at(t, s, Y / 2), [ux, 0, uz], [0, 1, 0], [nx, 0, nz], 0.8, Y / 2, 0.8, C.gray));
+    const m = at(0.5, 0, 42); return { x: m[0], y: 44, z: m[2] };
+  })();
+  // ふじさん・やま・とうきょう（とおい ものは ちかくに ちいさく おく。みえる おおきさ は ほんもの と おなじ）
+  const FAR = 2500;
+  function farPos(lat, lon) { const [x, z] = GEO(lat, lon), D = Math.hypot(x, z); return { x: x / D * FAR, z: z / D * FAR, s: FAR / D }; }
+  const FUJI = (() => {
+    const f = farPos(35.3606, 138.7274), r = 18000 * 0.25 * f.s, h = 3776 * 0.25 * f.s;
+    G.cone(f.x, -1, f.z, r, h, 28, hex('#5b7fa6'));
+    G.cone(f.x, h * 0.72, f.z, r * 0.28 * 1.02, h * 0.28, 28, C.white, hex('#e7f5ff'));
+    return { x: f.x, y: h, z: f.z };
+  })();
+  [[35.4712, 139.1626, 1673, 9000], [35.4408, 139.2314, 1252, 7000], [35.2333, 139.0211, 1438, 12000], [35.5300, 139.2000, 1300, 9000], [35.3500, 139.1200, 1100, 9000], [35.6000, 139.1000, 1500, 11000]].forEach(([la, lo, hm, rm]) => {
+    const f = farPos(la, lo); G.cone(f.x, -1, f.z, rm * 0.25 * f.s, hm * 0.25 * f.s, 14, hex('#6c8aa8'));
+  });
+  const TOKYO = (() => {
+    const f = farPos(35.6812, 139.7671);
+    for (let i = 0; i < 40; i++) {
+      const a = (hash01(i, 1) - 0.5) * 9000 * 0.25 * f.s, b = (hash01(1, i) - 0.5) * 4000 * 0.25 * f.s, h = (60 + hash01(i, i) * 190) * 0.25 * f.s, w = 40 * 0.25 * f.s;
+      G.box(f.x + a - w, -1, f.z + b - w, f.x + a + w, h, f.z + b + w, hex('#8fa3b8'));
+    }
+    const t = farPos(35.7101, 139.8107); G.cyl(t.x, -1, t.z, 60 * 0.25 * t.s, 634 * 0.25 * t.s, 8, hex('#a5b4c4'), 0, 10 * 0.25 * t.s);
+    return { x: f.x, y: 20, z: f.z, sky: { x: t.x, y: 634 * 0.25 * t.s, z: t.z } };
+  })();
+
+  // ================= ランドマークの ヘリポート =================
+  {
+    const y = LMH + 0.03;
+    G.cyl(LMC.x, y, LMC.z, 4.2, 0.03, 24, hex('#495057'));
+    G.cyl(LMC.x, y + 0.01, LMC.z, 3.6, 0.03, 24, C.yellow); G.cyl(LMC.x, y + 0.02, LMC.z, 3.2, 0.03, 24, hex('#495057'));
+    G.box(LMC.x - 1.3, y + 0.03, LMC.z - 1.4, LMC.x - 0.8, y + 0.06, LMC.z + 1.4, C.white);
+    G.box(LMC.x + 0.8, y + 0.03, LMC.z - 1.4, LMC.x + 1.3, y + 0.06, LMC.z + 1.4, C.white);
+    G.box(LMC.x - 0.8, y + 0.03, LMC.z - 0.25, LMC.x + 0.8, y + 0.06, LMC.z + 0.25, C.white);
+    // てすり
+    const [x0, z0, x1, z1] = LMB; const e = 0.2;
+    [[x0, z0, x1, z0 + e], [x0, z1 - e, x1, z1], [x0, z0, x0 + e, z1], [x1 - e, z0, x1, z1]].forEach(([a, b, c, d]) => G.box(a, LMH, b, c, LMH + 1.0, d, C.gray));
+  }
+  const HELI = { x: LMC.x + 5, y: LMH, z: LMC.z, yaw: 0, rot: 0, vx: 0, vy: 0, vz: 0, home: true };
+
+  // ================= コスモワールド: ジェットコースター =================
+  const CWP = POI['よこはまコスモワールド'] || { bb: [50, 6, 127, 71] };
+  const CO = (() => {
+    const cx = (CWP.bb[0] + CWP.bb[2]) / 2 - 12, cz = (CWP.bb[1] + CWP.bb[3]) / 2 - 3, N = 520;
+    const K = [[0, 2], [0.07, 2], [0.27, 22], [0.31, 22.4], [0.42, 1.3], [0.47, 1.3], [0.55, 12], [0.62, 5], [0.68, 9.5], [0.74, 3.5], [0.82, 7.5], [0.9, 2.6], [1, 2]];
+    const hAt = (u) => { for (let i = 1; i < K.length; i++) if (u <= K[i][0]) { const t = (u - K[i - 1][0]) / (K[i][0] - K[i - 1][0]); return K[i - 1][1] + (K[i][1] - K[i - 1][1]) * (0.5 - 0.5 * Math.cos(Math.PI * t)); } return 2; };
+    const pts = [];
+    for (let i = 0; i <= N; i++) {
+      const u = i / N, th = u * Math.PI * 2, r = 1 + 0.2 * Math.sin(3 * th) + (u > 0.6 && u < 0.85 ? 0.25 * Math.sin((u - 0.6) / 0.25 * Math.PI * 4) : 0);
+      pts.push([cx + 22 * r * Math.cos(th), hAt(u), cz + 14 * r * Math.sin(th)]);
+    }
+    const L = [0]; for (let i = 1; i <= N; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
+    const total = L[N];
+    function at(s) {
+      s = ((s % total) + total) % total; let lo = 0, hi = N; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (L[m] <= s) lo = m; else hi = m; }
+      const t = (s - L[lo]) / (L[hi] - L[lo] || 1), a = pts[lo], b = pts[hi];
+      const dx = b[0] - a[0], dy = b[1] - a[1], dz = b[2] - a[2], l = Math.hypot(dx, dy, dz) || 1;
+      return { x: a[0] + dx * t, y: a[1] + dy * t, z: a[2] + dz * t, tx: dx / l, ty: dy / l, tz: dz / l, u: s / total };
+    }
+    // レール・まくらぎ・はしら
+    for (let i = 0; i < N; i++) {
+      const a = pts[i], b = pts[i + 1], dx = b[0] - a[0], dz = b[2] - a[2], l = Math.hypot(dx, dz) || 1, nx = -dz / l * 0.6, nz = dx / l * 0.6;
+      G.beam([a[0] + nx, a[1], a[2] + nz], [b[0] + nx, b[1], b[2] + nz], 0.09, hex('#f8f9fa'));
+      G.beam([a[0] - nx, a[1], a[2] - nz], [b[0] - nx, b[1], b[2] - nz], 0.09, hex('#f8f9fa'));
+      G.beam([a[0], a[1] - 0.25, a[2]], [b[0], b[1] - 0.25, b[2]], 0.18, hex('#e03131'));
+      if (i % 3 === 0) G.beam([a[0] + nx * 1.2, a[1] - 0.05, a[2] + nz * 1.2], [a[0] - nx * 1.2, a[1] - 0.05, a[2] - nz * 1.2], 0.07, hex('#adb5bd'));
+      if (i % 8 === 0 && a[1] > 1.8) { G.beam([a[0], 0, a[2]], [a[0], a[1] - 0.3, a[2]], 0.22, hex('#ffd43b')); if (a[1] > 8) G.beam([a[0] + nx * 3, 0, a[2] + nz * 3], [a[0], a[1] * 0.6, a[2]], 0.12, hex('#ffd43b')); }
+    }
+    // スプラッシュ プール と トンネル
+    const pp = at(0.445 * total);
+    G.box(pp.x - 7, -0.2, pp.z - 7, pp.x + 7, 0.25, pp.z + 7, hex('#868e96'));
+    G.quad([pp.x - 6.5, 0.3, pp.z - 6.5], [pp.x + 6.5, 0.3, pp.z - 6.5], [pp.x + 6.5, 0.3, pp.z + 6.5], [pp.x - 6.5, 0.3, pp.z + 6.5], [0, 1, 0], hex('#4dabf7'), 2);
+    for (let s = 0.455; s < 0.475; s += 0.004) { const q = at(s * total); G.box(q.x - 2, q.y - 0.5, q.z - 2, q.x + 2, q.y + 2.6, q.z + 2, hex('#5f3dc4')); }
+    // のりば
+    const st = at(0.035 * total);
+    G.box(st.x - 4, 0, st.z - 4, st.x + 4, 1.4, st.z + 4, hex('#e9ecef')); G.box(st.x - 4.5, 4.5, st.z - 4.5, st.x + 4.5, 5, st.z + 4.5, hex('#e03131'));
+    [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([a, b]) => G.box(st.x + a * 4 - 0.2, 0, st.z + b * 4 - 0.2, st.x + a * 4 + 0.2, 4.5, st.z + b * 4 + 0.2, C.white));
+    return { pts, total, at, st, pool: pp };
+  })();
+
+  // ================= コスモワールド: おばけやしき =================
+  function freeArea(x, z, hx, hz) {
+    for (let r = 0; r < 60; r += 2) for (let a = 0; a < 24; a++) {
+      const xx = x + Math.cos(a / 24 * Math.PI * 2) * r, zz = z + Math.sin(a / 24 * Math.PI * 2) * r;
+      let ok = isLand(xx - hx, zz - hz) && isLand(xx + hx, zz - hz) && isLand(xx - hx, zz + hz) && isLand(xx + hx, zz + hz) && isLand(xx, zz + hz + 3);
+      if (ok) for (const b of near(xx - hx - 1, zz - hz - 1, xx + hx + 1, zz + hz + 5)) if (b.y1 > 0.05 && b.x1 > xx - hx - 1 && b.x0 < xx + hx + 1 && b.z1 > zz - hz - 1 && b.z0 < zz + hz + 5) { ok = false; break; }
+      if (ok) { let co = false; for (let s = 0; s < 1; s += 0.01) { const q = CO.at(s * CO.total); if (Math.abs(q.x - xx) < hx + 3 && Math.abs(q.z - zz) < hz + 6) { co = true; break; } } if (!co) return { x: xx, z: zz }; }
+      if (r === 0) break;
+    }
+    return { x, z };
+  }
+  const GH = (() => {
+    const f = freeArea(CWP.bb[0] + 14, CWP.bb[1] + 14, 6, 5);
+    const x = f.x, z = f.z, P2 = hex('#3b2f4a');
+    B(x - 6, 0, z - 5, x + 6, 6.5, z + 5, P2, 1, hex('#241b2e'));
+    for (let k = 0; k < 6; k++) G.box(x - 6 + k * 0.25, 6.5 + k * 0.5, z - 5, x + 6 - k * 0.25, 7 + k * 0.5, z + 5, hex('#241b2e'));
+    G.box(x - 1, 6.5, z - 1, x + 1, 11, z + 1, hex('#241b2e')); G.cone(x, 11, z, 1.6, 2.5, 6, hex('#241b2e'));
+    [[-4, 2.8], [4, 2.8], [-4, 5], [4, 5], [0, 9]].forEach(([dx, y]) => G.box(x + dx - 0.6, y - 0.6, z + 5.02, x + dx + 0.6, y + 0.6, z + 5.08, hex('#ffd43b'), 5));
+    G.box(x - 3, 3.3, z + 5.05, x + 3, 4.3, z + 5.15, hex('#c92a2a'), 5);          // かんばん
+    [[-8, 7], [-9.5, 9], [8.5, 8], [9.5, 10.5]].forEach(([dx, dz], i) => { G.box(x + dx - 0.5, 0, z + dz - 0.2, x + dx + 0.5, 1.3 - i * 0.1, z + dz + 0.2, hex('#868e96')); });
+    G.cyl(x + 9, 0, z - 3, 0.3, 4.5, 5, hex('#3d2b1f')); G.beam([x + 9, 3.5, z - 3], [x + 11, 5, z - 2], 0.12, hex('#3d2b1f')); G.beam([x + 9, 3, z - 3], [x + 7.5, 4.6, z - 4], 0.12, hex('#3d2b1f'));
+    return { x, z, door: { x, z: z + 6.4 } };
+  })();
+  // なかの めいろ（したの ほう に つくる。くらいので そとは みえない）
+  const GHM = (() => {
+    const g = new Geo(), Y = 0, hw = 1.7, HT = 3.2;
+    const path = [[0, 0], [0, -12], [10, -12], [10, -24], [-6, -24], [-6, -36], [12, -36], [12, -46]];
+    const segN = (i) => { const [ax, az] = path[i], [bx, bz] = path[i + 1], l = Math.hypot(bx - ax, bz - az); return [-(bz - az) / l, (bx - ax) / l]; };
+    const off = (i, side) => { // わきの かべの せん
+      let n;
+      if (i === 0) n = segN(0); else if (i === path.length - 1) n = segN(i - 1);
+      else { const a = segN(i - 1), b = segN(i); n = (Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) < 1e-6) ? a : [a[0] + b[0], a[1] + b[1]]; }
+      return [path[i][0] + n[0] * hw * side, path[i][1] + n[1] * hw * side];
+    };
+    const wallC = hex('#4a3b5c'), floorC = hex('#3a2a1c'), ceilC = hex('#1e1626');
+    [-1, 1].forEach((side) => {
+      for (let i = 0; i < path.length - 1; i++) {
+        const a = off(i, side), b = off(i + 1, side);
+        g.quad([a[0], Y, a[1]], [b[0], Y, b[1]], [b[0], Y + HT, b[1]], [a[0], Y + HT, a[1]], [0, 0, 1], wallC, 0);
+        g.quad([a[0], Y + 0.9, a[1]], [b[0], Y + 0.9, b[1]], [b[0], Y + 1.0, b[1]], [a[0], Y + 1.0, a[1]], [0, 0, 1], hex('#6b4f2a'), 0);
+      }
+    });
+    for (let i = 0; i < path.length - 1; i++) {
+      const [ax, az] = path[i], [bx, bz] = path[i + 1];
+      const x0 = Math.min(ax, bx) - hw, x1 = Math.max(ax, bx) + hw, z0 = Math.min(az, bz) - hw, z1 = Math.max(az, bz) + hw;
+      g.quad([x0, Y, z0], [x1, Y, z0], [x1, Y, z1], [x0, Y, z1], [0, 1, 0], floorC, 0);
+      g.quad([x0, Y + HT, z0], [x1, Y + HT, z0], [x1, Y + HT, z1], [x0, Y + HT, z1], [0, -1, 0], ceilC, 0);
+    }
+    // いりぐち・でぐち の かべ
+    [[0, 0, 1], [path.length - 1, -1, 0]].forEach(([i, , isStart]) => {
+      const a = off(i, -1), b = off(i, 1), n = segN(isStart ? 0 : i - 1), d = isStart ? -0.01 : 0.01;
+      g.quad([a[0] - n[1] * d, Y, a[1] + n[0] * d], [b[0] - n[1] * d, Y, b[1] + n[0] * d], [b[0], Y + HT, b[1]], [a[0], Y + HT, a[1]], [0, 0, 1], isStart ? wallC : hex('#fff9db'), isStart ? 0 : 5);
+    });
+    // ちょうちん・がくぶち・ちゃくもの
+    const L = [0]; for (let i = 1; i < path.length; i++) L.push(L[i - 1] + Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]));
+    const total = L[L.length - 1];
+    function at(s) {
+      s = clamp(s, 0, total); let i = 1; while (i < L.length - 1 && L[i] < s) i++;
+      const t = (s - L[i - 1]) / (L[i] - L[i - 1]), [ax, az] = path[i - 1], [bx, bz] = path[i];
+      const l = Math.hypot(bx - ax, bz - az); return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, ux: (bx - ax) / l, uz: (bz - az) / l, i };
+    }
+    for (let s = 3; s < total - 2; s += 5.5) {
+      const q = at(s), side = (Math.floor(s / 5.5) % 2) ? 1 : -1, nx = -q.uz * side, nz = q.ux * side;
+      const px = q.x + nx * (hw - 0.12), pz = q.z + nz * (hw - 0.12);
+      g.box(px - 0.15, 2.0, pz - 0.15, px + 0.15, 2.45, pz + 0.15, hex('#ff922b'), 5);
+      if (Math.floor(s / 5.5) % 3 === 0) { // がくぶち
+        const fx = q.x - nx * (hw - 0.06), fz = q.z - nz * (hw - 0.06);
+        g.obox([fx, 1.9, fz], [q.ux, 0, q.uz], [0, 1, 0], [nx, 0, nz], 0.6, 0.75, 0.04, hex('#8d6e3f'));
+        g.obox([fx + nx * 0.03, 1.9, fz + nz * 0.03], [q.ux, 0, q.uz], [0, 1, 0], [nx, 0, nz], 0.45, 0.6, 0.04, hex('#2b2b3a'));
+        g.obox([fx + nx * 0.06 - q.ux * 0.15, 2.05, fz + nz * 0.06 - q.uz * 0.15], [q.ux, 0, q.uz], [0, 1, 0], [nx, 0, nz], 0.06, 0.04, 0.02, hex('#ff0000'), 5);
+        g.obox([fx + nx * 0.06 + q.ux * 0.15, 2.05, fz + nz * 0.06 + q.uz * 0.15], [q.ux, 0, q.uz], [0, 1, 0], [nx, 0, nz], 0.06, 0.04, 0.02, hex('#ff0000'), 5);
+      }
+    }
+    for (let i = 1; i < path.length - 1; i++) { // くものす
+      const c = off(i, 1), d = off(i, -1);
+      [c, d].forEach((p) => { g.beam([p[0], HT - 0.05, p[1]], [p[0] * 0.8 + path[i][0] * 0.2, HT - 0.9, p[1] * 0.8 + path[i][1] * 0.2], 0.015, hex('#dee2e6')); });
+    }
+    const EV = [[8, 'portrait'], [19, 'ghost'], [30, 'flicker'], [42, 'skeleton'], [55, 'coffin'], [68, 'hands'], [81, 'face']];
+    // ひつぎ
+    { const q = at(55), nx = -q.uz, nz = q.ux; const cx2 = q.x + nx * 1.1, cz2 = q.z + nz * 1.1; g.obox([cx2, 0.35, cz2], [q.ux, 0, q.uz], [0, 1, 0], [nx, 0, nz], 1.0, 0.35, 0.4, hex('#5c3d2e')); }
+    return { mesh: g.upload(), at, total, hw, EV, Y: -400 };
+  })();
+
+  // ================= けいゆう びょういん =================
+  const HOSP = POI['けいゆう病院'] || { x: 108, z: -89, h: 15, bb: [97, -96, 118, -80] };
+
   // ================= ドア（はいれる ところ）=================
   const DOORS = [];
   function addDoor(id, d, label, color, run) {
@@ -501,11 +763,33 @@ void main(){
     G.obox([c[0] + d.nx * 0.05, 3.2, c[2] + d.nz * 0.05], [d.ux, 0, d.uz], [0, 1, 0], [d.nx, 0, d.nz], 1.8, 0.4, 0.06, C.white);
   }
   const MARKP = poi('MARK IS minatomirai'), MIDP = poi('M.M.MID Square'), WPP = poi('Yokohama World Porters');
-  addDoor('kumon', doorOn('M.M.MID Square', MARKP.x, MARKP.z), '🏫<br>くもん', hex('#20b26b'), () => enterKumon());
+  const KD = doorOn('M.M.MID Square', MARKP.x, MARKP.z);
+  addDoor('kumon', KD, '🏫<br>くもん', hex('#20b26b'), () => enterKumon());
   addDoor('toys', doorOn('MARK IS minatomirai', LMC.x, LMC.z), '🧸<br>はいる', hex('#e8590c'), () => openShop('toys'));
   addDoor('wp', doorOn('Yokohama World Porters', CAB ? CAB.ends[0].x : WPP.x - 30, CAB ? CAB.ends[0].z : WPP.z), '🎪<br>はいる', hex('#7048e8'), () => openShop('wp'));
   if (CAB) CAB.ends.forEach((e, k) => DOORS.push({ id: 'cab' + k, x: e.door.x, z: e.door.z, label: '🚡<br>のる', color: hex('#1c7ed6'), run: () => openShop('cabin', k) }));
 
+  DOORS.push({ id: 'ghost', x: GH.door.x, z: GH.door.z, label: '👻<br>はいる', color: hex('#9c36b5'), run: () => openShop('ticket', { title: '👻 おばけやしき', sub: 'よこはま コスモワールド', price: 600, what: 'おばけやしき こども 1まい', go: 'ghost', icon: '👻' }) });
+  { const s2 = freeSpot(CO.st.x + 6, CO.st.z); DOORS.push({ id: 'coaster', x: s2.x, z: s2.z, label: '🎢<br>のる', color: hex('#e03131'), run: () => openShop('ticket', { title: '🎢 ジェットコースター', sub: 'コスモワールド ・ みずに とびこむ コースター', price: 800, what: 'ジェットコースター こども 1まい', go: 'coaster', icon: '🎢' }) }); }
+  { const q = fwPos(0, 0, 4.4), s2 = freeSpot(q[0], q[2]); DOORS.push({ id: 'wheel', x: s2.x, z: s2.z, label: '🎡<br>のる', color: hex('#1098ad'), run: () => openShop('ticket', { title: '🎡 コスモクロック21', sub: 'だいかんらんしゃ', price: 900, what: 'かんらんしゃ 1まい', go: 'wheel', icon: '🎡' }) }); }
+  DOORS.push({ id: 'heli', get x() { return HELI.x; }, get z() { return HELI.z; }, get y() { return HELI.y; }, r: 3.8, label: '🚁<br>のる', color: hex('#e03131'), run: () => heliEnter() });
+  const HELI_EXIT = { id: 'heliexit', x: 0, z: 0, label: '🚁<br>おりる', color: hex('#e03131'), run: () => heliExit() };
+  const HOSPDOOR = (() => { const d = doorOn('けいゆう病院', MARKP.x, MARKP.z); return d ? { x: d.ox, z: d.oz } : null; })();
+  // ママ の ベンチ（くもんの いりぐち）
+  const MAMA = (() => {
+    if (!KD) return null;
+    for (const sg of [1, -1]) {
+      const x = KD.ox + KD.ux * 3.4 * sg - KD.nx * 0.3, z = KD.oz + KD.uz * 3.4 * sg - KD.nz * 0.3;
+      if (blockedAt(x, 0, z)) continue;
+      const U2 = [KD.ux, 0, KD.uz], N2 = [KD.nx, 0, KD.nz], wood = hex('#a9743a');
+      G.obox([x, 0.5, z], U2, [0, 1, 0], N2, 0.95, 0.06, 0.38, wood);
+      G.obox([x - KD.nx * 0.35, 0.9, z - KD.nz * 0.35], U2, [0, 1, 0], N2, 0.95, 0.38, 0.05, wood);
+      [[-0.8, -0.3], [0.8, -0.3], [-0.8, 0.3], [0.8, 0.3]].forEach(([a, b]) => G.obox([x + KD.ux * a + KD.nx * b, 0.25, z + KD.uz * a + KD.nz * b], U2, [0, 1, 0], N2, 0.05, 0.25, 0.05, C.gray));
+      G.obox([x + KD.ux * 1.25, 0.6, z + KD.uz * 1.25], U2, [0, 1, 0], N2, 0.12, 0.12, 0.12, hex('#74c0fc'));  // すいとう
+      return { x: x + KD.nx * 0.05, z: z + KD.nz * 0.05, face: Math.atan2(KD.nx, KD.nz) };
+    }
+    return null;
+  })();
   const staticMesh = G.upload();
 
   // ================= うごく あしば（かんらんしゃ）=================
@@ -521,7 +805,7 @@ void main(){
   function updatePlats(t) {
     cabins.forEach((p, i) => {
       const a = t * Math.PI * 2 / FW.period + i * Math.PI * 2 / FW.N;
-      const q = fwPos(Math.cos(a) * FW.R, FW.hub + Math.sin(a) * FW.R, 0);
+      const q = fwPos(Math.cos(a) * FW.Rc, FW.hub + Math.sin(a) * FW.Rc, 0);
       setPlat(p, q[0], q[1], q[2]);
     });
   }
@@ -534,7 +818,7 @@ void main(){
   star('lm-28', { x: LMC.x, y: 28 + 1.2, z: LMB[3] + 0.65 });
   star('queens', top('クイーンズタワーA棟'));
   if (SHIP) star('mast', { x: SHIP.masts[1].x, y: SHIP.masts[1].h + 1.3, z: SHIP.masts[1].z });
-  { const q = fwPos(0, FW.hub + 2.3, 0); star('fw-hub', { x: q[0], y: q[1], z: q[2] }); const t2 = fwPos(0, FW.hub + FW.R + 1.1, 0); star('fw-top', { x: t2[0], y: t2[1], z: t2[2] }); }
+  { const q = fwPos(0, FW.hub + 2.3, 0); star('fw-hub', { x: q[0], y: q[1], z: q[2] }); const t2 = fwPos(0, FW.hub + FW.Rc + 1.1, 0); star('fw-top', { x: t2[0], y: t2[1], z: t2[2] }); }
   star('cup', top('Cupnoodles Museum'));
   star('brick', top('横浜赤レンガ倉庫1号館'));
   { // おおさんばし の さき
@@ -575,7 +859,9 @@ void main(){
   if (SHIP) npc(SHIP.cx + 6, SHIP.cz + 6, C.teal, 'ふなのりさん', 'にっぽんまるの まんなかの マストの うえに ほしが ひかっているよ。');
   npc(FW.cx + 8, FW.cz + 6, C.purple, 'かんらんしゃの ひと', 'きいろい だいから はこの やねに とびのってごらん。そらの てっぺんまで はこんでくれるよ。');
   npc(MARKP.x + 4, MARKP.bb[3] + 5, C.red, 'おもちゃやさん', 'マークイズの 3かいに トイザらスが あるよ。プラレールが いっぱい！ 🚄');
-  npc(MIDP.x - 4, MIDP.bb[3] + 4, C.orange, 'おかあさん', 'くもんの みなとみらい きょうしつは ミッドスクエアの 3かい。プリントを 1まい やると 1000えん もらえるよ ✏️');
+  if (MAMA) NPCS.push({ x: MAMA.x, z: MAMA.z, y: -0.17, col: hex('#f783ac'), who: 'ママ', say: 'あおちゃん、ママは くもんの いりぐちの イスで まってるね 🪑 プリント 1まいで 1000えん！ のどが かわいたら おみず あるよ 🥤', sit: true, face: MAMA.face, mama: true });
+  else npc(MIDP.x - 4, MIDP.bb[3] + 4, C.orange, 'ママ', 'くもんの みなとみらい きょうしつは ミッドスクエアの 3かい。プリントを 1まい やると 1000えん もらえるよ ✏️');
+  npc(HOSP.x + 6, HOSP.bb[3] + 4, C.white, 'かんごしさん', 'ここは けいゆう びょういん。たかい ところから とびおりる ときは パラシュート 🪂 を わすれずにね！');
   npc(WPP.x - 3, WPP.bb[1] - 4, C.blue, 'ガイドさん', 'ワールドポーターズには ガチャガチャと えいがかんが あるよ。100えんだまが いるから りょうがえきを つかってね。');
   npc(poi('横浜赤レンガ倉庫1号館').x + 4, poi('横浜赤レンガ倉庫1号館').bb[3] + 4, C.yellow, 'パンやさん', 'スーパーおなら 💨 で そらへ！ おちる ときは ジャンプで パラシュート 🪂 を ひらいてね。');
 
@@ -629,6 +915,7 @@ void main(){
     }
     g.box(-0.18, -0.34, -th - 0.02, 0.18, 0.02, th + 0.02, C.black);
   });
+  const mCone = mk((g) => g.cone(0, 0, 0, 1, 1, 10, W));
   const mImo = mk((g) => { g.sphere(0, 0, 0, 0.5, 6, hex('#a64ca6')); g.cyl(0.42, -0.08, 0, 0.12, 0.16, 5, hex('#f5d76e')); });
   const mWheel = mk((g) => {
     const R2 = FW.R, n = 48;
@@ -637,7 +924,7 @@ void main(){
       g.beam([Math.cos(a0) * R2, Math.sin(a0) * R2, 0], [Math.cos(a1) * R2, Math.sin(a1) * R2, 0], 0.25, C.white);
       g.beam([Math.cos(a0) * (R2 - 1.4), Math.sin(a0) * (R2 - 1.4), 0], [Math.cos(a1) * (R2 - 1.4), Math.sin(a1) * (R2 - 1.4), 0], 0.15, hex('#a5d8ff'));
     }
-    for (let i = 0; i < FW.N; i++) { const a = i / FW.N * Math.PI * 2; g.beam([0, 0, 0], [Math.cos(a) * R2, Math.sin(a) * R2, 0], 0.08, C.white); }
+    for (let i = 0; i < FW.N; i++) { const a = i / FW.N * Math.PI * 2; g.beam([0, 0, 0], [Math.cos(a) * R2, Math.sin(a) * R2, 0], 0.08, C.white); g.beam([Math.cos(a) * R2, Math.sin(a) * R2, 0.3], [Math.cos(a) * R2, Math.sin(a) * R2, 1.4], 0.06, C.gray); }
   });
   const mClock = mk((g) => {
     for (let i = 0; i < 24; i++) {
@@ -695,7 +982,7 @@ void main(){
 
   // ================= にゅうりょく =================
   const keys = {};
-  const inp = { mx: 0, my: 0, jump: false, let: false, fart: false };
+  const inp = { mx: 0, my: 0, jump: false, let: false, fart: false, up: false, down: false };
   const joy = { id: null, ox: 0, oy: 0, x: 0, y: 0 };
   const cam = { yaw: START.yaw, pitch: 0.32, dist: 9, id: null, lx: 0, ly: 0 };
   if (save.pos) cam.yaw = save.pos.yaw || 0;
@@ -704,7 +991,8 @@ void main(){
     if (e.repeat) { if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault(); return; }
     keys[e.code] = true;
     if (paused) return;
-    if (e.code === 'Space') { inp.jump = true; e.preventDefault(); }
+    if (e.code === 'Space') { inp.jump = true; inp.up = true; e.preventDefault(); }
+    if (e.code === 'KeyX' || e.code === 'ShiftLeft') inp.down = true;
     if (e.code === 'KeyX') inp.let = true;
     if (e.code === 'KeyE') useOni();
     if (e.code === 'KeyF' || e.code === 'KeyQ') inp.fart = true;
@@ -713,7 +1001,7 @@ void main(){
     if (e.code === 'Escape') { show('ovMenu', true); setPaused(); }
     if (e.code.startsWith('Arrow')) e.preventDefault();
   });
-  addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'KeyF' || e.code === 'KeyQ') inp.fart = false; });
+  addEventListener('keyup', (e) => { keys[e.code] = false; if (e.code === 'KeyF' || e.code === 'KeyQ') inp.fart = false; if (e.code === 'Space') inp.up = false; if (e.code === 'KeyX' || e.code === 'ShiftLeft') inp.down = false; });
   addEventListener('blur', () => { for (const k in keys) keys[k] = false; inp.fart = false; joy.id = null; cam.id = null; $('joy').style.display = 'none'; });
   cv.addEventListener('pointerdown', (e) => {
     ac();
@@ -732,7 +1020,8 @@ void main(){
       joy.x = dx / mx; joy.y = dy / mx;
       $('joy').firstElementChild.style.transform = `translate(${dx}px,${dy}px)`;
     } else if (e.pointerId === cam.id) {
-      cam.yaw -= (e.clientX - cam.lx) * 0.008; cam.pitch = clamp(cam.pitch + (e.clientY - cam.ly) * 0.006, -0.25, 1.25);
+      if (FP[P.state]) { look.yaw -= (e.clientX - cam.lx) * 0.006; look.pitch = clamp(look.pitch - (e.clientY - cam.ly) * 0.005, -1.2, 1.1); }
+      else { cam.yaw -= (e.clientX - cam.lx) * 0.008; cam.pitch = clamp(cam.pitch + (e.clientY - cam.ly) * 0.006, -0.25, 1.25); }
       cam.lx = e.clientX; cam.ly = e.clientY;
     }
   });
@@ -748,8 +1037,8 @@ void main(){
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach((t) => el.addEventListener(t, () => { el.classList.remove('on'); if (up) up(); }));
     el.addEventListener('click', (e) => e.preventDefault());
   }
-  holdBtn($('bJump'), () => { inp.jump = true; });
-  holdBtn($('bLet'), () => { inp.let = true; });
+  holdBtn($('bJump'), () => { inp.jump = true; inp.up = true; }, () => { inp.up = false; });
+  holdBtn($('bLet'), () => { inp.let = true; inp.down = true; }, () => { inp.down = false; });
   holdBtn($('bOni'), useOni);
   holdBtn($('bFart'), () => { inp.fart = true; }, () => { inp.fart = false; });
   holdBtn($('bEnter'), () => { if (curDoor) curDoor.run(); });
@@ -805,7 +1094,9 @@ void main(){
     o.frequency.setValueAtTime(o.frequency.value, t); o.frequency.exponentialRampToValueAtTime(140, t + 0.12);
     o.stop(t + 0.15); lfo.stop(t + 0.15); fartNode = null;
   }
+  const FP = { coaster: 1, wheel: 1, ghost: 1 }; // じぶんの め で みる とき
   const SFX = {
+    drink: () => { [0, 0.18, 0.36].forEach((d) => tone(180, 0.12, 'sine', 0.12, 120, d)); tone(880, 0.2, 'triangle', 0.08, 1320, 0.6); },
     jump: () => tone(380, 0.14, 'square', 0.05, 720),
     land: () => tone(140, 0.09, 'sine', 0.12, 70),
     star: () => [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.22, 'triangle', 0.12, null, i * 0.08)),
@@ -883,6 +1174,8 @@ void main(){
     time += dt;
     updatePlats(time);
     if (P.state === 'ride') { rideUpdate(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
+    const SP = { coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
+    if (SP) { SP(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
     if (P.plat) { P.x += P.plat.dx; P.y += P.plat.dy; P.z += P.plat.dz; }
     readMove();
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
@@ -925,6 +1218,8 @@ void main(){
       const r = moveV(P.vy * dt);
       P.ground = r === 1;
       if (r !== 0) P.vy = 0;
+      // たかい ところから おちたら けが（パラシュート なら だいじょうぶ）
+      if (P.ground && !wasGround && (P.fallTop || 0) - P.y > 14 && !P.glide) { P.fallTop = P.y; hurt(); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
       if (P.ground) { if (!wasGround && fallV < -8) SFX.land(); P.glide = false; }
 
       let inWater = false;
@@ -953,6 +1248,7 @@ void main(){
         P.speed = Math.hypot(P.vx, P.vz);
       }
     }
+    if (P.ground || P.state === 'swim' || P.state === 'climb' || P.glide || P.farting) P.fallTop = P.y; else P.fallTop = Math.max(P.fallTop || P.y, P.y);
     inp.jump = false; inp.let = false;
     afterUpdate(dt);
   }
@@ -999,20 +1295,24 @@ void main(){
     }
     let nearN = null, nd = 4.5;
     for (const n of NPCS) { const d = Math.hypot(n.x - P.x, n.z - P.z); if (d < nd && Math.abs(n.y - P.y) < 3) { nd = d; nearN = n; } }
-    if (P.state === 'ride') nearN = null;
+    if (!{ ground: 1, air: 1, swim: 1, climb: 1 }[P.state]) nearN = null;
+    if (nearN && nearN.mama && time - (P.waterT || -1e9) > 50) { P.waterT = time; P.st = maxSt(); P.tired = false; SFX.drink(); banner('🥤 ママ「おみず どうぞ」<small>ごくごく… ぷはー！ げんき まんたん</small>', 2.6); }
     if (nearN !== lastTalk) {
       lastTalk = nearN; const t = $('talk');
       if (nearN) { t.dataset.who = nearN.who; t.textContent = nearN.say; t.style.display = 'block'; } else t.style.display = 'none';
     }
     if (P.y < -40) respawn();
     curDoor = null;
-    if (P.state === 'ground' && P.y < 0.6) for (const d of DOORS) if (Math.hypot(d.x - P.x, d.z - P.z) < 2.4) { curDoor = d; break; }
+    if (P.state === 'ground') for (const d of DOORS) if (Math.abs((d.y || 0) - P.y) < 0.8 && Math.hypot(d.x - P.x, d.z - P.z) < (d.r || 2.4)) { curDoor = d; break; }
+    if (P.state === 'heli' && HELI.landed) curDoor = HELI_EXIT;
     const did = curDoor ? curDoor.id : '';
     if (did !== lastDoorId) { lastDoorId = did; const b = $('bEnter'); b.hidden = !curDoor; if (curDoor) { b.innerHTML = curDoor.label; b.style.background = `rgb(${curDoor.color.map((v) => v * 255 | 0).join(',')})`; } }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z, yaw: cam.yaw }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
-    const lab = P.state === 'ride' ? 'のって<br>いるよ' : P.state === 'climb' ? 'うえへ<br>ジャンプ' : (P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ';
-    if (lab !== lastLab) { lastLab = lab; $('bJump').innerHTML = lab; $('bLet').hidden = P.state !== 'climb'; }
+    const lab = { ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
+      ((P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ');
+    const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
+    if (lab + letLab !== lastLab) { lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
     $('fartGauge').style.setProperty('--g', Math.round(P.gas * 100) + '%');
   }
 
@@ -1034,6 +1334,183 @@ void main(){
     }
   }
 
+  // ================= のりもの・アトラクション =================
+  const look = { yaw: 0, pitch: 0 };   // のって いる ときの みまわし
+  let windNode = null, droneNode = null;
+  function loopNoise(vol, freq, type) {
+    const a = ac(); if (!a) return null;
+    const n = a.sampleRate * 2, buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    s.buffer = buf; s.loop = true; f.type = type || 'lowpass'; f.frequency.value = freq; g.gain.value = vol;
+    s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+    return { s, g, f, stop() { try { s.stop(); } catch (e) { /* むし */ } } };
+  }
+  function startDrone() {
+    const a = ac(); if (!a) return null;
+    const g = a.createGain(); g.gain.value = 0.05; g.connect(a.destination);
+    const os = [55, 58.3, 110.5].map((f) => { const o = a.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(); return o; });
+    return { stop() { os.forEach((o) => { try { o.stop(); } catch (e) { /* むし */ } }); } };
+  }
+  function stopLoops() { if (windNode) { windNode.stop(); windNode = null; } if (droneNode) { droneNode.stop(); droneNode = null; } }
+  function startAttraction(kind) {
+    look.yaw = 0; look.pitch = 0; P.vx = P.vy = P.vz = 0; P.glide = false; P.wall = null; P.plat = null;
+    $('talk').style.display = 'none'; lastTalk = null;
+    if (kind === 'coaster') {
+      P.state = 'coaster'; P.co = { s: CO.total * 0.035, v: 2.2, lap: 0, scream: false, splash: false, chain: 0 };
+      windNode = loopNoise(0.0001, 900, 'bandpass');
+      banner('🎢 シートベルト よし！ しゅっぱつ！<small>みぎがわを なぞると まわりを みられるよ</small>', 2.5);
+    } else if (kind === 'ghost') {
+      P.state = 'ghost'; P.gh = { s: 0.5, pause: 0, ev: 0, et: 0, cur: null, beat: 0, flick: 0 };
+      droneNode = startDrone();
+      banner('👻 おばけやしき…<small>くらいよ。こわくなったら「でる」</small>', 2.5);
+    } else if (kind === 'wheel') {
+      let best = 0, bd = 1e9;
+      cabins.forEach((p, i) => { const a = ((time * Math.PI * 2 / FW.period + i * Math.PI * 2 / FW.N) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2); const d = Math.abs(a - Math.PI * 1.5); if (d < bd) { bd = d; best = i; } });
+      P.state = 'wheel'; P.wh = { i: best, t0: time, top: false };
+      banner('🎡 コスモクロック21 に のったよ<small>ぐるっと 1しゅう。みぎがわを なぞって とおくを みよう</small>', 3);
+    }
+  }
+  function endAttraction(msg) {
+    stopLoops(); const d = P.state === 'ghost' ? GH.door : P.state === 'coaster' ? DOORS.find((x) => x.id === 'coaster') : DOORS.find((x) => x.id === 'wheel');
+    P.state = 'ground'; P.ground = true; P.y = 0; if (d) { P.x = d.x; P.z = d.z; }
+    P.co = P.gh = P.wh = null; lastDoorId = '-'; if (msg) banner(msg, 3);
+  }
+  function coasterUpdate(dt) {
+    const c = P.co, q0 = CO.at(c.s), u = q0.u;
+    const g = 15;
+    if (u > 0.07 && u < 0.27) { c.v = 3.6; if ((c.chain -= dt) < 0) { c.chain = 0.16; tone(1400, 0.03, 'square', 0.03); } }
+    else if (u > 0.93 || (c.lap && u < 0.035)) { c.v = Math.max(1.8, c.v - 9 * dt); }
+    else { const ahead = CO.at(c.s + c.v * dt); c.v = Math.sqrt(Math.max(2.5, c.v * c.v + 2 * g * (q0.y - ahead.y) - 0.006 * c.v * c.v * c.v * dt)); }
+    const prevU = u; c.s += c.v * dt;
+    const q = CO.at(c.s);
+    if (q.u < prevU - 0.5) c.lap = 1;
+    if (!c.scream && q.u > 0.31) { c.scream = true; banner('🎢 キャーーーーッ！！', 2); tone(900, 1.4, 'sawtooth', 0.04, 300); }
+    if (!c.splash && q.u > 0.43) { c.splash = true; noise(0.9, 0.5, 700); splashFx(); banner('💦 ザッパーン！', 1.5); }
+    P.x = q.x; P.y = q.y + 0.2; P.z = q.z; P.face = Math.atan2(q.tx, q.tz);
+    if (windNode) { windNode.g.gain.value = Math.min(0.32, c.v * c.v * 0.0012); windNode.f.frequency.value = 400 + c.v * 60; }
+    c.vis = q;
+    if (c.lap && q.u >= 0.035 && q.u < 0.2) endAttraction('🎢 たのしかった！ もういっかい のる？');
+  }
+  function splashFx() {
+    const d = document.createElement('div'); d.className = 'splash';
+    for (let i = 0; i < 40; i++) { const s = document.createElement('i'); s.style.left = Math.random() * 100 + '%'; s.style.top = Math.random() * 100 + '%'; s.style.animationDelay = Math.random() * 0.3 + 's'; d.appendChild(s); }
+    document.body.appendChild(d); setTimeout(() => d.remove(), 2200);
+  }
+  const SCARE = {
+    portrait: () => { tone(220, 1.2, 'triangle', 0.05, 110); noise(0.6, 0.08, 2500, 'highpass'); },
+    ghost: () => { tone(500, 1.6, 'sine', 0.1, 900); tone(520, 1.6, 'sine', 0.06, 760, 0.2); },
+    flicker: () => { noise(1.4, 0.45, 120, 'lowpass'); },
+    skeleton: () => { for (let i = 0; i < 8; i++) tone(1200 + Math.random() * 800, 0.05, 'square', 0.04, null, i * 0.07); },
+    coffin: () => { tone(90, 1.8, 'sawtooth', 0.09, 60); noise(0.5, 0.2, 300); },
+    hands: () => { noise(2, 0.12, 3000, 'highpass'); },
+    face: () => { tone(700, 0.9, 'sawtooth', 0.12, 1400); noise(0.5, 0.35, 1500); },
+  };
+  function ghostUpdate(dt) {
+    const h = P.gh;
+    if (inp.let) { endAttraction('🏃 でぐちから でたよ。こわかったね！'); return; }
+    if ((h.beat -= dt) < 0) { h.beat = h.cur ? 0.45 : 0.9; tone(60, 0.12, 'sine', 0.18); tone(55, 0.12, 'sine', 0.14, null, 0.15); }
+    if (h.cur) { h.et += dt; if (h.et > 2.2) h.cur = null; }
+    else if (h.pause > 0) h.pause -= dt;
+    else {
+      h.s += 1.5 * dt;
+      const ev = GHM.EV[h.ev];
+      if (ev && h.s >= ev[0]) { h.cur = ev[1]; h.et = 0; h.ev++; h.pause = 0.4; SCARE[ev[1]](); if (ev[1] === 'face') banner('👻 ばあっ！！', 1.2); }
+      if (h.s >= GHM.total - 0.8) { endAttraction('🎉 でられた！ おばけやしき クリア！ 👻'); return; }
+    }
+    h.flick = h.cur === 'flicker' ? (Math.random() < 0.5 ? 1 : 0) : 0;
+  }
+  function wheelUpdate(dt) {
+    const w = P.wh, p = cabins[w.i];
+    P.x = p.cx; P.y = p.cy - 1.5; P.z = p.cz; P.speed = 0;
+    if (!w.top && time - w.t0 > FW.period / 2) { w.top = true; banner('🗻 てっぺん！ ふじさん・ベイブリッジ・マリンタワー が みえるかな？', 3.5); }
+    if (time - w.t0 > FW.period) endAttraction('🎡 おかえりなさい！ たかかったね');
+  }
+  // --- ヘリコプター ---
+  let rotorT = 0;
+  function heliHits(x, y, z) {
+    for (const b of near(x - 2, z - 2, x + 2, z + 2)) if (x + 1.6 > b.x0 && x - 1.6 < b.x1 && z + 1.6 > b.z0 && z - 1.6 < b.z1 && y + 2.2 > b.y0 && y < b.y1) return true;
+    return false;
+  }
+  function heliFloor(x, y, z) { let f = WATER + 0.3; for (const b of near(x - 1.6, z - 1.6, x + 1.6, z + 1.6)) if (x + 1.4 > b.x0 && x - 1.4 < b.x1 && z + 1.4 > b.z0 && z - 1.4 < b.z1 && b.y1 <= y + 0.3 && b.y1 > f) f = b.y1; return f; }
+  function heliUpdate(dt) {
+    const Hh = HELI; readMove();
+    const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+    const dx = rx * inp.mx + fx * inp.my, dz = rz * inp.mx + fz * inp.my;
+    const floor = heliFloor(Hh.x, Hh.y, Hh.z), landed = Hh.y - floor < 0.15;
+    const up = inp.up ? 7 : 0, down = inp.down ? -6 : 0;
+    Hh.vy += ((up + down) - Hh.vy) * Math.min(1, 3 * dt);
+    const sp = landed && !inp.up ? 0 : 16;
+    Hh.vx += (dx * sp - Hh.vx) * Math.min(1, 2.2 * dt); Hh.vz += (dz * sp - Hh.vz) * Math.min(1, 2.2 * dt);
+    let nx = Hh.x + Hh.vx * dt; if (heliHits(nx, Hh.y + 0.05, Hh.z)) { nx = Hh.x; Hh.vx = 0; } Hh.x = nx;
+    let nz = Hh.z + Hh.vz * dt; if (heliHits(Hh.x, Hh.y + 0.05, nz)) { nz = Hh.z; Hh.vz = 0; } Hh.z = nz;
+    let ny = Math.min(220, Hh.y + Hh.vy * dt); if (Hh.vy > 0 && heliHits(Hh.x, ny, Hh.z)) { ny = Hh.y; Hh.vy = 0; }
+    const f2 = heliFloor(Hh.x, Hh.y, Hh.z); if (ny < f2) { ny = f2; Hh.vy = Math.max(0, Hh.vy); } Hh.y = ny;
+    if (Math.hypot(Hh.vx, Hh.vz) > 0.5) { const want = Math.atan2(Hh.vx, Hh.vz); let d = want - Hh.yaw; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; Hh.yaw += d * Math.min(1, 2.5 * dt); }
+    Hh.rot += dt * 30;
+    P.x = Hh.x; P.y = Hh.y + 0.45; P.z = Hh.z; P.face = Hh.yaw; P.speed = 0;
+    if ((rotorT -= dt) < 0) { rotorT = 0.085; noise(0.06, 0.16, 110, 'lowpass'); }
+    Hh.landed = Hh.y - heliFloor(Hh.x, Hh.y, Hh.z) < 0.2;
+  }
+  function heliExit() {
+    const Hh = HELI; Hh.vx = Hh.vy = Hh.vz = 0;
+    const s = [[2.6, 0], [-2.6, 0], [0, 2.8], [0, -2.8]].map(([a, b]) => ({ x: Hh.x + Math.cos(Hh.yaw) * a + Math.sin(Hh.yaw) * b, z: Hh.z - Math.sin(Hh.yaw) * a + Math.cos(Hh.yaw) * b }))
+      .find((q) => !blockedAt(q.x, Hh.y + 0.02, q.z) && groundBelow(q.x, Hh.y + 0.1, q.z) > Hh.y - 0.5) || { x: Hh.x, z: Hh.z };
+    P.x = s.x; P.z = s.z; P.y = Hh.y; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; lastDoorId = '-';
+    banner('🚁 ヘリから おりたよ', 1.6);
+  }
+  // --- けが → きゅうきゅうしゃ → けいゆう びょういん ---
+  let sirenT = 0, sirenHi = false;
+  function hurt(h) {
+    P.state = 'hurt'; P.vx = P.vz = 0; P.glide = false; if (P.farting) { P.farting = false; fartStop(); }
+    const dx = HOSP.x - P.x, dz = HOSP.z - P.z, d = Math.hypot(dx, dz) || 1, ux = dx / d, uz = dz / d;
+    const stop = { x: P.x + uz * 3.2, z: P.z - ux * 3.2 }, from = { x: stop.x + ux * Math.min(50, d), z: stop.z + uz * Math.min(50, d) };
+    P.hurtS = { t: 0, from, stop, face: Math.atan2(-ux, -uz), y: P.y };
+    tone(300, 0.5, 'sawtooth', 0.05, 120);
+    banner('🤕 いたたた… たかい ところから おちちゃった！<small>だれか〜！ きゅうきゅうしゃ を よんで！</small>', 3.5);
+    $('talk').style.display = 'none'; lastTalk = null;
+  }
+  function hurtUpdate(dt) {
+    const s = P.hurtS; s.t += dt;
+    if ((sirenT -= dt) < 0) { sirenT = 0.62; sirenHi = !sirenHi; const near2 = Math.min(1, 25 / Math.max(5, Math.hypot(ambPos().x - P.x, ambPos().z - P.z))); tone(sirenHi ? 960 : 770, 0.6, 'square', 0.035 * near2 + 0.01); }
+    if (s.t > 7.3 && !s.done) { s.done = true; openHospital(); }
+  }
+  function ambPos() {
+    const s = P.hurtS; if (!s) return { x: 0, z: 0, f: 0 };
+    const k = clamp((s.t - 1.2) / 4, 0, 1), e = 1 - (1 - k) * (1 - k);
+    return { x: s.from.x + (s.stop.x - s.from.x) * e, z: s.from.z + (s.stop.z - s.from.z) * e, f: s.face };
+  }
+  const HOSP_STEPS = [
+    ['🚑', 'ピーポー ピーポー… きゅうきゅうしゃ で はこばれているよ'],
+    ['🏥', 'けいゆう びょういん（みなとみらい 3ちょうめ）に ついたよ'],
+    ['👩‍⚕️', 'かんごしさん「だいじょうぶ？ いたい ところを みせてね」'],
+    ['👨‍⚕️', 'おいしゃさん「ひざを すりむいた だけ。ばんそうこう を はって おくね。よく がまん できたね！」'],
+    ['🩹', 'げんきに なった！ たかい ところから おりる ときは、パラシュート 🪂 を ひらこうね'],
+  ];
+  function openHospital() {
+    stopLoops(); let i = 0;
+    const draw = () => {
+      const [e, t] = HOSP_STEPS[i];
+      $('hospBody').innerHTML = `<div class="hpic">${e}</div><p>${t}</p>`;
+      $('bHospNext').textContent = i < HOSP_STEPS.length - 1 ? 'つぎへ ▶' : '🚪 びょういんの そとへ';
+    };
+    $('bHospNext').onclick = () => {
+      i++; SFX.tap();
+      if (i >= HOSP_STEPS.length) {
+        show('ovHosp', false);
+        const d = HOSPDOOR || freeSpot(HOSP.x, HOSP.bb[3] + 3);
+        P.x = d.x; P.z = d.z; P.y = 0; P.state = 'ground'; P.ground = true; P.hurtS = null; P.st = maxSt(); P.tired = false; lastDoorId = '-';
+        setPaused(); banner('🏥 けいゆう びょういん から でたよ<small>おだいじに！</small>', 3); return;
+      }
+      draw();
+    };
+    draw(); show('ovHosp', true); setPaused();
+  }
+  function heliEnter() {
+    P.state = 'heli'; P.glide = false; P.vx = P.vy = P.vz = 0; HELI.vx = HELI.vy = HELI.vz = 0; HELI.home = false; lastDoorId = '-';
+    $('talk').style.display = 'none'; lastTalk = null; cam.dist = Math.max(cam.dist, 10);
+    banner('🚁 ヘリコプター しゅっぱつ！<small>ジャンプ＝のぼる・さがる ボタン＝さがる・ひだりで いどう。じめんに おりたら「おりる」</small>', 4);
+  }
   function climbUpdate(dt, rx, rz) {
     const w = P.wall, b = w.b, a = w.axis, t = a === 'x' ? 'z' : 'x';
     let rt = t === 'x' ? rx : rz;
@@ -1096,6 +1573,8 @@ void main(){
     if (w) { const push = 2.2; if (w.axis === 'x') P.vx = w.side * push; else P.vz = w.side * push; } P.vy = 0;
   }
   function respawn() {
+    stopLoops(); P.co = P.gh = P.wh = P.hurtS = null; P.fallTop = 0;
+    if (P.state === 'heli') { HELI.vx = HELI.vy = HELI.vz = 0; }
     P.x = START.x; P.y = START.y; P.z = START.z; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.wall = null; P.glide = false;
     P.plat = null; P.ride = null; P.st = maxSt(); P.tired = false; cam.yaw = START.yaw; P.face = START.face;
   }
@@ -1133,8 +1612,8 @@ void main(){
   }
   function person(x, y, z, face, shirt, pose, phase) { // おとなの ひと
     const base = M(T(x, y, z), RY(face)); const { lg, ar, al } = poseAngles(pose, phase);
-    part(base, -0.13, 0.72, 0, 0.2, 0.72, 0.22, C.navy, RX(lg));
-    part(base, 0.13, 0.72, 0, 0.2, 0.72, 0.22, C.navy, RX(-lg));
+    part(base, -0.13, 0.72, 0, 0.2, 0.72, 0.22, C.navy, RX(pose === 'sit' ? -1.45 : lg));
+    part(base, 0.13, 0.72, 0, 0.2, 0.72, 0.22, C.navy, RX(pose === 'sit' ? -1.45 : -lg));
     part(base, 0, 0.98, 0, 0.56, 0.58, 0.36, shirt);
     part(base, -0.36, 1.24, 0, 0.16, 0.54, 0.18, shirt, RX(-al));
     part(base, 0.36, 1.24, 0, 0.16, 0.54, 0.18, shirt, RX(-ar));
@@ -1142,6 +1621,81 @@ void main(){
     part(base, 0, 1.56, -0.06, 0.55, 0.42, 0.42, C.hair);
     part(base, -0.11, 1.5, 0.245, 0.07, 0.1, 0.02, C.black); part(base, 0.11, 1.5, 0.245, 0.07, 0.1, 0.02, C.black);
     return base;
+  }
+  function drawHeli() {
+    const h = HELI, b = M(T(h.x, h.y, h.z), RY(h.yaw)), red = hex('#e03131');
+    draw(mCube, M(b, T(0, 0.75, -0.1), S(2.0, 1.1, 3.0)), red);
+    draw(mCube, M(b, T(0, 0.72, -0.1), S(2.04, 0.22, 3.04)), C.white);
+    draw(mCube, M(b, T(0, 1.55, -0.85), S(1.9, 0.75, 1.3)), red);
+    draw(mCube, M(b, T(0, 1.0, -3.2), S(0.38, 0.38, 3.4)), red);
+    draw(mCube, M(b, T(0, 1.55, -4.7), S(0.14, 1.2, 0.7)), C.white);
+    draw(mCube, M(b, T(0.15, 1.55, -4.75), RX(h.rot * 1.4), S(0.05, 1.5, 0.16)), C.navy);
+    [-0.9, 0.9].forEach((x) => { draw(mCube, M(b, T(x, 0.06, 0), S(0.12, 0.12, 3.4)), C.gray); draw(mCube, M(b, T(x, 0.2, 0.7), S(0.08, 0.35, 0.08)), C.gray); draw(mCube, M(b, T(x, 0.2, -0.8), S(0.08, 0.35, 0.08)), C.gray); });
+    draw(mCube, M(b, T(0, 2.1, -0.3), S(0.22, 0.5, 0.22)), C.gray);
+    [0, Math.PI / 2].forEach((a) => draw(mCube, M(b, T(0, 2.38, -0.3), RY(h.rot + a), S(9.5, 0.06, 0.32)), C.navy));
+  }
+  function drawCoaster() {
+    const car = (q, col) => {
+      const yw = Math.atan2(q.tx, q.tz), pt = Math.asin(clamp(q.ty, -1, 1)), b = M(T(q.x, q.y + 0.2, q.z), RY(yw), RX(-pt));
+      draw(mCube, M(b, T(0, 0.15, 0), S(1.6, 0.5, 2.3)), col);
+      draw(mCube, M(b, T(0, 0.55, -0.9), S(1.5, 0.45, 0.25)), shade(col, 0.7));
+      draw(mCube, M(b, T(0, 0.45, 1.05), S(1.5, 0.3, 0.2)), C.white);
+      draw(mCube, M(b, T(0, 0.75, 0.35), S(1.3, 0.08, 0.08)), C.yellow);
+      [-0.75, 0.75].forEach((x) => draw(mCube, M(b, T(x, -0.1, 0), S(0.15, 0.25, 2)), C.gray));
+    };
+    if (P.state === 'coaster') { const s0 = P.co.s; car(CO.at(s0), hex('#e03131')); car(CO.at(s0 - 2.6), hex('#1c7ed6')); car(CO.at(s0 - 5.2), hex('#ffd43b')); }
+    else {
+      CO.idle = CO.idle || { s: 0, v: 3 }; const c = CO.idle, q = CO.at(c.s);
+      if (q.u > 0.07 && q.u < 0.27) c.v = 3.6; else { const a = CO.at(c.s + 0.3); c.v = Math.sqrt(Math.max(4, c.v * c.v + 2 * 15 * (q.y - a.y) * (0.3 / Math.max(0.3, 0.3)))); if (q.u > 0.93) c.v = Math.max(3, c.v * 0.97); }
+      c.s += c.v / 60;
+      [0, 2.6, 5.2].forEach((o, k) => car(CO.at(c.s - o), [hex('#e03131'), hex('#1c7ed6'), hex('#ffd43b')][k]));
+    }
+  }
+  function drawAmb() {
+    const a = ambPos(), b = M(T(a.x, 0, a.z), RY(a.f)), red = hex('#e03131'), on = Math.floor(time * 6) % 2;
+    draw(mCube, M(b, T(0, 1.35, -0.4), S(2.3, 2.1, 3.6)), C.white);
+    draw(mCube, M(b, T(0, 0.95, 1.95), S(2.2, 1.3, 1.3)), C.white);
+    draw(mCube, M(b, T(0, 1.35, 2.62), S(1.9, 0.55, 0.05)), [0.55, 0.8, 1]);
+    draw(mCube, M(b, T(0, 1.0, -0.2), S(2.34, 0.3, 4.6)), red);
+    draw(mCube, M(b, T(-0.6, 2.5, 1.0), S(0.45, 0.25, 0.4)), on ? red : shade(red, 0.4), on);
+    draw(mCube, M(b, T(0.6, 2.5, 1.0), S(0.45, 0.25, 0.4)), on ? shade(red, 0.4) : red, 1 - on);
+    draw(mCube, M(b, T(0, 1.8, -2.21), S(0.9, 0.9, 0.05)), red);
+    [[-1.05, 1.7], [1.05, 1.7], [-1.05, -1.4], [1.05, -1.4]].forEach(([x, z]) => draw(mCube, M(b, T(x, 0.4, z), S(0.3, 0.8, 0.8)), C.black));
+    if (P.hurtS.t > 5.3) { person(P.x + 1.2, 0, P.z + 0.8, a.f + Math.PI, C.white, 'stand', 0); person(P.x - 1.2, 0, P.z + 0.8, a.f + Math.PI, C.white, 'stand', 0); }
+  }
+  function drawGhostScene() {
+    gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    draw(GHM.mesh, T(0, GHM.Y, 0), W);
+    const h = P.gh, Y = GHM.Y, ev = h.cur, et = h.et, s0 = GHM.EV[Math.max(0, h.ev - 1)][0];
+    const ghost = (x, y, z, sc, a) => {
+      const f = Math.atan2(eye[0] - x, eye[2] - z), b = M(T(x, y, z), RY(f), S(sc));
+      draw(mSphere, M(b, S(0.55, 0.6, 0.55)), [0.95, 0.97, 1], 0.5, a);
+      draw(mCone, M(b, T(0, -0.15, 0), RX(Math.PI), S(0.55, 1.1, 0.55)), [0.95, 0.97, 1], 0.5, a);
+      draw(mSphere, M(b, T(-0.2, 0.08, 0.48), S(0.1, 0.16, 0.06)), C.black, 1, a);
+      draw(mSphere, M(b, T(0.2, 0.08, 0.48), S(0.1, 0.16, 0.06)), C.black, 1, a);
+      draw(mSphere, M(b, T(0, -0.2, 0.5), S(0.12, 0.14, 0.05)), C.black, 1, a);
+    };
+    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // ふわふわ ただよう ちいさな おばけ
+    for (let k = 0; k < 4; k++) { const q = GHM.at((h.s + 7 + k * 9) % GHM.total); ghost(q.x + Math.sin(time + k) * 0.6, Y + 2.2 + Math.sin(time * 2 + k) * 0.2, q.z + Math.cos(time + k) * 0.6, 0.35, 0.35); }
+    if (ev) {
+      const q = GHM.at(s0 + 2.5), nx = -q.uz, nz = q.ux;
+      if (ev === 'ghost') { const t = clamp(et / 1.6, 0, 1), sd = -GHM.hw + t * GHM.hw * 2; ghost(q.x + nx * sd, Y + 1.6 + Math.sin(et * 6) * 0.15, q.z + nz * sd, 1, 0.85); }
+      if (ev === 'portrait') ghost(q.x + nx * 1.2, Y + 1.8, q.z + nz * 1.2, 0.7, Math.min(0.8, et));
+      if (ev === 'skeleton') {
+        const y = Y + Math.max(0.9, 3.4 - et * 6) + Math.abs(Math.sin(et * 9)) * 0.15 * Math.max(0, 1 - et);
+        const b = M(T(q.x, y, q.z), RY(Math.atan2(eye[0] - q.x, eye[2] - q.z)));
+        draw(mSphere, M(b, T(0, 1.2, 0), S(0.28, 0.3, 0.28)), C.white, 0.3);
+        draw(mSphere, M(b, T(-0.1, 1.22, 0.24), S(0.07, 0.08, 0.04)), C.black); draw(mSphere, M(b, T(0.1, 1.22, 0.24), S(0.07, 0.08, 0.04)), C.black);
+        for (let r = 0; r < 4; r++) draw(mCube, M(b, T(0, 0.85 - r * 0.15, 0), S(0.5 - r * 0.05, 0.05, 0.25)), C.white, 0.3);
+        draw(mCube, M(b, T(0, 0.55, 0), S(0.06, 0.8, 0.06)), C.white, 0.3);
+        [-1, 1].forEach((sd) => { draw(mCube, M(b, T(sd * 0.32, 0.6, 0), RZ(sd * (0.3 + Math.sin(time * 12) * 0.3)), S(0.06, 0.6, 0.06)), C.white, 0.3); draw(mCube, M(b, T(sd * 0.12, -0.1, 0), S(0.06, 0.7, 0.06)), C.white, 0.3); });
+      }
+      if (ev === 'coffin') { const c = GHM.at(55), y = Y - 1.4 + Math.min(1.4, et * 1.6), b = person(c.x - c.uz * 1.1, y, c.z + c.ux * 1.1, Math.atan2(eye[0] - c.x, eye[2] - c.z), hex('#5c7a4a'), 'up', 0); part(b, 0, 1.5, 0, 0.53, 0.49, 0.49, hex('#94d82d')); }
+      if (ev === 'hands') for (let k = 0; k < 6; k++) { const qq = GHM.at(s0 + 0.5 + k * 0.7), sd = k % 2 ? 1 : -1, nx2 = -qq.uz * sd, nz2 = qq.ux * sd, out = Math.max(0, Math.sin(et * 3 + k)) * 0.7; draw(mCube, M(T(qq.x + nx2 * (GHM.hw - out / 2), Y + 1.2 + (k % 3) * 0.3, qq.z + nz2 * (GHM.hw - out / 2)), RY(Math.atan2(nx2, nz2)), S(0.14, 0.14, out + 0.05)), hex('#c0eb75')); }
+      if (ev === 'face') { const t = clamp(et / 0.6, 0, 1), f = GHM.at(s0 + 7 - t * 6.4); ghost(f.x, Y + 1.4, f.z, 1.8, 0.9); }
+    }
+    gl.disable(gl.BLEND);
   }
   function drawAo() { // 5さいの おとこのこ: あたま おおきめ・あし みじかめ
     let pose = 'stand';
@@ -1152,9 +1706,12 @@ void main(){
     else if (P.glide) pose = 'up';
     else if (P.state === 'air') pose = 'air';
     else if (P.speed > 0.5) pose = 'walk';
-    const base = M(T(P.x, P.y, P.z), RY(P.face)); const { lg, ar, al } = poseAngles(pose, P.phase);
-    part(base, -0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(lg));          // はんズボン
-    part(base, 0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(-lg));
+    if (P.state === 'heli' || P.state === 'coaster') pose = 'sit';
+    if (P.state === 'coaster' || P.state === 'wheel') return; // じぶんの め で みている
+    const base = P.state === 'hurt' ? M(T(P.x, P.y + 0.33, P.z), RY(P.face), RX(-Math.PI / 2)) : M(T(P.x, P.y, P.z), RY(P.face)); const { lg, ar, al } = poseAngles(pose, P.phase);
+    const sitP = pose === 'sit';
+    part(base, -0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(sitP ? -1.45 : lg));          // はんズボン
+    part(base, 0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(sitP ? -1.45 : -lg));
     part(base, -0.12, 0.1, 0.03, 0.2, 0.14, 0.28, C.white, lg ? RX(lg * 0.6) : null); // くつ
     part(base, 0.12, 0.1, 0.03, 0.2, 0.14, 0.28, C.white, lg ? RX(-lg * 0.6) : null);
     part(base, 0, 0.76, 0, 0.5, 0.5, 0.32, C.blue);                                   // あおい Tシャツ
@@ -1209,10 +1766,24 @@ void main(){
     gl.clearColor(C.sky[0], C.sky[1], C.sky[2], 1); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.enable(gl.DEPTH_TEST); gl.disable(gl.CULL_FACE); gl.disable(gl.BLEND);
 
-    const tgt = [P.x, P.y + 1.2, P.z];
+    let fov = 1.05, tgt, inGhost = P.state === 'ghost';
+    if (FP[P.state]) {
+      let ex, ey, ez, by = 0, bp = 0;
+      if (P.state === 'coaster') {
+        const q = P.co.vis || CO.at(P.co.s); by = Math.atan2(q.tx, q.tz); const pt0 = Math.asin(clamp(q.ty, -1, 1)); bp = pt0 * 0.9;
+        const ux = -Math.sin(by) * Math.sin(pt0), uy = Math.cos(pt0), uz = -Math.cos(by) * Math.sin(pt0);
+        ex = q.x + ux * 1.25 + q.tx * 0.15; ey = q.y + 0.2 + uy * 1.25 + q.ty * 0.15; ez = q.z + uz * 1.25 + q.tz * 0.15; fov = 1.05 + Math.min(0.45, P.co.v * 0.022);
+        const sh = Math.min(0.06, P.co.v * 0.0035); ex += (Math.random() - 0.5) * sh; ey += (Math.random() - 0.5) * sh;
+      } else if (P.state === 'wheel') { ex = P.x; ey = P.y + 1.15; ez = P.z; by = FW.axis === 'x' ? -Math.PI / 2 : Math.PI; bp = -0.22; }
+      else { const q = GHM.at(P.gh.s), want = Math.atan2(q.ux, q.uz); let d0 = want - (P.gh.yaw === undefined ? want : P.gh.yaw); while (d0 > Math.PI) d0 -= Math.PI * 2; while (d0 < -Math.PI) d0 += Math.PI * 2; P.gh.yaw = (P.gh.yaw === undefined ? want : P.gh.yaw) + d0 * 0.08; by = P.gh.yaw; ex = q.x; ey = GHM.Y + 1.35 + Math.sin(time * 6) * 0.02; ez = q.z; }
+      const yw = by + look.yaw, pt = clamp(bp + look.pitch, -1.45, 1.45);
+      eye = [ex, ey, ez]; tgt = [ex + Math.sin(yw) * Math.cos(pt), ey + Math.sin(pt), ez + Math.cos(yw) * Math.cos(pt)];
+    }
+    if (!FP[P.state]) {
+    tgt = P.state === 'heli' ? [HELI.x, HELI.y + 1.6, HELI.z] : [P.x, P.y + 1.2, P.z];
     const cp = Math.cos(cam.pitch);
     const dir = [Math.sin(cam.yaw) * cp, Math.sin(cam.pitch), Math.cos(cam.yaw) * cp];
-    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0);
+    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0) + (P.state === 'heli' ? 8 : 0) + (P.state === 'hurt' ? 4 : 0);
     const d = [dir[0] * dist, dir[1] * dist, dir[2] * dist];
     let tm = 1;
     if (P.state !== 'ride') {
@@ -1221,10 +1792,15 @@ void main(){
     }
     dist = Math.max(1.2, dist * tm - 0.25);
     eye = [tgt[0] + dir[0] * dist, Math.max(WATER + 0.4, tgt[1] + dir[1] * dist), tgt[2] + dir[2] * dist];
-    proj = persp(1.05, w / h, 0.1, 1200); view = lookAt(eye, tgt);
+    }
+    proj = persp(fov, w / h, 0.1, 3600); view = lookAt(eye, tgt);
+    // きり: たかい ところほど とおくまで みえる。おばけやしき は まっくら
+    const hy = Math.max(0, eye[1]);
+    gl.uniform1f(U.uFogN, inGhost ? 0.8 : 70 + hy * 8); gl.uniform1f(U.uFogF, inGhost ? (P.gh.flick ? 3.5 : 11) : Math.min(3200, 350 + hy * 28));
     gl.uniformMatrix4fv(U.uProj, false, proj); gl.uniformMatrix4fv(U.uView, false, view);
-    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, C.sky); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
+    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, inGhost ? [0, 0, 0] : C.sky); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
     bound = null;
+    if (inGhost) { drawGhostScene(); return; }
 
     draw(staticMesh, I(), W);
     // かんらんしゃ
@@ -1238,9 +1814,18 @@ void main(){
       draw(mCube, M(T(FW.cx, FW.hub, FW.cz), RY(rotP), T(0, 0, zo), RZ(-mn), T(0, 1.2, 0), S(0.15, 2.4, 0.05)), C.yellow, 1);
     });
     cabins.forEach((p, i) => {
+      if (P.state === 'wheel' && P.wh.i === i) { // のっている はこ は まどが あいて みえる
+        const c = CAB_COL[i % CAB_COL.length];
+        draw(mCube, M(T(p.cx, p.cy - 1.5, p.cz), S(2.2, 0.12, 2.2)), c);
+        draw(mCube, M(T(p.cx, p.cy + 0.15, p.cz), S(2.3, 0.08, 2.3)), c);
+        [[-1, -1], [1, -1], [1, 1], [-1, 1]].forEach(([a, b]) => draw(mCube, M(T(p.cx + a * 1.05, p.cy - 0.8, p.cz + b * 1.05), S(0.1, 1.5, 0.1)), c));
+        [[0, -1.08, 2.2, 0.06], [0, 1.08, 2.2, 0.06], [-1.08, 0, 0.06, 2.2], [1.08, 0, 0.06, 2.2]].forEach(([a, b, sx, sz]) => draw(mCube, M(T(p.cx + a, p.cy - 1.25, p.cz + b), S(sx, 0.45, sz)), c));
+        return;
+      }
       draw(mCube, M(T(p.cx, p.cy - 0.8, p.cz), S(2.2, 1.6, 2.2)), CAB_COL[i % CAB_COL.length]);
       draw(mCube, M(T(p.cx, p.cy - 0.75, p.cz), S(2.26, 0.6, 1.6)), [0.6, 0.85, 1]);
     });
+    drawCoaster(); drawHeli(); if (P.state === 'hurt') drawAmb();
     // エアキャビンの ゴンドラ
     if (CAB) {
       const n = 12, cyc = CAB.total * 2;
@@ -1254,8 +1839,9 @@ void main(){
       if (P.state === 'ride') gondola(P.x, CAB.Y - 2.4, P.z, P.face, hex('#ffe066'));
     }
     NPCS.forEach((n) => {
-      const f = Math.hypot(P.x - n.x, P.z - n.z) < 8 ? Math.atan2(P.x - n.x, P.z - n.z) : 0;
-      person(n.x, n.y, n.z, f, n.col, 'stand', 0);
+      const f = n.sit ? n.face : Math.hypot(P.x - n.x, P.z - n.z) < 8 ? Math.atan2(P.x - n.x, P.z - n.z) : 0;
+      const b = person(n.x, n.y, n.z, f, n.col, n.sit ? 'sit' : 'stand', 0);
+      if (n.mama) { part(b, 0, 1.45, -0.18, 0.56, 0.75, 0.2, C.hair); if (P.state === 'ground' && Math.hypot(P.x - n.x, P.z - n.z) < 4.5 && time - (P.waterT || -1e9) < 3) draw(mCube, M(b, T(0.36, 1.15, 0.35), S(0.14, 0.3, 0.14)), hex('#74c0fc')); }
     });
     PICKS.forEach((p) => {
       if (time - p.took < 45) return;
@@ -1280,16 +1866,19 @@ void main(){
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s)), [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
-    const gy = P.state === 'climb' || P.state === 'ride' ? null : groundBelow(P.x, P.y, P.z);
+    const gy = { climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
+    if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
     if (gy !== null && P.y - gy < 30) draw(mDisc, M(T(P.x, gy + 0.03, P.z), S(0.45 * Math.max(0.4, 1 - (P.y - gy) / 30))), C.black, 1, 0.3);
     STARS.forEach((s) => {
       if (save.stars.includes(s.id)) return;
       const big = s.big;
       draw(mCube, M(T(s.x, s.y + 30, s.z), S(big ? 0.9 : 0.45, 60, big ? 0.9 : 0.45)), big ? C.gold : C.yellow, 1, big ? 0.32 : 0.2);
     });
-    DOORS.forEach((dd) => draw(mCube, M(T(dd.x, 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)));
+    DOORS.forEach((dd) => { if (dd.id === 'heli' && P.state === 'heli') return; draw(mCube, M(T(dd.x, (dd.y || 0) + 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)); });
+    { const hb = M(T(HELI.x, HELI.y, HELI.z), RY(HELI.yaw)); draw(mCube, M(hb, T(0, 1.55, 0.9), S(1.85, 0.95, 1.5)), [0.7, 0.88, 1], 0.2, 0.4); }
     gl.depthMask(true); gl.disable(gl.BLEND);
 
+    drawTags();
     const MS = maxSt(), sv = $('stam');
     const showSt = P.st < MS - 0.01 || P.state === 'climb';
     sv.style.opacity = showSt ? 1 : 0;
@@ -1300,6 +1889,23 @@ void main(){
       fg.style.strokeDasharray = c; fg.style.strokeDashoffset = c * (1 - clamp(P.st / MS, 0, 1));
       sv.classList.toggle('tired', P.tired || P.st / MS < 0.25);
     }
+  }
+
+  const TAGS = [
+    { t: '🗻 ふじさん', p: () => FUJI }, { t: '🌉 ベイブリッジ', p: () => BAYB }, { t: '🗼 マリンタワー', p: () => ({ x: MARINE.x, y: 28, z: MARINE.z }) },
+    { t: '🏙️ よこはま えき', p: () => { const [x, z] = GEO(35.4658, 139.6223); return { x, y: 48, z }; } }, { t: '🗼 スカイツリー', p: () => TOKYO.sky },
+    { t: '🏢 ランドマークタワー', p: () => ({ x: LMC.x, y: LMH + 3, z: LMC.z }) }, { t: '🎡 コスモクロック', p: () => ({ x: FW.cx, y: FW.hub + FW.R + 2, z: FW.cz }) },
+  ];
+  function drawTags() {
+    const box = $('tags'), on = P.state === 'wheel' || P.state === 'heli' || (P.y > 30 && P.state !== 'ghost');
+    if (!box._made) { box._made = true; TAGS.forEach((g) => { g.el = document.createElement('span'); g.el.className = 'tag'; g.el.textContent = g.t; box.appendChild(g.el); }); }
+    const far = Math.min(3200, 350 + Math.max(0, eye[1]) * 28);
+    TAGS.forEach((g) => {
+      if (!on) { g.el.style.display = 'none'; return; }
+      const q = g.p(), d = Math.hypot(q.x - eye[0], q.z - eye[2]), sp = d > 25 && d < far * 0.97 ? project(q.x, q.y, q.z) : null;
+      if (!sp || sp[0] < 0 || sp[0] > innerWidth || sp[1] < 60 || sp[1] > innerHeight) { g.el.style.display = 'none'; return; }
+      g.el.style.display = 'block'; g.el.style.left = sp[0] + 'px'; g.el.style.top = sp[1] + 'px';
+    });
   }
 
   // ================= ちず =================
@@ -1359,7 +1965,7 @@ void main(){
     if (!window.Kumon) return;
     SFX.door(); show('ovKumon', true); setPaused();
     window.Kumon.open({
-      sfx: (n) => { if (n === 'tap') SFX.tap(); else if (n === 'ng') SFX.tired(); else if (n === 'good') SFX.star(); else if (n === 'pass') { SFX.big(); confetti(); } },
+      sfx: (n) => { if (n === 'drink') SFX.drink(); else if (n === 'tap') SFX.tap(); else if (n === 'ng') SFX.tired(); else if (n === 'good') SFX.star(); else if (n === 'pass') { SFX.big(); confetti(); } },
       onReward: (r) => {
         if (r.type === 'print') { save.wallet[1000] = (save.wallet[1000] || 0) + 1; store(); refreshHud(); SFX.coin(); return 'ごほうびに 💴 1000えん もらった！（おさいふ ' + walletTotal().toLocaleString() + 'えん）'; }
         save.oni = Math.min(9, save.oni + 3); store(); refreshHud();
@@ -1375,15 +1981,16 @@ void main(){
       arg, wallet: Wallet, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()), tone, confetti,
       onClose: (res) => {
         show('ovShop', false); setPaused(); refreshHud();
+        if (res && res.go) { startAttraction(res.go); return; }
         if (res && res.ride !== undefined) { startRide(res.ride); return; }
         stepOut();
       },
     });
   }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop'].some((i) => $(i).classList.contains('show')); }
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
     paused = anyOv();
-    if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
+    if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
   }
   function openMap() { drawMap(); show('ovMap', true); setPaused(); }
   $('money').parentElement.addEventListener('click', () => openShop('wallet'));
@@ -1421,5 +2028,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();

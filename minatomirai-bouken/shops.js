@@ -349,12 +349,20 @@
     root.appendChild(btn('← やめる', 'sout', () => api.onClose()));
   }
 
+  // ---------------- アトラクションの チケット ----------------
+  function attractionTicket(t) {
+    clear(t.title, t.sub, 'tk');
+    root.appendChild(el('div', 'price', `${t.icon} こども 1まい <b>${yen(t.price)}</b><br><small>（ゲームの ねだん）</small>`));
+    root.appendChild(btn('🎫 チケットを かう', 'sbig tall', () => pay(t.price, t.what, () => api.onClose({ go: t.go }), () => attractionTicket(t))));
+    root.appendChild(btn('← やめる', 'sout', () => api.onClose()));
+  }
   window.Shops = {
     open(kind, a) {
       api = a; root = document.getElementById('shopRoot');
       if (kind === 'toys') toys();
       else if (kind === 'wp') wp();
       else if (kind === 'cabin') cabin(a.arg);
+      else if (kind === 'ticket') attractionTicket(a.arg);
       else walletView();
     },
     TOYS, PRIZES,

@@ -6,7 +6,7 @@
 (function () {
   const KEY = 'minatomirai-bouken-kumon-v1';
   const PASS = 90, NEED = 3; // テストを うけるには 100てんの プリントが 3まい いる
-  let K = { level: '3A', passed: [], done: {}, tests: [] };
+  let K = { level: '3A', passed: [], done: {}, tests: [], water: 0 };
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') K = Object.assign(K, s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) { /* つかえない */ } }
 
@@ -85,6 +85,10 @@
     const teacher = el('div', 'kteach');
     teacher.innerHTML = `<span class="kface">👩‍🏫</span><span class="ksay">${msg || ('あおちゃん、いらっしゃい！ ' + pick(TEACH))}</span>`;
     root.appendChild(teacher);
+    const mama = el('div', 'kmama', `<span class="kmface">🚪🪑👩</span><span>ママは いりぐちの イスで まってるよ。<br><small>おみずを のんだ かず： 🥤×${K.water || 0}</small></span>`);
+    mama.appendChild(el('button', 'kwater', '🥤 おみず ちょうだい'));
+    mama.lastChild.addEventListener('click', () => mamaWater(true));
+    root.appendChild(mama);
 
     const tabs = el('div', 'ktabs');
     ORDER.forEach((L) => {
@@ -171,7 +175,7 @@
     const back = el('button', 'kout', '← やめて もどる');
     back.addEventListener('click', () => renderRoom('また やろうね。'));
     root.appendChild(back);
-    if (!tick) tick = setInterval(() => { timer += 1; const t = document.getElementById('kTime'); if (t) t.textContent = '⏱ ' + fmt(timer); }, 1000);
+    if (!tick) tick = setInterval(() => { timer += 1; mamaT += 1; const t = document.getElementById('kTime'); if (t) t.textContent = '⏱ ' + fmt(timer); if (mamaT >= 75 && view === 'sheet') mamaWater(false); }, 1000);
     const s = grid.children[cur.sel]; if (s && s.scrollIntoView) s.scrollIntoView({ block: 'nearest' });
   }
   function editable(i) { const q = cur.items[i]; return q && q.mark !== 'ok'; }
@@ -218,6 +222,7 @@
   }
   function finishPrint() {
     K.done[cur.p.id] = (K.done[cur.p.id] || 0) + 1; store(); sfx('good');
+    if (mamaT > 30 || Math.random() < 0.4) setTimeout(() => mamaWater(false), 1600);
     const first = cur.first === 100 ? 'いっかいで ぜんぶ せいかい！ すごい！' : `さいしょは ${cur.first}てん → なおして 100てん！`;
     const gift = opts.onReward ? opts.onReward({ type: 'print', level: cur.lv }) : '';
     const lv = cur.lv, p = cur.p;
@@ -269,6 +274,24 @@
   }
   function close() { stopTick(); view = 'room'; if (opts.onClose) opts.onClose(); }
 
+  // ---- ママ が おみずを もってきて くれる ----
+  let mamaT = 0;
+  function mamaWater(asked) {
+    if (document.getElementById('kMama')) return;
+    mamaT = 0;
+    const m = el('div', 'kmamaPop'); m.id = 'kMama';
+    m.innerHTML = `<div class="kmbox"><div class="kmbig">👩🥤</div><p>${asked ? 'ママ「はい、おみず どうぞ」' : 'ママ「あおちゃん、がんばってるね！ おみず のむ？」'}</p></div>`;
+    const box = m.firstChild;
+    const yes = el('button', 'ksubmit', '🥤 ごくごく のむ'), no = el('button', 'kout', 'いまは だいじょうぶ');
+    yes.addEventListener('click', () => {
+      K.water = (K.water || 0) + 1; store(); sfx('drink');
+      box.innerHTML = '<div class="kmbig">😋💧</div><p>ごくごく… ぷはー！ おいしい！<br>ママ「つづき がんばってね」</p>';
+      setTimeout(() => { m.remove(); if (view === 'room') renderRoom('おみずを のんで すっきり！'); }, 1500);
+    });
+    no.addEventListener('click', () => m.remove());
+    box.appendChild(yes); box.appendChild(no);
+    document.body.appendChild(m);
+  }
   window.Kumon = {
     open(o) {
       opts = o || {}; root = document.getElementById('kRoom'); lvView = K.level;
