@@ -11,7 +11,7 @@
 
   // ================= セーブ =================
   const SAVE_KEY = 'minatomirai-bouken-v2'; // v2: ほんものの ちず（ふるい いち は つかわない）
-  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1 } }; }
+  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2 }, piggy: {} }; }
   let save = fresh();
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') save = Object.assign(fresh(), s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* つかえない */ } }
@@ -1135,7 +1135,7 @@ void main(){
   }
 
   // ================= せってい =================
-  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1 }, save.settings || {});
+  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2 }, save.settings || {});
   function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
   function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
   // ================= だい3だんかい: のりもの =================
@@ -1260,7 +1260,7 @@ void main(){
   }
   function drawCars(night) {
     for (const c of CARS) {
-      if (c.x === undefined || Math.abs(c.x - P.x) > 140 || Math.abs(c.z - P.z) > 140) continue;
+      const cr = save.settings.gfx >= 1 ? 140 : 70; if (c.x === undefined || Math.abs(c.x - P.x) > cr || Math.abs(c.z - P.z) > cr) continue;
       const b = M(T(c.x, 0, c.z), RY(c.yaw)), col = c.taxi ? hex('#ffd43b') : c.col;
       draw(mCube, M(b, T(0, 0.55, 0), S(1.6, 0.6, 3.2)), col);
       draw(mCube, M(b, T(0, 1.05, -0.2), S(1.4, 0.5, 1.7)), [0.55, 0.75, 0.9]);
@@ -1875,6 +1875,7 @@ void main(){
     get: () => Object.assign({}, save.wallet), total: walletTotal,
     set: (w) => { save.wallet = {}; DENOM.forEach((d) => { if (w[d]) save.wallet[d] = w[d]; }); store(); refreshHud(); },
     items: () => save.items.slice(), addItem: (id) => { save.items.push(id); store(); },
+    piggy: () => Object.assign({}, save.piggy || {}), setPiggy: (w) => { save.piggy = {}; DENOM.forEach((d) => { if (w[d]) save.piggy[d] = w[d]; }); store(); },
     gacha: () => Object.assign({}, save.gacha), addGacha: (id) => { save.gacha[id] = (save.gacha[id] || 0) + 1; store(); },
   };
 
@@ -2542,6 +2543,7 @@ void main(){
       night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3,
       week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: SCHED[i], done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
       wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
+      stats: () => { let o = {}; try { o = JSON.parse(localStorage.getItem('minatomirai-bouken-odekake-v1')) || {}; } catch (e) { o = {}; } return { stamps: save.stamps.length, stars: save.stars.length, passed: window.Kumon ? window.Kumon.passed.length : 0, hs: save.hs || 0, photos: photos.length, cups: (o.cups || []).length, maru: Object.keys(o.maru || {}).length >= 5, toys: save.items.filter((id) => window.Shops && window.Shops.TOYS.some((t) => t.id === id && !t.acc)).length }; }, confetti,
       photos: () => photos.slice(), delPhoto: (i) => { photos.splice(i, 1); storePhotos(); $('photoN').textContent = photos.length; }, papa: PAPA.on, hs: save.hs || 0,
       onClose: (res) => {
         if (res && res.rest) { P.st = maxSt(); P.tired = false; }
@@ -2812,7 +2814,7 @@ void main(){
   }
 
   function render() {
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const gq = save.settings.gfx, dpr = gq >= 2 ? Math.min(devicePixelRatio || 1, 2) : gq >= 1 ? 1 : 0.6;
     const w = Math.floor(innerWidth * dpr), h = Math.floor(innerHeight * dpr);
     if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
     gl.viewport(0, 0, w, h);
@@ -3079,13 +3081,13 @@ void main(){
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
   function drawSet() {
     $('sVol').value = save.settings.vol; $('sCam').value = save.settings.cam;
-    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
+    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
   }
   $('bSet').addEventListener('click', () => { show('ovMenu', false); drawSet(); show('ovSet', true); setPaused(); });
   $('bSetOk').addEventListener('click', () => { show('ovSet', false); setPaused(); });
   $('sVol').addEventListener('input', (e) => { save.settings.vol = +e.target.value; store(); applySettings(); SFX.tap(); });
   $('sCam').addEventListener('input', (e) => { save.settings.cam = +e.target.value; store(); });
-  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
+  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return; save.settings[k] = k === 'big' ? b.dataset.v === '1' : +b.dataset.v; store(); applySettings(); drawSet(); SFX.tap();
   }));
   applySettings();
@@ -3315,9 +3317,12 @@ void main(){
   // ================= ループ =================
   refreshHud();
   let last = performance.now();
+  const FPS = { t: 0, n: 0, done: false };
   function loop(now) {
-    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    const last0 = last; const dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!paused) {
+      // うごきが おもい ときは がめんを かるく する（せってい で もどせる）
+      if (!FPS.done) { FPS.t += now - last0; FPS.n++; if (FPS.t > 8000) { const fps = FPS.n / (FPS.t / 1000); FPS.done = true; if (fps < 24 && save.settings.gfx > 0 && !save.settings.gfxAuto) { save.settings.gfx--; save.settings.gfxAuto = 1; store(); banner('⚡ うごきを かるく したよ<small>せってい の「がめん」で もどせる</small>', 3.5); } } }
       const n = dt > 0.025 ? 2 : 1;
       for (let i = 0; i < n; i++) update(dt / n);
       bgm();

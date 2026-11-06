@@ -32,6 +32,92 @@
     root.appendChild(btn(fromHome ? '← おうちに もどる' : '🚪 とじる', 'sout', () => (fromHome ? home() : api.onClose())));
   }
 
+
+  // ================= あおちゃんの へや（かざりつけ）=================
+  // かざりは あそんで あつめる（スタンプ・ほし・くもん・かくれんぼ・しゃしん・カップヌードル・おもちゃ）
+  const DECO = [
+    { id: 'clock', slot: 'wall', e: '🕐', n: 'とけい', need: () => true, how: 'さいしょから' },
+    { id: 'poster', slot: 'wall', e: '🚄', n: 'しんかんせん ポスター', need: () => true, how: 'さいしょから' },
+    { id: 'map', slot: 'wall', e: '🗺️', n: 'みなとみらい ちず', need: (s) => s.stamps >= 5, how: 'スタンプ 5こ' },
+    { id: 'award', slot: 'wall', e: '🏅', n: 'くもんの しょうじょう', need: (s) => s.passed >= 1, how: 'くもんの テストに ごうかく' },
+    { id: 'rainbow', slot: 'wall', e: '🌈', n: 'にじの え', need: (s) => s.hs >= 1, how: 'かくれんぼで ぜんいん みつける' },
+    { id: 'photo', slot: 'wall', e: '🖼️', n: 'しゃしん', need: (s) => s.photos >= 1, how: 'しゃしんを 1まい とる' },
+    { id: 'bear', slot: 'floor', e: '🧸', n: 'くまの ぬいぐるみ', need: () => true, how: 'さいしょから' },
+    { id: 'piano', slot: 'floor', e: '🎹', n: 'おもちゃの ピアノ', need: () => true, how: 'さいしょから' },
+    { id: 'rail', slot: 'floor', e: '🚂', n: 'プラレール', need: (s) => s.toys >= 1, how: 'トイザらスで でんしゃを かう' },
+    { id: 'cup', slot: 'floor', e: '🍜', n: 'マイカップヌードル', need: (s) => s.cups >= 1, how: 'カップヌードル ミュージアムで つくる' },
+    { id: 'tent', slot: 'floor', e: '⛺', n: 'へやの テント', need: (s) => s.stars >= 5, how: 'ほし 5こ' },
+    { id: 'dino', slot: 'floor', e: '🦖', n: 'きょうりゅう', need: (s) => s.stars >= 10, how: 'ほし 10こ' },
+    { id: 'ship', slot: 'floor', e: '⛵', n: 'にっぽんまる の もけい', need: (s) => s.maru, how: 'にっぽんまる の へやを ぜんぶ みる' },
+    { id: 'plant', slot: 'floor', e: '🪴', n: 'うえきばち', need: (s) => s.stamps >= 15, how: 'スタンプ 15こ' },
+  ];
+  const SLOTS = [['w1', 'wall'], ['w2', 'wall'], ['w3', 'wall'], ['f1', 'floor'], ['f2', 'floor'], ['f3', 'floor'], ['f4', 'floor']];
+  function myRoom() {
+    if (!Y.room) Y.room = { w1: 'clock', f1: 'bear' };
+    const st = api.stats(), ph = api.photos();
+    clear('🛏️ あおちゃんの へや', 'かざりを タップして えらぼう', 'home');
+    const R = el('div', 'myroom' + (api.night ? ' night' : ''));
+    R.appendChild(el('div', 'rwin', api.night ? '🌃' : '🏙️'));
+    SLOTS.forEach(([k, type]) => {
+      const d = DECO.find((x) => x.id === Y.room[k]);
+      const b = el('button', 'rslot ' + type + ' ' + k, d ? (d.id === 'photo' && ph[0] ? `<img src="${ph[0].url}" alt="">` : d.e) : '＋');
+      b.addEventListener('click', () => pickDeco(k, type)); R.appendChild(b);
+    });
+    root.appendChild(R);
+    const got = DECO.filter((d) => d.need(st)).length;
+    root.appendChild(el('div', 'tlabel', `🎁 あつめた かざり ${got} / ${DECO.length}`));
+    say('👩', got < DECO.length ? 'ママ「まちで いろいろ あそぶと、かざりが ふえるよ」' : 'ママ「すてきな へや！ ぜんぶ あつめたね 🎉」');
+    root.appendChild(btn('← おうちに もどる', 'sbig', home));
+  }
+  function pickDeco(k, type) {
+    const st = api.stats();
+    clear('🎁 かざりを えらぶ', type === 'wall' ? 'かべに かざる もの' : 'ゆかに おく もの', 'home');
+    const g = el('div', 'zgrid');
+    DECO.filter((d) => d.slot === type).forEach((d) => {
+      const ok = d.need(st), c = el('button', 'zcard' + (ok ? '' : ' none') + (Y.room[k] === d.id ? ' on' : ''), `<i>${ok ? d.e : '🔒'}</i><b>${d.n}</b><small>${ok ? 'タップで おく' : d.how}</small>`);
+      c.addEventListener('click', () => { if (!ok) { sfx('ng'); return; } Object.keys(Y.room).forEach((q) => { if (Y.room[q] === d.id) delete Y.room[q]; }); Y.room[k] = d.id; store(); sfx('pick'); myRoom(); });
+      g.appendChild(c);
+    });
+    root.appendChild(g);
+    root.appendChild(btn('🧹 かたづける（なにも おかない）', 'sbig sub', () => { delete Y.room[k]; store(); myRoom(); }));
+    root.appendChild(btn('← もどる', 'sout', myRoom));
+  }
+
+  // ================= ちょきんばこ =================
+  const PIG_GOALS = [[1000, '🥉 ちょきん はじめ'], [3000, '🥈 ちょきん じょうず'], [5000, '🥇 ちょきん めいじん'], [10000, '👑 ちょきん おうさま']];
+  const DEN = [10000, 5000, 1000, 500, 100, 50, 10, 5, 1];
+  const tot = (w) => Object.keys(w).reduce((a, d) => a + d * w[d], 0);
+  function piggy(msg) {
+    const w = api.wallet.get(), pg = api.wallet.piggy(), pt = tot(pg);
+    clear('🐷 ちょきんばこ', `ちょきん ${pt.toLocaleString()}えん ・ おさいふ ${tot(w).toLocaleString()}えん`, 'home');
+    const pig = el('div', 'pig', '🐷'); root.appendChild(pig);
+    const nx = PIG_GOALS.find((g) => g[0] > pt), done = PIG_GOALS.filter((g) => g[0] <= pt);
+    root.appendChild(el('div', 'pigbar', `<i style="width:${Math.min(100, nx ? pt / nx[0] * 100 : 100)}%"></i><span>${nx ? `つぎの めあて ${nx[0].toLocaleString()}えん（${nx[1]}）` : '👑 ぜんぶ たっせい！'}</span>`));
+    if (done.length) root.appendChild(el('div', 'memo2', 'もらった バッジ： ' + done.map((g) => g[1]).join('　')));
+    if (msg) say('👩', msg);
+    root.appendChild(el('div', 'tlabel', '👛 おさいふ → 🐷 に いれる（タップ）'));
+    const r1 = el('div', 'wrow');
+    DEN.forEach((d) => { if (!w[d]) return; const b = el('button', 'wslot', `<span class="${d >= 1000 ? 'bill b' + d : 'coin c' + d}">${d >= 1000 ? `<i>${d.toLocaleString()}</i><small>えん</small>` : d}</span><b>×${w[d]}</b>`); b.addEventListener('click', () => move(d, 1)); r1.appendChild(b); });
+    if (!r1.children.length) r1.appendChild(el('div', 'wempty', 'おさいふは からっぽ'));
+    root.appendChild(r1);
+    root.appendChild(el('div', 'tlabel', '🐷 → 👛 ママに たのんで だす（タップ）'));
+    const r2 = el('div', 'wrow');
+    DEN.forEach((d) => { if (!pg[d]) return; const b = el('button', 'wslot', `<span class="${d >= 1000 ? 'bill b' + d : 'coin c' + d}">${d >= 1000 ? `<i>${d.toLocaleString()}</i><small>えん</small>` : d}</span><b>×${pg[d]}</b>`); b.addEventListener('click', () => move(d, -1)); r2.appendChild(b); });
+    if (!r2.children.length) r2.appendChild(el('div', 'wempty', 'まだ からっぽ'));
+    root.appendChild(r2);
+    root.appendChild(btn('← おうちに もどる', 'sbig', home));
+  }
+  function move(d, dir) {
+    const w = api.wallet.get(), pg = api.wallet.piggy(), before = tot(pg);
+    const from = dir > 0 ? w : pg, to = dir > 0 ? pg : w;
+    if (!from[d]) return; from[d]--; if (!from[d]) delete from[d]; to[d] = (to[d] || 0) + 1;
+    api.wallet.set(w); api.wallet.setPiggy(pg); sfx('coin');
+    const after = tot(pg), hit = PIG_GOALS.find((g) => before < g[0] && after >= g[0]);
+    if (hit) { sfx('big'); api.confetti && api.confetti(); }
+    piggy(hit ? `すごい！ ${hit[0].toLocaleString()}えん たまったね。「${hit[1]}」バッジ！` : dir > 0 ? 'チャリン！ ちょきん できたね' : 'ママ「だいじに つかってね」');
+    if (dir > 0) { const p = root.querySelector('.pig'); if (p) p.classList.add('shake'); }
+  }
+
   // ================= おうち =================
   function home() {
     clear('🏠 あおちゃんの おうち', 'プラウド よこはま さくらぎちょう（にしく はなさきちょう）', 'home');
@@ -48,6 +134,7 @@
     if (mine.some((t) => !t.acc)) root.appendChild(btn('🚂 プラレールで あそぶ', 'sbig', () => playTrains(mine)));
     const cups = window.Odekake ? window.Odekake.cups() : [];
     if (cups.length) { root.appendChild(el('div', 'tlabel', `🍜 マイカップヌードル（${cups.length}こ）`)); root.appendChild(window.Odekake.cupGrid()); }
+    const row0 = el('div', 'brow'); row0.appendChild(btn('🛏️ へやの かざりつけ', 'sbig', myRoom)); row0.appendChild(btn('🐷 ちょきんばこ', 'sbig', () => piggy())); root.appendChild(row0);
     root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
     root.appendChild(btn('🖼️ しゃしんの アルバム（' + api.photos().length + 'まい）', 'sbig sub', () => album(true)));
     if (api.errand) root.appendChild(el('div', 'memo2', '📝 おつかい ちゅう： ' + api.errand.list.length + 'こ の うち ' + api.errand.got.length + 'こ かった'));
