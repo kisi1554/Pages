@@ -1132,6 +1132,209 @@ void main(){
   save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1 }, save.settings || {});
   function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
   function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
+  // ================= だい3だんかい: のりもの =================
+  function lineOf(pts) {
+    const L = [0]; for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+    const total = L[L.length - 1];
+    function at(s) {
+      s = clamp(s, 0, total); let lo = 0, hi = L.length - 1; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (L[m] <= s) lo = m; else hi = m; }
+      const t = (s - L[lo]) / ((L[hi] - L[lo]) || 1), [ax, az] = pts[lo], [bx, bz] = pts[hi], l = Math.hypot(bx - ax, bz - az) || 1;
+      return { x: ax + (bx - ax) * t, z: az + (bz - az) * t, ux: (bx - ax) / l, uz: (bz - az) / l };
+    }
+    function sOf(x, z) { let best = 0, bd = 1e9; for (let i = 0; i + 1 < pts.length; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], dx = bx - ax, dz = bz - az, L2 = dx * dx + dz * dz || 1, t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1), d = Math.hypot(ax + dx * t - x, az + dz * t - z); if (d < bd) { bd = d; best = L[i] + Math.sqrt(L2) * t; } } return best; }
+    return { pts, L, total, at, sOf };
+  }
+  // --- あかいくつ（横浜市営バス・こども 110えん）: ちずの ルート どおり ---
+  const AKAI = (MAP.akai || []).map((r, ri) => {
+    const pts = []; for (let i = 0; i < r.p.length; i += 2) pts.push([r.p[i], r.p[i + 1]]);
+    let ln = lineOf(pts); const seen = new Set();
+    const named = r.stops.filter((st) => st.n && !seen.has(st.n) && seen.add(st.n));
+    // バスていの じゅんばん（ちずの ルートの きろく どおり）に あわせて、せんの むきを そろえる
+    if (named.length >= 2 && ln.sOf(named[0].x, named[0].z) > ln.sOf(named[named.length - 1].x, named[named.length - 1].z)) ln = lineOf(pts.slice().reverse());
+    const stops = named.map((st) => Object.assign({}, st, { s: ln.sOf(st.x, st.z) }));
+    for (let k = 1; k < stops.length; k++) if (stops[k].s < stops[k - 1].s) stops[k].s = stops[k - 1].s + 1;
+    return Object.assign(ln, { name: r.n, stops, ri });
+  }).filter((r) => r.stops.length >= 2);
+  const AKAI_STOPS = [];
+  AKAI.forEach((r, ri) => r.stops.forEach((st, si) => {
+    if (si === r.stops.length - 1) return; // しゅうてん から は のれない（かえりの バスに のる）
+    const f = freeSpot(st.x, st.z);
+    G.cyl(f.x, 0, f.z, 0.08, 2.6, 6, C.gray); G.cyl(f.x, 2.6, f.z, 0.55, 0.12, 14, hex('#c92a2a')); G.box(f.x - 0.25, 1.1, f.z - 0.06, f.x + 0.25, 2.2, f.z + 0.06, C.white);
+    AKAI_STOPS.push({ ri, si, x: f.x, z: f.z, name: st.n });
+    DOORS.push({ id: 'akai' + ri + '_' + si, x: f.x, z: f.z, label: '👠<br>あかいくつ', color: hex('#c92a2a'),
+      run: () => openShop('ticket', { title: '👠 あかいくつ', sub: st.n + ' から ・ ' + (r.stops[r.stops.length - 1].n) + ' ゆき', price: 110, what: 'あかいくつ こども', go: 'akai:' + ri + ':' + si, icon: '🚌' }) });
+  }));
+  // --- シーバス（Y Cruise）: よこはまえき ひがしぐち・ハンマーヘッド・ピアあかレンガ・やましたこうえん ---
+  const SEA = (() => {
+    const W0 = -340, Z0 = -470, CS = 4, NW = 200, NZ = 250;
+    const wet = (x, z) => !isLand(x, z) && !onOuter(x, z) && !near(x - 1, z - 1, x + 1, z + 1).some((b) => b.y1 > -0.3 && x > b.x0 - 1 && x < b.x1 + 1 && z > b.z0 - 1 && z < b.z1 + 1);
+    const cell = new Uint8Array(NW * NZ);
+    for (let j = 0; j < NZ; j++) for (let i = 0; i < NW; i++) cell[j * NW + i] = wet(W0 + (i + 0.5) * CS, Z0 + (j + 0.5) * CS) ? 1 : 0;
+    const toC = (x, z) => [Math.floor((x - W0) / CS), Math.floor((z - Z0) / CS)];
+    const nearestWet = (x, z) => { const [ci, cj] = toC(x, z); for (let r = 0; r < 40; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) { if (Math.max(Math.abs(di), Math.abs(dj)) !== r) continue; const i = ci + di, j = cj + dj; if (i >= 0 && j >= 0 && i < NW && j < NZ && cell[j * NW + i]) return [i, j]; } return null; };
+    function astar(a, b) {
+      const N = NW * NZ, g = new Float32Array(N).fill(1e9), from = new Int32Array(N).fill(-1), open = [[0, a[1] * NW + a[0]]];
+      g[a[1] * NW + a[0]] = 0; const goal = b[1] * NW + b[0];
+      const push = (it) => { open.push(it); let i = open.length - 1; while (i) { const q = (i - 1) >> 1; if (open[q][0] <= open[i][0]) break; [open[q], open[i]] = [open[i], open[q]]; i = q; } };
+      const pop = () => { const t = open[0], l = open.pop(); if (open.length) { open[0] = l; let i = 0; for (;;) { const x = i * 2 + 1, y = x + 1; let m = i; if (x < open.length && open[x][0] < open[m][0]) m = x; if (y < open.length && open[y][0] < open[m][0]) m = y; if (m === i) break; [open[m], open[i]] = [open[i], open[m]]; i = m; } } return t; };
+      while (open.length) {
+        const [, u] = pop(); if (u === goal) break; const ui = u % NW, uj = (u / NW) | 0;
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+          if (!di && !dj) continue; const i = ui + di, j = uj + dj; if (i < 0 || j < 0 || i >= NW || j >= NZ) continue; const v = j * NW + i; if (!cell[v]) continue;
+          const ng = g[u] + (di && dj ? 1.414 : 1); if (ng < g[v]) { g[v] = ng; from[v] = u; push([ng + Math.hypot(i - b[0], j - b[1]), v]); }
+        }
+      }
+      if (from[goal] < 0 && goal !== a[1] * NW + a[0]) return null;
+      const out = []; let u = goal; while (u >= 0) { out.unshift([W0 + (u % NW + 0.5) * CS, Z0 + (((u / NW) | 0) + 0.5) * CS]); u = from[u]; }
+      // まっすぐ いける ところは まとめる
+      const clear = (p, q) => { const n = Math.ceil(Math.hypot(q[0] - p[0], q[1] - p[1]) / 2); for (let k = 1; k < n; k++) { const [ci, cj] = toC(p[0] + (q[0] - p[0]) * k / n, p[1] + (q[1] - p[1]) * k / n); if (!cell[cj * NW + ci]) return false; } return true; };
+      const sm = [out[0]]; let k = 0; while (k < out.length - 1) { let m = out.length - 1; while (m > k + 1 && !clear(out[k], out[m])) m--; sm.push(out[m]); k = m; }
+      return sm;
+    }
+    const PIERS = [
+      { n: 'よこはまえき ひがしぐち（ベイクォーター）', p: GEO(35.4669, 139.6266) },
+      { n: 'ハンマーヘッド', p: POI['新港さん橋'] ? [POI['新港さん橋'].x, POI['新港さん橋'].z] : [POI['横浜ハンマーヘッド'].x, POI['横浜ハンマーヘッド'].bb[3]] },
+      { n: 'ピア あかレンガ', p: POI['ピア赤レンガ'] ? [POI['ピア赤レンガ'].x, POI['ピア赤レンガ'].z] : GEO(35.4528, 139.6440) },
+      { n: 'やました こうえん', p: GEO(35.4456, 139.6503) },
+    ].map((pr) => { const w = nearestWet(pr.p[0], pr.p[1]); return w ? Object.assign(pr, { w: [W0 + (w[0] + 0.5) * CS, Z0 + (w[1] + 0.5) * CS] }) : null; }).filter(Boolean);
+    if (PIERS.length < 2) return null;
+    const legs = [];
+    for (let k = 0; k + 1 < PIERS.length; k++) { const a = toC(...PIERS[k].w), b = toC(...PIERS[k + 1].w), pth = astar(a, b); if (!pth) return null; legs.push(pth); }
+    const all = []; legs.forEach((l, k) => (k ? l.slice(1) : l).forEach((q) => all.push(q)));
+    const ln = lineOf(all);
+    PIERS.forEach((pr) => { pr.s = ln.sOf(pr.w[0], pr.w[1]); });
+    // のりば（りくの がわ）: かんばん と ドア
+    PIERS.forEach((pr, k) => {
+      const f = freeSpot(pr.w[0], pr.w[1]); pr.door = f;
+      G.box(f.x - 0.1, 0, f.z - 0.1, f.x + 0.1, 2.8, f.z + 0.1, C.white); G.box(f.x - 0.9, 2.2, f.z - 0.08, f.x + 0.9, 2.9, f.z + 0.08, hex('#1971c2'));
+      DOORS.push({ id: 'sea' + k, x: f.x, z: f.z, label: '⛴️<br>シーバス', color: hex('#1971c2'), run: () => openShop('seabass', { from: k, piers: PIERS.map((q) => q.n) }) });
+    });
+    return Object.assign(ln, { piers: PIERS });
+  })();
+  // --- くるま（みちを はしる。しんごうが あかなら とまる・ひとが いたら とまる）---
+  const CARG = (() => {
+    const DRV = { trunk: 1, primary: 1, secondary: 1, tertiary: 1, tertiary_link: 1, unclassified: 1, residential: 1 };
+    const key = (x, z) => x.toFixed(1) + ',' + z.toFixed(1), nodes = new Map();
+    const node = (x, z) => { const k = key(x, z); let n = nodes.get(k); if (!n) { n = { x, z, e: [] }; nodes.set(k, n); } return n; };
+    MAP.roads.forEach((r) => { if (r.a || !DRV[r.c]) return; for (let k = 0; k + 3 < r.p.length; k += 2) { const a = node(r.p[k], r.p[k + 1]), b = node(r.p[k + 2], r.p[k + 3]); if (a === b) continue; a.e.push(b); b.e.push(a); } });
+    const list = [...nodes.values()].filter((n) => n.e.length);
+    list.forEach((n) => { n.sig = SIGS.find((s) => Math.hypot(s.x - n.x, s.z - n.z) < 6) || null; });
+    return list;
+  })();
+  const CAR_COL = ['#e03131', '#1c7ed6', '#f8f9fa', '#212529', '#ffd43b', '#868e96', '#2f9e44', '#f783ac'].map(hex);
+  const CARS = [];
+  function spawnCar(c) {
+    const near2 = CARG.filter((n) => Math.abs(n.x - P.x) < 120 && Math.abs(n.z - P.z) < 120);
+    const a = (near2.length ? near2 : CARG)[Math.floor(Math.random() * (near2.length || CARG.length))]; if (!a) return;
+    c.a = a; c.b = a.e[Math.floor(Math.random() * a.e.length)]; c.t = 0; c.v = 5; c.col = CAR_COL[Math.floor(Math.random() * CAR_COL.length)]; c.taxi = Math.random() < 0.15;
+  }
+  for (let i = 0; i < 34; i++) { const c = {}; CARS.push(c); }
+  let carsReady = false;
+  function carsTick(dt) {
+    if (!CARG.length) return;
+    if (!carsReady) { carsReady = true; CARS.forEach(spawnCar); }
+    for (const c of CARS) {
+      if (!c.a) { spawnCar(c); continue; }
+      const L = Math.hypot(c.b.x - c.a.x, c.b.z - c.a.z) || 0.1, ux = (c.b.x - c.a.x) / L, uz = (c.b.z - c.a.z) / L;
+      const x = c.a.x + ux * L * c.t + uz * 0.9, z = c.a.z + uz * L * c.t - ux * 0.9; // ひだり がわ つうこう
+      // とまる りゆう: まえに ひと／しんごう あか（ほこうしゃ が あお の とき くるまは あか）
+      let stop = false;
+      const px = P.x - x, pz = P.z - z, ahead = px * ux + pz * uz, side = Math.abs(-px * uz + pz * ux);
+      if (ahead > 0 && ahead < 5 && side < 1.8 && P.y < 2) stop = true;
+      if (MOM && Math.hypot(MOM.x - x, MOM.z - z) < 2.5 && MOM.y < 2) stop = true;
+      const remain = (1 - c.t) * L;
+      if (c.b.sig && remain < 4 && remain > 0.5 && pedGreen(c.b.sig) !== 'r') stop = true;
+      c.v += ((stop ? 0 : 5) - c.v) * Math.min(1, dt * (stop ? 6 : 1.5));
+      if (stop && ahead > 0 && ahead < 5 && side < 1.8 && (!c.honk || time - c.honk > 4)) { c.honk = time; if (Math.hypot(px, pz) < 20) tone(440, 0.18, 'square', 0.03); }
+      c.t += c.v * dt / L;
+      if (c.t >= 1) { const nx = c.b.e.filter((n) => n !== c.a); c.a = c.b; c.b = (nx.length ? nx : c.b.e)[Math.floor(Math.random() * (nx.length || c.b.e.length))]; c.t = 0; }
+      c.x = x; c.z = z; c.yaw = Math.atan2(ux, uz);
+      if (Math.abs(x - P.x) > 170 || Math.abs(z - P.z) > 170) spawnCar(c);
+    }
+  }
+  function drawCars(night) {
+    for (const c of CARS) {
+      if (c.x === undefined || Math.abs(c.x - P.x) > 140 || Math.abs(c.z - P.z) > 140) continue;
+      const b = M(T(c.x, 0, c.z), RY(c.yaw)), col = c.taxi ? hex('#ffd43b') : c.col;
+      draw(mCube, M(b, T(0, 0.55, 0), S(1.6, 0.6, 3.2)), col);
+      draw(mCube, M(b, T(0, 1.05, -0.2), S(1.4, 0.5, 1.7)), [0.55, 0.75, 0.9]);
+      draw(mCube, M(b, T(0, 1.32, -0.2), S(1.42, 0.06, 1.72)), col);
+      if (c.taxi) draw(mCube, M(b, T(0, 1.45, -0.2), S(0.5, 0.2, 0.25)), C.white, 0.5);
+      [[-0.75, 1.0], [0.75, 1.0], [-0.75, -1.0], [0.75, -1.0]].forEach(([x, z]) => draw(mCube, M(b, T(x, 0.32, z), S(0.25, 0.64, 0.64)), C.black));
+      [-0.55, 0.55].forEach((x) => { draw(mCube, M(b, T(x, 0.62, 1.61), S(0.3, 0.16, 0.04)), night > 0.3 ? [1, 1, 0.8] : C.white, night > 0.3 ? 1 : 0); draw(mCube, M(b, T(x, 0.62, -1.61), S(0.3, 0.14, 0.04)), C.red, night > 0.3 ? 1 : 0.2); });
+    }
+  }
+  // --- のって いる あいだ ---
+  function rideAkai(ri, si) {
+    const r = AKAI[ri]; if (!r) return;
+    P.state = 'akai'; P.ak = { ri, s: r.stops[si].s, next: si + 1, pause: 1.2 }; P.vx = P.vy = P.vz = 0; P.glide = false; lastDoorId = '-';
+    $('talk').style.display = 'none'; lastTalk = null;
+    banner('👠 あかいくつ しゅっぱつ！<small>つぎは ' + r.stops[si + 1].n + '</small>', 3);
+  }
+  function akaiUpdate(dt) {
+    const a = P.ak, r = AKAI[a.ri];
+    if (a.pause > 0) { a.pause -= dt; }
+    else {
+      a.s += 6.5 * dt;
+      const st = r.stops[a.next];
+      if (st && a.s >= st.s) {
+        a.s = st.s; const last = a.next === r.stops.length - 1;
+        tone(880, 0.12, 'sine', 0.1); tone(660, 0.2, 'sine', 0.1, null, 0.14);
+        if (last) { endAkai('👠 しゅうてん「' + st.n + '」に つきました'); return; }
+        banner('🚏 ' + st.n + '<small>おりる なら「おりる」。つぎは ' + r.stops[a.next + 1].n + '</small>', 3);
+        a.pause = 3.2; a.next++;
+      }
+    }
+    const q = r.at(a.s), want = Math.atan2(q.ux, q.uz); let d = want - (a.yaw === undefined ? want : a.yaw); while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; a.yaw = (a.yaw === undefined ? want : a.yaw) + d * Math.min(1, 5 * dt);
+    a.x = q.x + q.uz * 0.9; a.z = q.z - q.ux * 0.9;
+    P.x = a.x - Math.cos(a.yaw) * 0.6; P.z = a.z + Math.sin(a.yaw) * 0.6; P.y = 0.55; P.face = a.yaw; P.speed = 0;
+  }
+  function endAkai(msg) {
+    const a = P.ak, f = freeSpot(a.x - Math.cos(a.yaw) * 3, a.z + Math.sin(a.yaw) * 3);
+    P.x = f.x; P.z = f.z; P.y = 0; P.state = 'ground'; P.ground = true; P.ak = null; lastDoorId = '-'; banner(msg, 2.6); momSay('あかいくつ、たのしかったね 👠', 3);
+  }
+  function drawAkai(x, z, yaw) {
+    const b = M(T(x, 0, z), RY(yaw)), red = hex('#c92a2a'), cream = hex('#fff3bf');
+    draw(mCube, M(b, T(0, 1.0, 0), S(2.9, 1.2, 6.6)), red); draw(mCube, M(b, T(0, 1.65, 0), S(2.92, 0.12, 6.62)), cream);
+    draw(mCube, M(b, T(0, 2.55, 0), S(2.9, 0.22, 6.6)), red); draw(mCube, M(b, T(0, 2.75, 0), S(2.4, 0.2, 5.6)), cream);
+    [-1.42, 1.42].forEach((sx) => [3.1, -3.1].forEach((sz) => draw(mCube, M(b, T(sx, 2.05, sz), S(0.1, 0.8, 0.12)), red)));
+    [-0.8, 0.8].forEach((sx) => draw(mSphere, M(b, T(sx, 1.0, 3.31), S(0.22, 0.22, 0.05)), [1, 1, 0.85], 0.8));
+    draw(mCube, M(b, T(0, 2.25, 3.31), S(1.8, 0.35, 0.04)), C.white);
+    [[-1.35, 2.1], [1.35, 2.1], [-1.35, -2.1], [1.35, -2.1]].forEach(([sx, sz]) => draw(mCube, M(b, T(sx, 0.4, sz), S(0.3, 0.8, 0.8)), C.black));
+  }
+  function akaiIdle() { // のって いない ときも 1だい まわって いる
+    if (!AKAI.length) return null;
+    const tot = AKAI.reduce((s, r) => s + r.total, 0); let s = (time * 6.5) % tot, k = 0; while (k < AKAI.length - 1 && s > AKAI[k].total) { s -= AKAI[k].total; k++; }
+    const q = AKAI[k].at(s); return { x: q.x + q.uz * 0.9, z: q.z - q.ux * 0.9, yaw: Math.atan2(q.ux, q.uz) };
+  }
+  function rideSea(from, to) {
+    if (!SEA) return;
+    P.state = 'boat'; P.sb = { s: SEA.piers[from].s, dir: to > from ? 1 : -1, to }; P.vx = P.vy = P.vz = 0; P.glide = false; lastDoorId = '-';
+    $('talk').style.display = 'none'; lastTalk = null;
+    banner('⛴️ シーバス しゅっぱつ！<small>' + SEA.piers[to].n + ' まで</small>', 3);
+  }
+  function boatUpdate(dt) {
+    const b = P.sb; b.s += b.dir * 9 * dt; const end = SEA.piers[b.to].s;
+    const done = b.dir > 0 ? b.s >= end : b.s <= end; if (done) b.s = end;
+    const q = SEA.at(b.s), want = Math.atan2(q.ux * b.dir, q.uz * b.dir); let d = want - (b.yaw === undefined ? want : b.yaw); while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; b.yaw = (b.yaw === undefined ? want : b.yaw) + d * Math.min(1, 3 * dt);
+    b.x = q.x; b.z = q.z; P.x = q.x; P.z = q.z; P.y = WATER + 1.3; P.face = b.yaw; P.speed = 0;
+    if (Math.random() < dt * 20) puffs.push({ x: q.x - Math.sin(b.yaw) * 3 + (Math.random() - 0.5), y: WATER + 0.3, z: q.z - Math.cos(b.yaw) * 3 + (Math.random() - 0.5), t: 0, vy: 0.3, w: 1 });
+    if (done) {
+      const f = SEA.piers[b.to].door; P.x = f.x; P.z = f.z; P.y = 0; P.state = 'ground'; P.ground = true; P.sb = null; lastDoorId = '-';
+      tone(523, 0.3, 'sine', 0.1); tone(392, 0.4, 'sine', 0.1, null, 0.3); banner('⛴️ ' + SEA.piers[b.to].n + ' に つきました', 2.8); momSay('うみの うえ、きもち よかったね 🌊', 3);
+    }
+  }
+  function drawBoat(x, z, yaw) {
+    const b = M(T(x, WATER, z), RY(yaw));
+    draw(mCube, M(b, T(0, 0.5, 0), S(3.4, 1.0, 8.4)), C.white); draw(mCube, M(b, T(0, 0.35, 0), S(3.44, 0.3, 8.44)), hex('#1971c2'));
+    draw(mCube, M(b, T(0, 1.5, -0.4), S(2.8, 1.1, 5.4)), C.white); draw(mCube, M(b, T(0, 1.55, -0.4), S(2.84, 0.5, 5.2)), [0.5, 0.75, 0.95]);
+    draw(mCube, M(b, T(0, 2.1, -0.4), S(2.9, 0.12, 5.6)), hex('#1971c2')); draw(mCube, M(b, T(0, 0.9, 4.1), S(2.4, 0.4, 0.6)), C.white);
+  }
+  function seaIdle() {
+    if (!SEA) return null; const T2 = SEA.total * 2, u = (time * 9) % T2, fwd = u < SEA.total, s = fwd ? u : T2 - u, q = SEA.at(s);
+    return { x: q.x, z: q.z, yaw: Math.atan2(q.ux * (fwd ? 1 : -1), q.uz * (fwd ? 1 : -1)) };
+  }
+  const AKAI_OFF = { id: 'akaioff', x: 0, z: 0, label: '🚏<br>おりる', color: hex('#c92a2a'), run: () => endAkai('🚏 おりたよ') };
   const staticMesh = G.upload();
 
   // ================= うごく あしば（かんらんしゃ）=================
@@ -1583,7 +1786,7 @@ void main(){
     time += dt;
     updatePlats(time);
     if (P.state === 'ride') { rideUpdate(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
-    const SP = { slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
+    const SP = { akai: akaiUpdate, boat: boatUpdate, slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
     if (SP) { SP(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
     if (P.plat) { P.x += P.plat.dx; P.y += P.plat.dy; P.z += P.plat.dz; }
     readMove();
@@ -1677,7 +1880,7 @@ void main(){
   };
   const MOM_STATE = {
     coaster: 'ママも うしろの せきに のるよ！ キャー！ 🎢', ghost: 'ママの てを はなさないでね… 👻', wheel: 'ママと いっしょに かんらんしゃ 🎡',
-    bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
+    akai: 'あかいくつ、まっかで かわいいね 👠', boat: 'シーバスで うみの うえ〜 ⛴️ かぜが きもちいいね', bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
   };
   function momUpdate(dt) {
     const m = MOM; m.phase += dt * 6;
@@ -1705,7 +1908,7 @@ void main(){
     // どこへ いくか
     const st = P.state; let tx, ty, tz, wantFly = false, sit = false;
     if (st === 'slide' && SLIDE) { tx = SLIDE.mom.x; tz = SLIDE.mom.z; ty = 0; m.airT = 0; }
-    else if (st === 'bus') { tx = P.x + Math.cos(P.face) * 0.9; tz = P.z - Math.sin(P.face) * 0.9; ty = P.y; sit = true; }
+    else if (st === 'bus' || st === 'akai' || st === 'boat') { tx = P.x + Math.cos(P.face) * 0.9; tz = P.z - Math.sin(P.face) * 0.9; ty = P.y; sit = true; }
     else if (st === 'ride' || st === 'wheel') { tx = P.x + Math.cos(P.face) * 0.75; tz = P.z - Math.sin(P.face) * 0.75; ty = P.y; sit = true; }
     else if (st === 'coaster') { const q = CO.at(P.co.s - 2.6); tx = q.x; ty = q.y + 0.2; tz = q.z; sit = true; m.face = Math.atan2(q.tx, q.tz); }
     else if (st === 'heli') { tx = HELI.x + Math.cos(HELI.yaw) * 3.4; tz = HELI.z - Math.sin(HELI.yaw) * 3.4; ty = HELI.y + 0.6; wantFly = true; }
@@ -1780,7 +1983,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    momUpdate(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick();
+    momUpdate(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
       const open = zooOpen();
@@ -1841,11 +2044,12 @@ void main(){
     curDoor = null;
     if (P.state === 'ground') for (const d of DOORS) if (Math.abs((d.y || 0) - P.y) < 0.8 && Math.hypot(d.x - P.x, d.z - P.z) < (d.r || 2.4)) { curDoor = d; break; }
     if (P.state === 'heli' && HELI.landed) curDoor = HELI_EXIT;
+    if (P.state === 'akai' && P.ak && P.ak.pause > 0 && P.ak.next > 0) curDoor = AKAI_OFF;
     const did = curDoor ? curDoor.id : '';
     if (did !== lastDoorId) { lastDoorId = did; const b = $('bEnter'); b.hidden = !curDoor; if (curDoor) { b.innerHTML = curDoor.label; b.style.background = `rgb(${curDoor.color.map((v) => v * 255 | 0).join(',')})`; } }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z, yaw: cam.yaw }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
-    const lab = { slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
+    const lab = { akai: 'のって<br>いるよ', boat: 'のって<br>いるよ', slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
       ((P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ');
     const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
     if (lab + letLab !== lastLab) { lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
@@ -1890,6 +2094,8 @@ void main(){
   }
   function stopLoops() { if (windNode) { windNode.stop(); windNode = null; } if (droneNode) { droneNode.stop(); droneNode = null; } }
   function startAttraction(kind) {
+    if (/^akai:/.test(kind)) { const [, a, b] = kind.split(':'); rideAkai(+a, +b); return; }
+    if (/^sea:/.test(kind)) { const [, a, b] = kind.split(':'); rideSea(+a, +b); return; }
     look.yaw = 0; look.pitch = 0; P.vx = P.vy = P.vz = 0; P.glide = false; P.wall = null; P.plat = null;
     $('talk').style.display = 'none'; lastTalk = null;
     if (kind === 'coaster') {
@@ -2357,7 +2563,7 @@ void main(){
     else if (P.glide) pose = 'up';
     else if (P.state === 'air') pose = 'air';
     else if (P.speed > 0.5) pose = 'walk';
-    if (P.state === 'heli' || P.state === 'coaster' || P.state === 'bus') pose = 'sit';
+    if (P.state === 'heli' || P.state === 'coaster' || P.state === 'bus' || P.state === 'akai' || P.state === 'boat') pose = 'sit';
     if (P.state === 'slide') pose = P.sl && P.sl.t < 1.6 ? 'climb' : P.sl && P.sl.t > 2 ? 'up' : 'stand';
     if (P.state === 'coaster' || P.state === 'wheel') return; // じぶんの め で みている
     const base = P.state === 'hurt' ? M(T(P.x, P.y + 0.33, P.z), RY(P.face), RX(-Math.PI / 2)) : M(T(P.x, P.y, P.z), RY(P.face)); const { lg, ar, al } = poseAngles(pose, P.phase);
@@ -2434,8 +2640,8 @@ void main(){
       eye = [ex, ey, ez]; tgt = [ex + Math.sin(yw) * Math.cos(pt), ey + Math.sin(pt), ez + Math.cos(yw) * Math.cos(pt)];
     }
     if (!FP[P.state]) {
-    tgt = P.state === 'heli' ? [HELI.x, HELI.y + 1.6, HELI.z] : P.state === 'bus' ? [P.x, 2.4, P.z] : [P.x, P.y + 1.2, P.z];
-    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0) + (P.state === 'heli' ? 8 : 0) + (P.state === 'hurt' ? 4 : 0) + (P.state === 'bus' ? 6 : 0);
+    tgt = P.state === 'heli' ? [HELI.x, HELI.y + 1.6, HELI.z] : (P.state === 'bus' || P.state === 'akai') ? [P.x, 2.4, P.z] : P.state === 'boat' ? [P.x, WATER + 2.8, P.z] : [P.x, P.y + 1.2, P.z];
+    let dist = cam.dist + (P.state === 'climb' ? 2 : 0) + (P.glide || P.farting ? 3 : 0) + (P.state === 'ride' ? 5 : 0) + (P.state === 'heli' ? 8 : 0) + (P.state === 'hurt' ? 4 : 0) + (P.state === 'bus' || P.state === 'akai' ? 6 : 0) + (P.state === 'boat' ? 8 : 0);
     const camTry = (pitch) => {
       const cp = Math.cos(pitch), dd = [Math.sin(cam.yaw) * cp, Math.sin(pitch), Math.cos(cam.yaw) * cp], d = [dd[0] * dist, dd[1] * dist, dd[2] * dist];
       let t2 = 1;
@@ -2483,7 +2689,9 @@ void main(){
       draw(mCube, M(T(p.cx, p.cy - 0.8, p.cz), S(2.2, 1.6, 2.2)), CAB_COL[i % CAB_COL.length]);
       draw(mCube, M(T(p.cx, p.cy - 0.75, p.cz), S(2.26, 0.6, 1.6)), [0.6, 0.85, 1]);
     });
-    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); drawSignals(); if (P.state === 'hurt') drawAmb();
+    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); drawSignals(); drawCars(SK.night);
+    { const ak = P.state === 'akai' && P.ak ? { x: P.ak.x, z: P.ak.z, yaw: P.ak.yaw } : akaiIdle(); if (ak) drawAkai(ak.x, ak.z, ak.yaw); }
+    { const bt = P.state === 'boat' && P.sb ? { x: P.sb.x, z: P.sb.z, yaw: P.sb.yaw } : seaIdle(); if (bt) drawBoat(bt.x, bt.z, bt.yaw); } if (P.state === 'hurt') drawAmb();
     // エアキャビンの ゴンドラ
     if (CAB) {
       const n = 12, cyc = CAB.total * 2;
@@ -2524,8 +2732,8 @@ void main(){
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     drawWeather();
-    puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s)), [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
-    const gy = { bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
+    puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s, p.w ? s * 0.4 : s, s)), p.w ? C.white : [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
+    const gy = { akai: 1, boat: 1, bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
     if (gy !== null && P.y - gy < 30) draw(mDisc, M(T(P.x, gy + 0.03, P.z), S(0.45 * Math.max(0.4, 1 - (P.y - gy) / 30))), C.black, 1, 0.3);
     STARS.forEach((s) => {
@@ -2703,5 +2911,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();

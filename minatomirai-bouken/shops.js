@@ -432,6 +432,17 @@
     root.appendChild(g);
     root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
   }
+  // ---------------- シーバス の きっぷ ----------------
+  function seabass(arg) {
+    const P2 = arg.piers, from = arg.from;
+    clear('⛴️ シーバス', P2[from] + ' のりば ・ どこまで いく？', 'cab');
+    P2.forEach((n, k) => {
+      if (k === from) return;
+      const price = [0, 200, 300, 350][Math.abs(k - from)] || 350;
+      root.appendChild(btn(`${k > from ? '➡️' : '⬅️'} ${n}<small>こども ${yen(price)}（ゲームの ねだん）</small>`, 'sbig tall', () => pay(price, 'シーバス ' + P2[from] + ' → ' + n, () => api.onClose({ go: 'sea:' + from + ':' + k }), () => seabass(arg))));
+    });
+    root.appendChild(btn('← やめる', 'sout', () => api.onClose()));
+  }
   window.Shops = {
     open(kind, a) {
       api = a; root = document.getElementById('shopRoot');
@@ -441,6 +452,7 @@
       else if (kind === 'ticket') attractionTicket(a.arg);
       else if (kind === 'konbini') konbini(a.arg);
       else if (kind === 'okstore') okstore();
+      else if (kind === 'seabass') seabass(a.arg);
       else walletView();
     },
     TOYS, PRIZES, toySvg,
