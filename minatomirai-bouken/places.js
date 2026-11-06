@@ -16,11 +16,28 @@
   }
   function say(face, text) { root.appendChild(el('div', 'kteach', `<span class="kface">${face}</span><span class="ksay">${text}</span>`)); }
 
+  // ================= しゃしんの アルバム =================
+  function album(fromHome) {
+    const ph = api.photos();
+    clear('🖼️ しゃしんの アルバム', ph.length + 'まい（いちばん あたらしい 12まい）', 'home');
+    if (!ph.length) say('👩', 'ママ「まだ しゃしんが ないね。そとで 📷 ボタンを おしてみて！」');
+    const g = el('div', 'agrid');
+    ph.forEach((p, i) => {
+      const c = el('div', 'acard', `<img src="${p.url}" alt=""><small>${p.t}</small>`);
+      c.querySelector('img').addEventListener('click', () => { clear('🖼️ しゃしん', p.t, 'home'); const im = el('img', 'bigphoto'); im.src = p.url; root.appendChild(im); root.appendChild(btn('← アルバムに もどる', 'sbig', () => album(fromHome))); });
+      c.appendChild(btn('🗑️ けす', '', () => { if (confirm('この しゃしんを けす？')) { api.delPhoto(i); album(fromHome); } }));
+      g.appendChild(c);
+    });
+    root.appendChild(g);
+    root.appendChild(btn(fromHome ? '← おうちに もどる' : '🚪 とじる', 'sout', () => (fromHome ? home() : api.onClose())));
+  }
+
   // ================= おうち =================
   function home() {
     clear('🏠 あおちゃんの おうち', 'プラウド よこはま さくらぎちょう（にしく はなさきちょう）', 'home');
     root.appendChild(el('div', 'room', '<span>🪟</span><span>🛋️</span><span>📺</span><span>🧸</span><span>🪴</span>'));
     say('👩', 'ママ「おかえり、あおちゃん！ ようちえんバスは すぐ ちかくの いわかめどおり から でるよ 🚌」');
+    if (api.papa) say('👨', 'パパ「おかえり！ きょうは パパも いっしょ。でんしゃを みに いこうか 🚃」');
     const items = api.wallet.items(), TOYS = (window.Shops && window.Shops.TOYS) || [];
     const mine = items.map((id) => TOYS.find((t) => t.id === id)).filter(Boolean);
     root.appendChild(el('div', 'tlabel', `🧸 あおちゃんの おもちゃ（${mine.length}こ）`));
@@ -32,6 +49,7 @@
     const cups = window.Odekake ? window.Odekake.cups() : [];
     if (cups.length) { root.appendChild(el('div', 'tlabel', `🍜 マイカップヌードル（${cups.length}こ）`)); root.appendChild(window.Odekake.cupGrid()); }
     root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
+    root.appendChild(btn('🖼️ しゃしんの アルバム（' + api.photos().length + 'まい）', 'sbig sub', () => album(true)));
     if (api.errand) root.appendChild(el('div', 'memo2', '📝 おつかい ちゅう： ' + api.errand.list.length + 'こ の うち ' + api.errand.got.length + 'こ かった'));
     else root.appendChild(btn('📝 ママから おつかいを たのまれる', 'sbig', () => api.onClose({ errand: true })));
     root.appendChild(btn(api.night ? '🛏️ ねる（あさに なる）' : '🛏️ おひるね する', 'sbig sub', nap));
@@ -238,7 +256,7 @@
     root.appendChild(btn('🚶 どうぶつを みに いく', 'sbig', () => api.onClose()));
   }
   window.Places = {
-    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else if (kind === 'piano') piano(); else yochien(); },
+    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else if (kind === 'piano') piano(); else if (kind === 'album') album(false); else yochien(); },
     again(kind) { if (kind === 'yochien') yochien(); else home(); },
   };
 })();

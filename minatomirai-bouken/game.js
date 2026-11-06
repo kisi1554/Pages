@@ -1475,6 +1475,51 @@ void main(){
   addDoor('cupnoodle', CUPD, '🍜<br>はいる', hex('#e03131'), () => openShop('cupnoodle'));
   if (NIKU) DOORS.push({ id: 'nikuman', x: NIKU.x, z: NIKU.z, label: '🥟<br>かう', color: hex('#c92a2a'), run: () => openShop('chuka') });
   [[KANTEI, 'kantei', '横浜関帝廟'], [MAZU, 'mazu', '横浜媽祖廟']].forEach(([q, id, n]) => { if (!q) return; const d = doorOn(n, q.x + 30, q.z - 30), f = d ? { x: d.ox, z: d.oz } : freeSpot(q.x, q.z); if (f) DOORS.push({ id, x: f.x, z: f.z, label: '🙏<br>おまいり', color: hex('#c92a2a'), run: () => openShop('byo', id) }); });
+  // ================= だい5だんかい: でんしゃ（JR・ブルーライン・みなとみらいせん）=================
+  const EKI_YOMI = { '桜木町': 'さくらぎちょう', '関内': 'かんない', '高島町': 'たかしまちょう', '新高島': 'しんたかしま', 'みなとみらい': 'みなとみらい', '馬車道': 'ばしゃみち', '日本大通り': 'にほんおおどおり', '元町・中華街': 'もとまち・ちゅうかがい', '横浜': 'よこはま' };
+  const LINE_INFO = {
+    jr: { name: 'JR けいひんとうほくせん・ねぎしせん', short: 'JR', col: '#00b2e5', ic: '🚃', sub: false },
+    blue: { name: 'よこはま しえい ちかてつ ブルーライン', short: 'ブルーライン', col: '#0067c0', ic: '🚇', sub: true },
+    mm: { name: 'みなとみらいせん', short: 'みなとみらいせん', col: '#0b2a6b', ic: '🚇', sub: true },
+  };
+  // せんろの たかさ（ちずの せんろ が はし なら たかい ところ）
+  function railY(x, z) {
+    let bd = 1e9, y = 0.04;
+    for (const r of MAP.rail) for (let i = 0; i + 3 < r.p.length; i += 2) {
+      const ax = r.p[i], az = r.p[i + 1], dx = r.p[i + 2] - ax, dz = r.p[i + 3] - az, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1), d = Math.hypot(ax + dx * t - x, az + dz * t - z);
+      if (d < bd) { bd = d; y = r.e ? 3 : 0.04; }
+    }
+    return bd < 6 ? y : null;
+  }
+  const YOKOHAMA_EKI = GEO(35.4657, 139.6223);
+  const TRAINS = (MAP.trains || []).map((t, li) => {
+    const pts = []; for (let i = 0; i < t.p.length; i += 2) pts.push([t.p[i], t.p[i + 1]]);
+    const ln = lineOf(pts);
+    const stops = t.stops.map((st) => ({ n: st.n, x: st.x, z: st.z, s: ln.sOf(st.x, st.z) }));
+    // よこはまえき は ちずの はし。せんが ちかくを とおって いれば えきに する
+    const ys = ln.sOf(YOKOHAMA_EKI[0], YOKOHAMA_EKI[1]), yq = ln.at(ys);
+    if (!stops.some((s) => s.n === '横浜') && Math.hypot(yq.x - YOKOHAMA_EKI[0], yq.z - YOKOHAMA_EKI[1]) < 45) stops.push({ n: '横浜', x: yq.x, z: yq.z, s: ys });
+    stops.sort((a, b) => a.s - b.s);
+    const info = LINE_INFO[t.k] || LINE_INFO.jr;
+    let hs = null;
+    if (!info.sub) { // JR は たかさ を じゅんびして なめらかに
+      const raw = pts.map(([x, z]) => railY(x, z)); let lastY = 3; const fill = raw.map((y) => (y === null ? lastY : (lastY = y)));
+      hs = fill.map((_, i) => { let s = 0, n = 0; for (let k = Math.max(0, i - 3); k <= Math.min(fill.length - 1, i + 3); k++) { s += fill[k]; n++; } return s / n; });
+    }
+    const yAt = (s) => { if (!hs) return 0; let lo = 0, hi = ln.L.length - 1; s = clamp(s, 0, ln.total); while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ln.L[m] <= s) lo = m; else hi = m; } const t2 = (s - ln.L[lo]) / ((ln.L[hi] - ln.L[lo]) || 1); return hs[lo] + (hs[hi] - hs[lo]) * t2; };
+    stops.forEach((st, si) => {
+      const f = freeSpot(st.x, st.z); st.door = f;
+      const col = hex(info.col);
+      if (info.sub) { // ちかてつの いりぐち
+        G.box(f.x - 1.3, 0, f.z + 1.0, f.x + 1.3, 2.4, f.z + 1.3, hex('#dee2e6')); G.box(f.x - 1.4, 2.4, f.z - 0.6, f.x + 1.4, 2.6, f.z + 1.4, col);
+        G.box(f.x - 1.3, 0, f.z - 0.4, f.x - 1.15, 2.4, f.z + 1.0, hex('#dee2e6')); G.box(f.x + 1.15, 0, f.z - 0.4, f.x + 1.3, 2.4, f.z + 1.0, hex('#dee2e6'));
+      }
+      G.box(f.x + 1.6, 0, f.z - 0.08, f.x + 1.72, 2.8, f.z + 0.08, C.gray); G.box(f.x + 1.2, 2.8, f.z - 0.1, f.x + 2.2, 3.5, f.z + 0.1, col, 5);
+      DOORS.push({ id: 'eki_' + li + '_' + si, x: f.x, z: f.z, label: info.ic + '<br>えき', color: col, run: () => openShop('train', { li, si }) });
+    });
+    return Object.assign(ln, { k: t.k, info, stops, yAt, li });
+  }).filter((t) => t.stops.length >= 2);
   const AKAI_OFF = { id: 'akaioff', x: 0, z: 0, label: '🚏<br>おりる', color: hex('#c92a2a'), run: () => endAkai('🚏 おりたよ') };
   const staticMesh = G.upload();
   const mSails = SAILG.upload();
@@ -1928,13 +1973,13 @@ void main(){
   }
 
   // ================= ゲームの すすみ =================
-  let time = 0, saveT = 0, climbSnd = 0, lastTalk = null, lastLab = '', curDoor = null, lastDoorId = '';
+  let photoOn = false, shootReq = false; let time = 0, saveT = 0, climbSnd = 0, lastTalk = null, lastLab = '', curDoor = null, lastDoorId = '';
   const puffs = [];
   function update(dt) {
     time += dt;
     updatePlats(time);
     if (P.state === 'ride') { rideUpdate(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
-    const SP = { akai: akaiUpdate, boat: boatUpdate, slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate }[P.state];
+    const SP = { akai: akaiUpdate, boat: boatUpdate, slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate, train: trainUpdate }[P.state];
     if (SP) { SP(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
     if (P.plat) { P.x += P.plat.dx; P.y += P.plat.dy; P.z += P.plat.dz; }
     readMove();
@@ -2028,7 +2073,7 @@ void main(){
   };
   const MOM_STATE = {
     coaster: 'ママも うしろの せきに のるよ！ キャー！ 🎢', ghost: 'ママの てを はなさないでね… 👻', wheel: 'ママと いっしょに かんらんしゃ 🎡',
-    akai: 'あかいくつ、まっかで かわいいね 👠', boat: 'シーバスで うみの うえ〜 ⛴️ かぜが きもちいいね', bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
+    train: 'でんしゃ！ まどの そと みてごらん 🚃', akai: 'あかいくつ、まっかで かわいいね 👠', boat: 'シーバスで うみの うえ〜 ⛴️ かぜが きもちいいね', bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
   };
   function momUpdate(dt) {
     const m = MOM; m.phase += dt * 6;
@@ -2056,7 +2101,7 @@ void main(){
     // どこへ いくか
     const st = P.state; let tx, ty, tz, wantFly = false, sit = false;
     if (st === 'slide' && SLIDE) { tx = SLIDE.mom.x; tz = SLIDE.mom.z; ty = 0; m.airT = 0; }
-    else if (st === 'bus' || st === 'akai' || st === 'boat') { tx = P.x + Math.cos(P.face) * 0.9; tz = P.z - Math.sin(P.face) * 0.9; ty = P.y; sit = true; }
+    else if (st === 'bus' || st === 'akai' || st === 'boat' || st === 'train') { tx = P.x + Math.cos(P.face) * 0.9; tz = P.z - Math.sin(P.face) * 0.9; ty = P.y; sit = true; }
     else if (st === 'ride' || st === 'wheel') { tx = P.x + Math.cos(P.face) * 0.75; tz = P.z - Math.sin(P.face) * 0.75; ty = P.y; sit = true; }
     else if (st === 'coaster') { const q = CO.at(P.co.s - 2.6); tx = q.x; ty = q.y + 0.2; tz = q.z; sit = true; m.face = Math.atan2(q.tx, q.tz); }
     else if (st === 'heli') { tx = HELI.x + Math.cos(HELI.yaw) * 3.4; tz = HELI.z - Math.sin(HELI.yaw) * 3.4; ty = HELI.y + 0.6; wantFly = true; }
@@ -2131,7 +2176,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    momUpdate(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
+    momUpdate(dt); papaUpdate(dt); hsTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
       const open = zooOpen();
@@ -2197,7 +2242,7 @@ void main(){
     if (did !== lastDoorId) { lastDoorId = did; const b = $('bEnter'); b.hidden = !curDoor; if (curDoor) { b.innerHTML = curDoor.label; b.style.background = `rgb(${curDoor.color.map((v) => v * 255 | 0).join(',')})`; } }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z, yaw: cam.yaw }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
-    const lab = { akai: 'のって<br>いるよ', boat: 'のって<br>いるよ', slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
+    const lab = { train: 'のって<br>いるよ', akai: 'のって<br>いるよ', boat: 'のって<br>いるよ', slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
       ((P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ');
     const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
     if (lab + letLab !== lastLab) { lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
@@ -2497,6 +2542,7 @@ void main(){
       night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3,
       week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: SCHED[i], done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
       wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
+      photos: () => photos.slice(), delPhoto: (i) => { photos.splice(i, 1); storePhotos(); $('photoN').textContent = photos.length; }, papa: PAPA.on, hs: save.hs || 0,
       onClose: (res) => {
         if (res && res.rest) { P.st = maxSt(); P.tired = false; }
         if (res && res.sleep) { sleepUntilMorning(); banner('☀️ おはよう！ あさに なったよ<small>きょうは ' + WEEK[CLK.wd] + 'ようび</small>', 3.5); }
@@ -2876,12 +2922,12 @@ void main(){
       draw(mCube, M(base, RZ(fl), T(0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
       draw(mCube, M(base, RZ(-fl), T(-0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
     }
-    drawAo(); drawMom();
+    drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains();
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     drawWeather();
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s, p.w ? s * 0.4 : s, s)), p.w ? C.white : [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
-    const gy = { akai: 1, boat: 1, bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
+    const gy = { train: 1, akai: 1, boat: 1, bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
     if (gy !== null && P.y - gy < 30) draw(mDisc, M(T(P.x, gy + 0.03, P.z), S(0.45 * Math.max(0.4, 1 - (P.y - gy) / 30))), C.black, 1, 0.3);
     STARS.forEach((s) => {
@@ -2895,6 +2941,7 @@ void main(){
     gl.depthMask(true); gl.disable(gl.BLEND);
 
     drawTags(); placeMomTalk();
+    { const b = $('papaTalk'); if (PAPA.sayT > 0) { const sp = PAPA.on ? project(PAPA.x, PAPA.y + 2.7, PAPA.z) : null; const ok = sp && sp[0] > 90 && sp[0] < innerWidth - 90 && sp[1] > 120 && sp[1] < innerHeight - 40; b.classList.toggle('fixed', !ok); if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; } } }
     const MS = maxSt(), sv = $('stam');
     const showSt = P.st < MS - 0.01 || P.state === 'climb';
     sv.style.opacity = showSt ? 1 : 0;
@@ -2999,12 +3046,14 @@ void main(){
     if (kind === 'nipponmaru' && !nmOpen()) { banner('⛵ にっぽんまるは しまってるよ<small>10:00〜17:00 ・ げつようび は おやすみ（めやす）</small>', 3); return; }
     SFX.door(); show('ovShop', true); setPaused();
     window.Shops.open(kind, {
-      arg, wallet: Wallet, clock: clockStr(), sailsToday: save.sails === save.clock.day, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()), tone, confetti,
+      arg, wallet: Wallet, clock: clockStr(), trains: trainStations(), sailsToday: save.sails === save.clock.day, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()), tone, confetti,
       errand: save.errand, errandItems: ERR_ITEMS,
       reward: (r) => { if (r.errand) errandBought(r.errand); if (r.oni) save.oni = Math.min(9, save.oni + r.oni); if (r.full) { P.st = maxSt(); P.tired = false; } if (r.gas) P.gas = 1; if (r.sails) { save.sails = save.clock.day; momSay('ほが ぜんぶ ひらいたね！ そとから みてみよう ⛵', 4); } if (r.nikuman) momSay('ふーふー して たべてね。あついよ 🥟', 3); if (r.karaage) { save.karaage = (save.karaage || 0) + 1; momSay('からあげクン おいしいね！ ママにも ひとつ ちょうだい 😋', 4); } store(); refreshHud(); },
       onClose: (res) => {
         show('ovShop', false); setPaused(); refreshHud();
         if (res && res.go) { startAttraction(res.go); return; }
+        if (res && res.jr) { startTrain(res.jr.li, res.jr.from, res.jr.to); return; }
+        if (res && res.trainTo) { arriveTrain(res.trainTo.li, res.trainTo.si, 'ちかてつの でぐち から でたよ'); return; }
         if (res && res.ride !== undefined) { startRide(res.ride); return; }
         stepOut();
       },
@@ -3012,7 +3061,7 @@ void main(){
   }
   function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
-    paused = anyOv();
+    paused = anyOv() || photoOn;
     if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
   }
   function openMap() { drawMap(); show('ovMap', true); setPaused(); }
@@ -3022,6 +3071,10 @@ void main(){
   $('bHow2').addEventListener('click', () => { show('ovMenu', false); show('ovHow', true); });
   $('bHowOk').addEventListener('click', () => { show('ovHow', false); setPaused(); });
   $('bMap').addEventListener('click', openMap);
+  $('bPhoto').addEventListener('click', () => { ac(); photoMode(true); });
+  $('bShoot').addEventListener('click', () => { shootReq = true; });
+  $('bPhotoX').addEventListener('click', () => photoMode(false));
+  $('bAlbum').addEventListener('click', () => { photoMode(false); openPlace('album'); });
   $('bMapOk').addEventListener('click', () => { show('ovMap', false); setPaused(); });
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
   function drawSet() {
@@ -3047,6 +3100,218 @@ void main(){
   document.addEventListener('visibilitychange', () => { if (document.hidden && !anyOv()) { show('ovMenu', true); setPaused(); } });
   if (save.seenTitle) $('bStart').textContent = 'つづきから';
 
+  // ================= だい5だんかい: でんしゃに のる =================
+  const ekiN = (n) => EKI_YOMI[n] || n;
+  function trainStations() { return TRAINS.map((t) => ({ k: t.k, name: t.info.name, short: t.info.short, col: t.info.col, sub: t.info.sub, stops: t.stops.map((s) => ({ n: ekiN(s.n) })) })); }
+  function arriveTrain(li, si, how) {
+    const t = TRAINS[li], st = t && t.stops[si]; if (!st) return;
+    P.x = st.door.x; P.z = st.door.z; P.y = 0; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; P.tr = null; lastDoorId = 'eki_' + li + '_' + si;
+    MOM.x = P.x + 1.2; MOM.z = P.z; MOM.y = 0; if (PAPA.on) { PAPA.x = P.x - 1.2; PAPA.z = P.z; }
+    tone(660, 0.15, 'sine', 0.1); tone(880, 0.25, 'sine', 0.1, null, 0.18);
+    banner(`${t.info.ic} ${ekiN(st.n)} に つきました<small>${t.info.short} ・ ${how || 'えきの そとに でたよ'}</small>`, 3); momSay('でんしゃ、たのしかったね 🚃', 3);
+  }
+  function startTrain(li, from, to) { // JR は そとが みえる ので 3D で はしる
+    const t = TRAINS[li]; if (!t) return;
+    const a = t.stops[from], b = t.stops[to];
+    P.state = 'train'; P.tr = { li, s: a.s, to, dir: b.s > a.s ? 1 : -1, v: 0, wait: 1.5 }; P.vx = P.vy = P.vz = 0; P.glide = false; lastDoorId = '-';
+    $('talk').style.display = 'none'; lastTalk = null; cam.dist = Math.max(cam.dist, 13);
+    banner(`🚃 ${t.info.short} しゅっぱつ！<small>つぎは ${ekiN(b.n)}</small>`, 3);
+    [0, 0.25, 0.5].forEach((d, i) => tone([784, 659, 523][i], 0.2, 'triangle', 0.07, null, d));
+  }
+  function trainUpdate(dt) {
+    const r = P.tr, t = TRAINS[r.li], goal = t.stops[r.to].s;
+    if (r.wait > 0) r.wait -= dt;
+    else {
+      const left = (goal - r.s) * r.dir, vmax = 13;
+      r.v = left < 18 ? Math.max(1.5, Math.min(r.v, left * 0.7)) : Math.min(vmax, r.v + 3 * dt);
+      r.s += r.v * r.dir * dt;
+      if ((goal - r.s) * r.dir <= 0.05) { arriveTrain(r.li, r.to); return; }
+      if (Math.random() < dt * r.v * 0.25) tone(90 + Math.random() * 20, 0.06, 'square', 0.025);
+    }
+    const q = t.at(r.s), y = t.yAt(r.s);
+    P.x = q.x; P.z = q.z; P.y = y + 0.6; P.face = Math.atan2(q.ux * r.dir, q.uz * r.dir); P.speed = 0;
+  }
+  function drawTrainAt(t, s, dir) {
+    const col = hex(t.info.col);
+    for (let c = 0; c < 3; c++) {
+      const sc = s - dir * c * 5.3, q = t.at(sc), y = t.yAt(sc), yaw = Math.atan2(q.ux, q.uz), b = M(T(q.x, y, q.z), RY(yaw));
+      draw(mCube, M(b, T(0, 1.25, 0), S(2.6, 2.1, 5.0)), hex('#dee2e6'));
+      draw(mCube, M(b, T(0, 1.55, 0), S(2.64, 0.7, 4.6)), [0.45, 0.62, 0.78]);
+      draw(mCube, M(b, T(0, 0.85, 0), S(2.66, 0.28, 5.02)), col);
+      draw(mCube, M(b, T(0, 2.35, 0), S(2.3, 0.12, 4.6)), hex('#adb5bd'));
+      if (c === 0 || c === 2) draw(mCube, M(b, T(0, 1.55, (c === 0 ? 1 : -1) * dir * 2.51), S(1.8, 0.6, 0.04)), [0.25, 0.3, 0.38]);
+    }
+  }
+  function drawTrains() {
+    TRAINS.forEach((t) => {
+      if (t.info.sub) return;
+      if (P.state === 'train' && P.tr && P.tr.li === t.li) { drawTrainAt(t, P.tr.s + P.tr.dir * 1.5, P.tr.dir); return; }
+      const T2 = t.total * 2, u = (time * 9) % T2, fwd = u < t.total;
+      drawTrainAt(t, fwd ? u : T2 - u, fwd ? 1 : -1);
+    });
+  }
+
+  // ================= パパ =================
+  // どようび・にちようび（8じ〜20じ）と、へいじつ の よる（18:30〜21じ）は パパも いっしょ
+  const PAPA = { on: false, x: 0, y: 0, z: 0, face: 0, phase: 0, speed: 0, sit: false, sayT: 0, talkT: 30, was: false };
+  const PAPA_LINES = ['あおちゃん、パパと きょうそう しよう！ 🏃', 'でんしゃ みにいく？ パパは でんしゃが だいすき 🚃', 'おなか すいたら ちゅうかがいの にくまん たべよう 🥟', 'たかい ところは パパに まかせて… ちょっと こわいな 😅',
+    'しゃしんを とろうか？ 📷 ボタンで パシャッ！', 'くもん がんばってて えらいね ✏️', 'みなとみらいは よる きらきら きれいだよ 🌃', 'パパの かたぐるま、たかいだろ〜！'];
+  function papaWanted() { const h = CLK.h; return (CLK.wd >= 5 && h >= 8 && h < 20) || (CLK.wd < 5 && h >= 18.5 && h < 21); }
+  function papaSay(t, sec) { PAPA.sayT = sec || 3.5; const b = $('papaTalk'); b.textContent = t; b.style.display = 'block'; }
+  function papaUpdate(dt) {
+    const p = PAPA, want = papaWanted();
+    if (want && !p.on) { p.on = true; p.x = P.x - 2; p.z = P.z - 1; p.y = P.y; papaSay(CLK.wd >= 5 ? 'きょうは パパも おやすみ！ いっしょに あそぼう 🙌' : 'ただいま〜！ パパも まぜて 🙌', 3.5); }
+    if (!want && p.on) { p.on = false; papaSay('パパは おしごとの じゅんび。またね 👋', 2.5); }
+    if (p.sayT > 0) { p.sayT -= dt; if (p.sayT <= 0) $('papaTalk').style.display = 'none'; }
+    if (!p.on) return;
+    p.phase += dt * 6; p.talkT -= dt;
+    if (p.talkT < 0 && p.sayT <= 0 && MOM.sayT <= 0 && save.settings.talk > 0) { p.talkT = (30 + Math.random() * 30) / save.settings.talk; papaSay(PAPA_LINES[(Math.random() * PAPA_LINES.length) | 0], 3.5); }
+    const st = P.state;
+    if ({ bus: 1, akai: 1, boat: 1, train: 1, ride: 1, wheel: 1 }[st]) { p.x = P.x - Math.cos(P.face) * 0.9; p.z = P.z + Math.sin(P.face) * 0.9; p.y = P.y; p.sit = true; p.face = P.face; return; }
+    p.sit = false;
+    const tx = P.x - Math.sin(P.face) * 0.6 - Math.cos(P.face) * 1.4, tz = P.z - Math.cos(P.face) * 0.6 + Math.sin(P.face) * 1.4;
+    const ty = groundBelow(tx, Math.min(P.y, 2) + 0.6, tz), d = Math.hypot(tx - p.x, tz - p.z);
+    if (d > 45 || Math.abs(p.y - ty) > 3) { p.x = tx; p.z = tz; p.y = ty; }
+    const sp = d > 1.8 ? Math.min(12, 2.5 + d * 1.5) : 0;
+    if (sp > 0) { const nx = p.x + (tx - p.x) / d * Math.min(d, sp * dt), nz = p.z + (tz - p.z) / d * Math.min(d, sp * dt); if (!blockedAt(nx, p.y + 0.05, nz)) { p.x = nx; p.z = nz; } else if (d > 8) { p.x = tx; p.z = tz; } p.face = Math.atan2(tx - p.x, tz - p.z); }
+    else p.face = Math.atan2(P.x - p.x, P.z - p.z);
+    p.speed = sp; p.y += (groundBelow(p.x, p.y + 0.6, p.z) - p.y) * Math.min(1, dt * 6);
+    if (P.y - ty > 6 && !p.saidHigh) { p.saidHigh = true; papaSay('パパは したで みてるよ〜！ 👀', 2.5); } if (P.y - ty < 2) p.saidHigh = false;
+  }
+  function drawPapa() {
+    if (!PAPA.on || P.state === 'ghost' || P.state === 'coaster' || P.state === 'heli') return;
+    const pose = PAPA.sit ? 'sit' : PAPA.speed > 0.5 ? 'walk' : 'stand';
+    const b = M(T(PAPA.x, PAPA.y - (PAPA.sit ? 0.17 : 0), PAPA.z), RY(PAPA.face), S(1.08));
+    personAt(b, hex('#4dabf7'), pose, PAPA.phase, hex('#495057'), C.hair, false);
+    part(b, -0.12, 1.53, 0.25, 0.14, 0.1, 0.02, C.black); part(b, 0.12, 1.53, 0.25, 0.14, 0.1, 0.02, C.black); // めがね
+    part(b, 0, 1.53, 0.255, 0.1, 0.02, 0.02, C.black);
+  }
+  function personAt(base, shirt, pose, phase, pants, hair, girl) {
+    const { lg, ar, al } = poseAngles(pose, phase);
+    part(base, -0.13, 0.72, 0, 0.2, 0.72, 0.22, pants, RX(pose === 'sit' ? -1.45 : lg));
+    part(base, 0.13, 0.72, 0, 0.2, 0.72, 0.22, pants, RX(pose === 'sit' ? -1.45 : -lg));
+    part(base, 0, 0.98, 0, 0.56, 0.58, 0.36, shirt);
+    part(base, -0.36, 1.24, 0, 0.16, 0.54, 0.18, shirt, RX(-al));
+    part(base, 0.36, 1.24, 0, 0.16, 0.54, 0.18, shirt, RX(-ar));
+    part(base, 0, 1.5, 0, 0.52, 0.48, 0.48, C.skin);
+    part(base, 0, 1.56, -0.06, 0.55, 0.42, 0.42, hair);
+    if (girl) { part(base, -0.3, 1.45, -0.05, 0.12, 0.3, 0.12, hair); part(base, 0.3, 1.45, -0.05, 0.12, 0.3, 0.12, hair); }
+    part(base, -0.11, 1.5, 0.245, 0.07, 0.1, 0.02, C.black); part(base, 0.11, 1.5, 0.245, 0.07, 0.1, 0.02, C.black);
+  }
+
+  // ================= ともだち と かくれんぼ =================
+  const FRIENDS = [
+    { id: 'yuto', name: 'ゆうとくん', shirt: hex('#40c057'), hair: C.hair },
+    { id: 'hana', name: 'はなちゃん', shirt: hex('#f06595'), hair: hex('#6b3e26'), girl: true },
+    { id: 'sota', name: 'そうたくん', shirt: hex('#fab005'), hair: C.black },
+  ];
+  // こうえんで あそんで いる ばしょ
+  const PARKS = [
+    (() => { const q = POI['臨港パーク']; if (!q) return null; const f = freeSpot(q.x, q.z); return { id: 'rinko', name: 'りんこうパーク', x: f.x, z: f.z }; })(),
+    YAMA ? (() => { const f = freeSpot(YAMA.x + 8, YAMA.z - 8); return { id: 'yama', name: 'やました こうえん', x: f.x, z: f.z }; })() : null,
+  ].filter(Boolean);
+  function friendsHere() { // ようちえんの じかん は ようちえんに いる
+    const h = CLK.h; if (h < 9.5 || h >= 17.5) return null; if (CLK.wd < 5 && h < 15) return null;
+    return PARKS[CLK.wd % PARKS.length];
+  }
+  let HS = null;
+  const HSDOOR = { id: 'hs', r: 3, label: '🙈<br>かくれんぼ', color: hex('#7950f2'), get x() { const p = !HS && friendsHere(); return p ? p.x : 1e7; }, get z() { const p = !HS && friendsHere(); return p ? p.z : 1e7; }, run: () => startHS() };
+  DOORS.push(HSDOOR);
+  function hideScore(x, z) { let n = 0; for (let a = 0; a < 8; a++) if (blockedAt(x + Math.cos(a * 0.785) * 1.3, 0, z + Math.sin(a * 0.785) * 1.3)) n++; return n; }
+  function startHS() {
+    const park = friendsHere(); if (!park) return;
+    const cand = [];
+    for (let k = 0; k < 90; k++) {
+      const a = Math.random() * Math.PI * 2, r = 10 + Math.random() * 26, f = freeSpot(park.x + Math.cos(a) * r, park.z + Math.sin(a) * r);
+      if (Math.hypot(f.x - park.x, f.z - park.z) < 8 || Math.hypot(f.x - park.x, f.z - park.z) > 40) continue;
+      cand.push({ x: f.x, z: f.z, sc: hideScore(f.x, f.z) + Math.random() * 1.5 });
+    }
+    cand.sort((a, b) => b.sc - a.sc);
+    const spots = [];
+    for (const c of cand) { if (spots.every((s) => Math.hypot(s.x - c.x, s.z - c.z) > 9)) spots.push(c); if (spots.length === 3) break; }
+    while (spots.length < 3) spots.push({ x: park.x + (spots.length - 1) * 14, z: park.z + 12 });
+    HS = { park, t: 0, phase: 'count', limit: 150, spots: spots.map((s, i) => ({ x: s.x, z: s.z, f: FRIENDS[i], found: false })), hintT: 22, giggleT: 4 };
+    $('hsHud').hidden = false; SFX.tap();
+    banner('🙈 かくれんぼ！ あおちゃんが おに<small>いーち、にー、さーん… みんなが かくれるまで まってね</small>', 4);
+    momSay('ママも いっしょに さがすよ 🔍', 3);
+  }
+  function hsTick(dt) {
+    if (!HS) return;
+    HS.t += dt;
+    if (HS.phase === 'count') {
+      if (HS.t > 4) { HS.phase = 'seek'; HS.t = 0; banner('🗣️「もういいよー！」<small>3にんを さがそう。ちかくに いくと みつかるよ</small>', 3); tone(523, 0.2, 'sine', 0.08); tone(659, 0.3, 'sine', 0.08, null, 0.2); }
+    } else {
+      const left = HS.spots.filter((s) => !s.found);
+      for (const s of left) if (Math.hypot(s.x - P.x, s.z - P.z) < 2.8 && Math.abs(P.y - 0) < 2.5) {
+        s.found = true; SFX.stamp(); banner(`👀 ${s.f.name} みーつけた！<small>「みつかっちゃった〜！」</small>`, 2.4);
+      }
+      const rest = HS.spots.filter((s) => !s.found);
+      if (!rest.length) {
+        save.hs = (save.hs || 0) + 1; store(); confetti(); SFX.big && SFX.big();
+        banner(`🏆 ぜんいん みつけた！ かくれんぼ めいじん<small>${Math.round(HS.t)}びょう で みつけたよ（${save.hs}かいめ）</small>`, 4); momSay('すごい！ あおちゃん さがすの じょうずだね 🏆', 3.5); endHS(); return;
+      }
+      if (HS.t > HS.limit) { banner('⏰ じかん ぎれ〜<small>みんな でてきたよ「ここに いたんだよ〜」</small>', 3.5); momSay('おしかったね。また あそぼう！', 3); endHS(); return; }
+      HS.hintT -= dt; HS.giggleT -= dt;
+      const near = rest.reduce((a, s) => (!a || Math.hypot(s.x - P.x, s.z - P.z) < Math.hypot(a.x - P.x, a.z - P.z) ? s : a), null), nd = Math.hypot(near.x - P.x, near.z - P.z);
+      if (HS.giggleT < 0 && nd < 12) { HS.giggleT = 3; [0, 0.1, 0.2].forEach((d) => tone(1100 + Math.random() * 300, 0.06, 'sine', 0.04, null, d)); }
+      if (HS.hintT < 0) {
+        HS.hintT = 20;
+        let a = Math.atan2(near.x - P.x, near.z - P.z) - (cam.yaw + Math.PI); while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI) a += Math.PI * 2;
+        const dir = Math.abs(a) < 0.8 ? 'まえ' : Math.abs(a) > 2.35 ? 'うしろ' : a > 0 ? 'ひだり' : 'みぎ';
+        momSay(`${dir} の ほうから くすくす わらいごえが きこえるよ 👂${nd < 12 ? ' もう すぐ ちかく！' : ''}`, 4);
+      }
+      $('hsHud').textContent = `🙈 みつけた ${3 - rest.length}/3 ・ のこり ${Math.max(0, Math.ceil(HS.limit - HS.t))}びょう`;
+    }
+    if (HS && HS.phase === 'count') $('hsHud').textContent = `🙈 いーち、にー… ${Math.min(10, Math.ceil(HS.t * 2.5))}`;
+  }
+  function endHS() { HS = null; $('hsHud').hidden = true; lastDoorId = '-'; }
+  function drawFriends() {
+    const park = friendsHere();
+    if (HS) {
+      HS.spots.forEach((s, i) => {
+        let x = s.x, z = s.z, pose = 'sit', y = -0.25;
+        if (HS.phase === 'count') { const k = Math.min(1, HS.t / 3.5); x = HS.park.x + (s.x - HS.park.x) * k + i; z = HS.park.z + (s.z - HS.park.z) * k; pose = 'walk'; y = 0; }
+        if (s.found) { x = P.x + Math.cos(time * 0.5 + i * 2.1) * 2.4; z = P.z + Math.sin(time * 0.5 + i * 2.1) * 2.4; pose = 'stand'; y = groundBelow(x, P.y + 0.6, z); }
+        const b = M(T(x, y, z), RY(Math.atan2(P.x - x, P.z - z)), S(0.66));
+        personAt(b, s.f.shirt, pose, time * 8, hex('#343a40'), s.f.hair, s.f.girl);
+      });
+      return;
+    }
+    if (!park || Math.abs(park.x - P.x) > 120 || Math.abs(park.z - P.z) > 120) return;
+    FRIENDS.forEach((f, i) => {
+      const a = time * 0.9 + i * 2.09, x = park.x + Math.cos(a) * 2.2, z = park.z + Math.sin(a) * 2.2;
+      const b = M(T(x, Math.abs(Math.sin(time * 5 + i)) * 0.15, z), RY(a + Math.PI / 2 * (i % 2 ? 1 : -1) + Math.PI), S(0.66));
+      personAt(b, f.shirt, 'walk', time * 9 + i, hex('#343a40'), f.hair, f.girl);
+    });
+  }
+
+  // ================= しゃしん モード =================
+  const PHOTO_KEY = 'minatomirai-bouken-photo-v1';
+  let photos = []; try { const s = JSON.parse(localStorage.getItem(PHOTO_KEY)); if (Array.isArray(s)) photos = s; } catch (e) { /* つかえない */ }
+  setTimeout(() => { $('photoN').textContent = photos.length; }, 0);
+  const storePhotos = () => { try { localStorage.setItem(PHOTO_KEY, JSON.stringify(photos)); return true; } catch (e) { return false; } };
+  function photoMode(on) {
+    photoOn = on; document.body.classList.toggle('photo', on); $('photoUI').hidden = !on;
+    if (on) { // みんな カメラの ほうを むく
+      const f = cam.yaw; P.face = f; MOM.face = f; PAPA.face = f; banner('📷 しゃしん モード<small>みぎを なぞって アングルを きめて、まるい ボタンで パシャッ！</small>', 3);
+    }
+    setPaused();
+  }
+  function capturePhoto() {
+    shootReq = false;
+    try {
+      const w = 360, h = Math.round(w * cv.height / cv.width), c2 = document.createElement('canvas'); c2.width = w; c2.height = h;
+      const g = c2.getContext('2d'); g.drawImage(cv, 0, 0, w, h);
+      g.fillStyle = 'rgba(255,255,255,.85)'; g.fillRect(0, h - 22, w, 22); g.fillStyle = '#1c2b4a'; g.font = 'bold 13px sans-serif';
+      g.fillText('📷 ' + clockStr() + ' ・ あおちゃんの だいぼうけん', 8, h - 7);
+      const url = c2.toDataURL('image/jpeg', 0.72);
+      photos.unshift({ url, t: clockStr() }); photos = photos.slice(0, 12);
+      while (!storePhotos() && photos.length > 1) photos.pop();
+      const fl = $('flash'); fl.classList.remove('go'); void fl.offsetWidth; fl.classList.add('go');
+      tone(1800, 0.04, 'square', 0.06); tone(900, 0.06, 'square', 0.05, null, 0.05);
+      $('photoN').textContent = photos.length;
+    } catch (e) { banner('📷 しゃしんが とれなかった…', 2); }
+  }
   // ================= ループ =================
   refreshHud();
   let last = performance.now();
@@ -3057,11 +3322,11 @@ void main(){
       for (let i = 0; i < n; i++) update(dt / n);
       bgm();
     }
-    render();
+    render(); if (shootReq) capturePhoto();
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();

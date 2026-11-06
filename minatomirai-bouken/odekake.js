@@ -264,6 +264,60 @@
     root.appendChild(btn('← もどる', 'sbig', () => byo(id)));
   }
 
+
+  // ================= えき（だい5だんかい）=================
+  // あおちゃん（5さい）は「ようじ」: おとな 1にんに 2にん まで むりょう。ママの きっぷ だけ かう。
+  // ねだん は めやす（JR 160えん・ブルーライン 210えん〜・みなとみらいせん 200えん〜）。
+  function fare(k, n) { if (k === 'jr') return 160; if (k === 'blue') return n <= 1 ? 210 : 250; return n <= 2 ? 200 : 230; }
+  function eki(arg) {
+    const { clear, el, btn, api, root } = K, T = api.trains[arg.li], here = T.stops[arg.si];
+    clear(`${T.sub ? '🚇' : '🚃'} ${here.n} えき`, T.name, 'eki ' + T.k);
+    say('🧑‍✈️', 'えきいんさん「どこまで いきますか？」');
+    const g = el('div', 'kgrid2');
+    T.stops.forEach((st, i) => {
+      if (i === arg.si) return;
+      const n = Math.abs(i - arg.si), c = el('button', 'kitem', `<i>${i > arg.si ? '➡️' : '⬅️'}</i><span>${st.n}</span><b>${n}えき さき</b>`);
+      c.addEventListener('click', () => ticket(arg, i)); g.appendChild(c);
+    });
+    root.appendChild(g);
+    root.appendChild(K.btn('🚪 そとに でる', 'sout', () => api.onClose()));
+  }
+  function ticket(arg, to) {
+    const { clear, el, btn, api, root } = K, T = api.trains[arg.li], n = Math.abs(to - arg.si), price = fare(T.k, n);
+    clear('🎫 きっぷを かう', `${T.stops[arg.si].n} → ${T.stops[to].n}（${T.short}）`, 'eki ' + T.k);
+    root.appendChild(el('div', 'fare', `👩 ママ（おとな）： <em>${K.yen(price)}</em><br>🧢 あおちゃん（5さい・ようじ）： <em>0えん</em> ✨<br><small>ようじ（1さい〜 しょうがっこうに はいる まえ）は、おとな 1にんに 2にん まで むりょう。ねだん は めやす だよ</small>`));
+    root.appendChild(btn('🎫 ママの きっぷを かう', 'sbig', () => K.pay(price, `${T.short} おとな 1まい`, () => gate(arg, to), () => ticket(arg, to))));
+    root.appendChild(btn('← もどる', 'sout', () => eki(arg)));
+  }
+  async function gate(arg, to) {
+    const { clear, el, btn, api, root } = K, T = api.trains[arg.li];
+    clear('🚪 かいさつ', 'きっぷを いれて とおろう', 'eki ' + T.k);
+    const g = el('div', 'gate', '🎫'); root.appendChild(g);
+    const b = btn('🎫 きっぷを いれる', 'sbig', async () => {
+      b.remove(); g.textContent = '🚪'; g.classList.add('go'); api.tone && api.tone(1320, 0.08, 'square', 0.05); api.tone && api.tone(1320, 0.08, 'square', 0.05, null, 0.12);
+      root.appendChild(el('p', 'desc', 'ピピッ！ ママと てを つないで とおったよ 🤝')); await wait(900);
+      if (!T.sub) { api.onClose({ jr: { li: arg.li, from: arg.si, to } }); return; }
+      ride(arg, to);
+    });
+    root.appendChild(b);
+  }
+  async function ride(arg, to) {
+    const { clear, el, btn, api, root } = K, T = api.trains[arg.li], dir = to > arg.si ? 1 : -1;
+    clear('🚇 ちかてつの なか', T.name, 'eki ' + T.k);
+    const tn = el('div', 'tunnel', '<div class="lights"></div><div class="sign"></div><div class="me">🧢👩</div>'); root.appendChild(tn);
+    const info = el('div', 'price', ''); root.appendChild(info);
+    say('👩', 'ママ「ちかてつは つちの なかを はしるんだよ。まどの そとは トンネル。えきに つくと あかるく なるね」');
+    for (let i = arg.si + dir; ; i += dir) {
+      tn.classList.remove('stop'); info.innerHTML = `🔊「つぎは <b>${T.stops[i].n}</b>」`;
+      for (let k = 0; k < 6; k++) { api.tone && api.tone(80 + (k % 2) * 6, 0.12, 'sawtooth', 0.03); await wait(380); if (!root.contains(tn)) return; }
+      tn.classList.add('stop'); tn.querySelector('.sign').textContent = T.stops[i].n;
+      api.tone && api.tone(880, 0.15, 'sine', 0.06); api.tone && api.tone(660, 0.25, 'sine', 0.06, null, 0.18);
+      if (i === to) break;
+      info.innerHTML = `🚉 ${T.stops[i].n}。 ドアが ひらきます`; await wait(1300); if (!root.contains(tn)) return;
+    }
+    info.innerHTML = `🚉 <b>${T.stops[to].n}</b> に つきました！`;
+    root.appendChild(btn('🚶 おりて そとへ でる', 'sbig', () => api.onClose({ trainTo: { li: arg.li, si: to } })));
+  }
   window.Odekake = {
     open(kind, ctx, arg) {
       K = ctx;
@@ -271,8 +325,9 @@
       else if (kind === 'nipponmaru') nipponmaru();
       else if (kind === 'chuka') chuka();
       else if (kind === 'byo') byo(arg);
+      else if (kind === 'train') eki(arg);
     },
-    has: (kind) => ['cupnoodle', 'nipponmaru', 'chuka', 'byo'].includes(kind),
+    has: (kind) => ['cupnoodle', 'nipponmaru', 'chuka', 'byo', 'train'].includes(kind),
     cups: () => O.cups.slice(), cupGrid: () => cupGrid(),
   };
 })();
