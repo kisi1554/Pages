@@ -453,6 +453,7 @@
       else if (kind === 'konbini') konbini(a.arg);
       else if (kind === 'okstore') okstore();
       else if (kind === 'seabass') seabass(a.arg);
+      else if (window.Odekake && window.Odekake.has(kind)) window.Odekake.open(kind, { api, root, pay, clear, el, btn, sfx, toast, yen }, a.arg);
       else walletView();
     },
     TOYS, PRIZES, toySvg,

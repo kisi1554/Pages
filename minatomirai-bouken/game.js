@@ -428,7 +428,7 @@ void main(){
       return { x, z, h };
     });
     const [bx2, bz2] = at(1, 0); G.beam([masts[3].x, 9, masts[3].z], [bx2, 2.4, bz2], 0.05, C.navy);
-    return { masts, cx: (ax + bx) / 2, cz: (az + bz) / 2 };
+    return { masts, cx: (ax + bx) / 2, cz: (az + bz) / 2, ux, uz, bow: { x: bx2, z: bz2 } };
   })();
 
   // --- コスモクロック21（かんらんしゃ）---
@@ -528,12 +528,17 @@ void main(){
     [35.4470, 139.6520], [BBX.la0, BBX.lo1], [BBX.la0, BBX.lo0], [BBX.la1, BBX.lo0]].map(([a, b]) => GEO(a, b));
   const DAIKOKU = [[35.4600, 139.6760], [35.4720, 139.6760], [35.4720, 139.6950], [35.4600, 139.6950]].map(([a, b]) => GEO(a, b));
   const INNER = [[BBX.la0, BBX.lo0], [BBX.la0, BBX.lo1], [BBX.la1, BBX.lo1], [BBX.la1, BBX.lo0]].map(([a, b]) => GEO(a, b));
-  const onOuter = (x, z) => (pip(x, z, OUTER) || pip(x, z, DAIKOKU)) && !pip(x, z, INNER);
+  // ちずの ついか はんい（やました こうえん・ちゅうかがい）も ちずの なか
+  const INNERS = [INNER].concat((MAP.extra || []).map(([a0, a1, o0, o1]) => [[a0 + 0.0002, o0], [a0 + 0.0002, o1 - 0.0002], [a1, o1 - 0.0002], [a1, o0]].map(([a, b]) => GEO(a, b))));
+  const onOuter = (x, z) => (pip(x, z, OUTER) || pip(x, z, DAIKOKU)) && !INNERS.some((q) => pip(x, z, q));
   function distInner(x, z) {
-    if (pip(x, z, INNER)) return 0; let d = 1e9;
-    for (let i = 0; i < 4; i++) {
-      const [ax, az] = INNER[i], [bx, bz] = INNER[(i + 1) % 4], dx = bx - ax, dz = bz - az;
-      const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1); d = Math.min(d, Math.hypot(x - ax - dx * t, z - az - dz * t));
+    let d = 1e9;
+    for (const Q of INNERS) {
+      if (pip(x, z, Q)) return 0;
+      for (let i = 0; i < 4; i++) {
+        const [ax, az] = Q[i], [bx, bz] = Q[(i + 1) % 4], dx = bx - ax, dz = bz - az;
+        const t = clamp(((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz), 0, 1); d = Math.min(d, Math.hypot(x - ax - dx * t, z - az - dz * t));
+      }
     }
     return d;
   }
@@ -583,11 +588,12 @@ void main(){
   // うみ（ひろく）
   G.quad([-3600, WATER - 0.01, -3600], [3600, WATER - 0.01, -3600], [3600, WATER - 0.01, 3600], [-3600, WATER - 0.01, 3600], [0, 1, 0], C.water, 2);
   // マリンタワー（106m）
-  const MARINE = (() => { const [x, z] = GEO(35.44375, 139.65055); return { x, z, h: 26.5 }; })();
-  G.cyl(MARINE.x, 0, MARINE.z, 2.6, 22, 10, C.red, 0, 1.0); G.cyl(MARINE.x, 22, MARINE.z, 2.4, 2.2, 10, C.white); G.cyl(MARINE.x, 24.2, MARINE.z, 0.5, 2.6, 6, C.red);
-  for (let k = 0; k < 22; k += 4) G.cyl(MARINE.x, k, MARINE.z, 2.62 - k * 0.07, 0.7, 10, C.white);
-  // ひかわまる
-  { const [x, z] = GEO(35.4450, 139.6495); G.box(x - 10, -1, z - 1.6, x + 10, 2.2, z + 1.6, C.black, 0, C.white); G.box(x - 3, 2.2, z - 1.2, x + 4, 4, z + 1.2, C.white); G.cyl(x, 4, z, 0.8, 3, 8, C.red); }
+  // ちずの なかに あれば OSM の かたち（ぶひん）で かく。ここでは いち だけ
+  const MARINE = (() => { const q = POI['横浜マリンタワー']; if (q) return { x: q.x, z: q.z, h: 26.5, osm: true }; const [x, z] = GEO(35.44375, 139.65055); return { x, z, h: 26.5 }; })();
+  if (!MARINE.osm) {
+    G.cyl(MARINE.x, 0, MARINE.z, 2.6, 22, 10, C.red, 0, 1.0); G.cyl(MARINE.x, 22, MARINE.z, 2.4, 2.2, 10, C.white); G.cyl(MARINE.x, 24.2, MARINE.z, 0.5, 2.6, 6, C.red);
+    for (let k = 0; k < 22; k += 4) G.cyl(MARINE.x, k, MARINE.z, 2.62 - k * 0.07, 0.7, 10, C.white);
+  }
   // よこはま ベイブリッジ（ほんとうの いち・おおきさ）
   const BAYB = (() => {
     const a = GEO(35.4475, 139.6705), b = GEO(35.4620, 139.6790), Y = 13, L = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -1334,8 +1340,144 @@ void main(){
     if (!SEA) return null; const T2 = SEA.total * 2, u = (time * 9) % T2, fwd = u < SEA.total, s = fwd ? u : T2 - u, q = SEA.at(s);
     return { x: q.x, z: q.z, yaw: Math.atan2(q.ux * (fwd ? 1 : -1), q.uz * (fwd ? 1 : -1)) };
   }
+  // ================= だい4だんかい: やました こうえん・ちゅうかがい・ひかわまる =================
+  // ちゅうかがいの もん（ぱいろう）: OSM の いち に、みちを またぐ むきで たてる
+  function nearRoad(x, z) {
+    let best = null, bd = 1e9;
+    for (const r of MAP.roads) for (let i = 0; i + 3 < r.p.length; i += 2) {
+      const ax = r.p[i], az = r.p[i + 1], dx = r.p[i + 2] - ax, dz = r.p[i + 3] - az, L2 = dx * dx + dz * dz || 1;
+      const t = clamp(((x - ax) * dx + (z - az) * dz) / L2, 0, 1), d = Math.hypot(x - ax - dx * t, z - az - dz * t);
+      if (d < bd) { bd = d; const L = Math.sqrt(L2); best = { r, d, ux: dx / L, uz: dz / L }; }
+    }
+    return best;
+  }
+  const GATES = [['善隣門', '#d6336c', 'ぜんりんもん'], ['玄武門', '#343a40', 'げんぶもん（きた・くろ）'], ['朝陽門(青龍門)', '#1c7ed6', 'ちょうようもん（ひがし・あお）']].map(([n, col, yomi]) => {
+    const q = POI[n]; if (!q) return null;
+    const rd = nearRoad(q.x, q.z), ux = rd ? rd.ux : 1, uz = rd ? rd.uz : 0, nx = -uz, nz = ux;
+    const hs = Math.max(2.4, (rd ? rd.r.w : 3) / 2 + 1.1), big = n === '朝陽門(青龍門)' ? 1.15 : 1, Hh = 4.6 * big;
+    const pc = hex(col), gold = C.gold, green = hex('#2b8a3e'), U = [nx, 0, nz], N2 = [ux, 0, uz];
+    [-1, 1].forEach((sd) => { // はしら
+      const px = q.x + nx * hs * sd, pz = q.z + nz * hs * sd;
+      G.obox([px, Hh / 2, pz], U, [0, 1, 0], N2, 0.22, Hh / 2, 0.22, pc);
+      G.obox([px, 0.25, pz], U, [0, 1, 0], N2, 0.38, 0.25, 0.38, C.white);
+      addSolid({ x0: px - 0.25, y0: 0, z0: pz - 0.25, x1: px + 0.25, y1: Hh, z1: pz + 0.25, climb: true });
+    });
+    G.obox([q.x, Hh - 1.0, q.z], U, [0, 1, 0], N2, hs + 0.3, 0.16, 0.18, pc);       // よこぎ
+    G.obox([q.x, Hh - 0.45, q.z], U, [0, 1, 0], N2, hs * 0.55, 0.32, 0.2, gold);     // がく（きんいろ）
+    G.obox([q.x + ux * 0.21, Hh - 0.45, q.z + uz * 0.21], U, [0, 1, 0], N2, hs * 0.45, 0.22, 0.01, hex('#c92a2a'));
+    G.obox([q.x, Hh + 0.05, q.z], U, [0, 1, 0], N2, hs + 0.9, 0.14, 0.75, green);   // やね
+    G.obox([q.x, Hh + 0.32, q.z], U, [0, 1, 0], N2, hs + 0.5, 0.14, 0.5, green);
+    G.obox([q.x, Hh + 0.52, q.z], U, [0, 1, 0], N2, hs + 0.1, 0.07, 0.12, gold);
+    [-1, 1].forEach((sd) => G.obox([q.x + nx * (hs + 0.9) * sd, Hh + 0.25, q.z + nz * (hs + 0.9) * sd], U, [0, 1, 0], N2, 0.12, 0.22, 0.7, gold)); // はねあがる のき
+    return { n, x: q.x, z: q.z, ux, uz, hs, yomi };
+  }).filter(Boolean);
+  // ちょうちん: ちゅうかがい おおどおり・かんていびょう どおり
+  MAP.roads.forEach((r) => {
+    if (r.n !== '中華街大通り' && r.n !== '関帝廟通り') return;
+    for (let i = 0; i + 3 < r.p.length; i += 2) {
+      const ax = r.p[i], az = r.p[i + 1], dx = r.p[i + 2] - ax, dz = r.p[i + 3] - az, L = Math.hypot(dx, dz); if (L < 1) continue;
+      const nx = -dz / L, nz = dx / L, hw = r.w / 2 + 0.5;
+      for (let s = 1.2; s < L; s += 2.4) {
+        const x = ax + dx * s / L, z = az + dz * s / L;
+        [-1, 1].forEach((sd) => { const lx = x + nx * hw * sd * 0.55, lz = z + nz * hw * sd * 0.55; G.cyl(lx, 3.1, lz, 0.26, 0.42, 8, hex('#f03e3e'), 5); G.cyl(lx, 3.52, lz, 0.18, 0.06, 8, C.gold); });
+      }
+      G.beam([ax + nx * (r.w / 2 + 0.3), 3.6, az + nz * (r.w / 2 + 0.3)], [r.p[i + 2] + nx * (r.w / 2 + 0.3), 3.6, r.p[i + 3] + nz * (r.w / 2 + 0.3)], 0.02, C.black);
+      G.beam([ax - nx * (r.w / 2 + 0.3), 3.6, az - nz * (r.w / 2 + 0.3)], [r.p[i + 2] - nx * (r.w / 2 + 0.3), 3.6, r.p[i + 3] - nz * (r.w / 2 + 0.3)], 0.02, C.black);
+    }
+  });
+  // びょう（おてら）: あかい かべ と みどりの やね を のせる
+  function byoRoof(n) {
+    const q = POI[n]; if (!q || !q.bb) return null;
+    const [x0, z0, x1, z1] = q.bb, y = Math.max(q.h || 2.4, 2.4), red = hex('#c92a2a'), green = hex('#2b8a3e');
+    G.box(x0 - 0.05, 0, z0 - 0.05, x1 + 0.05, y, z1 + 0.05, red, 0, red);
+    G.box(x0 - 0.7, y, z0 - 0.7, x1 + 0.7, y + 0.35, z1 + 0.7, green); G.box(x0 - 0.2, y + 0.35, z0 - 0.2, x1 + 0.2, y + 0.9, z1 + 0.2, green);
+    G.box(x0 + 0.5, y + 0.9, z0 + 0.5, x1 - 0.5, y + 1.4, z1 - 0.5, hex('#37b24d'), 0, C.gold);
+    G.cyl((x0 + x1) / 2, y + 1.4, (z0 + z1) / 2, 0.3, 0.7, 8, C.gold);
+    return q;
+  }
+  const KANTEI = byoRoof('横浜関帝廟'), MAZU = byoRoof('横浜媽祖廟');
+  // にくまん やさん（ぜんりんもん の ちかく）
+  const NIKU = (() => {
+    const g = GATES.find((q) => q.n === '善隣門'); if (!g) return null;
+    for (const s of [7, -7, 11, -11, 15]) for (const sd of [1, -1]) {
+      const x = g.x + g.ux * s - g.uz * (g.hs + 1.4) * sd, z = g.z + g.uz * s + g.ux * (g.hs + 1.4) * sd;
+      if (!isLand(x, z) || blockedAt(x, 0, z) || blockedAt(x - g.uz * 1.6 * sd, 0, z + g.ux * 1.6 * sd)) continue;
+      const bx = x - g.uz * 1.5 * sd, bz = z + g.ux * 1.5 * sd, U = [g.ux, 0, g.uz], N2 = [-g.uz * sd, 0, g.ux * sd];
+      G.obox([bx, 0.55, bz], U, [0, 1, 0], N2, 1.3, 0.55, 0.5, hex('#c92a2a'));
+      G.obox([bx, 1.15, bz], U, [0, 1, 0], N2, 1.1, 0.06, 0.4, C.white);
+      [-0.6, 0, 0.6].forEach((o) => G.cyl(bx + g.ux * o, 1.21, bz + g.uz * o, 0.3, 0.22, 8, hex('#e9ecef')));
+      G.obox([bx, 2.2, bz], U, [0, 1, 0], N2, 1.5, 0.08, 0.9, hex('#ffd43b'));
+      G.obox([bx - N2[0] * 0.5, 2.6, bz - N2[2] * 0.5], U, [0, 1, 0], N2, 1.0, 0.3, 0.05, hex('#c92a2a'));
+      addSolid({ x0: bx - 0.55, y0: 0, z0: bz - 0.55, x1: bx + 0.55, y1: 1.1, z1: bz + 0.55, climb: true });
+      return { x, z };
+    }
+    return null;
+  })();
+  // ひかわまる（やました こうえんの まえに いる ふね）
+  const HIKAWA = (() => {
+    const sp = POI['氷川丸']; if (!sp || !sp.poly) return null;
+    const p = sp.poly, n = p.length / 2; let a = 0, b = 0, best = 0;
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) { const d = Math.hypot(p[i * 2] - p[j * 2], p[i * 2 + 1] - p[j * 2 + 1]); if (d > best) { best = d; a = i; b = j; } }
+    const ax = p[a * 2], az = p[a * 2 + 1], ux = (p[b * 2] - ax) / best, uz = (p[b * 2 + 1] - az) / best;
+    const cx = ax + ux * best / 2, cz = az + uz * best / 2, hw = 2.5, U = [ux, 0, uz], N2 = [-uz, 0, ux];
+    const at = (t, s) => [cx + ux * best * t - uz * s, cz + uz * best * t + ux * s];
+    G.obox([cx, 0.6, cz], U, [0, 1, 0], N2, best / 2 - 1.2, 1.8, hw, C.black);
+    G.obox([cx, 2.3, cz], U, [0, 1, 0], N2, best / 2 - 1.2, 0.12, hw + 0.02, C.white);
+    { const [x, z] = at(0.5, 0); G.obox([x, 0.6, z], U, [0, 1, 0], N2, 1.2, 1.8, hw * 0.5, C.black); }
+    { const [x, z] = at(-0.5, 0); G.obox([x, 0.6, z], U, [0, 1, 0], N2, 1.2, 1.8, hw * 0.6, C.black); }
+    G.obox([cx, -0.9, cz], U, [0, 1, 0], N2, best / 2 - 1.2, 0.3, hw, hex('#c92a2a'));
+    const deck = 2.45;
+    G.obox([cx, deck, cz], U, [0, 1, 0], N2, best / 2 - 1.3, 0.05, hw - 0.1, C.wood);
+    [[0, 0.24, 1.4], [0.02, 0.18, 2.6], [0.03, 0.12, 3.6]].forEach(([t, L, y]) => { const [x, z] = at(t, 0); G.obox([x, deck + y - 0.5, z], U, [0, 1, 0], N2, best * L, 0.5, hw - 0.4, C.white, 1); });
+    { const [x, z] = at(0.02, 0); G.cyl(x, deck + 3.6, z, 0.9, 2.6, 10, C.black); G.cyl(x, deck + 4.4, z, 0.92, 0.5, 10, hex('#f8f9fa')); G.cyl(x, deck + 4.55, z, 0.93, 0.1, 10, hex('#c92a2a')); G.cyl(x, deck + 4.75, z, 0.93, 0.1, 10, hex('#c92a2a')); }
+    [-0.33, 0.33].forEach((t) => { const [x, z] = at(t, 0); G.beam([x, deck, z], [x, deck + 8, z], 0.12, C.tan); });
+    for (let t = -0.47; t < 0.48; t += 0.06) { const [x, z] = at(t, 0); const r = hw * (Math.abs(t) > 0.42 ? 0.6 : 0.95); addSolid({ x0: x - r, y0: -2, z0: z - r, x1: x + r, y1: deck, z1: z + r }); }
+    return { x: cx, z: cz, ux, uz, len: best };
+  })();
+  // やました こうえん: ふんすい「みずの まもりがみ」と あかいくつの おんなのこ
+  const YAMA = (() => {
+    const q = POI['山下公園']; if (!q) return null;
+    const f = freeSpot(q.x, q.z), x = f.x, z = f.z;
+    G.cyl(x, 0, z, 3.0, 0.5, 18, hex('#ced4da')); G.cyl(x, 0.5, z, 2.7, 0.02, 18, C.water, 2);
+    G.cyl(x, 0, z, 0.5, 2.2, 10, hex('#adb5bd')); G.sphere(x, 2.6, z, 0.42, 6, hex('#868e96'));
+    addSolid({ x0: x - 2.6, y0: 0, z0: z - 2.6, x1: x + 2.6, y1: 0.5, z1: z + 2.6, climb: true });
+    [[-5, 0], [5, 0], [0, -5], [0, 5]].forEach(([dx, dz]) => { if (!blockedAt(x + dx, 0, z + dz) && isLand(x + dx, z + dz)) { G.box(x + dx - 1, 0, z + dz - 1, x + dx + 1, 0.3, z + dz + 1, hex('#8a5a33')); for (let k = 0; k < 6; k++) G.sphere(x + dx + Math.cos(k) * 0.6, 0.42, z + dz + Math.sin(k) * 0.6, 0.22, 4, hex(['#ff6b6b', '#ffd43b', '#f783ac', '#ffffff', '#ff922b', '#cc5de8'][k])); } });
+    // あかいくつの おんなのこ（うみの そば・だいたいの いち）
+    let s = null;
+    if (HIKAWA) { const w = freeSpot(HIKAWA.x - HIKAWA.uz * 9, HIKAWA.z + HIKAWA.ux * 9); s = w; }
+    if (s) {
+      G.box(s.x - 0.4, 0, s.z - 0.4, s.x + 0.4, 0.5, s.z + 0.4, hex('#adb5bd'));
+      G.cyl(s.x, 0.5, s.z, 0.18, 0.12, 8, hex('#e03131')); G.cyl(s.x, 0.62, s.z, 0.2, 0.55, 8, hex('#7a6a58'), 0, 0.14); G.sphere(s.x, 1.32, s.z, 0.2, 6, hex('#7a6a58'));
+      addSolid({ x0: s.x - 0.4, y0: 0, z0: s.z - 0.4, x1: s.x + 0.4, y1: 0.5, z1: s.z + 0.4, climb: true });
+    }
+    return { x, z, girl: s };
+  })();
+  // にっぽんまる の ほ（そうはん てんぱん の ひ だけ でる）
+  const SAILG = new Geo();
+  if (SHIP) {
+    SHIP.masts.forEach((m, i) => {
+      const L0 = 3.2, ys = [m.h - 8, m.h - 5.3, m.h - 2.6];
+      ys.forEach((y, j) => {
+        const L = L0 - j * 0.6, Lb = j === 0 ? L * 1.05 : L0 - (j - 1) * 0.6, yb = j === 0 ? 3.0 : ys[j - 1];
+        const nx = -SHIP.uz, nz = SHIP.ux, bx = SHIP.ux * 0.35, bz = SHIP.uz * 0.35;
+        const A = [m.x + nx * L, y, m.z + nz * L], Bp = [m.x - nx * L, y, m.z - nz * L], Cc = [m.x - nx * Lb + bx, yb + 0.2, m.z - nz * Lb + bz], D = [m.x + nx * Lb + bx, yb + 0.2, m.z + nz * Lb + bz];
+        SAILG.quad(A, Bp, Cc, D, [SHIP.ux, 0, SHIP.uz], hex('#fffdf5'), 0);
+        if (i < 3) SAILG.quad(A, Bp, Cc, D, [SHIP.ux, 0, SHIP.uz], hex('#fffdf5'), 0);
+      });
+    });
+    // まえの さんかくの ほ（ジブ）
+    const f = SHIP.masts[0], bw = SHIP.bow;
+    [0.3, 0.55, 0.8].forEach((k) => SAILG.tri([f.x, 3 + (f.h - 3) * k, f.z], [bw.x, 2.6, bw.z], [f.x + (bw.x - f.x) * 0.25, 2.9, f.z + (bw.z - f.z) * 0.25], [-SHIP.uz, 0, SHIP.ux], hex('#fffdf5'), 0));
+  }
+  const NMDOOR = SHIP ? (() => { for (const s of [5, -5, 8]) { const f = freeSpot(SHIP.cx - SHIP.uz * s, SHIP.cz + SHIP.ux * s); if (Math.hypot(f.x - SHIP.cx, f.z - SHIP.cz) < 14) return f; } return freeSpot(SHIP.cx, SHIP.cz); })() : null;
+  if (NMDOOR) DOORS.push({ id: 'nipponmaru', x: NMDOOR.x, z: NMDOOR.z, label: '⛵<br>みる', color: hex('#1864ab'), run: () => openShop('nipponmaru') });
+  const CUPD = doorOn('Cupnoodles Museum', WPP.x, WPP.z);
+  addDoor('cupnoodle', CUPD, '🍜<br>はいる', hex('#e03131'), () => openShop('cupnoodle'));
+  if (NIKU) DOORS.push({ id: 'nikuman', x: NIKU.x, z: NIKU.z, label: '🥟<br>かう', color: hex('#c92a2a'), run: () => openShop('chuka') });
+  [[KANTEI, 'kantei', '横浜関帝廟'], [MAZU, 'mazu', '横浜媽祖廟']].forEach(([q, id, n]) => { if (!q) return; const d = doorOn(n, q.x + 30, q.z - 30), f = d ? { x: d.ox, z: d.oz } : freeSpot(q.x, q.z); if (f) DOORS.push({ id, x: f.x, z: f.z, label: '🙏<br>おまいり', color: hex('#c92a2a'), run: () => openShop('byo', id) }); });
   const AKAI_OFF = { id: 'akaioff', x: 0, z: 0, label: '🚏<br>おりる', color: hex('#c92a2a'), run: () => endAkai('🚏 おりたよ') };
   const staticMesh = G.upload();
+  const mSails = SAILG.upload();
 
   // ================= うごく あしば（かんらんしゃ）=================
   const plats = [];
@@ -1421,7 +1563,7 @@ void main(){
     zp('pacifico', 'パシフィコよこはま', 'パシフィコ横浜'),
     zp('rinko', 'りんこうパーク', '臨港パーク', { r: 30 }),
     zp('cosmo', 'コスモクロック21', 'コスモクロック21', { r: 16 }),
-    zp('cupnoodle', 'カップヌードル ミュージアム', 'Cupnoodles Museum'),
+    zp('cupnoodle', 'カップヌードル ミュージアム', 'Cupnoodles Museum', { say: 'じぶんだけの カップヌードル つくろうか 🍜' }),
     zp('worldporters', 'ワールドポーターズ', 'Yokohama World Porters'),
     { id: 'aircabin', name: 'エアキャビン', x: CAB ? CAB.at(CAB.total / 2).x : 0, z: CAB ? CAB.at(CAB.total / 2).z : 0, r: 0, ride: true },
     zp('kishamichi', 'きしゃみち', '汽車道', { r: 10 }),
@@ -1432,6 +1574,12 @@ void main(){
     { id: 'home', name: 'あおちゃんの おうち（プラウド）', x: PROWD.x, z: PROWD.z, r: 12 },
     { id: 'gankiro', name: 'いわかめどおり（バスてい）', x: STOP.x, z: STOP.z, r: 5 },
     { id: 'yochien', name: 'とべ ようちえん', x: YOCHI.x, z: YOCHI.z, r: 14 },
+    zp('chukagai', 'よこはま ちゅうかがい', '横浜中華街', { r: 30, say: 'いい におい！ にくまん たべたいね 🥟' }),
+    zp('kantei', 'かんていびょう', '横浜関帝廟', { r: 8, say: 'きらきらの おてらだね。おまいり しようか 🙏' }),
+    zp('mazu', 'まそびょう', '横浜媽祖廟', { r: 8, say: 'うみを まもる かみさまの おてら だよ' }),
+    YAMA ? { id: 'yamashita', name: 'やました こうえん', x: YAMA.x, z: YAMA.z, r: 18, say: 'うみの かぜが きもちいいね 🌊' } : null,
+    HIKAWA ? { id: 'hikawa', name: 'ひかわまる', x: HIKAWA.x, z: HIKAWA.z, r: HIKAWA.len / 2 + 4, say: 'おおきな くろい ふね！ むかしは アメリカまで いったんだって' } : null,
+    zp('marine', 'マリンタワー', '横浜マリンタワー', { r: 9, say: 'あかと しろの とう だね 🗼' }),
   ].filter(Boolean);
   $('stampT').textContent = ZONES.length;
 
@@ -1891,7 +2039,7 @@ void main(){
     if (P.farting && !m.wasFart) momSay('あおちゃんの おなら パワー！ ママも とぶよ 👼', 3); m.wasFart = P.farting;
     if (P.glide && !m.wasGlide) momSay('パラシュート じょうず！ 🪂', 2.5); m.wasGlide = P.glide;
     if (save.stars.length > m.stars) momSay('すごーい！ ほしを みつけたね ⭐', 3); m.stars = save.stars.length;
-    if (save.stamps.length > m.stamps) { const z = ZONES.find((q) => q.id === save.stamps[save.stamps.length - 1]); if (z) momSay(`${z.name} に ついたね！`, 3); } m.stamps = save.stamps.length;
+    if (save.stamps.length > m.stamps) { const z = ZONES.find((q) => q.id === save.stamps[save.stamps.length - 1]); if (z) momSay(z.say || `${z.name} に ついたね！`, 3); } m.stamps = save.stamps.length;
     const mon = walletTotal(); if (m.money && mon > m.money) momSay('おこづかい ふえたね！ だいじに つかおうね 💴', 3); m.money = mon;
     // ときどき はなしかける
     m.talkT -= dt;
@@ -2689,7 +2837,7 @@ void main(){
       draw(mCube, M(T(p.cx, p.cy - 0.8, p.cz), S(2.2, 1.6, 2.2)), CAB_COL[i % CAB_COL.length]);
       draw(mCube, M(T(p.cx, p.cy - 0.75, p.cz), S(2.26, 0.6, 1.6)), [0.6, 0.85, 1]);
     });
-    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); drawSignals(); drawCars(SK.night);
+    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); if (SHIP && save.sails === save.clock.day) draw(mSails, I(), W); drawSignals(); drawCars(SK.night);
     { const ak = P.state === 'akai' && P.ak ? { x: P.ak.x, z: P.ak.z, yaw: P.ak.yaw } : akaiIdle(); if (ak) drawAkai(ak.x, ak.z, ak.yaw); }
     { const bt = P.state === 'boat' && P.sb ? { x: P.sb.x, z: P.sb.z, yaw: P.sb.yaw } : seaIdle(); if (bt) drawBoat(bt.x, bt.z, bt.yaw); } if (P.state === 'hurt') drawAmb();
     // エアキャビンの ゴンドラ
@@ -2843,13 +2991,17 @@ void main(){
       onClose: () => { show('ovKumon', false); stepOut(); setPaused(); banner('🏫 また きてね！<small>いまは ' + window.Kumon.level + ' きょうざい</small>', 2); },
     });
   }
+  function cupOpen() { const h = CLK.h; return CLK.wd !== 1 && h >= 10 && h < 18; }
+  function nmOpen() { const h = CLK.h; return CLK.wd !== 0 && h >= 10 && h < 17; }
   function openShop(kind, arg) {
     if (!window.Shops) return;
+    if (kind === 'cupnoodle' && !cupOpen()) { banner('🍜 カップヌードル ミュージアムは しまってるよ<small>10:00〜18:00 ・ かようび は おやすみ</small>', 3); return; }
+    if (kind === 'nipponmaru' && !nmOpen()) { banner('⛵ にっぽんまるは しまってるよ<small>10:00〜17:00 ・ げつようび は おやすみ（めやす）</small>', 3); return; }
     SFX.door(); show('ovShop', true); setPaused();
     window.Shops.open(kind, {
-      arg, wallet: Wallet, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()), tone, confetti,
+      arg, wallet: Wallet, clock: clockStr(), sailsToday: save.sails === save.clock.day, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()), tone, confetti,
       errand: save.errand, errandItems: ERR_ITEMS,
-      reward: (r) => { if (r.errand) errandBought(r.errand); if (r.oni) save.oni = Math.min(9, save.oni + r.oni); if (r.full) { P.st = maxSt(); P.tired = false; } if (r.gas) P.gas = 1; if (r.karaage) { save.karaage = (save.karaage || 0) + 1; momSay('からあげクン おいしいね！ ママにも ひとつ ちょうだい 😋', 4); } store(); refreshHud(); },
+      reward: (r) => { if (r.errand) errandBought(r.errand); if (r.oni) save.oni = Math.min(9, save.oni + r.oni); if (r.full) { P.st = maxSt(); P.tired = false; } if (r.gas) P.gas = 1; if (r.sails) { save.sails = save.clock.day; momSay('ほが ぜんぶ ひらいたね！ そとから みてみよう ⛵', 4); } if (r.nikuman) momSay('ふーふー して たべてね。あついよ 🥟', 3); if (r.karaage) { save.karaage = (save.karaage || 0) + 1; momSay('からあげクン おいしいね！ ママにも ひとつ ちょうだい 😋', 4); } store(); refreshHud(); },
       onClose: (res) => {
         show('ovShop', false); setPaused(); refreshHud();
         if (res && res.go) { startAttraction(res.go); return; }
@@ -2911,5 +3063,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
