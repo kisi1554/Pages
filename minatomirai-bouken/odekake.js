@@ -318,6 +318,135 @@
     info.innerHTML = `🚉 <b>${T.stops[to].n}</b> に つきました！`;
     root.appendChild(btn('🚶 おりて そとへ でる', 'sbig', () => api.onClose({ trainTo: { li: arg.li, si: to } })));
   }
+
+  // ================= てつどう もけい の はくぶつかん（よこはま みつい ビル 2かい）=================
+  // ほんものの もけいの まね では なく、この アプリで かいた ジオラマ。ねだん は めやす。
+  const MODELS = [
+    { id: 'sl', n: 'じょうき きかんしゃ（SL）', body: '#2b2b2b', band: '#c92a2a', cars: ['#6b3e26', '#6b3e26', '#6b3e26'], smoke: 1, w: '🚂' },
+    { id: 'shin', n: 'しんかんせん', body: '#f8f9fa', band: '#1c4fd0', cars: ['#f8f9fa', '#f8f9fa', '#f8f9fa'], nose: 1, w: '🚄' },
+    { id: 'blue', n: 'ブルートレイン（しんだい とっきゅう）', body: '#1c3f8f', band: '#f8f9fa', cars: ['#1c3f8f', '#1c3f8f', '#1c3f8f'], w: '🚃' },
+    { id: 'euro', n: 'ヨーロッパの とっきゅう', body: '#c92a2a', band: '#ffd43b', cars: ['#e9ecef', '#c92a2a', '#e9ecef'], w: '🚆' },
+    { id: 'ele', n: 'でんき きかんしゃ と かもつ', body: '#2b8a3e', band: '#ffd43b', cars: ['#868e96', '#495057', '#868e96'], w: '🚛' },
+    { id: 'tram', n: 'ろめん でんしゃ', body: '#f59f00', band: '#fff', cars: [], w: '🚋' },
+  ];
+  function hara() {
+    const { clear, el, btn, api, root } = K;
+    clear('🚂 てつどう もけい の はくぶつかん', 'よこはま みつい ビルディング 2かい', 'hara');
+    say('🧑‍🔧', 'がくげいいんさん「ようこそ！ おおきな ジオラマで もけいの でんしゃが はしっているよ。じぶんで うんてん してみよう！」');
+    root.appendChild(el('div', 'fare', `👩 ママ（おとな）： <em>${K.yen(1500)}</em><br>🧢 あおちゃん（4さい いじょう）： <em>${K.yen(750)}</em><br><small>あわせて ${K.yen(2250)}。ねだん は めやす。ほんとうは よやく（ひにち と じかん を きめた きっぷ）が いるよ</small>`));
+    root.appendChild(btn('🎫 にゅうかん する（' + K.yen(2250) + '）', 'sbig', () => K.pay(2250, 'はくぶつかん おとな 1・こども 1', lobby, hara)));
+    root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
+  }
+  function lobby() {
+    const { clear, el, btn, api, root } = K;
+    clear('🚂 てつどう もけい の はくぶつかん', 'なかに はいったよ', 'hara');
+    say('👩', 'ママ「わあ、ひろい！ でんしゃが いっぱい はしってるね」');
+    root.appendChild(btn('🕹️ ジオラマで うんてん する', 'sbig', () => pickModel()));
+    root.appendChild(btn('🖼️ もけいの コレクション を みる', 'sbig sub', collection));
+    root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
+  }
+  function collection() {
+    const { clear, el, btn, root } = K;
+    clear('🖼️ もけいの コレクション', 'ガラスケースの なかの でんしゃたち', 'hara');
+    const g = el('div', 'zgrid');
+    MODELS.forEach((m) => { const c = el('div', 'zcard', `<canvas width="160" height="60"></canvas><b>${m.n}</b>`); g.appendChild(c); const x = c.querySelector('canvas').getContext('2d'); drawTrainSide(x, m, 8, 18); });
+    root.appendChild(g);
+    root.appendChild(el('p', 'desc', 'もけいは ほんものを ちいさく した もの。レールの はば も ほんものに あわせて ちいさく して あるよ'));
+    root.appendChild(btn('← もどる', 'sbig', lobby));
+  }
+  function drawTrainSide(x, m, ox, oy) {
+    const cars = [m.body].concat(m.cars.slice(0, 2));
+    cars.forEach((col, i) => {
+      const cx = ox + i * 48; x.fillStyle = col; x.fillRect(cx, oy, 44, 22); x.fillStyle = m.band; x.fillRect(cx, oy + 14, 44, 4);
+      x.fillStyle = '#a5d8ff'; for (let k = 0; k < 4; k++) if (!(i === 0 && m.smoke)) x.fillRect(cx + 4 + k * 10, oy + 4, 7, 7);
+      x.fillStyle = '#222'; [8, 36].forEach((w) => { x.beginPath(); x.arc(cx + w, oy + 24, 4, 0, 7); x.fill(); });
+    });
+    if (m.smoke) { x.fillStyle = '#222'; x.fillRect(ox + 6, oy - 8, 6, 9); }
+  }
+  function pickModel() {
+    const { clear, el, btn, root } = K;
+    clear('🕹️ どの でんしゃ を はしらせる？', 'えらんだ でんしゃを あおちゃんが うんてん', 'hara');
+    const g = el('div', 'kgrid2');
+    MODELS.forEach((m) => { const c = el('button', 'kitem', `<i>${m.w}</i><span>${m.n}</span>`); c.addEventListener('click', () => diorama(m)); g.appendChild(c); });
+    root.appendChild(g);
+    root.appendChild(btn('← もどる', 'sout', lobby));
+  }
+  function diorama(mine) {
+    const { clear, el, btn, api, root } = K;
+    clear('🕹️ ジオラマ うんてん', mine.n, 'hara');
+    const cv = document.createElement('canvas'); cv.width = 720; cv.height = 480; cv.className = 'diocv'; root.appendChild(cv);
+    const info = el('div', 'price', '⏹ とまっているよ。⏩ で しゅっぱつ！'); root.appendChild(info);
+    const g = cv.getContext('2d');
+    // せんろ: そと（あおちゃん）と うち（ほかの でんしゃ）の だえん
+    const loop = (cx, cy, a, r) => { const L = 2 * a + 2 * Math.PI * r; return { L, top: a + Math.PI * r + a / 2, at(s) { s = ((s % L) + L) % L; if (s < a) return [cx - a / 2 + s, cy + r, 0]; s -= a; if (s < Math.PI * r) { const t = s / r - Math.PI / 2; return [cx + a / 2 + Math.cos(t) * r, cy + Math.sin(t) * r, t + Math.PI / 2]; } s -= Math.PI * r; if (s < a) return [cx + a / 2 - s, cy - r, Math.PI]; s -= a; const t = s / r + Math.PI / 2; return [cx - a / 2 + Math.cos(t) * r, cy + Math.sin(t) * r, t + Math.PI / 2]; } }; };
+    const OUT = loop(360, 240, 370, 165), IN = loop(360, 240, 260, 105);
+    const ST = 90; // えき（した の ちょくせん）
+    const other = MODELS.find((m) => m.id !== mine.id && m.id !== 'tram') || MODELS[0];
+    const T1 = { m: mine, s: 30, v: 0, want: 0, L: OUT }, T2 = { m: other, s: 300, v: 70, want: 70, L: IN };
+    let night = false, last = performance.now(), msgT = 0, stopped = true, bell = 0;
+    const houses = []; for (let i = 0; i < 9; i++) houses.push([250 + (i % 3) * 70, 205 + Math.floor(i / 3) * 34, ['#ffa8a8', '#a5d8ff', '#ffe066', '#b2f2bb'][i % 4]]);
+    function rail(Lp, col) { g.strokeStyle = '#8d7b68'; g.lineWidth = 16; g.beginPath(); for (let s = 0; s <= Lp.L; s += 6) { const [x, y] = Lp.at(s); s ? g.lineTo(x, y) : g.moveTo(x, y); } g.closePath(); g.stroke(); g.strokeStyle = col; g.lineWidth = 2; g.setLineDash([2, 6]); g.stroke(); g.setLineDash([]); }
+    function train(T) {
+      const cars = [T.m.body].concat(T.m.cars);
+      cars.forEach((col, i) => {
+        const [x, y, a] = T.L.at(T.s - i * 30); g.save(); g.translate(x, y); g.rotate(a);
+        g.fillStyle = col; g.fillRect(-13, -9, 26, 18); g.fillStyle = T.m.band; g.fillRect(-13, 4, 26, 3);
+        if (i === 0) { if (T.m.nose) { g.fillStyle = col; g.beginPath(); g.moveTo(13, -9); g.lineTo(22, 0); g.lineTo(13, 9); g.fill(); } if (night) { g.fillStyle = 'rgba(255,240,150,.55)'; g.beginPath(); g.moveTo(14, -6); g.lineTo(60, -22); g.lineTo(60, 22); g.lineTo(14, 6); g.fill(); } }
+        g.fillStyle = night ? '#ffe066' : '#d0ebff'; g.fillRect(-9, -6, 5, 4); g.fillRect(-2, -6, 5, 4); g.fillRect(5, -6, 5, 4);
+        g.restore();
+      });
+      if (T.m.smoke && T.v > 5) { const [x, y] = T.L.at(T.s - 4); g.fillStyle = 'rgba(240,240,240,.7)'; for (let k = 0; k < 3; k++) { g.beginPath(); g.arc(x - k * 6, y - 14 - k * 6 - (performance.now() / 60 % 6), 5 + k * 2, 0, 7); g.fill(); } }
+    }
+    function frame(now) {
+      if (!root.contains(cv)) return;
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      T1.v += (T1.want - T1.v) * Math.min(1, dt * (T1.want < T1.v ? 2.5 : 1.5)); T1.s += T1.v * dt; T2.s += T2.v * dt;
+      // ふみきり（うえ の ちょくせん の まんなか）
+      const near = [T1, T2].some((T) => { const d = ((T.s - T.L.top) % T.L + T.L) % T.L; return d < 130 || d > T.L - 110; });
+      if (near && (bell -= dt) < 0) { bell = 0.35; api.tone && api.tone(1250, 0.12, 'square', 0.03); }
+      // そら・じめん
+      g.fillStyle = night ? '#1c2b4a' : '#7cc36b'; g.fillRect(0, 0, 720, 480);
+      g.fillStyle = night ? '#2b4a3a' : '#69b34c'; g.fillRect(0, 0, 720, 60);
+      // かわ と はし
+      g.fillStyle = night ? '#1b3a6b' : '#4dabf7'; g.fillRect(70, 0, 38, 480);
+      rail(OUT, '#adb5bd'); rail(IN, '#adb5bd');
+      // えき
+      const [sx, sy] = OUT.at(ST); g.fillStyle = '#ced4da'; g.fillRect(sx - 50, sy + 12, 100, 20); g.fillStyle = '#e03131'; g.fillRect(sx - 2, sy - 12, 4, 24);
+      g.fillStyle = '#1c2b4a'; g.font = 'bold 15px sans-serif'; g.textAlign = 'center'; g.fillText('🚉 もけい えき', sx, sy + 48);
+      // まち
+      houses.forEach(([x, y, c]) => { g.fillStyle = night ? '#495057' : c; g.fillRect(x, y, 40, 24); g.fillStyle = night ? '#ffe066' : '#fff'; g.fillRect(x + 6, y + 6, 8, 8); g.fillRect(x + 24, y + 6, 8, 8); g.fillStyle = night ? '#343a40' : '#c92a2a'; g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 20, y - 14); g.lineTo(x + 44, y); g.fill(); });
+      // ふみきり
+      const cx = 360, cyy = 240 - 165; g.fillStyle = '#495057'; g.fillRect(cx - 14, cyy - 60, 28, 120);
+      [-1, 1].forEach((sd) => { g.save(); g.translate(cx + sd * 30, cyy + sd * 28); g.rotate(near ? 0 : -Math.PI / 2 * sd); g.fillStyle = '#ffd43b'; g.fillRect(0, -3, -sd * 0 + 40 * -sd, 6); g.restore(); g.fillStyle = near && Math.floor(now / 300) % 2 ? '#ff2222' : '#661111'; g.beginPath(); g.arc(cx + sd * 30, cyy + sd * 28, 6, 0, 7); g.fill(); });
+      train(T2); train(T1);
+      // やま と トンネル（みぎ の カーブ）
+      g.fillStyle = night ? '#2f3e2f' : '#5c940d'; g.beginPath(); g.moveTo(560, 470); g.lineTo(640, 160); g.lineTo(720, 470); g.fill();
+      g.fillStyle = night ? '#3d4f3d' : '#74b816'; g.beginPath(); g.moveTo(600, 330); g.lineTo(700, 120); g.lineTo(720, 140); g.lineTo(720, 380); g.fill();
+      g.fillStyle = '#fff'; g.beginPath(); g.moveTo(690, 150); g.lineTo(700, 120); g.lineTo(712, 150); g.fill();
+      // うんてん の ようす
+      const d = ((T1.s - ST) % OUT.L + OUT.L) % OUT.L, dist = Math.min(d, OUT.L - d);
+      if (T1.v < 2 && T1.want === 0 && !stopped) {
+        stopped = true; const cm = Math.round(dist);
+        if (dist < 12) { info.innerHTML = '💮 ぴったり ていしゃ！ すごい うんてんしさん！'; api.tone && api.tone(880, 0.15, 'sine', 0.08); api.tone && api.tone(1175, 0.3, 'sine', 0.08, null, 0.15); }
+        else if (dist < 60) info.innerHTML = `🚉 えき まで あと ${cm}。もうすこし！`;
+        else info.innerHTML = '⏹ とまったよ。えきの あかい せん で とまれるかな？';
+      }
+      if (T1.want > 0) { stopped = false; if ((msgT -= dt) < 0) { msgT = 0.5; info.innerHTML = dist < 120 && ((T1.s - ST) % OUT.L + OUT.L) % OUT.L > OUT.L / 2 ? '🚉 もうすぐ えき！ ⏹ で とまろう' : `🚃 はしってるよ（はやさ ${Math.round(T1.want / 30)}）`; } }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+    const row = el('div', 'brow');
+    row.appendChild(btn('⏪ ゆっくり', 'sbig sub', () => { T1.want = Math.max(0, T1.want - 30); }));
+    row.appendChild(btn('⏹ とまる', 'sbig sub', () => { T1.want = 0; }));
+    row.appendChild(btn('⏩ はやく', 'sbig', () => { T1.want = Math.min(150, T1.want + 30); }));
+    root.appendChild(row);
+    const row2 = el('div', 'brow');
+    row2.appendChild(btn(mine.smoke ? '📯 きてき ポッポー' : '📯 けいてき プァーン', 'sbig sub', () => { if (mine.smoke) { api.tone && api.tone(520, 0.35, 'sine', 0.08); api.tone && api.tone(620, 0.5, 'sine', 0.08, null, 0.4); } else api.tone && api.tone(440, 0.7, 'sawtooth', 0.04); }));
+    row2.appendChild(btn('🌙 よる / ☀️ ひる', 'sbig sub', () => { night = !night; }));
+    root.appendChild(row2);
+    root.appendChild(btn('🔁 でんしゃを かえる', 'sbig sub', pickModel));
+    root.appendChild(btn('← ロビーに もどる', 'sout', lobby));
+  }
   window.Odekake = {
     open(kind, ctx, arg) {
       K = ctx;
@@ -326,8 +455,9 @@
       else if (kind === 'chuka') chuka();
       else if (kind === 'byo') byo(arg);
       else if (kind === 'train') eki(arg);
+      else if (kind === 'hara') hara();
     },
-    has: (kind) => ['cupnoodle', 'nipponmaru', 'chuka', 'byo', 'train'].includes(kind),
+    has: (kind) => ['cupnoodle', 'nipponmaru', 'chuka', 'byo', 'train', 'hara'].includes(kind),
     cups: () => O.cups.slice(), cupGrid: () => cupGrid(),
   };
 })();

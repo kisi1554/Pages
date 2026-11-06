@@ -1473,6 +1473,9 @@ void main(){
   if (NMDOOR) DOORS.push({ id: 'nipponmaru', x: NMDOOR.x, z: NMDOOR.z, label: '⛵<br>みる', color: hex('#1864ab'), run: () => openShop('nipponmaru') });
   const CUPD = doorOn('Cupnoodles Museum', WPP.x, WPP.z);
   addDoor('cupnoodle', CUPD, '🍜<br>はいる', hex('#e03131'), () => openShop('cupnoodle'));
+  // てつどう もけい の はくぶつかん（よこはま みつい ビルディング 2かい・たかしま 1-1-2）
+  const HARAD = POI['横浜三井ビルディング'] ? doorOn('横浜三井ビルディング', POI['横浜三井ビルディング'].x + 30, POI['横浜三井ビルディング'].z + 30) : null;
+  addDoor('hara', HARAD, '🚂<br>はくぶつかん', hex('#1864ab'), () => openShop('hara'));
   if (NIKU) DOORS.push({ id: 'nikuman', x: NIKU.x, z: NIKU.z, label: '🥟<br>かう', color: hex('#c92a2a'), run: () => openShop('chuka') });
   [[KANTEI, 'kantei', '横浜関帝廟'], [MAZU, 'mazu', '横浜媽祖廟']].forEach(([q, id, n]) => { if (!q) return; const d = doorOn(n, q.x + 30, q.z - 30), f = d ? { x: d.ox, z: d.oz } : freeSpot(q.x, q.z); if (f) DOORS.push({ id, x: f.x, z: f.z, label: '🙏<br>おまいり', color: hex('#c92a2a'), run: () => openShop('byo', id) }); });
   // ================= だい5だんかい: でんしゃ（JR・ブルーライン・みなとみらいせん）=================
@@ -1592,7 +1595,7 @@ void main(){
   npc(FW.cx + 8, FW.cz + 6, C.purple, 'かんらんしゃの ひと', 'きいろい だいから はこの やねに とびのってごらん。そらの てっぺんまで はこんでくれるよ。');
   npc(MARKP.x + 4, MARKP.bb[3] + 5, C.red, 'おもちゃやさん', 'マークイズの 3かいに トイザらスが あるよ。プラレールが いっぱい！ 🚄');
   // ママ は いつも あおちゃんに ついてくる（下の MOM）。くもんの まえの ベンチ だけ のこす
-  npc(HOSP.x + 6, HOSP.bb[3] + 4, C.white, 'かんごしさん', 'ここは けいゆう びょういん。たかい ところから とびおりる ときは パラシュート 🪂 を わすれずにね！');
+  npc(HOSP.x + 6, HOSP.bb[3] + 4, C.white, 'かんごしさん', 'ここは けいゆう びょういん。みんなの けがや びょうきを なおす ところだよ 🏥');
   npc(WPP.x - 3, WPP.bb[1] - 4, C.blue, 'ガイドさん', 'ワールドポーターズには ガチャガチャと えいがかんが あるよ。100えんだまが いるから りょうがえきを つかってね。');
   npc(poi('横浜赤レンガ倉庫1号館').x + 4, poi('横浜赤レンガ倉庫1号館').bb[3] + 4, C.yellow, 'パンやさん', 'スーパーおなら 💨 で そらへ！ おちる ときは ジャンプで パラシュート 🪂 を ひらいてね。');
 
@@ -1625,6 +1628,7 @@ void main(){
     YAMA ? { id: 'yamashita', name: 'やました こうえん', x: YAMA.x, z: YAMA.z, r: 18, say: 'うみの かぜが きもちいいね 🌊' } : null,
     HIKAWA ? { id: 'hikawa', name: 'ひかわまる', x: HIKAWA.x, z: HIKAWA.z, r: HIKAWA.len / 2 + 4, say: 'おおきな くろい ふね！ むかしは アメリカまで いったんだって' } : null,
     zp('marine', 'マリンタワー', '横浜マリンタワー', { r: 9, say: 'あかと しろの とう だね 🗼' }),
+    zp('hara', 'てつどう もけい はくぶつかん', '横浜三井ビルディング', { r: 14, say: 'でんしゃの もけいが いっぱい あるんだって 🚂' }),
   ].filter(Boolean);
   $('stampT').textContent = ZONES.length;
 
@@ -1657,6 +1661,12 @@ void main(){
   });
   const mHalo = mk((g) => { for (let i = 0; i < 20; i++) { const a0 = i / 20 * Math.PI * 2, a1 = (i + 1) / 20 * Math.PI * 2; g.beam([Math.cos(a0) * 0.3, 0, Math.sin(a0) * 0.3], [Math.cos(a1) * 0.3, 0, Math.sin(a1) * 0.3], 0.035, W); } });
   const mCone = mk((g) => g.cone(0, 0, 0, 1, 1, 10, W));
+  const mArrow = mk((g) => { // いきさき の やじるし（+z を むく）
+    const up = [0, 1, 0], dn = [0, -1, 0], t = 0.12;
+    const P2 = [[-0.28, -0.9], [0.28, -0.9], [0.28, 0.05], [0.7, 0.05], [0, 1.0], [-0.7, 0.05], [-0.28, 0.05]];
+    [[0, 1, 2], [0, 2, 6], [3, 4, 5]].forEach(([a, b, c]) => { g.tri([P2[a][0], t, P2[a][1]], [P2[b][0], t, P2[b][1]], [P2[c][0], t, P2[c][1]], up, W, 0); g.tri([P2[a][0], -t, P2[a][1]], [P2[b][0], -t, P2[b][1]], [P2[c][0], -t, P2[c][1]], dn, W, 0); });
+    for (let i = 0; i < P2.length; i++) { const [ax, az] = P2[i], [bx, bz] = P2[(i + 1) % P2.length], dx = bx - ax, dz = bz - az, L = Math.hypot(dx, dz); g.quad([ax, -t, az], [bx, -t, bz], [bx, t, bz], [ax, t, az], [dz / L, 0, -dx / L], W, 0); }
+  });
   const mImo = mk((g) => { g.sphere(0, 0, 0, 0.5, 6, hex('#a64ca6')); g.cyl(0.42, -0.08, 0, 0.12, 0.16, 5, hex('#f5d76e')); });
   const mWheel = mk((g) => {
     const R2 = FW.R, n = 48;
@@ -2024,8 +2034,13 @@ void main(){
       const r = moveV(P.vy * dt);
       P.ground = r === 1;
       if (r !== 0) P.vy = 0;
-      // たかい ところから おちたら けが（パラシュート なら だいじょうぶ）
-      if (P.ground && !wasGround && (P.fallTop || 0) - P.y > 14 && !P.glide) { P.fallTop = P.y; hurt(); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
+      // たかい ところから おちても けが しない（ふわっと ちゃくち）
+      if (P.ground && !wasGround && (P.fallTop || 0) - P.y > 14 && !P.glide) {
+        P.fallTop = P.y;
+        for (let i = 0; i < 14; i++) { const a = i / 14 * Math.PI * 2; puffs.push({ x: P.x + Math.cos(a) * 0.6, y: P.y + 0.1, z: P.z + Math.sin(a) * 0.6, t: 0, vy: 0.6, w: 1 }); }
+        tone(220, 0.25, 'sine', 0.12, 660); tone(520, 0.2, 'triangle', 0.06, 900, 0.15);
+        if (time - (P.softT || -1e9) > 20) { P.softT = time; banner('🌟 ふわっと ちゃくち！<small>たかい ところから おりても だいじょうぶ</small>', 2.2); momSay('ふわっと おりられたね！ さすが あおちゃん 👏', 3); }
+      }
       if (P.ground) { if (!wasGround && fallV < -8) SFX.land(); P.glide = false; }
 
       let inWater = false;
@@ -2925,6 +2940,8 @@ void main(){
       draw(mCube, M(base, RZ(-fl), T(-0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
     }
     drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains();
+    guideTick();
+    if (save.dest && !FP[P.state]) { const g2 = save.dest, a = Math.atan2(g2.x - P.x, g2.z - P.z), bob = Math.sin(time * 4) * 0.12; draw(mArrow, M(T(P.x, P.y + 3.0 + bob, P.z), RY(a), S(0.9)), [1, 0.83, 0.1], 0.7); }
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
     drawWeather();
@@ -2937,6 +2954,7 @@ void main(){
       const big = s.big;
       draw(mCube, M(T(s.x, s.y + 30, s.z), S(big ? 0.9 : 0.45, 60, big ? 0.9 : 0.45)), big ? C.gold : C.yellow, 1, big ? 0.32 : 0.2);
     });
+    if (save.dest) { draw(mCube, M(T(save.dest.x, 40, save.dest.z), S(1.6, 80, 1.6)), [1, 0.8, 0.1], 1, 0.3 + 0.1 * Math.sin(time * 4)); draw(mDisc, M(T(save.dest.x, groundBelow(save.dest.x, 200, save.dest.z) + 0.06, save.dest.z), S(3)), [1, 0.8, 0.1], 1, 0.45); }
     DOORS.forEach((dd) => { if (dd.id === 'heli' && P.state === 'heli') return; draw(mCube, M(T(dd.x, (dd.y || 0) + 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)); });
     { const hb = M(T(HELI.x, HELI.y, HELI.z), RY(HELI.yaw)); draw(mCube, M(hb, T(0, 1.55, 0.9), S(1.85, 0.95, 1.5)), [0.7, 0.88, 1], 0.2, 0.4); }
     { const bq = busPose(), bb = M(T(bq.x, 0, bq.z), RY(bq.yaw)); draw(mCube, M(bb, T(0, 2.05, 0.1), S(2.86, 0.8, 5.6)), [0.75, 0.9, 1], 0.2, 0.35); }
@@ -2981,6 +2999,7 @@ void main(){
     const sc = Math.min(Wd / (MAPB.x1 - MAPB.x0), Hd / (MAPB.z1 - MAPB.z0));
     const ox = (Wd - (MAPB.x1 - MAPB.x0) * sc) / 2, oz = (Hd - (MAPB.z1 - MAPB.z0) * sc) / 2;
     const px = (v) => ox + (v - MAPB.x0) * sc, pz = (v) => oz + (v - MAPB.z0) * sc;
+    mapTf = { ox, oz, sc, x0: MAPB.x0, z0: MAPB.z0 };
     const css = (col) => `rgb(${col.map((v) => Math.round(v * 255)).join(',')})`;
     if (!mapBase) {
       const m = document.createElement('canvas'); m.width = Wd; m.height = Hd; const y = m.getContext('2d');
@@ -3014,6 +3033,11 @@ void main(){
       if (!got) x.strokeText('★', px(s.x), pz(s.z) + 6);
       x.fillText('★', px(s.x), pz(s.z) + 6);
     });
+    if (save.dest) {
+      const g = save.dest; x.strokeStyle = '#f59f00'; x.lineWidth = 4; x.setLineDash([8, 6]); x.beginPath(); x.moveTo(px(P.x), pz(P.z)); x.lineTo(px(g.x), pz(g.z)); x.stroke(); x.setLineDash([]);
+      x.font = '30px sans-serif'; x.textAlign = 'center'; x.fillText('🎯', px(g.x), pz(g.z) + 10);
+      x.font = 'bold 15px sans-serif'; x.lineWidth = 4; x.strokeStyle = '#fff'; x.strokeText(g.name, px(g.x), pz(g.z) - 18); x.fillStyle = '#d9480f'; x.fillText(g.name, px(g.x), pz(g.z) - 18);
+    }
     x.save(); x.translate(px(P.x), pz(P.z)); x.rotate(-P.face + Math.PI);
     x.fillStyle = '#2f6fe0'; x.strokeStyle = '#fff'; x.lineWidth = 3;
     x.beginPath(); x.moveTo(0, -13); x.lineTo(9, 9); x.lineTo(0, 4); x.lineTo(-9, 9); x.closePath(); x.stroke(); x.fill();
@@ -3022,6 +3046,40 @@ void main(){
     const box = $('stamps'); box.innerHTML = '';
     ZONES.forEach((z) => { const s = document.createElement('span'); s.textContent = (save.stamps.includes(z.id) ? '📍 ' : '') + z.name; if (save.stamps.includes(z.id)) s.className = 'got'; box.appendChild(s); });
   }
+
+  // ================= いきさき あんない =================
+  // ちずを タップ → いきさき。がめんの うえの やじるし と、あおちゃんの あたまの うえの やじるし、ひかりの はしら で しめす
+  let mapTf = null;
+  function setDest(d) {
+    save.dest = d; store(); lastGuide = '';
+    if (d) { momSay(`${d.name} に いこう！ きいろい やじるし の ほうだよ 🎯`, 3.5); SFX.tap(); }
+    $('guide').hidden = !d; $('bDestX').hidden = !d;
+  }
+  let lastGuide = '';
+  function guideTick() {
+    const g = save.dest, el = $('guide');
+    if (!g) { if (!el.hidden) el.hidden = true; return; }
+    const dx = g.x - P.x, dz = g.z - P.z, d = Math.hypot(dx, dz);
+    if (d < 7 && Math.abs(P.y - groundBelow(g.x, P.y + 1, g.z)) < 4) { banner(`🎯 ${g.name} に ついたよ！<small>ちずで つぎの いきさきを えらべるよ</small>`, 3); SFX.star(); momSay('ついたね！ じょうずに いけたね 👏', 3); setDest(null); return; }
+    const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
+    const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz) * 180 / Math.PI;
+    const m = Math.round(d / 0.25), txt = m >= 1000 ? (m / 1000).toFixed(1) + 'キロ' : (Math.round(m / 10) * 10) + 'メートル';
+    const word = Math.abs(ang) < 25 ? 'まっすぐ' : Math.abs(ang) > 150 ? 'うしろ' : ang > 0 ? 'みぎ' : 'ひだり';
+    $('guideA').style.transform = `rotate(${ang.toFixed(0)}deg)`;
+    const t = `${g.name} まで ${txt}・${word}`; if (t !== lastGuide) { lastGuide = t; $('guideT').textContent = t; }
+    if (el.hidden) el.hidden = false;
+  }
+  $('mapCv').addEventListener('click', (e) => {
+    if (!mapTf) return;
+    const c = $('mapCv'), r = c.getBoundingClientRect(), cx = (e.clientX - r.left) * c.width / r.width, cy = (e.clientY - r.top) * c.height / r.height;
+    let x = mapTf.x0 + (cx - mapTf.ox) / mapTf.sc, z = mapTf.z0 + (cy - mapTf.oz) / mapTf.sc, name = 'えらんだ ばしょ', best = 22 / mapTf.sc;
+    const cand = ZONES.filter((q) => !q.ride && q.id !== 'lmtop').map((q) => ({ x: q.x, z: q.z, n: q.name }));
+    cand.forEach((q) => { const dd = Math.hypot(q.x - x, q.z - z); if (dd < best) { best = dd; x = q.x; z = q.z; name = q.n; } });
+    setDest({ x, z, name }); drawMap();
+  });
+  $('bDestX').addEventListener('click', () => { setDest(null); drawMap(); });
+  $('bDestX').hidden = !save.dest;
+  $('guide').addEventListener('click', () => openMap());
 
   // ================= がめん の きりかえ =================
   function show(id, on) { $(id).classList.toggle('show', on); }
@@ -3045,6 +3103,7 @@ void main(){
   function openShop(kind, arg) {
     if (!window.Shops) return;
     if (kind === 'cupnoodle' && !cupOpen()) { banner('🍜 カップヌードル ミュージアムは しまってるよ<small>10:00〜18:00 ・ かようび は おやすみ</small>', 3); return; }
+    if (kind === 'hara' && !(CLK.wd !== 1 && CLK.wd !== 2 && CLK.h >= 10 && CLK.h < 17)) { banner('🚂 てつどう もけい の はくぶつかん は しまってるよ<small>10:00〜17:00 ・ かようび と すいようび は おやすみ（めやす）</small>', 3); return; }
     if (kind === 'nipponmaru' && !nmOpen()) { banner('⛵ にっぽんまるは しまってるよ<small>10:00〜17:00 ・ げつようび は おやすみ（めやす）</small>', 3); return; }
     SFX.door(); show('ovShop', true); setPaused();
     window.Shops.open(kind, {
@@ -3333,5 +3392,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
