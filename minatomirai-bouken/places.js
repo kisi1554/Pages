@@ -29,7 +29,9 @@
     if (!mine.length) g.appendChild(el('div', 'wempty', 'まだ ないよ。マークイズの トイザらスで かえるよ 🧸'));
     root.appendChild(g);
     if (mine.some((t) => !t.acc)) root.appendChild(btn('🚂 プラレールで あそぶ', 'sbig', () => playTrains(mine)));
-    root.appendChild(btn('🛏️ おひるね する', 'sbig sub', nap));
+    if (api.errand) root.appendChild(el('div', 'memo2', '📝 おつかい ちゅう： ' + api.errand.list.length + 'こ の うち ' + api.errand.got.length + 'こ かった'));
+    else root.appendChild(btn('📝 ママから おつかいを たのまれる', 'sbig', () => api.onClose({ errand: true })));
+    root.appendChild(btn(api.night ? '🛏️ ねる（あさに なる）' : '🛏️ おひるね する', 'sbig sub', nap));
     root.appendChild(btn('🚪 そとへ でる', 'sout', () => api.onClose()));
   }
   function playTrains(mine) {
@@ -49,11 +51,11 @@
   function nap() {
     clear('💤 おひるね', '', 'home');
     root.appendChild(el('div', 'nap', '🛏️😴<div class="zzz">💤</div>'));
-    root.appendChild(el('p', 'desc', 'すやすや…'));
+    root.appendChild(el('p', 'desc', api.night ? 'おやすみなさい… 🌙' : 'すやすや…'));
     setTimeout(() => {
-      root.querySelector('.desc').textContent = 'ふあ〜。げんき まんたん！';
+      root.querySelector('.desc').textContent = api.night ? 'おはよう！ あさに なったよ ☀️' : 'ふあ〜。げんき まんたん！';
       sfx('star');
-      root.appendChild(btn('🚪 そとへ でる', 'sbig', () => api.onClose({ rest: true })));
+      root.appendChild(btn('🚪 そとへ でる', 'sbig', () => api.onClose({ rest: true, sleep: !!api.night })));
       root.appendChild(btn('← へやに もどる', 'sout', home));
     }, 2200);
   }
@@ -154,8 +156,19 @@
     root.appendChild(btn('← もどる', 'sout', yochien));
   }
 
+  // ================= どうぶつ ずかん =================
+  function zukan() {
+    const z = api.zoo; clear('🦒 のげやま どうぶつえん', 'よこはまし にしく おいまつちょう ・ にゅうえん むりょう', 'zk');
+    say('🧑‍🌾', z && z.open ? 'しいくいんさん「いらっしゃい！ どうぶつに ちかづくと ずかんに のるよ」' : 'しいくいんさん「いまは おやすみ。9:30〜16:30、げつようび は おやすみ だよ」');
+    const n = z ? Object.keys(z.found).length : 0;
+    root.appendChild(el('div', 'tlabel', `📖 どうぶつ ずかん（${n}/${z ? z.pens.length : 0}）`));
+    const g = el('div', 'zgrid');
+    (z ? z.pens : []).forEach((p) => g.appendChild(el('div', 'zcard' + (z.found[p.id] ? '' : ' none'), z.found[p.id] ? `<i>${p.e}</i><b>${p.name}</b><small>${p.info}</small>` : '<i>❔</i><b>？？？</b><small>どこに いるかな</small>')));
+    root.appendChild(g);
+    root.appendChild(btn('🚶 どうぶつを みに いく', 'sbig', () => api.onClose()));
+  }
   window.Places = {
-    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else yochien(); },
+    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else yochien(); },
     again(kind) { if (kind === 'yochien') yochien(); else home(); },
   };
 })();
