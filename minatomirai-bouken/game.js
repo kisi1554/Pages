@@ -11,7 +11,7 @@
 
   // ================= セーブ =================
   const SAVE_KEY = 'minatomirai-bouken-v2'; // v2: ほんものの ちず（ふるい いち は つかわない）
-  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null }; }
+  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1 } }; }
   let save = fresh();
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') save = Object.assign(fresh(), s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* つかえない */ } }
@@ -779,6 +779,7 @@ void main(){
   const KD = doorOn('M.M.MID Square', MARKP.x, MARKP.z);
   addDoor('kumon', KD, '🏫<br>くもん', hex('#20b26b'), () => enterKumon());
   addDoor('toys', doorOn('MARK IS minatomirai', LMC.x, LMC.z), '🧸<br>はいる', hex('#e8590c'), () => openShop('toys'));
+  addDoor('piano', doorOn('MARK IS minatomirai', MIDP.x, MIDP.z), '🎹<br>ピアノ', hex('#845ef7'), () => openPlace('piano')); // しまむら がっき（3かい）
   addDoor('wp', doorOn('Yokohama World Porters', CAB ? CAB.ends[0].x : WPP.x - 30, CAB ? CAB.ends[0].z : WPP.z), '🎪<br>はいる', hex('#7048e8'), () => openShop('wp'));
   if (CAB) CAB.ends.forEach((e, k) => DOORS.push({ id: 'cab' + k, x: e.door.x, z: e.door.z, label: '🚡<br>のる', color: hex('#1c7ed6'), run: () => openShop('cabin', k) }));
 
@@ -986,6 +987,151 @@ void main(){
   addDoor('okstore', OKD, '🛒<br>オーケー', hex('#e03131'), () => openShop('okstore'));
   if (OKD) { const y = 3.4, U3 = [OKD.ux, 0, OKD.uz], N3 = [OKD.nx, 0, OKD.nz]; G.obox([OKD.x + OKD.nx * 0.12, y, OKD.z + OKD.nz * 0.12], U3, [0, 1, 0], N3, 2.6, 0.45, 0.06, hex('#ffd43b')); }
   DOORS.push({ id: 'busstop', x: STOP.x, z: STOP.z, label: '🚌<br>のる', color: hex('#fab005'), run: () => startBus(1) });
+  // ================= 1しゅうかんの よてい =================
+  // ようちえん: へいじつ。くもん: かようび・きんようび（みなとみらい・かきん きょうしつ 14:00〜19:00）。
+  // ピアノ: もくようび（しまむら がっき よこはま みなとみらいてん、マークイズ 3かい）。どにち は おやすみ。
+  const SCHED = { 0: ['yochien'], 1: ['yochien', 'kumon'], 2: ['yochien'], 3: ['yochien', 'piano'], 4: ['yochien', 'kumon'], 5: [], 6: [] };
+  const SCHED_IC = { yochien: '🎒', kumon: '✏️', piano: '🎹' };
+  const SCHED_NM = { yochien: 'ようちえん', kumon: 'くもん', piano: 'ピアノ' };
+  function calToday() { save.cal = save.cal || {}; return (save.cal[save.clock.day] = save.cal[save.clock.day] || {}); }
+  function calDone(what) {
+    const today = SCHED[CLK.wd] || [];
+    if (!today.includes(what)) return false;
+    const c = calToday(); if (c[what]) return false;
+    c[what] = 1; store(); todayHud(); SFX.stamp();
+    banner(`${SCHED_IC[what]} きょうの ${SCHED_NM[what]} できた！<small>カレンダーに シール 🌟</small>`, 3);
+    return true;
+  }
+  function todayHud() {
+    const t = SCHED[CLK.wd] || [], c = (save.cal || {})[save.clock.day] || {};
+    $('today').textContent = t.length ? 'きょう ' + t.map((w) => SCHED_IC[w] + (c[w] ? '✅' : '')).join(' ') : 'きょう 🎈おやすみ';
+  }
+  let remind = '';
+  function scheduleTick() {
+    const h = CLK.h, wd = CLK.wd, key = save.clock.day + ':' + Math.floor(h * 2) / 2, t = SCHED[wd] || [], c = calToday();
+    const say2 = (k, text) => { if (remind !== save.clock.day + k) { remind = save.clock.day + k; momSay(text, 4.5); } };
+    if (h >= 7.5 && h < 8 && t.includes('yochien') && !c.yochien) say2('y', 'ようちえんの じかん！ いわかめどおり から さくらごう 🌸');
+    if (h >= 14.5 && h < 15 && t.includes('kumon') && !c.kumon) say2('k', 'きょうは くもんの ひ ✏️ ミッドスクエアの 3かい へ いこう');
+    if (h >= 14.5 && h < 15 && t.includes('piano') && !c.piano) say2('p', 'きょうは ピアノの レッスン 🎹 マークイズの 3かい、しまむら がっき だよ');
+    if (h >= 8 && h < 8.5 && !t.length) say2('o', 'きょうは おやすみ！ どこに おでかけ しようか？ 🎈');
+    void key;
+  }
+  function yochienOpen() { const h = CLK.h; return CLK.wd < 5 && h >= 8.5 && h < 15; }
+  function busRuns() { const h = CLK.h; return CLK.wd < 5 && h >= 7 && h < 16; }
+  function kumonOpen() { const h = CLK.h; return (CLK.wd === 1 || CLK.wd === 4) && h >= 14 && h < 19; }
+  function pianoOpen() { const h = CLK.h; return h >= 10 && h < (CLK.wd >= 4 ? 21 : 20); }
+
+  // ================= おてんき =================
+  function weatherOf(day) {
+    const r = hash01(day * 1.7 + 3, 11.3);
+    return r < 0.16 ? 'rain' : r < 0.2 ? 'snow' : r < 0.36 ? 'cloud' : 'sun';
+  }
+  function weatherNow() {
+    const w = weatherOf(save.clock.day), h = CLK.h;
+    if (w === 'rain') return h >= 9 && h < 14 ? 'rain' : h >= 14 && h < 15.5 ? 'rainbow' : 'cloud';
+    return w;
+  }
+  const WICON = { sun: '☀️', cloud: '☁️', rain: '☔', snow: '⛄', rainbow: '🌈' };
+  let rainNode = null, lastW = '';
+  function weatherTick() {
+    const w = weatherNow();
+    if (w !== lastW) {
+      if (lastW) {
+        if (w === 'rain') momSay('あめが ふってきたね ☔ かさを さそうね', 3.5);
+        if (w === 'rainbow') momSay('みて！ にじが でてる 🌈', 4);
+        if (w === 'snow') momSay('ゆきだ〜！ ⛄ さむいね', 3.5);
+      }
+      lastW = w;
+    }
+    const want = (w === 'rain') && !paused && P.state !== 'ghost';
+    if (want && !rainNode) rainNode = loopNoise(0.06, 2500, 'highpass');
+    if (!want && rainNode) { rainNode.stop(); rainNode = null; }
+  }
+
+  // ================= こうつう ルール（おうだんほどう・しんごう）=================
+  const SIGS = (MAP.sig || []).map(([x, z, dx, dz], i) => ({ x, z, dx, dz, off: hash01(x, z) * 24, i }));
+  const XINGS = (MAP.xing || []).map(([x, z, dx, dz]) => ({ x, z, dx, dz })).concat(SIGS.map((s) => ({ x: s.x, z: s.z, dx: s.dx, dz: s.dz, sig: s })));
+  // おうだんほどう の しましま
+  XINGS.forEach((c) => {
+    const nx = -c.dz, nz = c.dx;
+    for (let k = -3; k <= 3; k++) {
+      const cx = c.x + nx * k * 0.6, cz = c.z + nz * k * 0.6;
+      G.quad([cx - c.dx * 0.7 - nx * 0.18, 0.036, cz - c.dz * 0.7 - nz * 0.18], [cx + c.dx * 0.7 - nx * 0.18, 0.036, cz + c.dz * 0.7 - nz * 0.18],
+        [cx + c.dx * 0.7 + nx * 0.18, 0.036, cz + c.dz * 0.7 + nz * 0.18], [cx - c.dx * 0.7 + nx * 0.18, 0.036, cz - c.dz * 0.7 + nz * 0.18], [0, 1, 0], C.white, 0);
+    }
+  });
+  // しんごうの はしら（ほこうしゃ よう）
+  SIGS.forEach((s) => { const px = s.x - s.dz * 2.4, pz = s.z + s.dx * 2.4; s.px = px; s.pz = pz; G.cyl(px, 0, pz, 0.07, 2.4, 5, C.gray); });
+  function pedGreen(s) { const t = ((time + s.off) % 24 + 24) % 24; return t < 10 ? 'g' : t < 12 ? (Math.floor(t * 4) % 2 ? 'g' : 'o') : 'r'; }
+  // おおきな みち の せぐめんと（ふみこんだ か しらべる）
+  const RSEG = new Map();
+  MAP.roads.forEach((r) => {
+    if (r.a || !/^(trunk|primary|secondary|tertiary)$/.test(r.c)) return;
+    for (let k = 0; k + 3 < r.p.length; k += 2) {
+      const sg = { ax: r.p[k], az: r.p[k + 1], bx: r.p[k + 2], bz: r.p[k + 3], hw: r.w / 2 };
+      const i0 = Math.floor(Math.min(sg.ax, sg.bx) / HC), i1 = Math.floor(Math.max(sg.ax, sg.bx) / HC), j0 = Math.floor(Math.min(sg.az, sg.bz) / HC), j1 = Math.floor(Math.max(sg.az, sg.bz) / HC);
+      for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) { const kk = hk(i, j); let l = RSEG.get(kk); if (!l) { l = []; RSEG.set(kk, l); } l.push(sg); }
+    }
+  });
+  function onRoad(x, z) {
+    const l = RSEG.get(hk(Math.floor(x / HC), Math.floor(z / HC))); if (!l) return false;
+    for (const s of l) { const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz || 1, t = clamp(((x - s.ax) * dx + (z - s.az) * dz) / L2, 0, 1); if (Math.hypot(s.ax + dx * t - x, s.az + dz * t - z) < s.hw - 0.2) return true; }
+    return false;
+  }
+  function nearXing(x, z) { let b = null, bd = 1e9; for (const c of XINGS) { const d = Math.hypot(c.x - x, c.z - z), lim = c.sig ? 7 : 3.6; if (d < lim && d < bd) { bd = d; b = c; } } return b; } // しんごうの ある こうさてん は ひろめ
+  function nearSig(x, z) { let b = null, bd = 14; for (const s of SIGS) { const d = Math.hypot(s.x - x, s.z - z); if (d < bd) { bd = d; b = s; } } return b; }
+  const TR = { on: false, ok: false, warnT: -99 };
+  function trafficTick() {
+    if (P.state !== 'ground') { TR.on = false; return; }
+    const on = onRoad(P.x, P.z);
+    if (on && !TR.on) { // みちに ふみだした
+      const c = nearXing(P.x, P.z), s = nearSig(P.x, P.z);
+      if (c) {
+        if (s && pedGreen(s) === 'r') { TR.ok = false; if (time - TR.warnT > 6) { TR.warnT = time; momSay('あかしんごう！ とまって、あおに なるまで まとうね 🚦', 3.5); } }
+        else { TR.ok = true; P.handT = 3; momSay('てを あげて わたろうね ✋', 2.5); }
+      } else { TR.ok = false; if (time - TR.warnT > 12) { TR.warnT = time; momSay('あぶないよ！ おうだんほどうを わたろうね 🚸', 3.5); } }
+    }
+    if (!on && TR.on && TR.ok) { TR.ok = false; save.traffic = (save.traffic || 0) + 1; store(); banner(`🚸 こうつう ルール まもれたね！<small>シール ${save.traffic}まい</small>`, 2.2); SFX.pick(); }
+    TR.on = on;
+    if (P.handT > 0) P.handT -= 1 / 60;
+  }
+  function drawSignals() {
+    const g2 = [0.2, 1, 0.4], r2 = [1, 0.2, 0.2], off = [0.25, 0.25, 0.25];
+    for (const s of SIGS) {
+      if (Math.abs(s.px - P.x) > 50 || Math.abs(s.pz - P.z) > 50) continue;
+      const st = pedGreen(s), b = M(T(s.px, 2.6, s.pz), RY(Math.atan2(s.dx, s.dz)));
+      draw(mCube, M(b, S(0.36, 0.8, 0.22)), C.black);
+      draw(mCube, M(b, T(0, 0.18, 0.12), S(0.26, 0.26, 0.04)), st === 'r' ? r2 : off, st === 'r' ? 1 : 0);
+      draw(mCube, M(b, T(0, -0.18, 0.12), S(0.26, 0.26, 0.04)), st === 'g' ? g2 : off, st === 'g' ? 1 : 0);
+      draw(mCube, M(b, T(0, 0.18, -0.12), S(0.26, 0.26, 0.04)), st === 'r' ? r2 : off, st === 'r' ? 1 : 0);
+      draw(mCube, M(b, T(0, -0.18, -0.12), S(0.26, 0.26, 0.04)), st === 'g' ? g2 : off, st === 'g' ? 1 : 0);
+    }
+  }
+  function drawWeather() {
+    const w = weatherNow();
+    if (w === 'rain' || w === 'snow') {
+      const n = w === 'rain' ? 260 : 180;
+      for (let i = 0; i < n; i++) {
+        const ox = (hash01(i, 1) - 0.5) * 44, oz = (hash01(1, i) - 0.5) * 44, sp = w === 'rain' ? 26 : 3;
+        const y = eye[1] + 14 - (((time * sp) + hash01(i, 2) * 28) % 28);
+        const x = eye[0] + ox + (w === 'snow' ? Math.sin(time + i) * 0.6 : 0), z = eye[2] + oz;
+        if (w === 'rain') draw(mCube, M(T(x, y, z), S(0.05, 1.0, 0.05)), [0.75, 0.85, 1], 1, 0.6);
+        else draw(mSphere, M(T(x, y, z), S(0.1)), C.white, 1, 0.85);
+      }
+    }
+    if (w === 'rainbow') {
+      const cx = eye[0] + 360, cz = eye[2] - 360, R0 = 420; // いつも うみの ほう（ほくとう）に みえる
+      ['#ff6b6b', '#ff922b', '#ffd43b', '#51cf66', '#4dabf7', '#5c7cfa', '#9775fa'].forEach((hc, k) => {
+        const r = R0 - k * 9, col = hex(hc);
+        for (let i = 0; i < 40; i++) { const a = i / 40 * Math.PI, x = cx + Math.cos(a) * r * 0.7, z = cz + Math.cos(a) * r * 0.7, y = Math.sin(a) * r * 0.62 - 20; draw(mCube, M(T(x, y, z), RY(-Math.PI / 4), RZ(a + Math.PI / 2), S(13, 36, 1)), col, 1, 0.5); }
+      });
+    }
+  }
+
+  // ================= せってい =================
+  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1 }, save.settings || {});
+  function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
+  function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
   const staticMesh = G.upload();
 
   // ================= うごく あしば（かんらんしゃ）=================
@@ -1219,8 +1365,8 @@ void main(){
       joy.x = dx / mx; joy.y = dy / mx;
       $('joy').firstElementChild.style.transform = `translate(${dx}px,${dy}px)`;
     } else if (e.pointerId === cam.id) {
-      if (FP[P.state]) { look.yaw -= (e.clientX - cam.lx) * 0.006; look.pitch = clamp(look.pitch - (e.clientY - cam.ly) * 0.005, -1.2, 1.1); }
-      else { cam.yaw -= (e.clientX - cam.lx) * 0.008; cam.pitch = clamp(cam.pitch + (e.clientY - cam.ly) * 0.006, -0.25, 1.25); }
+      if (FP[P.state]) { look.yaw -= (e.clientX - cam.lx) * 0.006 * save.settings.cam; look.pitch = clamp(look.pitch - (e.clientY - cam.ly) * 0.005, -1.2, 1.1); }
+      else { cam.yaw -= (e.clientX - cam.lx) * 0.008 * save.settings.cam; cam.pitch = clamp(cam.pitch + (e.clientY - cam.ly) * 0.006 * save.settings.cam, -0.25, 1.25); }
       cam.lx = e.clientX; cam.ly = e.clientY;
     }
   });
@@ -1264,7 +1410,7 @@ void main(){
     const o = a.createOscillator(), g = a.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || 0.1, t + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+    o.connect(g); g.connect(OUT(a)); o.start(t); o.stop(t + dur + 0.05);
   }
   function noise(dur, vol, freq, type) {
     const a = ac(); if (!a) return;
@@ -1272,7 +1418,7 @@ void main(){
     for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
     const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
     f.type = type || 'bandpass'; f.frequency.value = freq || 800; g.gain.value = vol || 0.2;
-    s.buffer = buf; s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+    s.buffer = buf; s.connect(f); f.connect(g); g.connect(OUT(a)); s.start();
   }
   // おなら の おと（おしている あいだ ぶぶぶ…）
   let fartNode = null;
@@ -1283,7 +1429,7 @@ void main(){
     lfo.connect(lg); lg.connect(o.frequency);
     f.type = 'lowpass'; f.frequency.value = 520; f.Q.value = 6;
     g.gain.setValueAtTime(0.0001, a.currentTime); g.gain.exponentialRampToValueAtTime(0.22, a.currentTime + 0.04);
-    o.connect(f); f.connect(g); g.connect(a.destination); o.start(); lfo.start();
+    o.connect(f); f.connect(g); g.connect(OUT(a)); o.start(); lfo.start();
     fartNode = { o, lfo, g }; noise(0.15, 0.25, 300, 'lowpass');
   }
   function fartStop() {
@@ -1376,7 +1522,7 @@ void main(){
   function zooOpen() { const h = CLK.h; return CLK.wd !== 0 && h >= 9.5 && h < 16.5; }
   let lastPart = '';
   function clockTick(dt) {
-    save.clock.min += dt * 2;
+    save.clock.min += dt * 2 * save.settings.speed;
     if (save.clock.min >= 24 * 60) { save.clock.min -= 24 * 60; save.clock.day++; }
     const p = partOfDay();
     if (p !== lastPart) {
@@ -1387,7 +1533,8 @@ void main(){
       }
       lastPart = p;
     }
-    $('clock').textContent = (isNight() ? '🌙 ' : CLK.h < 10 ? '🌅 ' : CLK.h < 16 ? '☀️ ' : '🌇 ') + clockStr();
+    const wn = weatherNow(), ct = (wn !== 'sun' ? WICON[wn] + ' ' : isNight() ? '🌙 ' : CLK.h < 10 ? '🌅 ' : CLK.h < 16 ? '☀️ ' : '🌇 ') + clockStr();
+    if (ct !== CLK.last) { CLK.last = ct; $('clock').textContent = ct; todayHud(); }
   }
   function sleepUntilMorning() { save.clock.day++; save.clock.min = 7 * 60; store(); }
   // そらの いろ・ひかり
@@ -1398,7 +1545,9 @@ void main(){
     const tw = Math.exp(-((h - 18) ** 2) / 0.9) + Math.exp(-((h - 6) ** 2) / 0.9);
     const base = SKY_NIGHT.map((v, i) => v + (SKY_DAY[i] - v) * light);
     const col = base.map((v, i) => v + (SKY_SET[i] - v) * Math.min(0.75, tw * 0.8));
-    return { col, light, night: clamp(1 - light * 1.4, 0, 1) };
+    const wn = weatherNow(), dim = wn === 'rain' ? 0.62 : wn === 'snow' || wn === 'cloud' ? 0.8 : 1, gray = [0.62, 0.66, 0.72];
+    const col2 = dim < 1 ? col.map((v, i) => v * dim + gray[i] * (1 - dim) * light) : col;
+    return { col: col2, light: light * (0.55 + 0.45 * dim), night: clamp(1 - light * 1.4, 0, 1) };
   }
 
   // ================= おつかい =================
@@ -1543,8 +1692,8 @@ void main(){
     const mon = walletTotal(); if (m.money && mon > m.money) momSay('おこづかい ふえたね！ だいじに つかおうね 💴', 3); m.money = mon;
     // ときどき はなしかける
     m.talkT -= dt;
-    if (m.talkT < 0 && m.sayT <= 0) {
-      m.talkT = 22 + Math.random() * 25;
+    if (m.talkT < 0 && m.sayT <= 0 && save.settings.talk > 0) {
+      m.talkT = (22 + Math.random() * 25) / save.settings.talk;
       const pool = P.state === 'climb' ? MOM_LINES.climb : P.state === 'swim' ? MOM_LINES.swim : (m.fly > 0.5 || P.state === 'heli') ? MOM_LINES.fly : MOM_LINES.ground;
       if (P.st < maxSt() * 0.35 && P.state === 'climb') momSay('つかれたら ひとやすみ しようね', 3); else momSay(pickL(pool), 3.8);
     }
@@ -1602,6 +1751,7 @@ void main(){
     part(b, 0, 1.78, -0.05, 0.56, 0.14, 0.5, C.hair);
     if (!sit) part(b, 0, 0.62, 0, 0.66, 0.36, 0.44, hex('#ffd8e4'));       // スカート
     part(b, -0.18, 1.41, 0.245, 0.08, 0.05, 0.02, C.pink); part(b, 0.18, 1.41, 0.245, 0.08, 0.05, 0.02, C.pink);
+    if (weatherNow() === 'rain' && fly < 0.03 && !sit) { draw(mCone, M(b, T(0, 2.35, 0), S(1.1, 0.45, 1.1)), hex('#f783ac')); part(b, 0, 2.35, 0, 0.04, 1.0, 0.04, C.navy); }
     if (MOM.cup > 0) draw(mCube, M(b, T(0.36, 1.1, 0.3), S(0.14, 0.3, 0.14)), hex('#74c0fc'));
     if (fly > 0.03) { // てんしの はね と わっか
       const fl = Math.sin(time * 7) * 0.45;
@@ -1630,7 +1780,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    momUpdate(dt); clockTick(dt);
+    momUpdate(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick();
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
       const open = zooOpen();
@@ -1729,12 +1879,12 @@ void main(){
     for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
     s.buffer = buf; s.loop = true; f.type = type || 'lowpass'; f.frequency.value = freq; g.gain.value = vol;
-    s.connect(f); f.connect(g); g.connect(a.destination); s.start();
+    s.connect(f); f.connect(g); g.connect(OUT(a)); s.start();
     return { s, g, f, stop() { try { s.stop(); } catch (e) { /* むし */ } } };
   }
   function startDrone() {
     const a = ac(); if (!a) return null;
-    const g = a.createGain(); g.gain.value = 0.05; g.connect(a.destination);
+    const g = a.createGain(); g.gain.value = 0.05; g.connect(OUT(a));
     const os = [55, 58.3, 110.5].map((f) => { const o = a.createOscillator(); o.type = 'sine'; o.frequency.value = f; o.connect(g); o.start(); return o; });
     return { stop() { os.forEach((o) => { try { o.stop(); } catch (e) { /* むし */ } }); } };
   }
@@ -1902,6 +2052,7 @@ void main(){
   let busSnd = 0;
   function startBus(dir) {
     if (!BUSR) { banner('🚌 バスの みちが みつからないよ', 2); return; }
+    if (!busRuns()) { banner('🌸 さくらごうは いま はしって いないよ<small>へいじつ（げつ〜きん）の 7じ〜16じ</small>', 3); return; }
     BUS.dir = dir; BUS.s = dir > 0 ? 0 : BUSR.total; const q = BUSR.at(BUS.s); BUS.x = q.x; BUS.z = q.z; BUS.yaw = Math.atan2(q.ux * dir, q.uz * dir);
     P.state = 'bus'; P.vx = P.vy = P.vz = 0; P.glide = false; P.wall = null; lastDoorId = '-';
     $('talk').style.display = 'none'; lastTalk = null; SFX.door();
@@ -1983,10 +2134,14 @@ void main(){
   }
   function openPlace(kind) {
     if (!window.Places) return;
+    if (kind === 'yochien' && !yochienOpen()) { banner('🌷 ようちえんは いま おやすみ<small>へいじつ 8:30〜15:00</small>', 3); return; }
+    if (kind === 'piano' && !pianoOpen()) { banner('🎹 しまむら がっき は しまってるよ<small>10:00〜20:00（きん〜にち は 21:00 まで）</small>', 3); return; }
+    if (kind === 'yochien') calDone('yochien');
     SFX.door(); show('ovPlace', true); setPaused();
     if (kind === 'home' && errandDoneAtHome()) { const e2 = 100; save.wallet[100] = (save.wallet[100] || 0) + 1; store(); refreshHud(); void e2; }
     window.Places.open(kind, {
-      night: isNight(), clock: clockStr(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
+      night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3,
+      week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: SCHED[i], done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
       wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
       onClose: (res) => {
         if (res && res.rest) { P.st = maxSt(); P.tired = false; }
@@ -1996,6 +2151,7 @@ void main(){
         show('ovPlace', false); setPaused(); stepOut();
         if (res && res.bus) startBus(res.bus);
         else if (res && res.slide) startSlide();
+        if (res && res.piano) { if (!calDone('piano')) banner('🎹 れんしゅう できたね！<small>レッスンの シールは もくようび</small>', 2.5); momSay('ピアノ じょうずに なったね 🎹', 3); }
         else if (kind === 'home') momSay(res && res.rest ? 'よく ねたね！ さあ でかけよう' : 'いってきます！ ママも いっしょ', 3);
       },
     });
@@ -2213,7 +2369,7 @@ void main(){
     part(base, 0, 0.76, 0, 0.5, 0.5, 0.32, C.blue);                                   // あおい Tシャツ
     draw(mStar, M(base, T(0, 0.8, 0.17), S(0.13, 0.13, 0.06)), C.yellow, 0.6);
     part(base, -0.31, 0.98, 0, 0.14, 0.44, 0.16, C.blue, RX(-al));
-    part(base, 0.31, 0.98, 0, 0.14, 0.44, 0.16, C.blue, RX(-ar));
+    part(base, 0.31, 0.98, 0, 0.14, 0.44, 0.16, C.blue, RX(P.handT > 0 && P.state === 'ground' ? -2.9 : -ar)); // おうだんほどうで てを あげる
     part(base, 0, 1.32, 0, 0.62, 0.58, 0.56, C.skin);                                 // おおきな あたま
     part(base, 0, 1.4, -0.06, 0.65, 0.46, 0.5, hex('#2b1d14'));                         // みじかい かみ
     part(base, -0.13, 1.3, 0.285, 0.08, 0.12, 0.02, C.black); part(base, 0.13, 1.3, 0.285, 0.08, 0.12, 0.02, C.black);
@@ -2222,6 +2378,7 @@ void main(){
     part(base, 0, 1.66, 0, 0.66, 0.16, 0.6, C.cap);                                    // あおい ぼうし
     part(base, 0, 1.61, 0.38, 0.56, 0.05, 0.28, C.cap);
     if (P.glide) draw(mChute, M(base, T(0, 4.0, 0)), W);
+    else if (weatherNow() === 'rain' && (P.state === 'ground' || P.state === 'air')) { draw(mCone, M(base, T(-0.3, 2.15, 0), S(1.05, 0.45, 1.05)), hex('#ffd43b')); part(base, -0.3, 2.15, 0, 0.04, 1.1, 0.04, C.navy); } // きいろい かさ
   }
   function groundBelow(x, y, z) {
     let g = WATER;
@@ -2326,7 +2483,7 @@ void main(){
       draw(mCube, M(T(p.cx, p.cy - 0.8, p.cz), S(2.2, 1.6, 2.2)), CAB_COL[i % CAB_COL.length]);
       draw(mCube, M(T(p.cx, p.cy - 0.75, p.cz), S(2.26, 0.6, 1.6)), [0.6, 0.85, 1]);
     });
-    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); if (P.state === 'hurt') drawAmb();
+    drawCoaster(); drawHeli(); drawBus(); drawAnimals(); drawSignals(); if (P.state === 'hurt') drawAmb();
     // エアキャビンの ゴンドラ
     if (CAB) {
       const n = 12, cyc = CAB.total * 2;
@@ -2366,6 +2523,7 @@ void main(){
     drawAo(); drawMom();
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
+    drawWeather();
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s)), [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
     const gy = { bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
@@ -2465,11 +2623,12 @@ void main(){
   function stepOut() { if (curDoor) { const d = curDoor; P.x = d.x; P.z = d.z; P.y = 0; } P.vx = P.vz = 0; lastDoorId = '-'; }
   function enterKumon() {
     if (!window.Kumon) return;
+    if (!kumonOpen()) { banner('✏️ くもんは きょうは おやすみ<small>かようび・きんようび の 14:00〜19:00</small>', 3); return; }
     SFX.door(); show('ovKumon', true); setPaused();
     window.Kumon.open({
       sfx: (n) => { if (n === 'drink') SFX.drink(); else if (n === 'tap') SFX.tap(); else if (n === 'ng') SFX.tired(); else if (n === 'good') SFX.star(); else if (n === 'pass') { SFX.big(); confetti(); } },
       onReward: (r) => {
-        if (r.type === 'print') { save.wallet[1000] = (save.wallet[1000] || 0) + 1; store(); refreshHud(); SFX.coin(); return 'ごほうびに 💴 1000えん もらった！（おさいふ ' + walletTotal().toLocaleString() + 'えん）'; }
+        if (r.type === 'print') { calDone('kumon'); save.wallet[1000] = (save.wallet[1000] || 0) + 1; store(); refreshHud(); SFX.coin(); return 'ごほうびに 💴 1000えん もらった！（おさいふ ' + walletTotal().toLocaleString() + 'えん）'; }
         save.oni = Math.min(9, save.oni + 3); store(); refreshHud();
         return 'ごうかくの ごほうびに 🍙 おにぎり を 3こ もらった！';
       },
@@ -2491,7 +2650,7 @@ void main(){
       },
     });
   }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace'].some((i) => $(i).classList.contains('show')); }
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
     paused = anyOv();
     if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
@@ -2505,6 +2664,18 @@ void main(){
   $('bMap').addEventListener('click', openMap);
   $('bMapOk').addEventListener('click', () => { show('ovMap', false); setPaused(); });
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
+  function drawSet() {
+    $('sVol').value = save.settings.vol; $('sCam').value = save.settings.cam;
+    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
+  }
+  $('bSet').addEventListener('click', () => { show('ovMenu', false); drawSet(); show('ovSet', true); setPaused(); });
+  $('bSetOk').addEventListener('click', () => { show('ovSet', false); setPaused(); });
+  $('sVol').addEventListener('input', (e) => { save.settings.vol = +e.target.value; store(); applySettings(); SFX.tap(); });
+  $('sCam').addEventListener('input', (e) => { save.settings.cam = +e.target.value; store(); });
+  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button'); if (!b) return; save.settings[k] = k === 'big' ? b.dataset.v === '1' : +b.dataset.v; store(); applySettings(); drawSet(); SFX.tap();
+  }));
+  applySettings();
   $('bResume').addEventListener('click', () => { show('ovMenu', false); setPaused(); });
   $('bHome').addEventListener('click', () => { respawn(); show('ovMenu', false); setPaused(); });
   $('bReset').addEventListener('click', () => {
@@ -2532,5 +2703,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();

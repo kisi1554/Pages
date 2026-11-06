@@ -29,6 +29,7 @@
     if (!mine.length) g.appendChild(el('div', 'wempty', 'まだ ないよ。マークイズの トイザらスで かえるよ 🧸'));
     root.appendChild(g);
     if (mine.some((t) => !t.acc)) root.appendChild(btn('🚂 プラレールで あそぶ', 'sbig', () => playTrains(mine)));
+    root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
     if (api.errand) root.appendChild(el('div', 'memo2', '📝 おつかい ちゅう： ' + api.errand.list.length + 'こ の うち ' + api.errand.got.length + 'こ かった'));
     else root.appendChild(btn('📝 ママから おつかいを たのまれる', 'sbig', () => api.onClose({ errand: true })));
     root.appendChild(btn(api.night ? '🛏️ ねる（あさに なる）' : '🛏️ おひるね する', 'sbig sub', nap));
@@ -156,6 +157,73 @@
     root.appendChild(btn('← もどる', 'sout', yochien));
   }
 
+  // ================= カレンダー =================
+  function calendar() {
+    clear('📅 あおちゃんの カレンダー', 'こんしゅうの よてい と シール', 'home');
+    const w = api.week; const g = el('div', 'cal');
+    w.days.forEach((d, i) => {
+      const c = el('div', 'cday' + (i === w.today ? ' today' : '') + (i >= 5 ? ' off' : ''));
+      c.appendChild(el('b', '', d.name));
+      c.appendChild(el('div', 'cplan', d.plan.length ? d.plan.map((p) => `<span class="${d.done[p] ? 'got' : ''}">${({ yochien: '🎒', kumon: '✏️', piano: '🎹' })[p]}${d.done[p] ? '🌟' : ''}</span>`).join('') : '<span>🎈</span>'));
+      c.appendChild(el('small', '', d.plan.length ? d.plan.map((p) => ({ yochien: 'ようちえん', kumon: 'くもん', piano: 'ピアノ' })[p]).join('・') : 'おやすみ'));
+      g.appendChild(c);
+    });
+    root.appendChild(g);
+    root.appendChild(el('p', 'desc', '✏️ くもん は かようび と きんようび、🎹 ピアノ は もくようび。できたら 🌟 シール！'));
+    root.appendChild(btn('← へやに もどる', 'sout', home));
+  }
+  // ================= ピアノ（しまむら がっき）=================
+  // きょくは メロディ だけ（ドレミ）。きらきらぼし・かえるのうた・ちょうちょう は むかしからの みんよう。
+  const PSONGS = [
+    { name: 'きらきらぼし', n: 'ドドソソララソ ファファミミレレド ソソファファミミレ ソソファファミミレ ドドソソララソ ファファミミレレド' },
+    { name: 'かえるのうた', n: 'ドレミファミレド ミファソラソファミ ド ド ド ド ドドレレミミファファミレド' },
+    { name: 'ちょうちょう', n: 'ソミミ ファレレ ドレミファソソソ ソミミ ファレレ ドミソソミミミ' },
+  ];
+  const KEYS = [['ド', 261.6, '#ff6b6b'], ['レ', 293.7, '#ff922b'], ['ミ', 329.6, '#ffd43b'], ['ファ', 349.2, '#51cf66'], ['ソ', 392, '#4dabf7'], ['ラ', 440, '#5c7cfa'], ['シ', 493.9, '#cc5de8'], ['ド↑', 523.3, '#ff8787']];
+  const parseNotes = (s) => { const out = []; let i = 0; while (i < s.length) { if (s[i] === ' ') { i++; continue; } if (s.startsWith('ファ', i)) { out.push('ファ'); i += 2; } else { out.push(s[i]); i++; } } return out; };
+  function keyboard(onKey) {
+    const kb = el('div', 'piano');
+    KEYS.forEach(([n, f, c], i) => {
+      const k = el('button', 'pkey', `<span style="background:${c}"></span><b>${n}</b>`); k.dataset.i = i;
+      k.addEventListener('pointerdown', (e) => { e.preventDefault(); if (api.tone) { api.tone(f, 0.9, 'triangle', 0.16); api.tone(f * 2, 0.5, 'sine', 0.04); } k.classList.add('on'); setTimeout(() => k.classList.remove('on'), 150); onKey(n, i); });
+      kb.appendChild(k);
+    });
+    return kb;
+  }
+  function piano() {
+    clear('🎹 しまむら がっき', 'マークイズ みなとみらい 3かい ・ ピアノ きょうしつ', 'pn');
+    say('👩‍🏫', api.lessonDay ? 'ピアノの せんせい「あおちゃん、こんにちは！ きょうは レッスンの ひ。いっしょに ひこうね」' : 'ピアノの せんせい「レッスンは もくようび。きょうは じゆうに れんしゅう しようね」');
+    PSONGS.forEach((s2, i) => root.appendChild(btn(`🎵 ${s2.name}（ドレミで ひく）`, 'sbig', () => lesson(i))));
+    root.appendChild(btn('🎶 じゆうに ひく', 'sbig sub', free));
+    root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
+  }
+  function free() {
+    clear('🎶 じゆうに ひこう', 'すきな おとを ならしてね', 'pn');
+    const shown = el('div', 'pnote', '♪'); root.appendChild(shown);
+    root.appendChild(keyboard((n) => { shown.textContent = n; }));
+    root.appendChild(btn('← もどる', 'sout', piano));
+  }
+  function lesson(i) {
+    const s2 = PSONGS[i], notes = parseNotes(s2.n); let pos = 0, miss = 0;
+    clear('🎵 ' + s2.name, 'ひかる けんばんを おしてね', 'pn');
+    const line = el('div', 'pline'); notes.forEach((n, k) => line.appendChild(el('span', k === 0 ? 'cur' : '', n))); root.appendChild(line);
+    const kbd = keyboard((n) => {
+      if (pos >= notes.length) return;
+      if (n.replace('↑', '') === notes[pos]) { line.children[pos].className = 'ok'; pos++; if (pos < notes.length) line.children[pos].className = 'cur'; hint(); if (pos >= notes.length) done(); }
+      else miss++;
+    });
+    root.appendChild(kbd);
+    const hint = () => { kbd.querySelectorAll('.pkey').forEach((k) => k.classList.toggle('hint', pos < notes.length && KEYS[k.dataset.i][0] === notes[pos])); };
+    hint();
+    const done = () => {
+      sfx('big');
+      const p2 = el('div', 'prize', `<i>💮</i><b>${s2.name} ひけたね！</b><span>${miss === 0 ? 'まちがい なし！ すごい！' : 'さいごまで ひけたね'}</span>`);
+      root.insertBefore(p2, line);
+      root.appendChild(btn('🌟 レッスン おしまい', 'sbig', () => api.onClose({ piano: true })));
+      root.appendChild(btn('🔁 もういちど', 'sbig sub', () => lesson(i)));
+    };
+    root.appendChild(btn('← きょくを えらぶ', 'sout', piano));
+  }
   // ================= どうぶつ ずかん =================
   function zukan() {
     const z = api.zoo; clear('🦒 のげやま どうぶつえん', 'よこはまし にしく おいまつちょう ・ にゅうえん むりょう', 'zk');
@@ -168,7 +236,7 @@
     root.appendChild(btn('🚶 どうぶつを みに いく', 'sbig', () => api.onClose()));
   }
   window.Places = {
-    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else yochien(); },
+    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else if (kind === 'piano') piano(); else yochien(); },
     again(kind) { if (kind === 'yochien') yochien(); else home(); },
   };
 })();
