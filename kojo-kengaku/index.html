@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e7f5ff">
+<title>こうじょう けんがく ― もの が できる まで</title>
+<link rel="stylesheet" href="style.css?v=fdc8724">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル: こうじょう を えらぶ -->
+<section id="title" class="screen">
+  <header class="top">
+    <h1>🏭 こうじょう けんがく</h1>
+    <div class="toggles">
+      <button type="button" class="tog" id="sndBtn" aria-label="こうかおん">🔊</button>
+      <button type="button" class="tog" id="bgmBtn" aria-label="おんがく">🎵</button>
+    </div>
+  </header>
+  <p class="lead">まいにち つかう もの は どう やって できる の？ きかい を うごかして つくって みよう！</p>
+  <div class="factories" id="factories"></div>
+  <button type="button" class="big shelf-btn" id="shelfBtn">🏆 ぼく の こうじょう たな</button>
+</section>
+
+<!-- かみ: ライン を えらぶ -->
+<div class="modal" id="choose" hidden>
+  <div class="modal-box">
+    <h2>📄 どっち から つくる？</h2>
+    <div class="choose-btns" id="chooseBtns"></div>
+    <button type="button" class="small" id="chooseClose">もどる</button>
+  </div>
+</div>
+
+<!-- ライン -->
+<section id="line" class="screen" hidden>
+  <header class="top">
+    <button type="button" class="small" id="lineBack" aria-label="もどる">◀ もどる</button>
+    <h2 id="lineTitle"></h2>
+    <div class="dots" id="dots"></div>
+  </header>
+  <div class="line-body">
+    <div class="stage" id="stage">
+      <div class="track" id="track"></div>
+    </div>
+    <div class="info">
+      <div class="step-name" id="stepName"></div>
+      <p class="step-text" id="stepText"></p>
+      <p class="adult" id="adultNote" hidden>⚠️ ほんもの の きかい は おとな が うごかす よ。まね しないでね。</p>
+      <div class="how"><span id="stepHow"></span> <b id="stepProg"></b></div>
+      <div class="bar"><i id="stepBar"></i></div>
+      <button type="button" class="small" id="retryBtn">↺ やりなおし</button>
+    </div>
+  </div>
+</section>
+
+<!-- じゅんばん パズル -->
+<section id="puzzle" class="screen" hidden>
+  <header class="top">
+    <button type="button" class="small" id="puzBack">◀ もどる</button>
+    <h2>🧩 じゅんばん パズル</h2>
+  </header>
+  <p class="lead" id="puzLead">ばらばら に なった こうてい を、つくる じゅん に ならべよう。カード を タップ！</p>
+  <ol class="slots" id="slots"></ol>
+  <div class="pool" id="pool"></div>
+  <p class="puz-msg" id="puzMsg"></p>
+  <button type="button" class="big" id="puzCheck" disabled>こたえ あわせ</button>
+</section>
+
+<!-- かんせい -->
+<section id="done" class="screen" hidden>
+  <h2 class="done-h">🎉 かんせい！</h2>
+  <div class="product" id="doneProduct"></div>
+  <p class="done-name" id="doneName"></p>
+  <p class="done-stars" id="doneStars"></p>
+  <p class="lead">「ぼく の こうじょう たな」に かざった よ。</p>
+  <div class="done-btns">
+    <button type="button" class="big" id="drawBtn" hidden>✏️ かいて みる</button>
+    <button type="button" class="big" id="doneShelf">🏆 たな を みる</button>
+    <button type="button" class="big alt" id="doneMenu">🏭 ほか の こうじょう</button>
+  </div>
+</section>
+
+<!-- えんぴつ で かく -->
+<section id="draw" class="screen" hidden>
+  <header class="top">
+    <button type="button" class="small" id="drawBack">◀ もどる</button>
+    <h2>✏️ じぶん の えんぴつ で かこう</h2>
+    <button type="button" class="small" id="drawClear">🧽 けす</button>
+  </header>
+  <canvas id="canvas"></canvas>
+</section>
+
+<!-- たな -->
+<section id="shelf" class="screen" hidden>
+  <header class="top">
+    <button type="button" class="small" id="shelfBack">◀ もどる</button>
+    <h2>🏆 ぼく の こうじょう たな</h2>
+  </header>
+  <p class="lead" id="shelfLead"></p>
+  <div class="shelf" id="shelfGrid"></div>
+</section>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="lines.js?v=fdc8724"></script>
+<script src="logic.js?v=fdc8724"></script>
+<script src="audio.js?v=fdc8724"></script>
+<script src="game.js?v=fdc8724"></script>
+</body>
+</html>
