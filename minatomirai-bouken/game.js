@@ -1746,6 +1746,7 @@ void main(){
     if (e.code === 'KeyX' || e.code === 'ShiftLeft') inp.down = true;
     if (e.code === 'KeyX') inp.let = true;
     if (e.code === 'KeyE') useOni();
+    if (e.code === 'KeyC' && !e.repeat) toggleProp();
     if (e.code === 'KeyF' || e.code === 'KeyQ') inp.fart = true;
     if (e.code === 'KeyM') openMap();
     if (e.code === 'Enter' && curDoor) curDoor.run();
@@ -1792,6 +1793,7 @@ void main(){
   holdBtn($('bLet'), () => { inp.let = true; inp.down = true; }, () => { inp.down = false; });
   holdBtn($('bOni'), useOni);
   holdBtn($('bFart'), () => { inp.fart = true; }, () => { inp.fart = false; });
+  $('bProp').addEventListener('click', (e) => { e.preventDefault(); ac(); toggleProp(); });
   holdBtn($('bEnter'), () => { if (curDoor) curDoor.run(); });
   function readMove() {
     let mx = joy.x, my = -joy.y;
@@ -2000,7 +2002,7 @@ void main(){
     P.cool = Math.max(0, P.cool - dt);
 
     // スーパーおなら
-    const wantFart = inp.fart && P.gas > 0.02;
+    const wantFart = inp.fart && P.gas > 0.02 && P.state !== 'prop';
     if (inp.fart && P.gas <= 0.02 && !P.noGasMsg) { P.noGasMsg = true; banner('💨 おならが でない…<small>じめんで まつか、🍠 おいも を たべよう</small>', 1.8); }
     if (!inp.fart) P.noGasMsg = false;
     if (wantFart) {
@@ -2011,7 +2013,8 @@ void main(){
       if (Math.random() < dt * 30) puffs.push({ x: P.x - Math.sin(P.face) * 0.3 + (Math.random() - 0.5) * 0.4, y: P.y + 0.5, z: P.z - Math.cos(P.face) * 0.3 + (Math.random() - 0.5) * 0.4, t: 0, vy: -2 - Math.random() * 2 });
     } else if (P.farting) { P.farting = false; fartStop(); }
 
-    if (P.state === 'climb') climbUpdate(dt, rx, rz);
+    if (P.state === 'prop') propUpdate(dt, dx, dz);
+    else if (P.state === 'climb') climbUpdate(dt, rx, rz);
     else {
       const swim = P.state === 'swim';
       const speed = swim ? 3.6 : P.glide ? 7.5 : P.farting ? 8 : 7;
@@ -2089,7 +2092,7 @@ void main(){
   };
   const MOM_STATE = {
     coaster: 'ママも うしろの せきに のるよ！ キャー！ 🎢', ghost: 'ママの てを はなさないでね… 👻', wheel: 'ママと いっしょに かんらんしゃ 🎡',
-    train: 'でんしゃ！ まどの そと みてごらん 🚃', akai: 'あかいくつ、まっかで かわいいね 👠', boat: 'シーバスで うみの うえ〜 ⛴️ かぜが きもちいいね', bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
+    prop: 'ふわ〜っ！ たかい たかい 🧢', train: 'でんしゃ！ まどの そと みてごらん 🚃', akai: 'あかいくつ、まっかで かわいいね 👠', boat: 'シーバスで うみの うえ〜 ⛴️ かぜが きもちいいね', bus: 'ピンクの さくらごう！ せんせいも のってるね 🌸', slide: 'すべりだい、いってらっしゃい！ 🛝', ride: 'エアキャビン、うみの うえだよ〜 🚡', heli: 'ママは てんしに なって ついていくね 👼', hurt: 'あおちゃん！ だいじょうぶ！？ ママが ついてるよ 🚑', climb: 'がんばれ〜！ 🧗',
   };
   function momUpdate(dt) {
     const m = MOM; m.phase += dt * 6;
@@ -2258,10 +2261,10 @@ void main(){
     if (did !== lastDoorId) { lastDoorId = did; const b = $('bEnter'); b.hidden = !curDoor; if (curDoor) { b.innerHTML = curDoor.label; b.style.background = `rgb(${curDoor.color.map((v) => v * 255 | 0).join(',')})`; } }
     saveT += dt; if (saveT > 4) { saveT = 0; if (P.state === 'ground' && !P.plat) { save.pos = { x: P.x, y: P.y, z: P.z, yaw: cam.yaw }; store(); } }
     if (bannerT > 0) { bannerT -= dt; if (bannerT <= 0) $('banner').classList.remove('show'); }
-    const lab = { train: 'のって<br>いるよ', akai: 'のって<br>いるよ', boat: 'のって<br>いるよ', slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
+    const lab = { train: 'のって<br>いるよ', akai: 'のって<br>いるよ', boat: 'のって<br>いるよ', slide: 'わーい！', bus: 'のって<br>いるよ', ride: 'のって<br>いるよ', coaster: 'のって<br>いるよ', wheel: 'のって<br>いるよ', ghost: 'ドキ<br>ドキ…', heli: '⬆️<br>のぼる', prop: '⬆️<br>のぼる', hurt: 'いたた…', climb: 'うえへ<br>ジャンプ' }[P.state] ||
       ((P.state === 'air' && !P.farting) ? (P.glide ? 'とじる' : '🪂<br>ひらく') : 'ジャンプ');
-    const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
-    if (lab + letLab !== lastLab) { lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
+    const letLab = { climb: 'はなす', heli: '⬇️<br>さがる', prop: '⬇️<br>さがる', ghost: '🚪<br>でる' }[P.state] || '';
+    if (lab + letLab !== lastLab) { document.body.classList.toggle('propon', P.state === 'prop'); lastLab = lab + letLab; $('bJump').innerHTML = lab; $('bLet').hidden = !letLab; $('bLet').innerHTML = letLab; }
     $('fartGauge').style.setProperty('--g', Math.round(P.gas * 100) + '%');
   }
 
@@ -2635,6 +2638,38 @@ void main(){
     if (P.y + 1.2 < b.y0) { release(); return; }
     if (moving && (climbSnd -= dt) < 0) { climbSnd = 0.32; SFX.climb(); }
   }
+  // ================= プロペラぼうし（じゆうに そらを とぶ）=================
+  // あおい ぼうしの プロペラが まわって とぶ。スタミナ も おなら も いらない。ジャンプ＝のぼる・さがる ボタン＝さがる
+  let propSnd = 0;
+  function toggleProp() {
+    if (paused) return;
+    if (P.state === 'prop') {
+      P.state = 'air'; P.ground = false; P.fallTop = P.y; P.vy = Math.min(P.vy, 0);
+      tone(500, 0.25, 'sine', 0.06, 220); banner('🧢 プロペラ ストップ<small>ふわっと おりるよ。🪂 も ひらけるよ</small>', 2); return;
+    }
+    if (!{ ground: 1, air: 1, swim: 1, climb: 1 }[P.state]) { banner('🧢 いまは プロペラが つかえないよ', 1.6); return; }
+    if (P.state === 'climb') release();
+    if (P.farting) { P.farting = false; fartStop(); }
+    P.state = 'prop'; P.ground = false; P.glide = false; P.plat = null; P.vy = 5; P.propT = 0;
+    tone(300, 0.35, 'triangle', 0.06, 900); banner('🧢 プロペラぼうし！ そらへ しゅっぱつ<small>ジャンプ＝のぼる ・ さがる ボタン＝さがる ・ ひだりで すすむ</small>', 3.5);
+    if (save.settings.talk > 0) momSay('プロペラぼうし！ ママも はねで いっしょに とぶよ 👼', 3);
+  }
+  function propUpdate(dt, dx, dz) {
+    P.propT = (P.propT || 0) + dt;
+    const sp = 11, k = Math.min(1, 3 * dt);
+    P.vx += (dx * sp - P.vx) * k; P.vz += (dz * sp - P.vz) * k;
+    const ty = inp.up ? 6.5 : inp.down ? -6.5 : Math.sin(time * 2.5) * 0.25;
+    P.vy += (ty - P.vy) * Math.min(1, 4 * dt);
+    moveH('x', P.vx * dt, false); moveH('z', P.vz * dt, false);
+    if (P.y + P.vy * dt > 230) P.vy = Math.min(0, P.vy);
+    const r = moveV(P.vy * dt); if (r !== 0) P.vy = 0;
+    if (Math.hypot(P.vx, P.vz) > 0.6) { const want = Math.atan2(P.vx, P.vz); let d = want - P.face; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; P.face += d * Math.min(1, 8 * dt); }
+    P.speed = 0; P.glide = false; P.fallTop = P.y;
+    if (P.y < WATER - 0.2) { P.y = WATER - 0.2; P.vy = Math.max(0, P.vy); }
+    if ((propSnd -= dt) < 0) { propSnd = 0.11; tone(190 + Math.min(80, Math.abs(P.vy) * 12), 0.07, 'triangle', 0.018); }
+    // じめんに ついたら しぜんに とまる（とびたって すぐ は とまらない）
+    if (r === 1 && P.propT > 0.8 && !inp.up) { P.state = 'ground'; P.ground = true; P.vy = 0; tone(420, 0.2, 'sine', 0.06, 200); banner('🧢 ちゃくち！<small>また とぶ ときは 🧢 ボタン</small>', 1.8); }
+  }
   function release() {
     const w = P.wall; P.state = 'air'; P.wall = null; P.cool = 0.45; P.ground = false; P.boost = 0;
     if (w) { const push = 2.2; if (w.axis === 'x') P.vx = w.side * push; else P.vz = w.side * push; } P.vy = 0;
@@ -2794,6 +2829,11 @@ void main(){
     part(base, 0, 1.15, 0.285, 0.12, 0.04, 0.02, hex('#c2410c'));                     // くち
     part(base, 0, 1.66, 0, 0.66, 0.16, 0.6, C.cap);                                    // あおい ぼうし
     part(base, 0, 1.61, 0.38, 0.56, 0.05, 0.28, C.cap);
+    { // ぼうしの プロペラ（とぶ とき だけ まわる）
+      const on = P.state === 'prop', a = on ? time * 28 : 0.6;
+      part(base, 0, 1.8, 0, 0.09, on ? 0.34 : 0.16, 0.09, C.gray);
+      { const pb = M(base, T(0, on ? 2.02 : 1.88, 0), RY(a)), L = on ? 2.1 : 0.9, Wb = on ? 0.3 : 0.18; draw(mCube, M(pb, S(L, 0.07, Wb)), C.yellow, 0.3); draw(mCube, M(pb, RY(Math.PI / 2), S(L, 0.07, Wb)), hex('#ff6b6b'), 0.3); draw(mSphere, M(pb, S(0.12)), C.red); }
+    }
     if (P.glide) draw(mChute, M(base, T(0, 4.0, 0)), W);
     else if (weatherNow() === 'rain' && (P.state === 'ground' || P.state === 'air')) { draw(mCone, M(base, T(-0.3, 2.15, 0), S(1.05, 0.45, 1.05)), hex('#ffd43b')); part(base, -0.3, 2.15, 0, 0.04, 1.1, 0.04, C.navy); } // きいろい かさ
   }
