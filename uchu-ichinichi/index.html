@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>うちゅう ステーション の いちにち</title>
+<meta name="description" content="うちゅう ひこうし に なって、ちきゅう の まわり を まわる うちゅう ステーション で 1にち を すごそう。みず が まるく うく、ふわふわ の むじゅうりょく を ゆび で たいけん。">
+<meta name="theme-color" content="#3b5bdb">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<link rel="stylesheet" href="style.css?v=fdc8724">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <h1>🛰️ うちゅう ステーション の いちにち</h1>
+  <div class="tools">
+    <button type="button" id="listBtn" class="icon-btn" aria-label="ミッション の リスト">📋</button>
+    <button type="button" id="compareBtn" class="icon-btn" aria-label="ちきゅう と くらべる">🌏</button>
+    <button type="button" id="cardsBtn" class="icon-btn" aria-label="まめちしき カード">📇</button>
+    <button type="button" id="soundBtn" class="icon-btn" aria-label="おと オン/オフ" aria-pressed="true">🔊</button>
+  </div>
+</header>
+
+<main class="game">
+  <div id="stageWrap" class="stage-wrap">
+    <svg id="stage" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet" aria-label="うちゅう ステーション"></svg>
+    <div id="roomSign" class="room-sign"></div>
+    <div id="toast" class="toast" hidden></div>
+  </div>
+
+  <section class="panel">
+    <div id="chips" class="chips" aria-label="ミッション"></div>
+    <p id="hint" class="hint">かべ を ゆび で スワイプ すると、その むき に ふわっと すすむ よ</p>
+    <div class="actions">
+      <button type="button" id="grabBtn" class="btn grab">✋ つかまる</button>
+      <button type="button" id="missionBtn" class="btn mission" hidden></button>
+    </div>
+  </section>
+</main>
+
+<!-- ミッション -->
+<div id="ovMission" class="ov" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <button type="button" class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="mTitle"></h2>
+    <p id="mText" class="m-text"></p>
+    <div id="mArt" class="m-art"></div>
+    <div id="mCtl" class="m-ctl"></div>
+  </div>
+</div>
+
+<!-- ミッション の リスト -->
+<div id="ovList" class="ov" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="lTitle">
+    <button type="button" class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="lTitle">📋 きょう の ミッション</h2>
+    <ul id="mList" class="m-list"></ul>
+    <div class="m-ctl"><button type="button" id="resetBtn" class="btn sub">🌅 あたらしい いちにち（やりなおす）</button></div>
+  </div>
+</div>
+
+<!-- ちきゅう と くらべる -->
+<div id="ovCompare" class="ov" hidden>
+  <div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="cTitle">
+    <button type="button" class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="cTitle">🌏 ちきゅう と くらべる</h2>
+    <div class="tabs">
+      <button type="button" class="tab on" data-exp="water">💧 みず を こぼす</button>
+      <button type="button" class="tab" data-exp="ball">⚽ ボール を はなす</button>
+    </div>
+    <div class="cmp">
+      <figure><figcaption>🛰️ うちゅう</figcaption><svg id="cmpSpace" viewBox="0 0 160 200"></svg></figure>
+      <figure><figcaption>🌏 ちきゅう</figcaption><svg id="cmpEarth" viewBox="0 0 160 200"></svg></figure>
+    </div>
+    <p id="cmpText" class="m-text"></p>
+    <div class="m-ctl"><button type="button" id="cmpGo" class="btn mission">▶ やって みる</button></div>
+  </div>
+</div>
+
+<!-- まめちしき カード -->
+<div id="ovCards" class="ov" hidden>
+  <div class="sheet wide" role="dialog" aria-modal="true" aria-labelledby="kTitle">
+    <button type="button" class="close" data-close aria-label="とじる">✕</button>
+    <h2 id="kTitle">📇 まめちしき カード <span id="cardCount"></span></h2>
+    <div id="cardGrid" class="card-grid"></div>
+    <div id="cardDetail" class="card-detail" hidden></div>
+  </div>
+</div>
+
+<!-- おつかれさま -->
+<div id="ovEnd" class="ov" hidden>
+  <div class="sheet end" role="dialog" aria-modal="true" aria-labelledby="eTitle">
+    <h2 id="eTitle">🌙 おつかれさま！</h2>
+    <svg id="endArt" viewBox="0 0 300 200" class="end-art"></svg>
+    <p class="m-text">ぜんぶ の ミッション を やりとげた！ まど の した では、ちきゅう の よる の まち の あかり が きらきら。また あした も がんばろう。</p>
+    <div class="m-ctl">
+      <button type="button" id="endCards" class="btn mission">📇 カード を みる</button>
+      <button type="button" id="endAgain" class="btn sub">🌅 あたらしい いちにち</button>
+      <button type="button" class="btn sub" data-close>✕ とじる</button>
+    </div>
+  </div>
+</div>
+
+<script src="float.js?v=fdc8724"></script>
+<script src="data.js?v=fdc8724"></script>
+<script src="audio.js?v=fdc8724"></script>
+<script src="app.js?v=fdc8724"></script>
+</body>
+</html>
