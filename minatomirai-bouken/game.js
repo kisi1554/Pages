@@ -11,7 +11,7 @@
 
   // ================= セーブ =================
   const SAVE_KEY = 'minatomirai-bouken-v2'; // v2: ほんものの ちず（ふるい いち は つかわない）
-  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2 }, piggy: {} }; }
+  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0 }, piggy: {} }; }
   let save = fresh();
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') save = Object.assign(fresh(), s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* つかえない */ } }
@@ -1135,8 +1135,8 @@ void main(){
   }
 
   // ================= せってい =================
-  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2 }, save.settings || {});
-  function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
+  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0 }, save.settings || {});
+  function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); $('bProp').hidden = !save.settings.prop; if (!save.settings.prop && P.state === 'prop') { P.state = 'air'; P.ground = false; P.fallTop = P.y; } if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
   function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
   // ================= だい3だんかい: のりもの =================
   function lineOf(pts) {
@@ -2003,12 +2003,12 @@ void main(){
 
     // スーパーおなら
     const wantFart = inp.fart && P.gas > 0.02 && P.state !== 'prop';
-    if (inp.fart && P.gas <= 0.02 && !P.noGasMsg) { P.noGasMsg = true; banner('💨 おならが でない…<small>じめんで まつか、🍠 おいも を たべよう</small>', 1.8); }
+    if (inp.fart && P.gas <= 0.02 && !P.noGasMsg) { P.noGasMsg = true; banner('💨 おならが でない…<small>じめんに おりると すぐ たまるよ（🍠 おいも でも まんたん）</small>', 1.8); }
     if (!inp.fart) P.noGasMsg = false;
     if (wantFart) {
       if (P.state === 'climb') { release(); }
       if (!P.farting) { P.farting = true; fartStart(); }
-      P.gas = Math.max(0, P.gas - 0.42 * dt);
+      P.gas = Math.max(0, P.gas - 0.32 * dt);
       P.vy = Math.min(11, Math.max(P.vy, 0) + 40 * dt); P.glide = false; P.ground = false; P.plat = null;
       if (Math.random() < dt * 30) puffs.push({ x: P.x - Math.sin(P.face) * 0.3 + (Math.random() - 0.5) * 0.4, y: P.y + 0.5, z: P.z - Math.cos(P.face) * 0.3 + (Math.random() - 0.5) * 0.4, t: 0, vy: -2 - Math.random() * 2 });
     } else if (P.farting) { P.farting = false; fartStop(); }
@@ -2208,8 +2208,9 @@ void main(){
     const MS = maxSt();
     if (P.state === 'ground') {
       P.st = Math.min(MS, P.st + MS * 0.45 * dt); if (P.tired && P.st >= MS * 0.5) P.tired = false;
-      P.gas = Math.min(1, P.gas + 0.16 * dt);
     }
+    // おならは すぐ たまる（じめん なら 1びょう ちょっとで まんたん、そらでも すこしずつ）
+    if (!P.farting) P.gas = Math.min(1, P.gas + (P.state === 'ground' ? 1.1 : P.state === 'climb' || P.state === 'swim' ? 0.5 : 0.3) * dt);
     P.phase += dt * (P.state === 'climb' ? P.speed * 2.2 : P.speed * 1.5);
     for (let i = puffs.length - 1; i >= 0; i--) { const p = puffs[i]; p.t += dt; p.y += p.vy * dt; p.vy *= 0.96; if (p.t > 1.3) puffs.splice(i, 1); }
     // ほし
@@ -2642,7 +2643,7 @@ void main(){
   // あおい ぼうしの プロペラが まわって とぶ。スタミナ も おなら も いらない。ジャンプ＝のぼる・さがる ボタン＝さがる
   let propSnd = 0;
   function toggleProp() {
-    if (paused) return;
+    if (paused || !save.settings.prop) return;
     if (P.state === 'prop') {
       P.state = 'air'; P.ground = false; P.fallTop = P.y; P.vy = Math.min(P.vy, 0);
       tone(500, 0.25, 'sine', 0.06, 220); banner('🧢 プロペラ ストップ<small>ふわっと おりるよ。🪂 も ひらけるよ</small>', 2); return;
@@ -2830,9 +2831,9 @@ void main(){
     part(base, 0, 1.66, 0, 0.66, 0.16, 0.6, C.cap);                                    // あおい ぼうし
     part(base, 0, 1.61, 0.38, 0.56, 0.05, 0.28, C.cap);
     { // ぼうしの プロペラ（とぶ とき だけ まわる）
-      const on = P.state === 'prop', a = on ? time * 28 : 0.6;
+      const on = P.state === 'prop', a = on ? time * 28 : 0.6; if (save.settings.prop) {
       part(base, 0, 1.8, 0, 0.09, on ? 0.34 : 0.16, 0.09, C.gray);
-      { const pb = M(base, T(0, on ? 2.02 : 1.88, 0), RY(a)), L = on ? 2.1 : 0.9, Wb = on ? 0.3 : 0.18; draw(mCube, M(pb, S(L, 0.07, Wb)), C.yellow, 0.3); draw(mCube, M(pb, RY(Math.PI / 2), S(L, 0.07, Wb)), hex('#ff6b6b'), 0.3); draw(mSphere, M(pb, S(0.12)), C.red); }
+      { const pb = M(base, T(0, on ? 2.02 : 1.88, 0), RY(a)), L = on ? 2.1 : 0.9, Wb = on ? 0.3 : 0.18; draw(mCube, M(pb, S(L, 0.07, Wb)), C.yellow, 0.3); draw(mCube, M(pb, RY(Math.PI / 2), S(L, 0.07, Wb)), hex('#ff6b6b'), 0.3); draw(mSphere, M(pb, S(0.12)), C.red); } }
     }
     if (P.glide) draw(mChute, M(base, T(0, 4.0, 0)), W);
     else if (weatherNow() === 'rain' && (P.state === 'ground' || P.state === 'air')) { draw(mCone, M(base, T(-0.3, 2.15, 0), S(1.05, 0.45, 1.05)), hex('#ffd43b')); part(base, -0.3, 2.15, 0, 0.04, 1.1, 0.04, C.navy); } // きいろい かさ
@@ -3180,13 +3181,13 @@ void main(){
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
   function drawSet() {
     $('sVol').value = save.settings.vol; $('sCam').value = save.settings.cam;
-    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
+    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx], ['sProp', save.settings.prop]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
   }
   $('bSet').addEventListener('click', () => { show('ovMenu', false); drawSet(); show('ovSet', true); setPaused(); });
   $('bSetOk').addEventListener('click', () => { show('ovSet', false); setPaused(); });
   $('sVol').addEventListener('input', (e) => { save.settings.vol = +e.target.value; store(); applySettings(); SFX.tap(); });
   $('sCam').addEventListener('input', (e) => { save.settings.cam = +e.target.value; store(); });
-  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
+  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx'], ['sProp', 'prop']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return; save.settings[k] = k === 'big' ? b.dataset.v === '1' : +b.dataset.v; store(); applySettings(); drawSet(); SFX.tap();
   }));
   applySettings();
