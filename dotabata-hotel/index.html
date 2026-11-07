@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#c2255c">
+<title>どたばた ペット ホテル</title>
+<link rel="stylesheet" href="style.css?v=63bb6d0">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <div id="view">
+    <canvas id="cv"></canvas>
+    <div id="labels"></div>
+    <div id="fade"></div>
+    <header id="hud" hidden>
+      <div id="petsLeft" class="chip"></div>
+      <div class="spacer"></div>
+      <div id="evChip" class="chip ev" hidden><span id="evIcon"></span><span id="evName"></span><span class="bar"><i id="evBar"></i></span></div>
+      <div class="spacer"></div>
+      <div id="timeChip" class="chip">⏱ <span id="timeTx">0:00</span></div>
+      <div id="messChip" class="chip">💥 <span id="messTx">0</span></div>
+      <button id="btnPause" class="hudBtn" aria-label="とめる">⏸</button>
+    </header>
+    <div id="roulette" hidden>
+      <div class="rTop">🔔 ピンポンパンポーン♪</div>
+      <div id="rIcon" class="rIcon">🎈</div>
+      <div id="rName" class="rName"></div>
+      <div id="rTip" class="rTip"></div>
+    </div>
+    <div id="banner" hidden></div>
+  </div>
+
+  <div id="pad" hidden>
+    <div id="stickZone"><div id="stickBase"><div id="stickKnob"></div></div><span class="hint">ここで うごく</span></div>
+    <div id="btns">
+      <button id="bDash" class="pbtn dash">💨<small>ダッシュ</small></button>
+      <button id="bBubble" class="pbtn bubble">🫧<small>あわ</small></button>
+      <button id="bJump" class="pbtn jump">⤴<small>ジャンプ</small></button>
+    </div>
+  </div>
+
+  <!-- タイトル -->
+  <section id="sTitle" class="screen">
+    <div class="card big">
+      <div class="logo">🏨</div>
+      <h1>どたばた<br>ペット ホテル</h1>
+      <p class="lead">にげた ペットを シャボンだまで つかまえて、へやに かえそう！</p>
+      <button id="goSelect" class="btn main">▶ あそぶ</button>
+      <div class="row">
+        <button id="goHow" class="btn">❓ あそびかた</button>
+        <button id="goSet" class="btn">⚙️ せってい</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- フロア えらび -->
+  <section id="sSelect" class="screen" hidden>
+    <div class="card wide">
+      <div class="head"><button class="btn back" data-go="sTitle">◀</button><h2>だれで あそぶ？</h2></div>
+      <div id="charRow" class="chars"></div>
+      <div id="colorRow" class="colors"></div>
+      <h2 class="sub">どの フロア？</h2>
+      <div id="floorGrid" class="floors"></div>
+    </div>
+  </section>
+
+  <!-- あそびかた -->
+  <section id="sHow" class="screen" hidden>
+    <div class="card wide">
+      <div class="head"><button class="btn back" data-go="sTitle">◀</button><h2>あそびかた</h2></div>
+      <ul class="how">
+        <li>🕹️ ひだりした の スティックで あるく。<b>ジャンプ</b> は ながおしで たかく とべる。</li>
+        <li>🫧 <b>あわ</b> で シャボンだまを うつ。ペットに あたると あわに つつまれて ぷかぷか。</li>
+        <li>🎈 あわに さわると ひもが ついて ついてくる（3つ まで）。かべに つよく ぶつけると ぱちん！</li>
+        <li>🚪 ドアの マーク と おなじ ペットを へやに はこぶと「ただいま！」。ぜんぶ かえすと クリア。</li>
+        <li>💨 <b>ダッシュ</b> で ずさーっ。ぶつかった ものが とんでいく。とばした かずが <b>めちゃくちゃ ポイント</b>。</li>
+        <li>🔔 25びょう ごとに <b>はちゃめちゃ イベント</b>！ じゅうりょくが かわったり、ゆかが トランポリンに なったり…</li>
+        <li>🐷 どろんこ の ぶたは あわが すべる。シャワーで あらうか、3かい あわを あてて きれいに しよう。</li>
+        <li>⭐ ぜんぶ かえす ／ ⭐⭐ じかん いない ／ ⭐⭐⭐ めちゃくちゃ ポイント が めあて いじょう</li>
+        <li>⌨️ キーボード: WASD・やじるし で いどう、スペース ジャンプ、J あわ、K ダッシュ、マウス ドラッグ で カメラ。</li>
+        <li>📱 がめんを なぞると カメラが まわる。はなすと うしろに もどる。</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- せってい / ひとやすみ -->
+  <section id="sSet" class="screen" hidden>
+    <div class="card">
+      <div class="head"><button id="setBack" class="btn back">◀</button><h2 id="setTitle">せってい</h2></div>
+      <div id="pauseBtns" class="col" hidden>
+        <button id="resume" class="btn main">▶ つづける</button>
+      </div>
+      <div class="toggles">
+        <button class="tgl" data-k="bgm">🎵 BGM</button>
+        <button class="tgl" data-k="se">🔊 こうかおん</button>
+        <button class="tgl" data-k="weak">🌀 ぐるぐる よわめ<small>かたむき・ゆれ を なくす</small></button>
+        <button class="tgl" data-k="left">✋ ひだりきき<small>ボタンを ひだりに</small></button>
+        <button class="tgl" data-k="easy">🐣 やさしい モード<small>ペットが ゆっくり・あわが われない</small></button>
+      </div>
+      <div id="pauseBtns2" class="row" hidden>
+        <button id="retry" class="btn">🔁 やりなおす</button>
+        <button id="toSelect" class="btn">🏨 フロア えらび</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- けっか -->
+  <section id="sResult" class="screen" hidden>
+    <div class="card">
+      <h2 id="resTitle">フロア クリア！</h2>
+      <div id="resStars" class="stars"></div>
+      <div id="resRows" class="rows"></div>
+      <div id="resUnlock" class="unlock" hidden></div>
+      <div class="col">
+        <button id="resNext" class="btn main">🛗 つぎの フロアへ</button>
+        <div class="row">
+          <button id="resRetry" class="btn">🔁 もういちど</button>
+          <button id="resSelect" class="btn">🏨 フロア えらび</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sNoGL" class="screen" hidden>
+    <div class="card"><div class="logo">🙇</div><h2>ごめんね</h2><p class="lead">この たんまつ では あそべません。<br>（3D の きのう WebGL が つかえないみたい）</p></div>
+  </section>
+</div>
+
+<script src="physics.js?v=63bb6d0"></script>
+<script src="floors.js?v=63bb6d0"></script>
+<script src="mesh.js?v=63bb6d0"></script>
+<script src="gl.js?v=63bb6d0"></script>
+<script src="game.js?v=63bb6d0"></script>
+<script src="input.js?v=63bb6d0"></script>
+<script src="audio.js?v=63bb6d0"></script>
+<script src="app.js?v=63bb6d0"></script>
+</body>
+</html>
