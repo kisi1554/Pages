@@ -1,0 +1,127 @@
+/* ころころ ピンボール どうぶつえん */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; }
+body {
+  font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  background: #fff4e6; color: #4a2c00;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+button { font: inherit; cursor: pointer; }
+
+#app {
+  height: 100vh; height: 100dvh; width: 100%;
+  display: grid; gap: 6px;
+  padding: max(6px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-areas: "hud" "zoo" "stage";
+  transition: background .8s;
+}
+#app.night { background: #14163a; color: #ffe8a3; }
+#app.night .hud, #app.night .zoo { background: #23265a; border-color: #ffd43b55; }
+
+.hud { grid-area: hud; background: #fff; border: 3px solid #f08c00; border-radius: 16px; padding: 4px 10px; }
+.hud-top { display: flex; align-items: center; gap: 6px; }
+.back { text-decoration: none; font-size: 22px; min-width: 40px; min-height: 40px; display: grid; place-items: center; }
+.stage-name { flex: 1; font-weight: bold; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.btns { display: flex; gap: 4px; }
+.ibtn { width: 42px; height: 42px; border-radius: 12px; border: 2px solid #f08c0088; background: #fff4e6; font-size: 20px; padding: 0; }
+.ibtn.off { opacity: .4; }
+.score { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.score .num { font-size: 30px; font-weight: 900; color: #e8590c; font-variant-numeric: tabular-nums; line-height: 1.1; }
+#app.night .score .num { color: #ffd43b; }
+.score .num small, .final small { font-size: 15px; margin-left: 2px; }
+.yomi { font-size: 13px; color: #a05a00; line-height: 1.3; }
+#app.night .yomi { color: #ffe8a3; }
+.row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; }
+.balls { font-size: 18px; letter-spacing: 2px; min-height: 22px; }
+.saver { font-size: 13px; color: #1971c2; font-weight: bold; }
+#app.night .saver { color: #74c0fc; }
+
+.zoo { grid-area: zoo; background: #fff; border: 3px solid #f08c0066; border-radius: 16px; padding: 4px 8px; }
+.zoo h2 { display: none; margin: 4px 0 6px; font-size: 16px; }
+.zoo h2 small { font-weight: normal; font-size: 12px; }
+.zoo ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 2px; justify-content: space-around; }
+.zoo li { display: flex; flex-direction: column; align-items: center; min-width: 32px; position: relative; }
+.zoo li .em { font-size: 24px; line-height: 1.1; filter: grayscale(.7) brightness(.9); transition: filter .4s, transform .4s; }
+.zoo li.awake .em { filter: none; transform: scale(1.15); }
+.zoo li .zz { position: absolute; right: -2px; top: -4px; font-size: 11px; }
+.zoo li.awake .zz { display: none; }
+.zoo li .dots { font-size: 9px; letter-spacing: 1px; color: #f08c00; }
+.zoo li .nm, .zoo li .how { display: none; }
+.zoo .tip { display: none; font-size: 12px; opacity: .8; }
+
+.stage { grid-area: stage; position: relative; display: grid; place-items: center; min-height: 0; touch-action: none; }
+#cv { display: block; touch-action: none; border-radius: 18px; box-shadow: 0 4px 0 #c76b00, 0 8px 18px #0003; }
+.msg {
+  position: absolute; left: 50%; top: 38%; transform: translate(-50%, -50%);
+  background: #fffbe8ee; border: 4px solid #f08c00; border-radius: 20px; padding: 10px 18px;
+  font-size: 24px; font-weight: 900; color: #d9480f; text-align: center; pointer-events: none;
+  width: max-content; max-width: 92%; animation: pop .35s ease-out;
+}
+@keyframes pop { from { transform: translate(-50%, -50%) scale(.4); } to { transform: translate(-50%, -50%) scale(1); } }
+
+/* よこ がめん: まんなか に だい、ひだり に スコア、みぎ に どうぶつ ずかん */
+@media (min-aspect-ratio: 1/1) {
+  #app {
+    /* だい は たて 700：よこ 400 なので、たかさ × 0.57 の はば に する */
+    grid-template-columns: minmax(150px, 1fr) minmax(0, calc((100dvh - 16px) * 0.5714)) minmax(150px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "hud stage zoo";
+  }
+  .hud, .zoo { align-self: stretch; overflow: auto; }
+  .hud { display: flex; flex-direction: column; gap: 10px; padding: 10px; }
+  .hud-top { flex-wrap: wrap; }
+  .stage-name { order: 3; flex-basis: 100%; white-space: normal; font-size: 17px; }
+  .score { flex-direction: column; gap: 2px; }
+  .score .num { font-size: 40px; }
+  .yomi { font-size: 16px; }
+  .row { flex-direction: column; align-items: flex-start; gap: 6px; font-size: 15px; }
+  .balls { font-size: 24px; }
+  .zoo { padding: 10px; }
+  .zoo h2 { display: block; }
+  .zoo ul { flex-direction: column; gap: 6px; }
+  .zoo li.awake .dots::before { content: "おきた！"; }
+  .zoo li { flex-direction: row; gap: 8px; align-items: center; background: #fff4e6; border-radius: 12px; padding: 4px 8px; flex-wrap: wrap; }
+  #app.night .zoo li { background: #2f3370; }
+  .zoo li .em { font-size: 30px; }
+  .zoo li .zz { position: static; font-size: 14px; order: 3; }
+  .zoo li .nm { display: block; font-weight: bold; font-size: 15px; }
+  .zoo li .dots { font-size: 13px; margin-left: auto; }
+  .zoo li .how { display: block; flex-basis: 100%; font-size: 12px; opacity: .8; }
+  .zoo .tip { display: block; }
+}
+/* よこ の スマホ（ひくい）: もじ を ちいさく */
+@media (min-aspect-ratio: 1/1) and (max-height: 500px) {
+  .score .num { font-size: 26px; }
+  .zoo li .how { display: none; }
+  .zoo li .em { font-size: 22px; }
+  .hud { gap: 4px; }
+}
+
+.overlay {
+  position: fixed; inset: 0; background: #0006; display: grid; place-items: center; z-index: 10; padding: 16px;
+  overflow: auto;
+}
+.overlay[hidden] { display: none; }
+.panel {
+  background: #fff; color: #4a2c00; border: 5px solid #f08c00; border-radius: 26px; padding: 16px 20px;
+  max-width: 460px; width: 100%; text-align: center; box-shadow: 0 10px 0 #c76b00;
+}
+.panel h1 { margin: 6px 0; font-size: 26px; color: #e8590c; line-height: 1.25; }
+.panel .big { font-size: 46px; }
+.panel p { margin: 6px 0; font-size: 16px; line-height: 1.5; }
+.howto { text-align: left; font-size: 14px; padding-left: 4px; list-style: none; margin: 8px 0; line-height: 1.7; }
+.modes { display: grid; gap: 10px; margin-top: 10px; }
+.mode {
+  display: block; width: 100%; min-height: 60px; border: 0; border-radius: 18px; padding: 10px;
+  background: #f08c00; color: #fff; font-size: 22px; font-weight: 900; box-shadow: 0 5px 0 #b35f00; margin: 8px 0;
+}
+.mode small { display: block; font-size: 13px; font-weight: normal; }
+.mode[data-mode="easy"] { background: #37b24d; box-shadow: 0 5px 0 #237a33; }
+.mode.sub { background: #868e96; box-shadow: 0 5px 0 #5c636a; font-size: 18px; min-height: 50px; }
+.mode:active { transform: translateY(3px); box-shadow: none; }
+.final { font-size: 46px; font-weight: 900; color: #e8590c; }
+.best { font-size: 14px; opacity: .8; }
+.woke { font-size: 26px; }
