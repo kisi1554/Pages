@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>かみひこうき グライダー</title>
+<meta name="description" content="じぶん で おった かみひこうき を スワイプ で なげよう。のぼる かぜ や とり と いっしょ に、どこまで とおく とべる かな。">
+<meta name="theme-color" content="#1c7ed6">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>✈️</text></svg>">
+<link rel="stylesheet" href="style.css?v=4242514">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header class="top">
+  <button type="button" id="homeBtn" class="icon-btn" aria-label="ひこうき を えらびなおす" hidden>↩️</button>
+  <h1>✈️ かみひこうき グライダー</h1>
+  <div class="tools">
+    <button type="button" id="bgmBtn" class="icon-btn" aria-label="BGM オン/オフ" aria-pressed="true">🎵</button>
+    <button type="button" id="soundBtn" class="icon-btn" aria-label="おと オン/オフ" aria-pressed="true">🔊</button>
+  </div>
+</header>
+
+<!-- 1. えらぶ -->
+<main id="scPick" class="screen pick">
+  <section class="box">
+    <h2>① どの ひこうき を おる？</h2>
+    <div id="planeList" class="plane-list"></div>
+  </section>
+  <section class="box">
+    <h2>② いろ と もよう</h2>
+    <div id="colorList" class="swatches" aria-label="いろ"></div>
+    <div id="patList" class="swatches pats" aria-label="もよう"></div>
+  </section>
+  <section class="box">
+    <h2>③ どんな そら？</h2>
+    <div class="sky-list">
+      <button type="button" class="sky-btn" data-sky="free"><b>🎲 いろいろ な そら</b><small>なげる たび に かぜ が かわる</small></button>
+      <button type="button" class="sky-btn" data-sky="daily"><b>📅 きょう の そら</b><small id="dailyLabel">まいにち かわる。きょう の きろく に ちょうせん</small></button>
+    </div>
+    <p id="bestLine" class="best-line"></p>
+  </section>
+  <button type="button" id="goFold" class="btn big">✂️ おって みる！</button>
+</main>
+
+<!-- 2. おる -->
+<main id="scFold" class="screen fold" hidden>
+  <div class="fold-head">
+    <div id="foldDots" class="dots"></div>
+    <p id="foldText" class="fold-text"></p>
+  </div>
+  <div class="fold-wrap">
+    <svg id="foldSvg" viewBox="-135 -175 270 350" aria-label="おりがみ"></svg>
+    <div id="foldHint" class="fold-hint">👆 やじるし の ほう へ ゆび で なぞろう</div>
+  </div>
+  <div class="fold-ctl">
+    <button type="button" id="foldAuto" class="btn sub">🤖 おって もらう</button>
+    <button type="button" id="foldNext" class="btn big" hidden>✈️ なげ に いく！</button>
+  </div>
+</main>
+
+<!-- 3. とぶ -->
+<main id="scFly" class="screen fly" hidden>
+  <div id="flyWrap" class="fly-wrap">
+    <canvas id="sky" aria-label="そら"></canvas>
+    <div class="hud">
+      <span id="hudDist" class="hud-dist">0<small>メートル</small></span>
+      <span id="hudAlt" class="hud-chip">⬆️ 0m</span>
+      <span id="hudBal" class="hud-chip">🎈 0</span>
+      <span id="hudZone" class="hud-chip zone">🌳 こうえん</span>
+    </div>
+    <div id="pop" class="pop" hidden></div>
+    <div id="aimHint" class="aim-hint">👉 ゆび で <b>ななめ うえ</b> に シュッ と スワイプ して なげよう！</div>
+    <div id="flyHint" class="fly-hint" hidden>👇 おさえる と はな が うえ を むく ／ はなす と さがる</div>
+  </div>
+  <div class="fly-ctl">
+    <button type="button" id="easyThrow" class="btn sub">🖐️ ぽいっ と なげる</button>
+    <span id="skyName" class="sky-name"></span>
+  </div>
+</main>
+
+<!-- けっか -->
+<div id="ovResult" class="ov" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="rTitle">
+    <p id="rWhere" class="r-where"></p>
+    <h2 id="rTitle" class="r-dist"></h2>
+    <p id="rSub" class="r-sub"></p>
+    <p id="rBest" class="r-best"></p>
+    <div class="r-ctl">
+      <button type="button" id="again" class="btn big">✈️ もういちど なげる</button>
+      <button type="button" id="refold" class="btn sub">✂️ べつ の ひこうき を おる</button>
+    </div>
+  </div>
+</div>
+
+<script src="flight.js?v=4242514"></script>
+<script src="fold.js?v=4242514"></script>
+<script src="audio.js?v=4242514"></script>
+<script src="app.js?v=4242514"></script>
+</body>
+</html>
