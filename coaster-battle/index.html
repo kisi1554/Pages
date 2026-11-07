@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1b1035">
+<title>ジェットコースター ロボ バトル</title>
+<link rel="stylesheet" href="style.css?v=fdc8724">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="fx"></canvas>
+
+<div id="hud" hidden>
+  <div class="top">
+    <div class="pl p1">
+      <div class="nm"><span id="n1"></span><span class="wins" id="w1"></span></div>
+      <div class="hp"><div class="hpb" id="hb1"></div><div class="hpf" id="hf1"></div></div>
+      <div class="sp" id="sp1"><div class="spf" id="sf1"></div><span>ひっさつ</span></div>
+    </div>
+    <div class="mid">
+      <div id="ride"><div id="rideFill"></div><span id="rideIcon">🎢</span><span class="goal">🏁</span></div>
+      <div id="rnd"></div>
+    </div>
+    <div class="pl p2">
+      <div class="nm"><span class="wins" id="w2"></span><span id="n2"></span></div>
+      <div class="hp"><div class="hpb" id="hb2"></div><div class="hpf" id="hf2"></div></div>
+      <div class="sp" id="sp2"><div class="spf" id="sf2"></div><span>ひっさつ</span></div>
+    </div>
+  </div>
+  <div id="gtag"></div>
+  <button id="pauseBtn" aria-label="いちじ ていし">⏸</button>
+</div>
+<div id="msg"></div>
+<div id="cutin"></div>
+
+<div id="pad" hidden>
+  <div class="lpad">
+    <button data-k="left" aria-label="ひだり">◀</button>
+    <button data-k="right" aria-label="みぎ">▶</button>
+  </div>
+  <div class="rpad">
+    <button data-k="super" id="padSuper" class="b-sup">🔥<small>ひっさつ</small></button>
+    <button data-k="jump" class="b-jump">⬆️<small>ジャンプ</small></button>
+    <button data-k="kick" class="b-kick">🦶<small>キック</small></button>
+    <button data-k="punch" class="b-punch">👊<small>パンチ</small></button>
+  </div>
+</div>
+
+<section id="title" class="screen">
+  <div class="card">
+    <h1><span class="t1">ジェットコースター</span><span class="t2">ロボ バトル</span></h1>
+    <p class="lead">はしる ジェットコースターの うえで ロボットが だいけっとう！<br>ループ・さかさま・ふわっと うく おか… ふりおとされるな！</p>
+    <button id="btnPlay" class="big">あそぶ ▶</button>
+    <button id="btnHow" class="sub">あそびかた</button>
+    <div id="how" hidden>
+      <ul>
+        <li>◀ ▶ で うごく。<b>あいてと はんたいに うごくと ガード</b> 🛡️</li>
+        <li>👊 パンチ は 3かい つづけて おすと れんぞく わざ！</li>
+        <li>🦶 キック で あいてを ふっとばす。ジャンプちゅうの キックは きゅうこうか！</li>
+        <li>🔥 ゲージが たまったら <b>ひっさつわざ</b>！</li>
+        <li>れっしゃの はしから おとすと <b>-15</b>。ふうせんで もどってくるよ 🎈</li>
+        <li>おかの てっぺんでは <b>ふわっ</b>と たかく とべる。たにでは <b>ずっしり</b> おもくなる。</li>
+        <li>じしゃく ブーツ で さかさまでも おちないよ 🙃</li>
+        <li>さきに 2かい かったほうが かち。KO しないまま ゴールしたら、げんきが おおいほうの かち。</li>
+      </ul>
+      <p class="keys">キーボード: ← → うごく ／ ↑・スペース ジャンプ ／ J パンチ ／ K キック ／ L ひっさつ ／ P ていし</p>
+    </div>
+    <div id="trophy"></div>
+  </div>
+</section>
+
+<section id="select" class="screen" hidden>
+  <div class="card wide">
+    <h2>ロボを えらぼう</h2>
+    <div id="chars"></div>
+    <h3>あいての つよさ</h3>
+    <div id="levels">
+      <button data-lv="0">🐣 やさしい</button>
+      <button data-lv="1">🙂 ふつう</button>
+      <button data-lv="2">😈 つよい</button>
+    </div>
+    <div class="row">
+      <button id="btnBack" class="sub">◀ もどる</button>
+      <button id="btnGo" class="big">しゅっぱつ！ 🎢</button>
+    </div>
+  </div>
+</section>
+
+<section id="result" class="screen" hidden>
+  <div class="card">
+    <h2 id="resTitle"></h2>
+    <div id="resBody"></div>
+    <button id="btnAgain" class="big">もういちど 🎢</button>
+    <div class="row">
+      <button id="btnChange" class="sub">ロボを かえる</button>
+      <button id="btnTitle" class="sub">タイトル</button>
+    </div>
+  </div>
+</section>
+
+<section id="pause" class="screen" hidden>
+  <div class="card">
+    <h2>ひとやすみ ⏸</h2>
+    <button id="btnResume" class="big">つづける ▶</button>
+    <button id="btnSnd2" class="sub snd">🔊 おと</button>
+    <button id="btnQuit" class="sub">やめる</button>
+  </div>
+</section>
+
+<div id="nogl" hidden>この きかいでは 3D が うごかないみたい… ごめんね。</div>
+<button id="sndBtn" aria-label="おと">🔊</button>
+
+<script src="gl.js?v=fdc8724"></script>
+<script src="track.js?v=fdc8724"></script>
+<script src="audio.js?v=fdc8724"></script>
+<script src="fighter.js?v=fdc8724"></script>
+<script src="draw.js?v=fdc8724"></script>
+<script src="game.js?v=fdc8724"></script>
+</body>
+</html>
