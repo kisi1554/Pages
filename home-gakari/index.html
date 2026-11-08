@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>えき の ホームがかり</title>
+<meta name="description" content="えき の ホーム で はたらく えきいん さん に なる ゲーム。おりる ひと が さき、きいろい せん の うちがわ、ゆびさし かくにん。あんぜん を たしかめて しゅっぱつ OK！">
+<meta name="theme-color" content="#2b8a3e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧑‍✈️</text></svg>">
+<link rel="stylesheet" href="style.css?v=3922bb0">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section id="vTitle" class="view">
+  <div class="tbox">
+    <div class="hero" aria-hidden="true"><span>🚃</span><span class="h2">🧑‍✈️</span><span>👉</span></div>
+    <h1>えき の<br>ホームがかり</h1>
+    <p class="lead">きょう は きみ が <b>えきいん さん</b>！<br>あんぜん を たしかめて 「しゅっぱつ OK！」</p>
+    <div class="tbtns">
+      <button type="button" id="bDay" class="big primary">🚃 1にち の しごと<span class="sub">あさ → ひる → ゆうがた（でんしゃ 9ほん）</span><span class="best" id="bestDay"></span></button>
+      <div class="sub-h">れんしゅう（でんしゃ 1ぽん）</div>
+      <div class="row3">
+        <button type="button" class="mid bOne" data-period="asa">🌅 あさ<span class="sub">ラッシュ</span></button>
+        <button type="button" class="mid bOne" data-period="hiru">☀️ ひる<span class="sub">くるまいす・まいご</span></button>
+        <button type="button" class="mid bOne" data-period="yuu">☔ ゆうがた<span class="sub">あめ・かさ</span></button>
+      </div>
+      <div class="row">
+        <button type="button" id="bHelp" class="mid">❓ あそびかた</button>
+        <button type="button" id="bZukan" class="mid">📖 えき の しごと</button>
+      </div>
+      <div class="row">
+        <button type="button" class="mid bSnd" aria-pressed="true">🔊 こうかおん</button>
+        <button type="button" class="mid bVoice" aria-pressed="true">🗣️ よみあげ</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ゲーム -->
+<section id="vGame" class="view" hidden>
+  <header class="gbar">
+    <button type="button" id="bBack" class="sq" aria-label="もどる">⬅️</button>
+    <div class="info"><span id="gPeriod">🌅 あさ</span><span id="gTrain">🚃 1/9</span></div>
+    <button type="button" class="sq bSnd" aria-pressed="true" aria-label="こうかおん">🔊</button>
+    <button type="button" class="sq bVoice" aria-pressed="true" aria-label="よみあげ">🗣️</button>
+  </header>
+  <div id="stageWrap">
+    <div id="sceneBox"><div id="scene">
+      <div class="sky"></div>
+      <div class="wall">
+        <div class="sign">どんぐり えき</div>
+        <div id="sig" class="sig" aria-hidden="true"><span class="lamp"></span><span class="lbl">しんごう</span></div>
+        <div id="clock" class="clock" aria-hidden="true"><span class="hh"></span><span class="mm"></span><span class="lbl">とけい</span></div>
+      </div>
+      <div class="rails"></div>
+      <div id="train"></div>
+      <div class="plat"><div class="edge"></div><div class="yline"></div></div>
+      <div id="marks"></div>
+      <div id="ramp" hidden></div>
+      <div id="layer"></div>
+      <div id="rain" hidden></div>
+      <div id="finger" aria-hidden="true">👉</div>
+    </div></div>
+  </div>
+  <div id="msgRow"><div id="hint"></div><div id="msg" aria-live="polite"></div></div>
+  <div id="ctrl">
+    <div class="pt">
+      <span class="pth">👉 ゆびさし かくにん</span>
+      <div class="pbtns">
+        <button type="button" class="pb" data-pt="door">🚪<span>ドア</span></button>
+        <button type="button" class="pb" data-pt="signal">🚦<span>しんごう</span></button>
+        <button type="button" class="pb" data-pt="clock">🕐<span>とけい</span></button>
+      </div>
+    </div>
+    <div class="act">
+      <button type="button" id="tRamp" class="tool">🛝<span>スロープ</span></button>
+      <button type="button" id="bSig" class="sigbtn"><span class="fill"></span><span class="t">📣 あいず<small>ながおし</small></span></button>
+    </div>
+  </div>
+  <div id="ghost" hidden>🛝</div>
+  <div id="card" hidden></div>
+</section>
+
+<!-- まど -->
+<div id="modal" hidden><div class="mbox"><div id="mBody"></div><div id="mBtns"></div></div></div>
+
+<script src="audio.js?v=3922bb0"></script>
+<script src="platform.js?v=3922bb0"></script>
+<script src="app.js?v=3922bb0"></script>
+</body>
+</html>
