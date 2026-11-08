@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>うちゅう せんそう</title>
+<meta name="description" content="ギギガー ぐんだん から ぼくらの ほし を まもれ！ わくせい の じゅうりょく で たま が まがる、ふたり でも あそべる うちゅう アクション。">
+<meta name="theme-color" content="#0b1026">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛸</text></svg>">
+<link rel="stylesheet" href="style.css?v=e2eb2ff">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<!-- ============ タイトル ============ -->
+<section id="title" class="screen">
+  <div class="title-inner">
+    <a class="back" href="../" aria-label="メニューへ もどる">←</a>
+    <h1 class="logo"><ruby>宇宙<rt>うちゅう</rt></ruby><ruby>戦争<rt>せんそう</rt></ruby></h1>
+    <p id="story" class="story"></p>
+
+    <div class="row">
+      <span class="label">なんにん？</span>
+      <button class="opt" type="button" data-players="1">🚀 ひとり</button>
+      <button class="opt" type="button" data-players="2">🚀🚀 ふたり</button>
+    </div>
+    <div class="row">
+      <span class="label">むずかしさ</span>
+      <button class="opt" type="button" data-mode="easy">🌱 やさしい</button>
+      <button class="opt" type="button" data-mode="normal">🔥 ふつう</button>
+    </div>
+    <p class="hint" id="modeHint"></p>
+
+    <h2 class="sub">どこを まもる？</h2>
+    <div id="sectors" class="sectors"></div>
+
+    <details class="howto">
+      <summary>あそびかた</summary>
+      <ul>
+        <li>がめんを ゆびで なぞると その むきに とぶ（ゆびを おいた ところが スティック）。<b>ふたり</b>の ときは がめんの ひだり はんぶん と みぎ はんぶん で べつべつ。</li>
+        <li>たまは <b>じどうで</b> ちかくの てきに とんで いく。わくせいの そばでは <b>じゅうりょくで まがる</b>よ。</li>
+        <li>💫 スターボム: てきの たまを ぜんぶ けして、まわりの てきに おおダメージ。</li>
+        <li>ロボットを たおすと ⭐ スターかけら。ウェーブ 3 と 6 の あとの ショップで つかえる。🛸 は なかま メカ、❤️ は かいふく。</li>
+        <li>まもるのは まんなかの「ぼくらの ほし」。やられても すこし まてば ほしの そばで ふっかつ。</li>
+        <li>キーボード: 1P＝WASD（ひとりの ときは やじるし も）・スペースで ボム ／ 2P＝やじるし・Enter で ボム。P で ひとやすみ。</li>
+      </ul>
+    </details>
+
+    <div class="row settings">
+      <button class="tool" id="btnBgm" type="button" aria-pressed="true">🎵 BGM</button>
+      <button class="tool" id="btnSfx" type="button" aria-pressed="true">🔊 こうかおん</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ゲーム ============ -->
+<section id="game" class="screen" hidden>
+  <canvas id="cv" aria-label="うちゅう"></canvas>
+  <div class="hud">
+    <button id="btnPause" class="hud-btn" type="button" aria-label="ひとやすみ">⏸</button>
+    <div class="hud-main">
+      <div class="basebar" aria-label="ぼくらの ほし の バリア"><span>🌏</span><i><b id="baseFill"></b></i></div>
+      <div class="hud-line"><span id="waveLabel"></span><span>⭐ <b id="starCount">0</b></span><span id="scoreLabel"></span></div>
+      <div class="hud-line" id="hearts"></div>
+    </div>
+  </div>
+  <div id="banner" class="banner" hidden></div>
+  <button id="bomb0" class="bomb" type="button" aria-label="1P スターボム">💫<small>×2</small></button>
+  <button id="bomb1" class="bomb p2" type="button" aria-label="2P スターボム" hidden>💫<small>×2</small></button>
+</section>
+
+<!-- ============ ショップ ============ -->
+<div id="shop" class="overlay" hidden>
+  <div class="panel">
+    <h2>🛒 うちゅう ショップ</h2>
+    <p class="hint">⭐ <b id="shopStars">0</b> こ もってるよ</p>
+    <p id="shopFact" class="fact"></p>
+    <div id="shopItems" class="shop-items"></div>
+    <button id="shopGo" class="big" type="button">🚀 つぎの ウェーブへ</button>
+  </div>
+</div>
+
+<!-- ============ けっか ============ -->
+<div id="result" class="overlay" hidden>
+  <div class="panel">
+    <h2 id="resTitle"></h2>
+    <p id="resStars" class="res-stars"></p>
+    <p id="resText"></p>
+    <p id="resFact" class="fact"></p>
+    <div class="row center">
+      <button id="resRetry" class="big" type="button">🔁 もういちど</button>
+      <button id="resNext" class="big" type="button">▶ つぎの ばしょ</button>
+      <button id="resTitleBtn" class="big ghost" type="button">🏠 タイトル</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ひとやすみ ============ -->
+<div id="pause" class="overlay" hidden>
+  <div class="panel">
+    <h2>⏸ ひとやすみ</h2>
+    <div class="row center">
+      <button id="pResume" class="big" type="button">▶ つづける</button>
+      <button id="pTitle" class="big ghost" type="button">🏠 タイトル</button>
+    </div>
+    <div class="row center settings">
+      <button class="tool" id="pBgm" type="button" aria-pressed="true">🎵 BGM</button>
+      <button class="tool" id="pSfx" type="button" aria-pressed="true">🔊 こうかおん</button>
+    </div>
+  </div>
+</div>
+
+<script src="data.js?v=e2eb2ff"></script>
+<script src="sim.js?v=e2eb2ff"></script>
+<script src="render.js?v=e2eb2ff"></script>
+<script src="audio.js?v=e2eb2ff"></script>
+<script src="app.js?v=e2eb2ff"></script>
+</body>
+</html>
