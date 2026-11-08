@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>でんしゃ しれいしつ</title>
+<meta name="description" content="ポイント と しんごう を きりかえて、つぎつぎ くる でんしゃ を ただしい ホーム へ みちびく リアルタイム パズル。">
+<meta name="theme-color" content="#1971c2">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚦</text></svg>">
+<link rel="stylesheet" href="style.css?v=976d70a">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<!-- ============ タイトル ============ -->
+<section id="title" class="screen">
+  <div class="title-inner">
+    <a class="back" href="../" aria-label="メニューへ もどる">←</a>
+    <h1 class="logo">🚦 でんしゃ <ruby>指令室<rt>しれいしつ</rt></ruby></h1>
+    <p class="story">きみ は まち の せんろ を みはる <b>しれいいん</b>。ポイント と しんごう を きりかえて、でんしゃ を ただしい ホーム へ みちびこう！</p>
+
+    <div id="chapters" class="chapters"></div>
+
+    <button id="btnFree" class="free-btn" type="button">🧩 じゆう モード <small>せんろ を ならべて しれい する</small></button>
+
+    <details class="howto">
+      <summary>あそびかた</summary>
+      <ul>
+        <li>でんしゃ の うえ の <b>まる</b> が いく さき。①②③④ は ホーム、🏠 は しゃこ、📦 は かもつ の せんろ、⛰️🌊🌲🏙️ は でて いく トンネル。</li>
+        <li><b>ポイント</b>（きいろ の まる）を タップ すると レール が かちゃっ と きりかわる。やじるし の ほう へ すすむ よ。でんしゃ が のって いる とき・すぐ ちかく に いる とき は うごかない（🔒）。</li>
+        <li><b>しんごう</b> を タップ すると あお ↔ あか。あか の まえ で でんしゃ は とまる。ホーム の はし の しゅっぱつ しんごう は、でんしゃ が とおると また あか に もどる。</li>
+        <li>ひとつ の くかん（しんごう と しんごう の あいだ）に はいれる でんしゃ は <b>1ぽん だけ</b>（へいそく）。ぶつかる ことは ない けど、まつ と おくれ に なる。</li>
+        <li>ちがう ホーム や トンネル に いくと「あれれ？」で おくれ ＋5。ぎりぎり で とめると きゅうブレーキ ＋2。</li>
+        <li>★ は おくれ の すくなさ。💡 で つぎ に さわる ところ が ひかる。⏩ で はやおくり。</li>
+        <li>❄️ ゆき の ひ は ポイント が こおる。ながおし で あたためて から タップ！</li>
+      </ul>
+    </details>
+
+    <div class="row settings">
+      <button class="tool" id="btnSound" type="button" aria-pressed="true">🔊 おと オン</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ゲーム ============ -->
+<section id="game" class="screen" hidden>
+  <canvas id="cv" aria-label="せんろ ばん"></canvas>
+  <div class="hud" id="hud">
+    <button id="btnMenu" class="hud-btn" type="button" aria-label="メニュー">◀</button>
+    <div class="hud-main">
+      <div class="hud-title" id="stageTitle"></div>
+      <div class="hud-line">
+        <span class="chip">🚃 のこり <b id="leftCount">0</b></span>
+        <span class="chip" id="delayChip">⏱ おくれ <b id="delayCount">0</b>びょう</span>
+      </div>
+    </div>
+    <div class="hud-tools">
+      <button id="btnHint" class="hud-btn" type="button" aria-pressed="false" aria-label="ヒント">💡</button>
+      <button id="btnFast" class="hud-btn" type="button" aria-pressed="false" aria-label="はやおくり">⏩</button>
+      <button id="btnPause" class="hud-btn" type="button" aria-label="ひとやすみ">⏸</button>
+      <button id="btnSound2" class="hud-btn" type="button" aria-label="おと">🔊</button>
+    </div>
+  </div>
+  <div id="msg" class="msg"></div>
+  <div id="editor" class="editor" hidden>
+    <div class="tools" id="editTools">
+      <button class="etool" type="button" data-tool="h" aria-pressed="true">━<small>まっすぐ</small></button>
+      <button class="etool" type="button" data-tool="d">╲<small>ななめ</small></button>
+      <button class="etool" type="button" data-tool="u">╱<small>ななめ</small></button>
+      <button class="etool" type="button" data-tool="plat">🚉<small>ホーム</small></button>
+      <button class="etool" type="button" data-tool="sig">🚦<small>しんごう</small></button>
+      <button class="etool" type="button" data-tool="erase">🧽<small>けす</small></button>
+    </div>
+    <div class="tools">
+      <button class="etool go" type="button" id="btnRun">▶<small>しれい スタート</small></button>
+      <button class="etool" type="button" id="btnSample">🔄<small>みほん</small></button>
+      <button class="etool" type="button" id="btnClear">🗑<small>ぜんぶ けす</small></button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ステージ の はじめ ============ -->
+<div id="intro" class="overlay" hidden>
+  <div class="panel">
+    <p class="ch-label" id="introCh"></p>
+    <h2 id="introTitle"></h2>
+    <p id="introTip" class="tip"></p>
+    <p id="introTrains" class="trains-preview"></p>
+    <button id="introGo" class="big" type="button">🚦 しれい かいし！</button>
+  </div>
+</div>
+
+<!-- ============ ひとやすみ ============ -->
+<div id="pause" class="overlay" hidden>
+  <div class="panel">
+    <h2>⏸ ひとやすみ</h2>
+    <div class="col">
+      <button id="pauseGo" class="big" type="button">▶ つづける</button>
+      <button id="pauseRetry" class="big sub" type="button">🔁 さいしょ から</button>
+      <button id="pauseMenu" class="big sub" type="button">🏠 ステージ を えらぶ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ けっか ============ -->
+<div id="result" class="overlay" hidden>
+  <div class="panel">
+    <h2 id="resTitle">🎉 しれい かんりょう！</h2>
+    <p id="resStars" class="res-stars"></p>
+    <p id="resText" class="res-text"></p>
+    <p id="resFact" class="fact"></p>
+    <div class="col">
+      <button id="resNext" class="big" type="button">▶ つぎ の ステージ</button>
+      <button id="resRetry" class="big sub" type="button">🔁 もういちど</button>
+      <button id="resMenu" class="big sub" type="button">🏠 ステージ を えらぶ</button>
+    </div>
+  </div>
+</div>
+
+<script src="layout.js?v=976d70a"></script>
+<script src="dispatch.js?v=976d70a"></script>
+<script src="stages.js?v=976d70a"></script>
+<script src="audio.js?v=976d70a"></script>
+<script src="render.js?v=976d70a"></script>
+<script src="app.js?v=976d70a"></script>
+</body>
+</html>
