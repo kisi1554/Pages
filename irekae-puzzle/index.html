@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>かもつ いれかえ パズル</title>
+<meta name="description" content="いれかえ きかんしゃ で おしたり ひいたり。ばらばら の かしゃ を ちゅうもん どおり の じゅんばん に ならべる パズル。">
+<meta name="theme-color" content="#e8590c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚃</text></svg>">
+<link rel="stylesheet" href="style.css?v=ecdd318">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<header class="top">
+  <button class="pill" id="back" hidden aria-label="もどる">‹ <span class="long">もどる</span></button>
+  <h1 class="title"><span aria-hidden="true">🚃</span><span id="titleText">かもつ いれかえ パズル</span></h1>
+  <span class="stars-total" aria-label="あつめた ほし">⭐ <b id="starCount">0</b></span>
+  <button class="pill round" id="soundBtn" aria-pressed="true" aria-label="おと オン／オフ">🔊</button>
+</header>
+
+<main class="view scroll" id="home">
+  <div class="wrap">
+    <p class="lead">かもつ えき の <b>いれかえ きかんしゃ</b> を うごかして、かしゃ を <b>ちゅうもん どおり</b> に ならべよう！</p>
+    <button class="daily" id="dailyBtn"><span class="big">📅</span><span><b>まいにち もんだい</b><small id="dailyInfo">ひづけ で かわる もんだい</small></span></button>
+    <div id="stageList"></div>
+    <section class="howto">
+      <h2>あそびかた</h2>
+      <ol>
+        <li><b>ポイント</b>（🚩・1・2・3 の ボタン か せんろ を タップ）で いく せんろ を えらぶ。</li>
+        <li><b>▶ すすむ</b>（または みぎ へ スワイプ）で きかんしゃ が すすんで、かしゃ に <b>れんけつ</b>（がちゃん）。</li>
+        <li><b>✂ かいほう</b> の − ＋（または かしゃ を タップ）で、なんりょう つれて かえる か えらぶ。</li>
+        <li><b>◀ もどる</b>（または ひだり へ スワイプ）で、えらんだ かしゃ だけ つれて もどる。のこり は その せんろ に おいて いく。</li>
+        <li>うえ の <b>ちゅうもん</b> と おなじ じゅんばん（ひだり から）で 🚩しゅっぱつ せん に ならんだら クリア！</li>
+      </ol>
+      <p>わきせん に いって もどる まで が <b>1て</b>。めやす の てかず で できたら ★3 の めいじん。<br>
+      ひきあげせん（きかんしゃ の いる ところ）と わきせん には おける かず に かぎり が ある よ。</p>
+    </section>
+  </div>
+</main>
+
+<main class="view" id="play" hidden>
+  <section class="order" aria-label="ちゅうもん">
+    <div class="order-card">
+      <span class="otag">ちゅうもん</span>
+      <span class="ocars" id="orderCars"></span>
+      <span class="oloco" aria-hidden="true">🚩</span>
+    </div>
+    <div class="count">てかず <b id="moves">0</b><small> / めやす <span id="par">0</span></small></div>
+    <p class="cond" id="cond" hidden></p>
+  </section>
+  <div class="board-wrap" id="boardWrap">
+    <svg id="board" role="img" aria-label="せんろ ばん"></svg>
+  </div>
+  <section class="ctrl">
+    <p class="msg" id="msg" aria-live="polite"></p>
+    <div class="row points" id="points"><span class="rlab">ポイント</span></div>
+    <div class="row drive">
+      <button class="btn back2" id="backBtn2" aria-label="もどる">◀<small>もどる</small></button>
+      <div class="cutbox" aria-label="かいほう">
+        <span class="clab">✂ つれて かえる</span>
+        <button class="btn sm" id="cutMinus" aria-label="へらす">−</button>
+        <b id="cutN">–</b><span class="unit">りょう</span>
+        <button class="btn sm" id="cutPlus" aria-label="ふやす">＋</button>
+      </div>
+      <button class="btn go" id="goBtn" aria-label="すすむ">▶<small>すすむ</small></button>
+    </div>
+    <div class="row tools">
+      <button class="btn t" id="undoBtn">↩ 1て もどる</button>
+      <button class="btn t" id="hintBtn">💡 ヒント</button>
+      <button class="btn t" id="resetBtn">🔄 さいしょ から</button>
+    </div>
+  </section>
+</main>
+
+<div class="result" id="result" hidden role="dialog" aria-modal="true" aria-labelledby="resTitle">
+  <div class="res-card">
+    <div class="res-stars" id="resStars">★★★</div>
+    <h2 id="resTitle">めいじん！</h2>
+    <p id="resText"></p>
+    <div class="res-btns">
+      <button class="btn t" id="againBtn">🔄 もういちど</button>
+      <button class="btn t" id="menuBtn">📋 ステージ</button>
+      <button class="btn go" id="nextBtn">つぎ ▶</button>
+    </div>
+  </div>
+</div>
+
+<script src="yard.js?v=ecdd318"></script>
+<script src="stages.js?v=ecdd318"></script>
+<script src="audio.js?v=ecdd318"></script>
+<script src="app.js?v=ecdd318"></script>
+</body>
+</html>
