@@ -1747,6 +1747,7 @@ void main(){
     if (e.code === 'KeyX') inp.let = true;
     if (e.code === 'KeyE') useOni();
     if (e.code === 'KeyC' && !e.repeat) toggleProp();
+    if (e.code === 'KeyB' && !e.repeat && !paused) openBag();
     if (e.code === 'KeyF' || e.code === 'KeyQ') inp.fart = true;
     if (e.code === 'KeyM') openMap();
     if (e.code === 'Enter' && curDoor) curDoor.run();
@@ -2017,17 +2018,17 @@ void main(){
     else if (P.state === 'climb') climbUpdate(dt, rx, rz);
     else {
       const swim = P.state === 'swim';
-      const speed = swim ? 3.6 : P.glide ? 7.5 : P.farting ? 8 : 7;
+      const speed = (swim ? 3.6 : P.glide ? 7.5 : P.farting ? 8 : 7) * (bagOn('kick') && P.ground && !swim ? 1.9 : 1);
       const k = P.ground ? 14 : P.glide ? 3 : 5;
       P.vx += (dx * speed - P.vx) * Math.min(1, k * dt); P.vz += (dz * speed - P.vz) * Math.min(1, k * dt);
       if (inp.jump) {
-        if (P.ground) { P.vy = JUMP; P.ground = false; P.plat = null; SFX.jump(); }
+        if (P.ground) { P.vy = JUMP * (bagOn('spring') ? 1.5 : 1); P.ground = false; P.plat = null; SFX.jump(); }
         else if (swim) { P.vy = 5.5; SFX.splash(); }
         else if (!P.farting) { P.glide = !P.glide; if (P.glide) SFX.chute(); }
       }
       if (P.farting) { /* うえ むきの ちから は うえで */ }
       else if (P.glide) { P.vy = Math.max(P.vy - GRAV * dt, -2.0); }
-      else P.vy = Math.max(P.vy - GRAV * dt, -45);
+      else P.vy = Math.max(P.vy - GRAV * (bagOn('balloon') && !P.farting ? 0.35 : 1) * dt, bagOn('balloon') ? -6 : -45);
       if (swim && P.vy < 0 && P.y <= WATER - 1.0 + 0.01) P.vy = 0;
 
       const wasGround = P.ground, fallV = P.vy;
@@ -2195,7 +2196,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    momUpdate(dt); papaUpdate(dt); hsTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
+    momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
       const open = zooOpen();
@@ -2912,7 +2913,7 @@ void main(){
     const hy = Math.max(0, eye[1]);
     gl.uniform1f(U.uFogN, inGhost ? 0.8 : 70 + hy * 8); gl.uniform1f(U.uFogF, inGhost ? (P.gh.flick ? 3.5 : 11) : Math.min(3200, 350 + hy * 28));
     gl.uniformMatrix4fv(U.uProj, false, proj); gl.uniformMatrix4fv(U.uView, false, view);
-    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, inGhost ? [0, 0, 0] : SK.col); gl.uniform1f(U.uLight, inGhost ? 1 : SK.light); gl.uniform1f(U.uNight, inGhost ? 0 : SK.night); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
+    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, inGhost ? [0, 0, 0] : SK.col); gl.uniform1f(U.uLight, inGhost ? 1 : bagOn('lantern') ? Math.max(SK.light, 0.72) : SK.light); gl.uniform1f(U.uNight, inGhost ? 0 : bagOn('lantern') ? SK.night * 0.45 : SK.night); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
     bound = null;
     if (inGhost) { drawGhostScene(); return; }
 
@@ -2980,12 +2981,12 @@ void main(){
       draw(mCube, M(base, RZ(fl), T(0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
       draw(mCube, M(base, RZ(-fl), T(-0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
     }
-    drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains();
+    drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains(); drawBagItems();
     guideTick();
-    if (save.dest && !FP[P.state]) { const g2 = save.dest, a = Math.atan2(g2.x - P.x, g2.z - P.z), bob = Math.sin(time * 4) * 0.12; draw(mArrow, M(T(P.x, P.y + 3.0 + bob, P.z), RY(a), S(0.9)), [1, 0.83, 0.1], 0.7); }
+    if ((save.dest || bagOn('radar')) && !FP[P.state]) { const g2 = save.dest || radarTarget(); if (g2) { const a = Math.atan2(g2.x - P.x, g2.z - P.z), bob = Math.sin(time * 4) * 0.12; draw(mArrow, M(T(P.x, P.y + 3.0 + bob + (bagOn('balloon') ? 1.2 : 0), P.z), RY(a), S(0.9)), g2.star ? [1, 0.95, 0.3] : [1, 0.83, 0.1], 0.7); } }
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-    drawWeather();
+    drawWeather(); drawBubbles();
     puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s, p.w ? s * 0.4 : s, s)), p.w ? C.white : [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
     const gy = { train: 1, akai: 1, boat: 1, bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
@@ -3098,10 +3099,10 @@ void main(){
   }
   let lastGuide = '';
   function guideTick() {
-    const g = save.dest, el = $('guide');
+    const g = save.dest || radarTarget(), el = $('guide');
     if (!g) { if (!el.hidden) el.hidden = true; return; }
     const dx = g.x - P.x, dz = g.z - P.z, d = Math.hypot(dx, dz);
-    if (d < 7 && Math.abs(P.y - groundBelow(g.x, P.y + 1, g.z)) < 4) { banner(`🎯 ${g.name} に ついたよ！<small>ちずで つぎの いきさきを えらべるよ</small>`, 3); SFX.star(); momSay('ついたね！ じょうずに いけたね 👏', 3); setDest(null); return; }
+    if (!g.star && d < 7 && Math.abs(P.y - groundBelow(g.x, P.y + 1, g.z)) < 4) { banner(`🎯 ${g.name} に ついたよ！<small>ちずで つぎの いきさきを えらべるよ</small>`, 3); SFX.star(); momSay('ついたね！ じょうずに いけたね 👏', 3); setDest(null); return; }
     const fx = -Math.sin(cam.yaw), fz = -Math.cos(cam.yaw), rx = Math.cos(cam.yaw), rz = -Math.sin(cam.yaw);
     const ang = Math.atan2(dx * rx + dz * rz, dx * fx + dz * fz) * 180 / Math.PI;
     const m = Math.round(d / 0.25), txt = m >= 1000 ? (m / 1000).toFixed(1) + 'キロ' : (Math.round(m / 10) * 10) + 'メートル';
@@ -3161,7 +3162,7 @@ void main(){
       },
     });
   }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet'].some((i) => $(i).classList.contains('show')); }
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet', 'ovBag'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
     paused = anyOv() || photoOn;
     if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
@@ -3414,6 +3415,120 @@ void main(){
       $('photoN').textContent = photos.length;
     } catch (e) { banner('📷 しゃしんが とれなかった…', 2); }
   }
+  // ================= 🎒 どうぐぶくろ（べんり アイテム）=================
+  // どれも この ゲームの オリジナルの どうぐ。「つける」どうぐ は もう いちど おすと はずれる
+  const BAG = [
+    { id: 'kick', e: '🛴', n: 'キックボード', d: 'じめんを 2ばい はやく すすむ', tog: 1 },
+    { id: 'spring', e: '👟', n: 'ぴょんぴょん ぐつ', d: 'ジャンプが たかく なる', tog: 1 },
+    { id: 'balloon', e: '🎈', n: 'ふわふわ ふうせん', d: 'ゆっくり おちる。とおくまで ジャンプ', tog: 1 },
+    { id: 'radar', e: '📡', n: 'ほし レーダー', d: 'いちばん ちかい ほし の ほうこう を やじるしで おしえる', tog: 1 },
+    { id: 'lantern', e: '🏮', n: 'ランタン', d: 'よる でも まわりが あかるく みえる', tog: 1 },
+    { id: 'warp', e: '✨', n: 'ひとっとび ちず', d: 'いった ことの ある ばしょへ すぐ いける' },
+    { id: 'bell', e: '🔔', n: 'ママ よびだし ベル', d: 'ママが すぐ きて、げんき と おなら が まんたん' },
+    { id: 'clock', e: '⏰', n: 'じかん とばし どけい', d: 'あさ・ひる・おやつ・ゆうがた・よる へ とぶ' },
+    { id: 'bubble', e: '🫧', n: 'シャボンだま', d: 'ふーっと ふくと シャボンだまが いっぱい' },
+  ];
+  if (!save.bag) save.bag = {};
+  const bagOn = (id) => !!(save.bag && save.bag[id]);
+  const bubbles = [];
+  let bellT = -1e9;
+  function bagHud() { $('bagOn').textContent = BAG.filter((b) => b.tog && bagOn(b.id)).map((b) => b.e).join(''); }
+  function openBag(view) {
+    const root = $('bagRoot'); root.innerHTML = '';
+    const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
+    if (view === 'warp') {
+      root.appendChild(el('h2', '', '✨ ひとっとび ちず'));
+      root.appendChild(el('p', 'bagsub', 'いった ことの ある ばしょ（スタンプ）へ ひとっとび。ママも いっしょ'));
+      const g = el('div', 'baggrid'), got = ZONES.filter((z) => save.stamps.includes(z.id) && !z.ride && z.id !== 'lmtop');
+      got.forEach((z) => { const b = el('button', 'bagitem', `<i>📍</i><b>${z.name}</b>`); b.addEventListener('click', () => warpTo(z)); g.appendChild(b); });
+      if (!got.length) g.appendChild(el('p', 'bagsub', 'まだ スタンプが ないよ。まちを あるいて あつめよう'));
+      root.appendChild(g); root.appendChild(bagBack()); show('ovBag', true); setPaused(); return;
+    }
+    if (view === 'clock') {
+      root.appendChild(el('h2', '', '⏰ じかん とばし どけい'));
+      root.appendChild(el('p', 'bagsub', `いまは ${clockStr()}。どこへ とぶ？（まえの じかん なら つぎの ひ）`));
+      const g = el('div', 'baggrid');
+      [['🌅', 'あさ', 8], ['🍱', 'おひる', 12], ['🍪', 'おやつ', 15], ['🌇', 'ゆうがた', 17.5], ['🌙', 'よる', 19.5]].forEach(([e, n, h]) => {
+        const b = el('button', 'bagitem', `<i>${e}</i><b>${n}</b><small>${Math.floor(h)}:${h % 1 ? '30' : '00'}</small>`);
+        b.addEventListener('click', () => { const now = save.clock.min, t = h * 60; if (t <= now) { save.clock.day++; } save.clock.min = t; store(); show('ovBag', false); setPaused(); refreshHud(); todayHud && todayHud(); SFX.star(); banner(`⏰ ${n} に なったよ<small>${clockStr()}</small>`, 2.6); });
+        g.appendChild(b);
+      });
+      root.appendChild(g); root.appendChild(bagBack()); show('ovBag', true); setPaused(); return;
+    }
+    root.appendChild(el('h2', '', '🎒 どうぐぶくろ'));
+    root.appendChild(el('p', 'bagsub', 'タップで つかう。🔆 が ついて いる ものは つけている どうぐ'));
+    const g = el('div', 'baggrid');
+    BAG.forEach((it) => {
+      const on = it.tog && bagOn(it.id), b = el('button', 'bagitem' + (on ? ' on' : ''), `<i>${it.e}</i><b>${it.n}</b><small>${it.d}</small>${it.tog ? `<em>${on ? '🔆 つけてる' : 'つける'}</em>` : ''}`);
+      b.addEventListener('click', () => useItem(it)); g.appendChild(b);
+    });
+    root.appendChild(g);
+    const ok = el('button', 'big', 'とじる'); ok.addEventListener('click', () => { show('ovBag', false); setPaused(); }); root.appendChild(ok);
+    show('ovBag', true); setPaused();
+  }
+  function bagBack() { const b = document.createElement('button'); b.className = 'big sub'; b.textContent = '← どうぐぶくろ'; b.addEventListener('click', () => openBag()); return b; }
+  function useItem(it) {
+    SFX.tap();
+    if (it.tog) {
+      save.bag = save.bag || {}; save.bag[it.id] = !save.bag[it.id]; store(); bagHud();
+      const on = bagOn(it.id);
+      if (on) momSay({ kick: 'キックボード、くるまに きを つけてね 🛴', spring: 'ぴょーん！ たかく とべるね 👟', balloon: 'ふうせんで ふわ〜っ 🎈', radar: 'ほしの ほうこうが わかるよ 📡', lantern: 'ランタンで あかるいね 🏮' }[it.id], 3);
+      openBag(); return;
+    }
+    if (it.id === 'warp') { openBag('warp'); return; }
+    if (it.id === 'clock') { openBag('clock'); return; }
+    show('ovBag', false); setPaused();
+    if (it.id === 'bell') {
+      if (time - bellT < 20) { banner('🔔 ママは さっき きたよ<small>すこし まってから また ならそう</small>', 2); return; }
+      bellT = time; [0, 0.18, 0.36].forEach((d) => tone(1320, 0.25, 'sine', 0.07, null, d));
+      MOM.x = P.x + Math.cos(P.face) * 1.3; MOM.z = P.z - Math.sin(P.face) * 1.3; MOM.y = P.y;
+      P.st = maxSt(); P.tired = false; P.gas = 1; MOM.cup = 2.5; SFX.drink();
+      momSay('は〜い！ ママ きたよ。おみず どうぞ 🥤 げんき まんたん！', 3.5); return;
+    }
+    if (it.id === 'bubble') {
+      for (let i = 0; i < 26; i++) bubbles.push({ x: P.x + Math.sin(P.face) * 0.8, y: P.y + 1.3, z: P.z + Math.cos(P.face) * 0.8, vx: Math.sin(P.face) * (1 + Math.random() * 2) + (Math.random() - 0.5) * 1.5, vy: 0.3 + Math.random() * 0.8, vz: Math.cos(P.face) * (1 + Math.random() * 2) + (Math.random() - 0.5) * 1.5, r: 0.12 + Math.random() * 0.22, t: 0, life: 3 + Math.random() * 3, c: Math.random() });
+      [0, 0.1, 0.2].forEach((d) => tone(900 + Math.random() * 500, 0.08, 'sine', 0.04, 1400, d));
+      momSay('わあ、きれい！ シャボンだま いっぱい 🫧', 3);
+    }
+  }
+  function warpTo(z) {
+    if (!{ ground: 1, air: 1, swim: 1, climb: 1, prop: 1 }[P.state]) { banner('✨ いまは とべないよ', 1.6); return; }
+    const f = freeSpot(z.x, z.z);
+    P.x = f.x; P.z = f.z; P.y = 0; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.ground = true; P.wall = null; P.glide = false; P.fallTop = 0; lastDoorId = '-';
+    MOM.x = P.x + 1.3; MOM.z = P.z; MOM.y = 0; if (PAPA.on) { PAPA.x = P.x - 1.3; PAPA.z = P.z; PAPA.y = 0; }
+    show('ovBag', false); setPaused();
+    for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; puffs.push({ x: P.x + Math.cos(a), y: P.y + 0.3, z: P.z + Math.sin(a), t: 0, vy: 1.2, w: 1 }); }
+    tone(520, 0.15, 'sine', 0.07, 1040); tone(780, 0.25, 'sine', 0.07, 1560, 0.12);
+    banner(`✨ ${z.name} に ひとっとび！`, 2.4); momSay('びゅーん！ ついたね ✨', 2.5);
+  }
+  function radarTarget() {
+    if (!bagOn('radar')) return null; let best = null, bd = 1e9;
+    for (const s of STARS) { if (save.stars.includes(s.id)) continue; const d = Math.hypot(s.x - P.x, s.z - P.z) + Math.abs(s.y - P.y) * 0.5; if (d < bd) { bd = d; best = s; } }
+    return best ? { x: best.x, z: best.z, y: best.y, name: (best.big ? 'おおきな ' : '') + 'ほし ⭐', star: true } : null;
+  }
+  function bagTick(dt) {
+    for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.t += dt; b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.vx *= 0.98; b.vz *= 0.98; b.vy += (Math.sin(b.t * 3 + b.c * 9) * 0.3 - 0.05) * dt; if (b.t > b.life) bubbles.splice(i, 1); }
+  }
+  function drawBagItems() {
+    // キックボード
+    if (bagOn('kick') && (P.state === 'ground' || P.state === 'air')) {
+      const b = M(T(P.x, P.y, P.z), RY(P.face));
+      draw(mCube, M(b, T(0, 0.08, 0.05), S(0.32, 0.06, 1.0)), hex('#20c997'));
+      [0.45, -0.38].forEach((z) => draw(mCube, M(b, T(0, 0.04, z), S(0.12, 0.12, 0.12)), C.black));
+      draw(mCube, M(b, T(0, 0.55, 0.48), S(0.06, 0.95, 0.06)), C.gray); draw(mCube, M(b, T(0, 1.0, 0.48), S(0.6, 0.06, 0.06)), C.gray);
+    }
+    // ふうせん
+    if (bagOn('balloon') && !FP[P.state]) {
+      const bx = P.x - Math.cos(P.face) * 0.35, bz = P.z + Math.sin(P.face) * 0.35, sw = Math.sin(time * 2) * 0.15;
+      draw(mSphere, M(T(bx + sw, P.y + 3.0, bz), S(0.5, 0.6, 0.5)), hex('#ff6b6b'), 0.25);
+      draw(mCube, M(T(bx + sw / 2, P.y + 1.95, bz), S(0.02, 1.3, 0.02)), C.white);
+    }
+    // ランタン
+    if (bagOn('lantern') && !FP[P.state]) { const lx = P.x + Math.cos(P.face) * 0.42 + Math.sin(P.face) * 0.15, lz = P.z - Math.sin(P.face) * 0.42 + Math.cos(P.face) * 0.15; draw(mCube, M(T(lx, P.y + 0.75, lz), S(0.2, 0.26, 0.2)), [1, 0.85, 0.4], 1); }
+  }
+  function drawBubbles() { bubbles.forEach((b) => draw(mSphere, M(T(b.x, b.y, b.z), S(b.r)), [0.75 + 0.25 * Math.sin(b.c * 6), 0.85, 1], 0.6, 0.35 * Math.min(1, (b.life - b.t) * 2))); }
+  $('bBag').addEventListener('click', (e) => { e.preventDefault(); ac(); if (!paused) openBag(); });
+  bagHud();
   // ================= ループ =================
   refreshHud();
   let last = performance.now();
@@ -3433,5 +3548,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
