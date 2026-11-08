@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#070a1c">
+<title>つきの うさぎ と かぐやひめ</title>
+<link rel="stylesheet" href="style.css?v=6a32669">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div id="fx"></div>
+
+<div id="hud" hidden>
+  <div class="top">
+    <div id="hearts" aria-label="ハート"></div>
+    <div class="kbox">
+      <div class="kname">👸 かぐやひめ</div>
+      <div class="kbar"><i id="kfill"></i></div>
+    </div>
+    <button id="bPause" class="icon" aria-label="ていし">⏸</button>
+    <button class="icon snd" aria-label="おと">🔊</button>
+  </div>
+  <div id="say" hidden></div>
+  <div id="hint" hidden></div>
+</div>
+
+<div id="stick" aria-hidden="true"><div id="knobBase"><div id="knob"></div></div></div>
+<button id="bJump" class="pad" aria-label="ジャンプ">⬆️<small>ジャンプ</small></button>
+<button id="bThrow" class="pad" aria-label="なげる">🍡<small>なげる</small></button>
+
+<section id="title" class="screen">
+  <div class="card">
+    <h1><span class="e">🐰</span><ruby>月<rt>つき</rt></ruby>の うさぎ と かぐやひめ<span class="e">🌕</span></h1>
+    <p class="story">かぐやひめが つきの おだんごを ぜんぶ もっていっちゃった！<br>
+      うさぎさん、おだんごを なげて とりかえそう！</p>
+    <div class="diffs">
+      <button data-diff="easy" class="d easy">やさしい<span class="best"></span></button>
+      <button data-diff="normal" class="d normal">ふつう<span class="best"></span></button>
+      <button data-diff="hard" class="d hard">むずかしい<span class="best"></span></button>
+    </div>
+    <ul class="howto">
+      <li>🕹️ ひだりで うごく（まえに たおすと かぐやひめの ほうへ）</li>
+      <li>⬆️ ジャンプ … くうちゅうで もう1かい とべる。つきだから ふわっ！</li>
+      <li>🍡 なげる … かぐやひめを ねらって とんでいくよ</li>
+      <li>🟡 ひかりの たま は よこへ よける ・ 🔴 あかい まる は たけのこ！ すぐ にげる ・ 💫 ひかる わっか は ジャンプ</li>
+      <li class="kb">⌨️ やじるし / WASD で うごく ・ スペース で ジャンプ ・ J か Z で なげる ・ P で ていし</li>
+    </ul>
+    <div class="row">
+      <a class="home" href="../">🏠 メニュー</a>
+      <button class="icon snd" aria-label="おと">🔊</button>
+    </div>
+  </div>
+</section>
+
+<section id="pause" class="screen" hidden>
+  <div class="card small">
+    <h2>ひとやすみ 🍵</h2>
+    <button id="bResume" class="big">つづける</button>
+    <button id="bQuit" class="sub">タイトルへ</button>
+  </div>
+</section>
+
+<section id="result" class="screen" hidden>
+  <div class="card small">
+    <div class="r-emoji"></div>
+    <h2 class="r-title"></h2>
+    <div class="r-msg"></div>
+    <button id="bAgain" class="big">もういちど</button>
+    <button id="bTitle" class="sub">タイトルへ</button>
+  </div>
+</section>
+
+<div id="nogl" hidden>
+  <p>この ブラウザでは 3D が うごかないみたい…</p>
+  <a class="home" href="../">🏠 メニューへ もどる</a>
+</div>
+
+<script src="gl.js?v=6a32669"></script>
+<script src="audio.js?v=6a32669"></script>
+<script src="game.js?v=6a32669"></script>
+</body>
+</html>
