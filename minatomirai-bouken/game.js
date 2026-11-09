@@ -11,7 +11,7 @@
 
   // ================= セーブ =================
   const SAVE_KEY = 'minatomirai-bouken-v2'; // v2: ほんものの ちず（ふるい いち は つかわない）
-  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0 }, piggy: {} }; }
+  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1 }, piggy: {} }; }
   let save = fresh();
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') save = Object.assign(fresh(), s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* つかえない */ } }
@@ -287,8 +287,9 @@ void main(){
     if (r.e) for (let k = 0; k + 1 < r.p.length; k += 4) G.box(r.p[k] - 0.3, 0, r.p[k + 1] - 0.3, r.p[k] + 0.3, y, r.p[k + 1] + 0.3, C.gray);
   });
   // き（おおすぎる ときは まびく）
+  const TREEPOS = [];
   { const n = MAP.trees.length / 2, step = n > 1400 ? n / 1400 : 1;
-    for (let f = 0; f < n; f += step) { const i = Math.floor(f) * 2; tree(MAP.trees[i], MAP.trees[i + 1], 0, 0.8 + hash01(i, 3) * 0.5); } }
+    for (let f = 0; f < n; f += step) { const i = Math.floor(f) * 2, sc = 0.8 + hash01(i, 3) * 0.5; tree(MAP.trees[i], MAP.trees[i + 1], 0, sc); TREEPOS.push([MAP.trees[i], MAP.trees[i + 1], sc]); } }
 
   // --- たてもの ---
   const BCOL = {
@@ -1010,7 +1011,8 @@ void main(){
   }
   function todayHud() {
     const t = SCHED[CLK.wd] || [], c = (save.cal || {})[save.clock.day] || {};
-    $('today').textContent = t.length ? 'きょう ' + t.map((w) => SCHED_IC[w] + (c[w] ? '✅' : '')).join(' ') : 'きょう 🎈おやすみ';
+    const se = ['🌸', '🌻', '🍁', '⛄'][seasonOf(save.clock.day)], evx = ({ bday: '🎂', halloween: '🎃', xmas: '🎄', hanabi: '🎆' })[eventToday()] || '';
+    $('today').textContent = se + evx + ' ' + (t.length ? 'きょう ' + t.map((w) => SCHED_IC[w] + (c[w] ? '✅' : '')).join(' ') : 'きょう 🎈おやすみ');
   }
   let remind = '';
   function scheduleTick() {
@@ -1028,9 +1030,12 @@ void main(){
   function pianoOpen() { const h = CLK.h; return h >= 10 && h < (CLK.wd >= 4 ? 21 : 20); }
 
   // ================= おてんき =================
+  function seasonOf(day) { const f = save.settings.season; return f >= 0 ? f : Math.floor(day / 7) % 4; }
   function weatherOf(day) {
-    const r = hash01(day * 1.7 + 3, 11.3);
-    return r < 0.16 ? 'rain' : r < 0.2 ? 'snow' : r < 0.36 ? 'cloud' : 'sun';
+    const r = hash01(day * 1.7 + 3, 11.3), s = seasonOf(day);
+    if (s === 3) return r < 0.22 ? 'snow' : r < 0.3 ? 'rain' : r < 0.45 ? 'cloud' : 'sun';   // ふゆ は ゆきが おおい
+    if (s === 1) return r < 0.16 ? 'rain' : r < 0.3 ? 'cloud' : 'sun';                      // なつ は ゆきが ふらない
+    return r < 0.16 ? 'rain' : r < 0.2 ? (s === 0 ? 'cloud' : 'snow') : r < 0.36 ? 'cloud' : 'sun';
   }
   function weatherNow() {
     const w = weatherOf(save.clock.day), h = CLK.h;
@@ -1135,7 +1140,7 @@ void main(){
   }
 
   // ================= せってい =================
-  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0 }, save.settings || {});
+  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1 }, save.settings || {});
   function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); $('bProp').hidden = !save.settings.prop; if (!save.settings.prop && P.state === 'prop') { P.state = 'air'; P.ground = false; P.fallTop = P.y; } if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
   function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
   // ================= だい3だんかい: のりもの =================
@@ -2045,7 +2050,7 @@ void main(){
         tone(220, 0.25, 'sine', 0.12, 660); tone(520, 0.2, 'triangle', 0.06, 900, 0.15);
         if (time - (P.softT || -1e9) > 20) { P.softT = time; banner('🌟 ふわっと ちゃくち！<small>たかい ところから おりても だいじょうぶ</small>', 2.2); momSay('ふわっと おりられたね！ さすが あおちゃん 👏', 3); }
       }
-      if (P.ground) { if (!wasGround && fallV < -8) SFX.land(); P.glide = false; }
+      if (P.ground) { if (!wasGround && fallV < -8) SFX.land(); if (!wasGround) splash(true); P.glide = false; }
 
       let inWater = false;
       if (!P.ground && P.y < WATER - 1.0) {
@@ -2196,7 +2201,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
+    momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); seasonTick(dt); rainTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
       const open = zooOpen();
@@ -2252,7 +2257,7 @@ void main(){
     if (nearN && nearN.mama && time - (P.waterT || -1e9) > 50) { P.waterT = time; P.st = maxSt(); P.tired = false; SFX.drink(); banner('🥤 ママ「おみず どうぞ」<small>ごくごく… ぷはー！ げんき まんたん</small>', 2.6); }
     if (nearN !== lastTalk) {
       lastTalk = nearN; const t = $('talk');
-      if (nearN) { t.dataset.who = nearN.who; t.textContent = nearN.say; t.style.display = 'block'; } else t.style.display = 'none';
+      if (nearN) { t.dataset.who = nearN.who; t.textContent = nearN.say; t.style.display = 'block'; halloweenTalk(nearN); } else t.style.display = 'none';
     }
     if (P.y < -40) respawn();
     curDoor = null;
@@ -2564,6 +2569,7 @@ void main(){
       week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: SCHED[i], done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
       wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
       stats: () => { let o = {}; try { o = JSON.parse(localStorage.getItem('minatomirai-bouken-odekake-v1')) || {}; } catch (e) { o = {}; } return { stamps: save.stamps.length, stars: save.stars.length, passed: window.Kumon ? window.Kumon.passed.length : 0, hs: save.hs || 0, photos: photos.length, cups: (o.cups || []).length, maru: Object.keys(o.maru || {}).length >= 5, toys: save.items.filter((id) => window.Shops && window.Shops.TOYS.some((t) => t.id === id && !t.acc)).length }; }, confetti,
+      event: eventToday(), year: yearNow(),
       photos: () => photos.slice(), delPhoto: (i) => { photos.splice(i, 1); storePhotos(); $('photoN').textContent = photos.length; }, papa: PAPA.on, hs: save.hs || 0,
       onClose: (res) => {
         if (res && res.rest) { P.st = maxSt(); P.tired = false; }
@@ -2818,8 +2824,10 @@ void main(){
     const sitP = pose === 'sit';
     part(base, -0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(sitP ? -1.45 : lg));          // はんズボン
     part(base, 0.12, 0.52, 0, 0.19, 0.5, 0.2, hex('#3b4a6b'), RX(sitP ? -1.45 : -lg));
-    part(base, -0.12, 0.1, 0.03, 0.2, 0.14, 0.28, C.white, lg ? RX(lg * 0.6) : null); // くつ
-    part(base, 0.12, 0.1, 0.03, 0.2, 0.14, 0.28, C.white, lg ? RX(-lg * 0.6) : null);
+    const rainy = weatherOf(save.clock.day) === 'rain', rw = save.rainwear || {}, shoe = rainy ? hex(rw.b || '#ffd43b') : C.white, sh = rainy ? 0.26 : 0.14;
+    part(base, -0.12, 0.04 + sh / 2, 0.03, 0.2, sh, 0.28, shoe, lg ? RX(lg * 0.6) : null); // くつ（あめの ひ は ながぐつ）
+    part(base, 0.12, 0.04 + sh / 2, 0.03, 0.2, sh, 0.28, shoe, lg ? RX(-lg * 0.6) : null);
+    if (eventToday() === 'halloween') { part(base, 0, 0.72, -0.2, 0.62, 0.86, 0.04, hex('#f76707')); draw(mCone, M(base, T(0, 1.78, 0), S(0.42, 0.75, 0.42)), hex('#343a40')); draw(mDisc, M(base, T(0, 1.74, 0), S(0.55)), hex('#343a40')); }
     part(base, 0, 0.76, 0, 0.5, 0.5, 0.32, C.blue);                                   // あおい Tシャツ
     draw(mStar, M(base, T(0, 0.8, 0.17), S(0.13, 0.13, 0.06)), C.yellow, 0.6);
     part(base, -0.31, 0.98, 0, 0.14, 0.44, 0.16, C.blue, RX(-al));
@@ -2837,7 +2845,7 @@ void main(){
       { const pb = M(base, T(0, on ? 2.02 : 1.88, 0), RY(a)), L = on ? 2.1 : 0.9, Wb = on ? 0.3 : 0.18; draw(mCube, M(pb, S(L, 0.07, Wb)), C.yellow, 0.3); draw(mCube, M(pb, RY(Math.PI / 2), S(L, 0.07, Wb)), hex('#ff6b6b'), 0.3); draw(mSphere, M(pb, S(0.12)), C.red); } }
     }
     if (P.glide) draw(mChute, M(base, T(0, 4.0, 0)), W);
-    else if (weatherNow() === 'rain' && (P.state === 'ground' || P.state === 'air')) { draw(mCone, M(base, T(-0.3, 2.15, 0), S(1.05, 0.45, 1.05)), hex('#ffd43b')); part(base, -0.3, 2.15, 0, 0.04, 1.1, 0.04, C.navy); } // きいろい かさ
+    else if (weatherNow() === 'rain' && (P.state === 'ground' || P.state === 'air')) { draw(mCone, M(base, T(-0.3, 2.15, 0), S(1.05, 0.45, 1.05)), hex((save.rainwear || {}).u || '#ffd43b')); part(base, -0.3, 2.15, 0, 0.04, 1.1, 0.04, C.navy); } // かさ
   }
   function groundBelow(x, y, z) {
     let g = WATER;
@@ -2981,13 +2989,13 @@ void main(){
       draw(mCube, M(base, RZ(fl), T(0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
       draw(mCube, M(base, RZ(-fl), T(-0.6, 0, 0), S(1.2, 0.06, 0.4)), C.white);
     }
-    drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains(); drawBagItems();
+    drawAo(); drawMom(); drawPapa(); drawFriends(); drawTrains(); drawBagItems(); drawSeason();
     guideTick();
     if ((save.dest || bagOn('radar')) && !FP[P.state]) { const g2 = save.dest || radarTarget(); if (g2) { const a = Math.atan2(g2.x - P.x, g2.z - P.z), bob = Math.sin(time * 4) * 0.12; draw(mArrow, M(T(P.x, P.y + 3.0 + bob + (bagOn('balloon') ? 1.2 : 0), P.z), RY(a), S(0.9)), g2.star ? [1, 0.95, 0.3] : [1, 0.83, 0.1], 0.7); } }
 
     gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
-    drawWeather(); drawBubbles();
-    puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s, p.w ? s * 0.4 : s, s)), p.w ? C.white : [0.78, 0.82, 0.35], 0.6, 0.55 * (1 - p.t / 1.3)); });
+    drawWeather(); drawBubbles(); drawSeasonFx(); drawPuddles();
+    puffs.forEach((p) => { const s = 0.3 + p.t * 0.9; draw(mSphere, M(T(p.x, p.y, p.z), S(s, p.w ? s * 0.4 : s, s)), p.c || (p.w ? C.white : [0.78, 0.82, 0.35]), 0.6, 0.55 * (1 - p.t / 1.3)); });
     const gy = { train: 1, akai: 1, boat: 1, bus: 1, climb: 1, ride: 1, coaster: 1, wheel: 1, heli: 1, hurt: 1 }[P.state] ? null : groundBelow(P.x, P.y, P.z);
     if (P.state === 'heli' || HELI.y > 1) { const hg = groundBelow(HELI.x, HELI.y + 0.2, HELI.z); if (HELI.y - hg < 60) draw(mDisc, M(T(HELI.x, hg + 0.04, HELI.z), S(2.6)), C.black, 1, 0.25); }
     if (gy !== null && P.y - gy < 30) draw(mDisc, M(T(P.x, gy + 0.03, P.z), S(0.45 * Math.max(0.4, 1 - (P.y - gy) / 30))), C.black, 1, 0.3);
@@ -3182,13 +3190,13 @@ void main(){
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
   function drawSet() {
     $('sVol').value = save.settings.vol; $('sCam').value = save.settings.cam;
-    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx], ['sProp', save.settings.prop]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
+    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx], ['sProp', save.settings.prop], ['sSeason', save.settings.season]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
   }
   $('bSet').addEventListener('click', () => { show('ovMenu', false); drawSet(); show('ovSet', true); setPaused(); });
   $('bSetOk').addEventListener('click', () => { show('ovSet', false); setPaused(); });
   $('sVol').addEventListener('input', (e) => { save.settings.vol = +e.target.value; store(); applySettings(); SFX.tap(); });
   $('sCam').addEventListener('input', (e) => { save.settings.cam = +e.target.value; store(); });
-  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx'], ['sProp', 'prop']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
+  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx'], ['sProp', 'prop'], ['sSeason', 'season']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return; save.settings[k] = k === 'big' ? b.dataset.v === '1' : +b.dataset.v; store(); applySettings(); drawSet(); SFX.tap();
   }));
   applySettings();
@@ -3427,6 +3435,7 @@ void main(){
     { id: 'bell', e: '🔔', n: 'ママ よびだし ベル', d: 'ママが すぐ きて、げんき と おなら が まんたん' },
     { id: 'clock', e: '⏰', n: 'じかん とばし どけい', d: 'あさ・ひる・おやつ・ゆうがた・よる へ とぶ' },
     { id: 'bubble', e: '🫧', n: 'シャボンだま', d: 'ふーっと ふくと シャボンだまが いっぱい' },
+    { id: 'rainwear', e: '☂️', n: 'かさ と ながぐつ', d: 'あめの ひ の かさ と ながぐつ の いろを えらぶ' },
   ];
   if (!save.bag) save.bag = {};
   const bagOn = (id) => !!(save.bag && save.bag[id]);
@@ -3443,6 +3452,18 @@ void main(){
       got.forEach((z) => { const b = el('button', 'bagitem', `<i>📍</i><b>${z.name}</b>`); b.addEventListener('click', () => warpTo(z)); g.appendChild(b); });
       if (!got.length) g.appendChild(el('p', 'bagsub', 'まだ スタンプが ないよ。まちを あるいて あつめよう'));
       root.appendChild(g); root.appendChild(bagBack()); show('ovBag', true); setPaused(); return;
+    }
+    if (view === 'rain') {
+      const rw = save.rainwear = save.rainwear || { u: '#ffd43b', b: '#ffd43b' };
+      root.appendChild(el('h2', '', '☂️ かさ と ながぐつ'));
+      root.appendChild(el('p', 'bagsub', 'あめの ひ に つかうよ。みずたまりで ジャンプ すると ぴちゃぴちゃ！'));
+      [['u', '☂️ かさ'], ['b', '👢 ながぐつ']].forEach(([k, n]) => {
+        root.appendChild(el('p', 'bagsub', n));
+        const row = el('div', 'rwrow');
+        RAINCOL.forEach((c) => { const b = el('button', 'rwc' + (rw[k] === c ? ' on' : '')); b.style.background = c; b.addEventListener('click', () => { rw[k] = c; store(); SFX.tap(); openBag('rain'); }); row.appendChild(b); });
+        root.appendChild(row);
+      });
+      root.appendChild(bagBack()); show('ovBag', true); setPaused(); return;
     }
     if (view === 'clock') {
       root.appendChild(el('h2', '', '⏰ じかん とばし どけい'));
@@ -3477,6 +3498,7 @@ void main(){
     }
     if (it.id === 'warp') { openBag('warp'); return; }
     if (it.id === 'clock') { openBag('clock'); return; }
+    if (it.id === 'rainwear') { openBag('rain'); return; }
     show('ovBag', false); setPaused();
     if (it.id === 'bell') {
       if (time - bellT < 20) { banner('🔔 ママは さっき きたよ<small>すこし まってから また ならそう</small>', 2); return; }
@@ -3529,6 +3551,134 @@ void main(){
   function drawBubbles() { bubbles.forEach((b) => draw(mSphere, M(T(b.x, b.y, b.z), S(b.r)), [0.75 + 0.25 * Math.sin(b.c * 6), 0.85, 1], 0.6, 0.35 * Math.min(1, (b.life - b.t) * 2))); }
   $('bBag').addEventListener('click', (e) => { e.preventDefault(); ac(); if (!paused) openBag(); });
   bagHud();
+  // ================= きせつ と イベント（ゲームの 1しゅうかん で きせつが かわる）=================
+  const SEASONS = [{ id: 'spring', n: 'はる', e: '🌸' }, { id: 'summer', n: 'なつ', e: '🌻' }, { id: 'autumn', n: 'あき', e: '🍁' }, { id: 'winter', n: 'ふゆ', e: '⛄' }];
+  const EVENTS = { bday: { e: '🎂', n: 'あおちゃんの おたんじょうび' }, halloween: { e: '🎃', n: 'ハロウィン' }, xmas: { e: '🎄', n: 'クリスマス' }, hanabi: { e: '🎆', n: 'はなび たいかい' } };
+  function seasonNow() { return seasonOf(save.clock.day); }
+  function yearNow() { return Math.floor(save.clock.day / 28); }
+  function eventToday() {
+    const s = seasonNow(), wd = CLK.wd;
+    if (s === 0 && wd === 6) return 'bday';
+    if (s === 2 && wd === 5) return 'halloween';
+    if (s === 3 && wd >= 5) return 'xmas';
+    if (s === 1 && wd >= 5) return 'hanabi';
+    return null;
+  }
+  const evDone = (k) => !!(save.events && save.events[k + ':' + yearNow()]);
+  const evSet = (k) => { save.events = save.events || {}; save.events[k + ':' + yearNow()] = 1; store(); };
+  // --- き の ばしょ から きせつの かざり を つくる ---
+  const SAKURA_SEG = [];
+  MAP.roads.forEach((r) => { if (!/^(さくら通り|汽車道|関内さくら通り|さくらみらい橋)$/.test(r.n || '')) return; for (let i = 0; i + 3 < r.p.length; i += 2) SAKURA_SEG.push([r.p[i], r.p[i + 1], r.p[i + 2], r.p[i + 3]]); });
+  const segD = (x, z, s) => { const dx = s[2] - s[0], dz = s[3] - s[1], L2 = dx * dx + dz * dz || 1, t = clamp(((x - s[0]) * dx + (z - s[1]) * dz) / L2, 0, 1); return Math.hypot(s[0] + dx * t - x, s[1] + dz * t - z); };
+  const SAKURA = TREEPOS.filter(([x, z]) => SAKURA_SEG.some((s) => segD(x, z, s) < 12));
+  const mSakura = mk((g) => SAKURA.forEach(([x, z, s], i) => { g.sphere(x, 2.25 * s, z, 1.35 * s, 5, hex(i % 3 ? '#ffc9de' : '#ffdeeb')); g.sphere(x + 0.5 * s, 1.85 * s, z - 0.3 * s, 0.85 * s, 4, hex('#fcc2d7')); }));
+  const mAutumn = mk((g) => TREEPOS.forEach(([x, z, s], i) => g.cone(x, 0.78 * s, z, 1.27 * s, 2.7 * s, 6, hex(['#f76707', '#e03131', '#fab005', '#d9480f'][i % 4]))));
+  const mSnowCap = mk((g) => TREEPOS.forEach(([x, z, s]) => g.cone(x, 1.95 * s, z, 0.86 * s, 1.5 * s, 6, hex('#f8f9fa'))));
+  const mLights = mk((g) => TREEPOS.forEach(([x, z, s], i) => {
+    if (Math.hypot(x - LMC.x, z - LMC.z) > 320 || hash01(x, z) > 0.7) return;
+    for (let k = 0; k < 7; k++) { const a = k * 2.3 + i, hh = 0.9 + (k / 7) * 2.3, rr = 1.2 * (1 - (hh - 0.8) / 2.7) * s + 0.06; g.sphere(x + Math.cos(a) * rr, hh * s, z + Math.sin(a) * rr, 0.09, 3, hex(['#ffd43b', '#ff6b6b', '#74c0fc', '#ffffff'][k % 4])); }
+  }));
+  // ゆきだるま（こうえん）・クリスマスツリー（あかレンガ）・はなび の ばしょ（うみの うえ）
+  const SNOWMEN = PARKS.map((p) => freeSpot(p.x + 5, p.z + 3));
+  const XTREE = (() => { const a = POI['横浜赤レンガ倉庫1号館'], b = POI['横浜赤レンガ倉庫2号館']; if (!a || !b) return null; return freeSpot((a.x + b.x) / 2, (a.z + b.z) / 2); })();
+  const mXTree = mk((g) => { if (!XTREE) return; g.cyl(XTREE.x, 0, XTREE.z, 0.5, 1.2, 8, C.trunk); [[0.9, 4.2, 3.4], [3.0, 3.6, 2.8], [5.2, 3.0, 2.2]].forEach(([y, h, r]) => g.cone(XTREE.x, y, XTREE.z, r, h, 10, hex('#2b8a3e'))); });
+  const HANABI = (() => { const q = POI['臨港パーク'] || { x: 150, z: -60 }; for (let r = 30; r < 220; r += 10) for (let a = 0; a < 16; a++) { const x = q.x + Math.cos(a / 16 * Math.PI * 2) * r, z = q.z + Math.sin(a / 16 * Math.PI * 2) * r; if (!isLand(x, z) && !isLand(x + 15, z) && !isLand(x - 15, z)) return { x, z }; } return { x: q.x + 80, z: q.z }; })();
+  const SANTA = XTREE ? freeSpot(XTREE.x + 4, XTREE.z + 2) : null;
+  const sparks = [], petals = [];
+  let lastSeason = -1, hanabiT = 0, cicadaT = 0, lastEv = '';
+  function seasonTick(dt) {
+    const s = seasonNow(), ev = eventToday();
+    if (s !== lastSeason) {
+      if (lastSeason >= 0) banner(`${SEASONS[s].e} ${SEASONS[s].n} に なったよ！<small>${['さくらが さいたよ。きしゃみち や さくらどおり へ いこう', 'あついね！ しゅうまつ の よる は うみで はなび', 'はっぱが あかや きいろに なったよ', 'さむい！ ゆきが ふる ことも。よるは イルミネーション'][s]}</small>`, 4);
+      lastSeason = s; todayHud();
+    }
+    if (ev !== lastEv) { lastEv = ev || ''; todayHud(); if (ev) { const L = { bday: 'きょうは あおちゃんの おたんじょうび！ おうちで おいわい しよう 🎂', halloween: 'きょうは ハロウィン！ まちの ひとに「トリック オア トリート」🎃', xmas: 'メリー クリスマス！ あかレンガ そうこ に おおきな ツリー 🎄', hanabi: 'こんやは うみで はなび が あがるよ 🎆（19:30〜21:00）' }[ev]; momSay(L, 4.5); } }
+    // はなび
+    if (ev === 'hanabi' && CLK.h >= 19.5 && CLK.h < 21) {
+      if ((hanabiT -= dt) < 0) {
+        hanabiT = 0.7 + Math.random() * 0.9; const x = HANABI.x + (Math.random() - 0.5) * 40, z = HANABI.z + (Math.random() - 0.5) * 40, y = 45 + Math.random() * 25;
+        const col = [[1, 0.4, 0.4], [1, 0.85, 0.3], [0.5, 0.8, 1], [0.7, 1, 0.5], [1, 0.6, 1]][(Math.random() * 5) | 0];
+        for (let i = 0; i < 46; i++) { const a = Math.random() * Math.PI * 2, b = Math.acos(2 * Math.random() - 1), v = 9 + Math.random() * 3; sparks.push({ x, y, z, vx: Math.sin(b) * Math.cos(a) * v, vy: Math.cos(b) * v, vz: Math.sin(b) * Math.sin(a) * v, t: 0, life: 1.6 + Math.random() * 0.6, col }); }
+        const d = Math.hypot(x - P.x, z - P.z); if (d < 600) { const v = clamp(30 / Math.max(30, d), 0.15, 1); setTimeout(() => { noise(0.5, 0.12 * v, 160, 'lowpass'); tone(70, 0.5, 'sine', 0.12 * v, 40); }, Math.min(1500, d * 3)); }
+      }
+    }
+    for (let i = sparks.length - 1; i >= 0; i--) { const p = sparks[i]; p.t += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.vy -= 4 * dt; p.vx *= 0.97; p.vz *= 0.97; if (p.t > p.life) sparks.splice(i, 1); }
+    // せみ（なつの ひる、きの ちかく）
+    if (s === 1 && CLK.h >= 9 && CLK.h < 17 && P.state === 'ground' && weatherNow() === 'sun' && (cicadaT -= dt) < 0) {
+      cicadaT = 5 + Math.random() * 6;
+      if (near(P.x - 12, P.z - 12, P.x + 12, P.z + 12).length > 0 && TREEPOS.some(([x, z]) => Math.abs(x - P.x) < 15 && Math.abs(z - P.z) < 15)) for (let k = 0; k < 10; k++) tone(k % 2 ? 1450 : 1250, 0.13, 'sawtooth', 0.012, null, k * 0.16);
+    }
+    // さくらの はなびら
+    if (s === 0 && SAKURA.length && Math.random() < dt * 14) {
+      const t = SAKURA[(Math.random() * SAKURA.length) | 0];
+      if (Math.hypot(t[0] - P.x, t[1] - P.z) < 60) petals.push({ x: t[0] + (Math.random() - 0.5) * 3, y: 2.6 * t[2], z: t[1] + (Math.random() - 0.5) * 3, t: 0, s: Math.random() * 9 });
+    }
+    for (let i = petals.length - 1; i >= 0; i--) { const p = petals[i]; p.t += dt; p.y -= 0.6 * dt; p.x += Math.sin(p.t * 2 + p.s) * 0.7 * dt + 0.25 * dt; p.z += Math.cos(p.t * 1.7 + p.s) * 0.5 * dt; if (p.y < 0.03 || petals.length > 260) petals.splice(i, 1); }
+    // クリスマス: サンタさん から プレゼント（1ねんに 1かい）
+    if (ev === 'xmas' && SANTA && P.state === 'ground' && Math.hypot(SANTA.x - P.x, SANTA.z - P.z) < 3 && !evDone('xmasgift')) {
+      evSet('xmasgift');
+      const T = (window.Shops && window.Shops.TOYS) || [], own = save.items, cand = T.filter((t) => !t.acc && !own.includes(t.id)), gift = cand[(Math.random() * cand.length) | 0];
+      if (gift) { Wallet.addItem(gift.id); banner(`🎅 サンタさん から プレゼント！<small>🎁 ${gift.name}（おうちの おもちゃ に はいったよ）</small>`, 4.5); }
+      else { save.oni = Math.min(9, save.oni + 3); store(); refreshHud(); banner('🎅 サンタさん から プレゼント！<small>🍙 おにぎり 3こ</small>', 4); }
+      confetti(); SFX.big(); momSay('よかったね！ サンタさんに ありがとう って いおうね 🎅', 4);
+    }
+  }
+  // ハロウィン: まちの ひとに はなしかけると おかし
+  function halloweenTalk(n) {
+    if (eventToday() !== 'halloween' || !n || n.mama) return;
+    const key = 'candy:' + save.clock.day + ':' + Math.round(n.x) + ',' + Math.round(n.z);
+    save.events = save.events || {}; if (save.events[key]) return; save.events[key] = 1;
+    save.candy = (save.candy || 0) + 1; store();
+    const c = ['🍬', '🍭', '🍫', '🍪', '🧁'][save.candy % 5];
+    banner(`🎃 トリック オア トリート！<small>${c} おかしを もらったよ（ぜんぶで ${save.candy}こ）</small>`, 2.6); SFX.star();
+  }
+  function drawSeason() {
+    const s = seasonNow(), SKn = skyNow().night, ev = eventToday();
+    if (s === 0) draw(mSakura, I(), W);
+    else if (s === 2) draw(mAutumn, I(), W);
+    else if (s === 3) { draw(mSnowCap, I(), W); if (SKn > 0.25) draw(mLights, I(), W, 1); SNOWMEN.forEach((q) => { draw(mSphere, M(T(q.x, 0.7, q.z), S(0.75)), C.white); draw(mSphere, M(T(q.x, 1.7, q.z), S(0.5)), C.white); draw(mCone, M(T(q.x, 1.7, q.z + 0.45), RX(Math.PI / 2), S(0.08, 0.35, 0.08)), C.orange); [-0.17, 0.17].forEach((o) => draw(mSphere, M(T(q.x + o, 1.85, q.z + 0.44), S(0.06)), C.black)); draw(mCube, M(T(q.x, 2.25, q.z), S(0.55, 0.35, 0.55)), hex('#c92a2a')); }); }
+    if (s === 3 && XTREE) { draw(mXTree, I(), W); draw(mStar, M(T(XTREE.x, 8.8, XTREE.z), RY(time), S(1.1)), C.gold, 1); if (SKn > 0.25 || ev === 'xmas') for (let k = 0; k < 24; k++) { const a = k * 1.9, hh = 1.2 + k * 0.28, rr = 3.3 * (1 - hh / 8.5); draw(mSphere, M(T(XTREE.x + Math.cos(a) * rr, hh, XTREE.z + Math.sin(a) * rr), S(0.16)), [[1, 0.3, 0.3], [1, 0.85, 0.3], [0.4, 0.7, 1]][k % 3], 0.5 + 0.5 * Math.sin(time * 3 + k)); } }
+    if (ev === 'xmas' && SANTA) { const b = M(T(SANTA.x, 0, SANTA.z), RY(Math.atan2(P.x - SANTA.x, P.z - SANTA.z))); personAt(b, hex('#e03131'), 'stand', 0, hex('#e03131'), C.white, false); part(b, 0, 1.35, 0.2, 0.5, 0.35, 0.12, C.white); draw(mCone, M(b, T(0, 1.85, 0), S(0.3, 0.55, 0.3)), hex('#e03131')); draw(mSphere, M(b, T(0, 2.4, 0), S(0.09)), C.white); }
+    if (ev === 'halloween') DOORS.forEach((d, i) => { if (i > 40 || d.x > 1e6 || d.y) return; const x = d.x + 1.1, z = d.z + 0.6; draw(mSphere, M(T(x, 0.38, z), S(0.5, 0.4, 0.5)), hex('#f76707')); draw(mCube, M(T(x, 0.82, z), S(0.06, 0.14, 0.06)), hex('#2b8a3e')); draw(mCube, M(T(x, 0.42, z + 0.47), S(0.32, 0.08, 0.04)), [1, 0.85, 0.3], 1); });
+  }
+  function drawSeasonFx() {
+    sparks.forEach((p) => draw(mSphere, M(T(p.x, p.y, p.z), S(0.45)), p.col, 1, Math.max(0, 1 - p.t / p.life)));
+    petals.forEach((p) => draw(mCube, M(T(p.x, p.y, p.z), RY(p.t * 3 + p.s), RX(p.t * 2), S(0.12, 0.02, 0.1)), hex('#ffc9de'), 0.5, 0.9));
+  }
+
+  // ================= あめの ひ の あそび（みずたまり ジャンプ）=================
+  const PUD = new Map();
+  function rainDay() { return weatherOf(save.clock.day) === 'rain' && CLK.h >= 9; }
+  function puddlesNear(x, z) {
+    const out = [], C0 = 9;
+    for (let i = Math.floor((x - 30) / C0); i <= Math.floor((x + 30) / C0); i++) for (let j = Math.floor((z - 30) / C0); j <= Math.floor((z + 30) / C0); j++) {
+      const k = i * 100003 + j; let p = PUD.get(k);
+      if (p === undefined) {
+        p = null;
+        if (hash01(i * 3.1 + 7, j * 1.7 + 3) < 0.22) { const px = (i + 0.2 + hash01(i, j) * 0.6) * C0, pz = (j + 0.2 + hash01(j, i) * 0.6) * C0; if (isLand(px, pz) && !blockedAt(px, 0, pz) && isLand(px + 1, pz) && isLand(px - 1, pz)) p = { x: px, z: pz, r: 1.1 + hash01(i * 2, j) * 0.8 }; }
+        PUD.set(k, p);
+      }
+      if (p) out.push(p);
+    }
+    return out;
+  }
+  function puddleAt(x, z) { if (!rainDay()) return null; return puddlesNear(x, z).find((p) => Math.hypot(p.x - x, p.z - z) < p.r) || null; }
+  function splash(big) {
+    const p = puddleAt(P.x, P.z); if (!p || P.y > 0.3) return;
+    for (let i = 0; i < (big ? 16 : 5); i++) { const a = Math.random() * Math.PI * 2; puffs.push({ x: P.x + Math.cos(a) * 0.4, y: 0.1, z: P.z + Math.sin(a) * 0.4, t: 0.4, vy: big ? 2.5 + Math.random() * 1.5 : 1, w: 1, c: [0.55, 0.75, 1] }); }
+    if (big) {
+      tone(900, 0.08, 'sine', 0.06, 300); tone(600, 0.1, 'triangle', 0.04, 200, 0.05);
+      save.splash = (save.splash || 0) + 1; store();
+      if (save.splash % 10 === 0) { banner(`💦 ぴちゃぴちゃ めいじん！<small>みずたまり ジャンプ ${save.splash}かい</small>`, 2.6); momSay('ながぐつ はいてて よかったね！ 💦', 3); }
+    }
+  }
+  let walkSplashT = 0;
+  function rainTick(dt) { if (P.state === 'ground' && P.speed > 3 && (walkSplashT -= dt) < 0) { walkSplashT = 0.35; splash(false); } }
+  function drawPuddles() {
+    if (!rainDay()) return;
+    puddlesNear(P.x, P.z).forEach((p) => { draw(mDisc, M(T(p.x, 0.035, p.z), S(p.r, 1, p.r * 0.75)), [0.32, 0.45, 0.62], 0.1, 0.55); if (weatherNow() === 'rain') { const r = ((time * 1.3 + p.x) % 1); draw(mDisc, M(T(p.x + Math.sin(p.z) * 0.3, 0.04, p.z), S(r * p.r * 0.7, 1, r * p.r * 0.5)), C.white, 0.4, 0.3 * (1 - r)); } });
+  }
+  const RAINCOL = ['#ffd43b', '#ff6b6b', '#4dabf7', '#51cf66', '#f783ac', '#9775fa'];
   // ================= ループ =================
   refreshHud();
   let last = performance.now();
@@ -3548,5 +3698,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
