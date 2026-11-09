@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>でんしゃ どこだ？</title>
+<meta name="description" content="まち の え に かくれた ケーブルカー や SL を さがそう！ いろいろ な てつどう を みつけて ずかん に あつめる さがしもの ゲーム。">
+<meta name="theme-color" content="#f08c00">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+<link rel="stylesheet" href="style.css?v=74580fa">
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ホーム: まち を えらぶ -->
+<main id="home" class="screen">
+  <header class="hd">
+    <h1>🔍 でんしゃ どこだ？</h1>
+    <p class="sub">まち の え に かくれた てつどう を さがそう！</p>
+  </header>
+  <div class="towns" id="towns"></div>
+  <div class="homebtns">
+    <button type="button" id="zukanBtn" class="big">📖 ずかん <span id="zukanCount"></span></button>
+  </div>
+  <div class="toggles">
+    <button type="button" class="tgl" data-tgl="snd" aria-pressed="true">🔊 おと</button>
+    <button type="button" class="tgl" data-tgl="voice" aria-pressed="true">🗣️ こえ</button>
+  </div>
+  <ul class="how">
+    <li>え を ゆび で うごかす・2ほん の ゆび で ひろげる（＋－ ボタン でも）</li>
+    <li>したの カード の もの を みつけたら タップ！</li>
+    <li>わからない ときは カード を <b>ながおし</b> → だいたい の ばしょ が ひかる</li>
+    <li>へんな もの（おまけ）も かくれて いるよ</li>
+  </ul>
+</main>
+
+<!-- あそぶ -->
+<section id="play" class="screen" hidden>
+  <div class="bar">
+    <button type="button" id="backBtn" aria-label="もどる">◀</button>
+    <div id="townName" class="tname"></div>
+    <div id="count" class="count">0/5</div>
+    <button type="button" class="tgl sm" data-tgl="snd" aria-pressed="true" aria-label="おと">🔊</button>
+    <button type="button" class="tgl sm" data-tgl="voice" aria-pressed="true" aria-label="こえ">🗣️</button>
+  </div>
+  <div id="stage">
+    <svg id="scene" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMinYMin meet" aria-label="まち の え">
+      <defs>
+        <radialGradient id="hintGrad"><stop offset="0" stop-color="#fff3bf" stop-opacity=".95"/><stop offset=".6" stop-color="#ffe066" stop-opacity=".55"/><stop offset="1" stop-color="#ffe066" stop-opacity="0"/></radialGradient>
+      </defs>
+      <g id="world"></g>
+      <g id="fx"></g>
+    </svg>
+    <div class="zoombtns">
+      <button type="button" id="zIn" aria-label="おおきく">＋</button>
+      <button type="button" id="zOut" aria-label="ちいさく">－</button>
+    </div>
+    <div id="toast" class="toast" hidden></div>
+    <div id="omakeBadge" class="omake" hidden></div>
+  </div>
+  <div id="cards" class="cards"></div>
+
+  <div id="result" class="result" hidden>
+    <div class="panel">
+      <div class="big-emoji">🎉</div>
+      <h2>ぜんぶ みつけた！</h2>
+      <p id="resOmake"></p>
+      <div class="rbtns">
+        <button type="button" id="againBtn" class="big">🔄 もういちど</button>
+        <button type="button" id="otherBtn" class="big">🗺️ ほか の まち</button>
+        <button type="button" id="resZukanBtn" class="big">📖 ずかん</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ずかん -->
+<section id="zukan" class="screen" hidden>
+  <div class="bar">
+    <button type="button" id="zBack" aria-label="もどる">◀</button>
+    <div class="tname">📖 てつどう ずかん</div>
+    <div id="zCount" class="count"></div>
+  </div>
+  <div id="zlist" class="zlist"></div>
+</section>
+
+<script src="art.js?v=74580fa"></script>
+<script src="scenes.js?v=74580fa"></script>
+<script src="audio.js?v=74580fa"></script>
+<script src="app.js?v=74580fa"></script>
+</body>
+</html>
