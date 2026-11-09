@@ -1481,6 +1481,12 @@ void main(){
   // てつどう もけい の はくぶつかん（よこはま みつい ビルディング 2かい・たかしま 1-1-2）
   const HARAD = POI['横浜三井ビルディング'] ? doorOn('横浜三井ビルディング', POI['横浜三井ビルディング'].x + 30, POI['横浜三井ビルディング'].z + 30) : null;
   addDoor('hara', HARAD, '🚂<br>はくぶつかん', hex('#1864ab'), () => openShop('hara'));
+  // よこはま みなと はくぶつかん（にっぽんまる の となり）・みつびし みなとみらい ぎじゅつかん・ひかわまる の いりぐち（OSM の いち）
+  const MINATO = freeSpot(...GEO(35.452709, 139.632629)), MHI = freeSpot(...GEO(35.4557307, 139.6300831));
+  DOORS.push({ id: 'minato', x: MINATO.x, z: MINATO.z, label: '⚓<br>はくぶつかん', color: hex('#1864ab'), run: () => openShop('minato') });
+  DOORS.push({ id: 'mhi', x: MHI.x, z: MHI.z, label: '🚀<br>ぎじゅつかん', color: hex('#e03131'), run: () => openShop('mhi') });
+  const HIKAWAD = HIKAWA ? (() => { for (const sd of [1, -1]) { const f = freeSpot(HIKAWA.x - HIKAWA.uz * 6 * sd, HIKAWA.z + HIKAWA.ux * 6 * sd); if (Math.hypot(f.x - HIKAWA.x, f.z - HIKAWA.z) < 14) return f; } return freeSpot(HIKAWA.x, HIKAWA.z); })() : null;
+  if (HIKAWAD) DOORS.push({ id: 'hikawa', x: HIKAWAD.x, z: HIKAWAD.z, label: '🚢<br>はいる', color: hex('#212529'), run: () => openShop('hikawa') });
   if (NIKU) DOORS.push({ id: 'nikuman', x: NIKU.x, z: NIKU.z, label: '🥟<br>かう', color: hex('#c92a2a'), run: () => openShop('chuka') });
   [[KANTEI, 'kantei', '横浜関帝廟'], [MAZU, 'mazu', '横浜媽祖廟']].forEach(([q, id, n]) => { if (!q) return; const d = doorOn(n, q.x + 30, q.z - 30), f = d ? { x: d.ox, z: d.oz } : freeSpot(q.x, q.z); if (f) DOORS.push({ id, x: f.x, z: f.z, label: '🙏<br>おまいり', color: hex('#c92a2a'), run: () => openShop('byo', id) }); });
   // ================= だい5だんかい: でんしゃ（JR・ブルーライン・みなとみらいせん）=================
@@ -1633,6 +1639,8 @@ void main(){
     YAMA ? { id: 'yamashita', name: 'やました こうえん', x: YAMA.x, z: YAMA.z, r: 18, say: 'うみの かぜが きもちいいね 🌊' } : null,
     HIKAWA ? { id: 'hikawa', name: 'ひかわまる', x: HIKAWA.x, z: HIKAWA.z, r: HIKAWA.len / 2 + 4, say: 'おおきな くろい ふね！ むかしは アメリカまで いったんだって' } : null,
     zp('marine', 'マリンタワー', '横浜マリンタワー', { r: 9, say: 'あかと しろの とう だね 🗼' }),
+    { id: 'minato', name: 'よこはま みなと はくぶつかん', x: MINATO.x, z: MINATO.z, r: 8, say: 'みなと の れきし が わかる はくぶつかん だよ ⚓' },
+    { id: 'mhi', name: 'みつびし みなとみらい ぎじゅつかん', x: MHI.x, z: MHI.z, r: 8, say: 'ロケット や ひこうき が みられるんだって 🚀' },
     zp('hara', 'てつどう もけい はくぶつかん', '横浜三井ビルディング', { r: 14, say: 'でんしゃの もけいが いっぱい あるんだって 🚂' }),
   ].filter(Boolean);
   $('stampT').textContent = ZONES.length;
@@ -3154,6 +3162,8 @@ void main(){
     if (!window.Shops) return;
     if (kind === 'cupnoodle' && !cupOpen()) { banner('🍜 カップヌードル ミュージアムは しまってるよ<small>10:00〜18:00 ・ かようび は おやすみ</small>', 3); return; }
     if (kind === 'hara' && !(CLK.wd !== 1 && CLK.wd !== 2 && CLK.h >= 10 && CLK.h < 17)) { banner('🚂 てつどう もけい の はくぶつかん は しまってるよ<small>10:00〜17:00 ・ かようび と すいようび は おやすみ（めやす）</small>', 3); return; }
+    if ((kind === 'hikawa' || kind === 'minato') && !(CLK.wd !== 0 && CLK.h >= 10 && CLK.h < 17)) { banner(`${kind === 'hikawa' ? '🚢 ひかわまる' : '⚓ みなと はくぶつかん'} は しまってるよ<small>10:00〜17:00 ・ げつようび は おやすみ（めやす）</small>`, 3); return; }
+    if (kind === 'mhi' && !(CLK.wd !== 1 && CLK.wd !== 2 && CLK.h >= 10 && CLK.h < 17)) { banner('🚀 ぎじゅつかん は しまってるよ<small>10:00〜17:00 ・ かようび と すいようび は おやすみ（めやす）</small>', 3); return; }
     if (kind === 'nipponmaru' && !nmOpen()) { banner('⛵ にっぽんまるは しまってるよ<small>10:00〜17:00 ・ げつようび は おやすみ（めやす）</small>', 3); return; }
     SFX.door(); show('ovShop', true); setPaused();
     window.Shops.open(kind, {
@@ -3213,7 +3223,7 @@ void main(){
 
   // ================= だい5だんかい: でんしゃに のる =================
   const ekiN = (n) => EKI_YOMI[n] || n;
-  function trainStations() { return TRAINS.map((t) => ({ k: t.k, name: t.info.name, short: t.info.short, col: t.info.col, sub: t.info.sub, stops: t.stops.map((s) => ({ n: ekiN(s.n) })) })); }
+  function trainStations() { return TRAINS.map((t) => ({ k: t.k, name: t.info.name, short: t.info.short, col: t.info.col, sub: t.info.sub, stops: t.stops.map((s) => ({ n: ekiN(s.n), s: s.s })) })); }
   function arriveTrain(li, si, how) {
     const t = TRAINS[li], st = t && t.stops[si]; if (!st) return;
     P.x = st.door.x; P.z = st.door.z; P.y = 0; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; P.tr = null; lastDoorId = 'eki_' + li + '_' + si;
@@ -3698,5 +3708,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
