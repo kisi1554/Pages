@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>くもん エレベーター</title>
+<style>
+  :root { --shaft: 72px; --ink: #1f2a44; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink);
+    background: linear-gradient(#8fd3ff, #d9f2ff 60%, #b9e6a8);
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  #app { height: 100%; display: flex; flex-direction: column; max-width: 760px; margin: 0 auto; padding: 6px 8px 8px; }
+
+  /* ── ヘッダー ── */
+  header { display: flex; align-items: center; gap: 6px; flex: none; padding-bottom: 6px; }
+  header h1 { font-size: clamp(15px, 4.4vw, 22px); margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hbtn { min-width: 46px; height: 46px; border-radius: 14px; background: #fff; font-size: 22px; box-shadow: 0 2px 0 #0002; position: relative; overflow: hidden; }
+  .hbtn .fill, .print .fill { position: absolute; left: 0; bottom: 0; height: 100%; width: 0; background: #ffd43b88; pointer-events: none; }
+  .holding .fill { width: 100%; transition: width 1s linear; }
+  .bar { display: flex; gap: 6px; align-items: stretch; flex: none; padding-bottom: 6px; }
+  .power { flex: 1; background: #fff; border-radius: 14px; padding: 5px 10px; box-shadow: 0 2px 0 #0002; min-width: 0; }
+  .power small { font-size: 12px; display: block; }
+  .gauge { display: flex; gap: 3px; margin-top: 3px; }
+  .gauge i { flex: 1; height: 12px; border-radius: 6px; background: #e9ecef; }
+  .gauge i.on { background: linear-gradient(#ffe066, #fab005); }
+  .print { position: relative; overflow: hidden; background: #fff; border-radius: 14px; padding: 4px 10px; font-size: 13px; font-weight: 700; box-shadow: 0 2px 0 #0002; line-height: 1.25; min-height: 46px; }
+  .print.done { background: #d3f9d8; }
+
+  /* ── ビル ── */
+  #bldg { flex: 1; min-height: 0; position: relative; display: flex; flex-direction: column; background: #f8f9fa; border: 4px solid #495057; border-radius: 18px 18px 8px 8px; overflow-y: auto; overflow-x: hidden; }
+  .row { flex: 1; min-height: 46px; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 calc(var(--shaft) + 8px); border-top: 3px solid #495057; background: var(--c); text-align: left; width: 100%; position: relative; }
+  .row:first-child { border-top: none; }
+  .row.roof { background: linear-gradient(90deg, #1b2a5c, #364fc7); color: #fff; font-weight: 700; font-size: 15px; }
+  .row .id { flex: none; width: 54px; height: 36px; border-radius: 12px; background: #fff; display: grid; place-items: center; font-weight: 900; font-size: 20px; border: 3px solid var(--ink); }
+  .row .who { font-size: 26px; flex: none; }
+  .row .nm { flex: 1; min-width: 0; font-weight: 700; font-size: clamp(12px, 3.6vw, 17px); line-height: 1.2; }
+  .row .nm small { display: block; font-weight: 400; font-size: 11px; opacity: .8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .st { flex: none; font-size: 15px; font-weight: 700; text-align: right; white-space: nowrap; }
+  .row.locked { filter: saturate(.35); }
+  .row.locked .who { filter: brightness(0); opacity: .55; }
+  .row.cur .id { background: #ffd43b; }
+  .row.next { filter: none; }
+  .row.next .who { filter: brightness(0); opacity: .7; }
+  .row.next .st { animation: pulse 1.2s infinite; }
+  .tag { display: inline-block; background: #e03131; color: #fff; border-radius: 9px; padding: 2px 7px; font-size: 11px; }
+  .tag.b { background: #1c7ed6; }
+  @keyframes pulse { 50% { transform: scale(1.12); } }
+  #shaft { position: absolute; left: 0; top: 0; width: var(--shaft); background: repeating-linear-gradient(#ced4da 0 6px, #adb5bd 6px 8px); border-right: 3px solid #495057; pointer-events: none; }
+  #shaft::before { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 3px; background: #343a40; }
+  #car { position: absolute; left: 7px; width: calc(var(--shaft) - 17px); top: 0; border: 3px solid var(--k1, #364fc7); border-radius: 9px; background: var(--k2, #dbe4ff); display: grid; place-items: center; font-size: 24px; transition: top var(--t, 1s) cubic-bezier(.45,.05,.3,1); pointer-events: auto; z-index: 3; line-height: 1; }
+  #car .deco { position: absolute; top: -4px; right: -6px; font-size: 14px; }
+  #car.moving { animation: wob .3s infinite; }
+  @keyframes wob { 50% { transform: translateX(1px); } }
+
+  /* ── へや（オーバーレイ） ── */
+  #room { position: fixed; inset: 0; z-index: 20; display: none; flex-direction: column; background: var(--c, #fff); overflow: hidden; }
+  #room.show { display: flex; }
+  .door { position: absolute; top: 0; bottom: 0; width: 50%; background: linear-gradient(90deg, #adb5bd, #dee2e6, #adb5bd); z-index: 30; transition: transform .9s ease-in-out; border: 3px solid #495057; }
+  .door.l { left: 0; } .door.r { right: 0; }
+  #room.open .door.l { transform: translateX(-101%); }
+  #room.open .door.r { transform: translateX(101%); }
+  .rhead { display: flex; align-items: center; gap: 8px; padding: 8px; flex: none; }
+  .rhead .back { background: #fff; border-radius: 14px; height: 48px; padding: 0 12px; font-weight: 700; font-size: 15px; box-shadow: 0 2px 0 #0003; }
+  .rhead .ttl { flex: 1; font-weight: 900; font-size: clamp(16px, 4.6vw, 24px); min-width: 0; }
+  .scene { flex: none; display: flex; justify-content: center; align-items: flex-end; gap: 12px; font-size: clamp(34px, 9vmin, 64px); padding: 2px 8px 6px; min-height: 1.4em; }
+  .scene .big { font-size: 1.4em; }
+  .scene .sil { filter: brightness(0); opacity: .5; }
+  .scene .q { opacity: .35; font-size: .7em; }
+  .scene .pop { animation: pop .6s; }
+  @keyframes pop { 0% { transform: scale(0) rotate(-30deg); } 70% { transform: scale(1.4); } }
+  .body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 6px 12px 16px; background: #ffffffc9; border-radius: 22px 22px 0 0; }
+  .msg { font-size: clamp(16px, 4.4vw, 22px); font-weight: 700; text-align: center; line-height: 1.6; }
+  .msg small { font-weight: 400; font-size: .8em; }
+  .go { background: #f76707; color: #fff; font-weight: 900; font-size: clamp(18px, 5vw, 26px); border-radius: 20px; padding: 14px 24px; min-height: 64px; box-shadow: 0 5px 0 #c2410c; }
+  .go:active { transform: translateY(3px); box-shadow: 0 2px 0 #c2410c; }
+  .go.blue { background: #1c7ed6; box-shadow: 0 5px 0 #1864ab; }
+  .dots { display: flex; gap: 8px; }
+  .dots i { width: 18px; height: 18px; border-radius: 50%; background: #dee2e6; }
+  .dots i.ok { background: #40c057; } .dots i.now { background: #ffd43b; }
+  .quest { font-size: clamp(30px, 9vmin, 60px); font-weight: 900; text-align: center; line-height: 1.3; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: .25em; }
+  .quest .cnt { font-size: .62em; letter-spacing: .08em; line-height: 1.25; max-width: 11em; word-break: break-all; }
+  .quest .lbl { font-size: .45em; width: 100%; }
+  .frac { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1.05; font-size: .8em; }
+  .frac b { padding: 0 .2em; } .frac b:first-child { border-bottom: .09em solid currentColor; }
+  .hint { background: #fff9db; border: 2px dashed #f59f00; border-radius: 14px; padding: 6px 12px; font-size: clamp(14px, 3.8vw, 18px); text-align: center; line-height: 1.5; }
+  .choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 520px; }
+  .choices button { min-height: 76px; border-radius: 20px; background: #fff; border: 4px solid var(--ink); font-size: clamp(26px, 7vmin, 40px); font-weight: 900; box-shadow: 0 5px 0 var(--ink); }
+  .choices button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--ink); }
+  .choices button.ok { background: #b2f2bb; } .choices button.ng { background: #ffc9c9; animation: shake .35s; opacity: .6; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  @media (orientation: landscape) and (max-height: 520px) {
+    .scene { font-size: 30px; } .choices { grid-template-columns: repeat(4, 1fr); max-width: 760px; } .choices button { min-height: 60px; }
+  }
+
+  /* ── おいわい・ダイアログ ── */
+  #fx { position: fixed; inset: 0; pointer-events: none; z-index: 60; overflow: hidden; }
+  #fx span { position: absolute; top: -40px; font-size: 28px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+  .modal { position: fixed; inset: 0; z-index: 50; background: #0008; display: none; align-items: center; justify-content: center; padding: 14px; }
+  .modal.show { display: flex; }
+  .card { background: #fff; border-radius: 24px; padding: 18px; width: 100%; max-width: 460px; max-height: 94%; overflow-y: auto; text-align: center; }
+  .card h2 { margin: 0 0 8px; font-size: 22px; }
+  .card p { margin: 6px 0; line-height: 1.6; }
+  .card label { display: block; text-align: left; font-weight: 700; margin: 10px 0 4px; font-size: 14px; }
+  .card input, .card select { width: 100%; font-size: 18px; padding: 10px; border-radius: 12px; border: 2px solid #adb5bd; font-family: inherit; }
+  .card .rowb { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .card .rowb button { flex: 1; min-height: 50px; border-radius: 14px; font-weight: 700; background: #e9ecef; padding: 0 10px; }
+  .card .rowb .pri { background: #1c7ed6; color: #fff; }
+  .card .rowb .warn { background: #ffe3e3; color: #c92a2a; }
+  .bigemo { font-size: 64px; line-height: 1.1; }
+  #toast { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); background: #1f2a44; color: #fff; padding: 10px 16px; border-radius: 16px; font-weight: 700; z-index: 70; display: none; max-width: 92%; text-align: center; line-height: 1.5; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>🛗 くもん エレベーター</h1>
+    <button class="hbtn" id="snd" aria-label="おと">🔊</button>
+    <button class="hbtn" id="key" aria-label="おうちの ひと（ながおし）">🔑<span class="fill"></span></button>
+  </header>
+  <div class="bar">
+    <div class="power">
+      <small>⚡ エレベーター パワー <span id="pwTxt"></span></small>
+      <div class="gauge" id="gauge"></div>
+    </div>
+    <button class="print" id="print"><span class="fill"></span><span id="printTxt"></span></button>
+  </div>
+  <div id="bldg"></div>
+</div>
+
+<div id="room">
+  <div class="door l"></div><div class="door r"></div>
+  <div class="rhead">
+    <button class="back" id="back">🛗 もどる</button>
+    <div class="ttl" id="rttl"></div>
+  </div>
+  <div class="scene" id="scene"></div>
+  <div class="body" id="rbody"></div>
+</div>
+
+<div class="modal" id="modal"><div class="card" id="mcard"></div></div>
+<div id="fx"></div>
+<div id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+  var R = function (a, b) { return a + Math.floor(Math.random() * (b - a + 1)); };
+  var pick = function (a) { return a[R(0, a.length - 1)]; };
+  var shuffle = function (a) { for (var i = a.length - 1; i > 0; i--) { var j = R(0, i), t = a[i]; a[i] = a[j]; a[j] = t; } return a; };
+
+  /* ── かい の データ（した から うえ） ── */
+  var FLOORS = [
+    { id: '5A', name: 'どうぶつ ひろば', who: '🐰', items: ['🥕', '🌷', '🎈'], c: '#ffe3e3', what: 'かずを かぞえる' },
+    { id: '4A', name: 'おかし やさん', who: '🐻', items: ['🍩', '🍭', '🎂'], c: '#fff3bf', what: 'すうじを よむ・ならべる' },
+    { id: '3A', name: 'でんしゃの えき', who: '🚃', items: ['🚉', '🚦', '🎫'], c: '#d0ebff', what: 'たす1・たす2・たす3' },
+    { id: '2A', name: 'うちゅう きち', who: '🚀', items: ['🪐', '🛸', '🌟'], c: '#e5dbff', what: 'たしざん（たす4〜たす10）' },
+    { id: 'A', name: 'きょうりゅう ジャングル', who: '🦖', items: ['🌋', '🥚', '🌴'], c: '#d3f9d8', what: 'たしざん・ひきざん' },
+    { id: 'B', name: 'かいてい トンネル', who: '🐬', items: ['🐙', '🐠', '🐚'], c: '#c5f6fa', what: 'おおきい かずの たしざん・ひきざん' },
+    { id: 'C', name: 'ロボット こうじょう', who: '🤖', items: ['⚙️', '🔧', '🔋'], c: '#e9ecef', what: 'かけざん・わりざん' },
+    { id: 'D', name: 'そらの おしろ', who: '🐉', items: ['🏰', '👑', '🗝️'], c: '#ffe8cc', what: 'おおきい かけざん・わりざん' },
+    { id: 'E', name: 'にじの くも', who: '🦄', items: ['🌈', '☁️', '🎠'], c: '#fcc2d7', what: 'ぶんすうの たしざん・ひきざん' },
+    { id: 'F', name: 'ほしの てんぼうだい', who: '🦉', items: ['🔭', '🌠', '🌙'], c: '#bac8ff', what: 'ぶんすう・しょうすうの けいさん' }
+  ];
+  var SKINS = [
+    { n: 'ふつう', k1: '#364fc7', k2: '#dbe4ff', d: '' },
+    { n: 'でんしゃ', k1: '#2b8a3e', k2: '#d3f9d8', d: '🚃' },
+    { n: 'ほし', k1: '#f59f00', k2: '#fff3bf', d: '⭐' },
+    { n: 'ロケット', k1: '#c2255c', k2: '#ffdeeb', d: '🚀' },
+    { n: 'にじ', k1: '#7048e8', k2: '#e5dbff', d: '🌈' },
+    { n: 'おうさま', k1: '#e8590c', k2: '#ffe8cc', d: '👑' },
+    { n: 'ダイヤ', k1: '#0c8599', k2: '#c5f6fa', d: '💎' }
+  ];
+  var PMAX = 10, QN = 5, PEEKN = 3;
+
+  /* ── ほぞん ── */
+  var KEY = 'kumon-elevator-v1';
+  var S = { level: 2, at: 2, stars: [], peek: [], power: 0, skins: 1, skin: 0, print: '', name: 'あおちゃん', sound: true };
+  try {
+    var raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+    if (raw && typeof raw === 'object') for (var k in S) if (raw[k] !== undefined) S[k] = raw[k];
+  } catch (e) {}
+  for (var i = 0; i < 10; i++) { S.stars[i] = S.stars[i] || 0; S.peek[i] = !!S.peek[i]; }
+  S.level = Math.max(0, Math.min(9, S.level | 0)); S.at = Math.max(0, Math.min(9, S.at | 0));
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+  function today() { var d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+
+  /* ── おと（WebAudio の ごうせいおん） ── */
+  var AC = null, hum = null;
+  function ac() {
+    if (!S.sound) return null;
+    try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; }
+    return AC;
+  }
+  function tone(f, t0, len, type, vol) {
+    var a = ac(); if (!a) return;
+    var o = a.createOscillator(), g = a.createGain(), t = a.currentTime + (t0 || 0);
+    o.type = type || 'sine'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vol || 0.18, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + len + 0.05);
+  }
+  var sfx = {
+    tap: function () { tone(660, 0, 0.08, 'triangle', 0.12); },
+    ding: function () { tone(1318, 0, 0.5); tone(1046, 0.22, 0.7); },
+    ok: function () { tone(784, 0, 0.12, 'triangle'); tone(1046, 0.1, 0.25, 'triangle'); },
+    ng: function () { tone(196, 0, 0.25, 'sawtooth', 0.08); },
+    star: function () { [523, 659, 784, 1046].forEach(function (f, i) { tone(f, i * 0.1, 0.3, 'triangle'); }); },
+    fanfare: function () { [523, 523, 523, 659, 784, 659, 784, 1046].forEach(function (f, i) { tone(f, i * 0.16, 0.35, 'square', 0.09); }); },
+    door: function () { tone(300, 0, 0.5, 'sine', 0.06); tone(360, 0.3, 0.5, 'sine', 0.06); }
+  };
+  function humStart(up, sec) {
+    var a = ac(); if (!a) return;
+    humStop();
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(up ? 70 : 110, a.currentTime);
+    o.frequency.linearRampToValueAtTime(up ? 130 : 60, a.currentTime + sec);
+    g.gain.value = 0.035; o.connect(g); g.connect(a.destination); o.start(); hum = o;
+  }
+  function humStop() { if (hum) { try { hum.stop(); } catch (e) {} hum = null; } }
+
+  /* ── もんだい づくり ── */
+  function frac(n, d) { return '<span class="frac"><b>' + n + '</b><b>' + d + '</b></span>'; }
+  function numQ(html, ans, hint) {
+    var c = [ans + 1, ans - 1, ans + 2, ans - 2, ans + 10, ans - 10].filter(function (v) { return v >= 0; });
+    var w = c.slice(0, 2).concat(shuffle(c.slice(2)).slice(0, 1));
+    while (w.length < 3) w.push(ans + w.length + 3);
+    return { html: html, ans: String(ans), ch: shuffle([ans].concat(w).map(String)), hint: hint };
+  }
+  function strQ(html, ans, wrongs, hint) {
+    var seen = {}; seen[ans] = 1;
+    var w = wrongs.filter(function (x) { if (seen[x]) return false; seen[x] = 1; return true; }).slice(0, 3);
+    return { html: html, ans: ans, ch: shuffle([ans].concat(w)), hint: hint };
+  }
+  function dotsHint(a, b) {
+    return a + ' の つぎから ' + b + 'こ かぞえよう<br>' + new Array(b + 1).join('🔵');
+  }
+  var GEN = [
+    function () { // 5A
+      var n = R(1, 10), e = pick(['🍎', '🐟', '⭐', '🚗', '🌼', '🍓']);
+      return numQ('<span class="cnt">' + new Array(n + 1).join(e) + '</span><span class="lbl">いくつ ある？</span>', n, 'ゆびで 1こずつ さして かぞえよう');
+    },
+    function () { // 4A
+      if (R(0, 1)) { var n = R(1, 49); return numQ(n + ' の つぎは？', n + 1, n + ' の つぎの かず だよ。こえに だして かぞえて みよう'); }
+      var m = R(11, 20);
+      return numQ('<span class="cnt">' + '🟠🟠🟠🟠🟠🟠🟠🟠🟠🟠<br>' + new Array(m - 9).join('🟠') + '</span><span class="lbl">いくつ ある？</span>', m, 'うえの れつは 10こ。10 と あと いくつ？');
+    },
+    function () { // 3A
+      var t = R(0, 3), a;
+      if (t === 0) { a = R(30, 119); return numQ(a + ' の つぎは？', a + 1, a + ' の つぎの かず だよ'); }
+      if (t === 1) { a = R(1, 99); return numQ(a + ' + 1 =', a + 1, 'たす1 は「つぎの かず」'); }
+      if (t === 2) { a = R(1, 20); return numQ(a + ' + 2 =', a + 2, dotsHint(a, 2)); }
+      a = R(1, 17); return numQ(a + ' + 3 =', a + 3, dotsHint(a, 3));
+    },
+    function () { var a = R(1, 15), b = R(4, 10); return numQ(a + ' + ' + b + ' =', a + b, dotsHint(a, b)); }, // 2A
+    function () { // A
+      if (R(0, 1)) { var a = R(5, 18), b = R(2, 10); return numQ(a + ' + ' + b + ' =', a + b, dotsHint(a, b)); }
+      var x = R(5, 20), y = R(1, Math.min(9, x));
+      return numQ(x + ' − ' + y + ' =', x - y, x + ' から ' + y + 'こ もどるよ（' + x + ' → …）');
+    },
+    function () { // B
+      if (R(0, 1)) { var a = R(12, 60), b = R(11, 99 - a); return numQ(a + ' + ' + b + ' =', a + b, 'いちの くらい から たそう。10を こえたら くりあがり！'); }
+      var x = R(30, 99), y = R(11, x - 5);
+      return numQ(x + ' − ' + y + ' =', x - y, 'いちの くらい から ひこう。ひけない ときは 10 かりるよ');
+    },
+    function () { // C
+      var a = R(2, 9), b = R(2, 9);
+      if (R(0, 2)) return numQ(a + ' × ' + b + ' =', a * b, a + ' が ' + b + 'こ あるよ（' + a + ' を ' + b + 'かい たす）');
+      return numQ((a * b) + ' ÷ ' + a + ' =', b, a + ' × □ = ' + (a * b) + ' の □は？');
+    },
+    function () { // D
+      if (R(0, 1)) { var a = R(11, 40), b = R(2, 6); return numQ(a + ' × ' + b + ' =', a * b, 'いちの くらい と じゅうの くらい を べつべつに かけて たす'); }
+      var d = R(2, 9), q = R(11, 25);
+      return numQ((d * q) + ' ÷ ' + d + ' =', q, d + ' × □ = ' + (d * q) + ' の □は？');
+    },
+    function () { // E
+      var d = R(3, 9), a, b, hint = 'したの かず（ぶんぼ）は そのまま。うえの かず だけ けいさん するよ';
+      if (R(0, 1)) {
+        a = R(1, d - 2); b = R(1, d - 1 - a);
+        return strQ(frac(a, d) + ' + ' + frac(b, d) + ' =', frac(a + b, d), [frac(a + b, d * 2), frac(a + b + 1, d), frac(Math.max(1, a + b - 1), d), frac(a + b, d + 1)], hint);
+      }
+      a = R(2, d - 1); b = R(1, a - 1);
+      return strQ(frac(a, d) + ' − ' + frac(b, d) + ' =', frac(a - b, d), [frac(a + b, d), frac(a - b + 1, d), frac(a - b, d + 1), frac(a, d)], hint);
+    },
+    function () { // F
+      if (R(0, 1)) {
+        var a = R(1, 9), b = R(1, 9), f = function (v) { return (v / 10).toFixed(1); };
+        return strQ(f(a) + ' + ' + f(b) + ' =', f(a + b), [f(a + b + 1), f(Math.abs(a - b) + 1), String(a + b), f(a + b + 10)], '0.1 が いくつ ぶん かで かんがえよう');
+      }
+      var T = [
+        [[1, 2], '+', [1, 4], [3, 4], [[2, 6], [1, 6], [2, 4]]], [[1, 2], '+', [1, 3], [5, 6], [[2, 5], [1, 6], [2, 6]]],
+        [[1, 3], '+', [1, 6], [1, 2], [[2, 9], [1, 9], [2, 6]]], [[1, 2], '−', [1, 4], [1, 4], [[1, 2], [0, 2], [3, 4]]],
+        [[1, 4], '+', [1, 8], [3, 8], [[2, 12], [1, 12], [2, 8]]], [[3, 4], '−', [1, 2], [1, 4], [[2, 2], [1, 2], [2, 4]]],
+        [[1, 2], '+', [1, 6], [2, 3], [[2, 8], [1, 8], [1, 3]]], [[2, 3], '−', [1, 6], [1, 2], [[1, 3], [1, 6], [3, 6]]]
+      ], t = pick(T), fr = function (p) { return frac(p[0], p[1]); };
+      return strQ(fr(t[0]) + ' ' + t[1] + ' ' + fr(t[2]) + ' =', fr(t[3]), t[4].map(fr), 'したの かず（ぶんぼ）を そろえて から けいさん（つうぶん）');
+    }
+  ];
+
+  /* ── ビルを かく ── */
+  var bldg = $('bldg'), rows = [], shaft, car, moving = false;
+  function build() {
+    bldg.innerHTML = '';
+    var roof = document.createElement('button');
+    roof.className = 'row roof'; roof.innerHTML = '🌙 おくじょう ✨ <small style="font-weight:400">ぜんぶ のぼると…？</small>';
+    roof.onclick = function () { sfx.tap(); toast('Fかいの うえは おくじょう。<br>いちばん うえまで のぼった ひと だけの ひみつ だよ ✨'); };
+    bldg.appendChild(roof);
+    for (var i = 9; i >= 0; i--) {
+      var r = document.createElement('button');
+      r.dataset.i = i; rows[i] = r;
+      r.onclick = (function (i) { return function () { goFloor(i); }; })(i);
+      bldg.appendChild(r);
+    }
+    shaft = document.createElement('div'); shaft.id = 'shaft';
+    car = document.createElement('button'); car.id = 'car'; car.setAttribute('aria-label', 'エレベーターの かざりを かえる');
+    car.onclick = function (e) { e.stopPropagation(); changeSkin(); };
+    shaft.appendChild(car); bldg.appendChild(shaft);
+    paint(); place(false);
+  }
+  function paint() {
+    FLOORS.forEach(function (f, i) {
+      var r = rows[i], st, cls = 'row';
+      if (i <= S.level) {
+        st = '★★★'.slice(0, S.stars[i]) + '☆☆☆'.slice(0, 3 - S.stars[i]);
+        if (i === S.level) { cls += ' cur'; st = '<span class="tag">いま ここ</span><br>' + st; }
+      } else if (i === S.level + 1) { cls += ' locked next'; st = '<span class="tag b">つぎは ここ</span><br>🔑' + (S.peek[i] ? '👀' : ''); }
+      else { cls += ' locked'; st = '🔒'; }
+      r.className = cls; r.style.setProperty('--c', f.c);
+      r.innerHTML = '<span class="id">' + f.id + '</span><span class="who">' + f.who + '</span>' +
+        '<span class="nm">' + (i <= S.level || S.peek[i] ? f.name : '？？？') + '<small>' + f.what + '</small></span><span class="st">' + st + '</span>';
+    });
+    var g = '';
+    for (var p = 0; p < PMAX; p++) g += '<i class="' + (p < S.power ? 'on' : '') + '"></i>';
+    $('gauge').innerHTML = g;
+    $('pwTxt').textContent = S.skins < SKINS.length ? '（いっぱいで あたらしい かざり！）' : '';
+    var done = S.print === today();
+    $('print').className = 'print' + (done ? ' done' : '');
+    $('printTxt').innerHTML = done ? '📄 きょうの プリント<br>できた！ ✅' : '📄 プリント できたら<br>ながおし ⚡⚡⚡';
+    $('snd').textContent = S.sound ? '🔊' : '🔇';
+    var sk = SKINS[S.skin] || SKINS[0];
+    car.style.setProperty('--k1', sk.k1); car.style.setProperty('--k2', sk.k2);
+    car.innerHTML = '🧒' + (sk.d ? '<span class="deco">' + sk.d + '</span>' : '');
+  }
+  function place(anim, sec) {
+    var r = rows[S.at];
+    shaft.style.height = bldg.scrollHeight + 'px';
+    car.style.setProperty('--t', anim ? sec + 's' : '0s');
+    car.style.height = (r.offsetHeight - 8) + 'px';
+    car.style.top = (r.offsetTop + 4) + 'px';
+  }
+  window.addEventListener('resize', function () { shaft.style.height = '0px'; place(false); });
+
+  function goFloor(i) {
+    if (moving) return;
+    sfx.tap(); moving = true;
+    var dist = Math.abs(i - S.at), sec = dist ? Math.min(3.2, 0.6 + dist * 0.45) : 0.15, up = i > S.at;
+    S.at = i; save();
+    if (dist) { humStart(up, sec); car.classList.add('moving'); }
+    place(true, sec);
+    rows[i].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    setTimeout(function () {
+      humStop(); car.classList.remove('moving'); sfx.ding();
+      setTimeout(function () { moving = false; openRoom(i); }, 450);
+    }, sec * 1000);
+  }
+  function changeSkin() {
+    if (moving) return;
+    sfx.tap();
+    if (S.skins <= 1) { toast('⚡パワーを いっぱいに すると<br>エレベーターの かざりが ふえるよ！'); return; }
+    S.skin = (S.skin + 1) % S.skins; save(); paint();
+    toast('かざり：' + SKINS[S.skin].n + ' ' + SKINS[S.skin].d);
+  }
+  function addPower(n) {
+    S.power += n;
+    var got = null;
+    if (S.power >= PMAX) {
+      if (S.skins < SKINS.length) { S.power -= PMAX; got = SKINS[S.skins]; S.skin = S.skins; S.skins++; }
+      else S.power = PMAX;
+    }
+    save(); paint();
+    return got;
+  }
+
+  /* ── へや ── */
+  var room = $('room'), scene = $('scene'), body = $('rbody'), cur = -1;
+  function openRoom(i) {
+    cur = i; var f = FLOORS[i];
+    room.style.setProperty('--c', f.c);
+    $('rttl').textContent = f.id + ' かい　' + (i <= S.level || S.peek[i] ? f.name : '？？？');
+    room.classList.remove('open'); room.classList.add('show');
+    if (i <= S.level) lobby(); else peekLobby();
+    sfx.door();
+    setTimeout(function () { room.classList.add('open'); }, 60);
+  }
+  function closeRoom() {
+    sfx.tap(); room.classList.remove('open');
+    setTimeout(function () { room.classList.remove('show'); paint(); place(false); }, 700);
+  }
+  $('back').onclick = closeRoom;
+
+  function drawScene(i, popIdx) {
+    var f = FLOORS[i], h = '';
+    if (i <= S.level) {
+      h = '<span class="big">' + f.who + '</span>';
+      f.items.forEach(function (it, k) {
+        h += k < S.stars[i] ? '<span class="' + (k === popIdx ? 'pop' : '') + '">' + it + '</span>' : '<span class="q">❓</span>';
+      });
+    } else {
+      h = '<span class="big ' + (S.peek[i] ? (popIdx === -2 ? 'pop' : '') : 'sil') + '">' + f.who + '</span>';
+      f.items.forEach(function (it) { h += '<span class="sil">' + it + '</span>'; });
+    }
+    scene.innerHTML = h;
+  }
+  function lobby() {
+    var i = cur, f = FLOORS[i], s = S.stars[i];
+    drawScene(i);
+    var m = s >= 3 ? 'この かいは かんぺき！ ★★★<br><small>なんかい でも あそべるよ（⚡が たまる）</small>'
+      : f.who + '「' + QN + 'もん できたら ' + f.items[s] + ' を あげるよ！」';
+    if (i === S.level && i < 9) m += '<br><small>つぎは ' + FLOORS[i + 1].id + ' かい。🔑は くもんの しんきゅうテストで もらえるよ</small>';
+    body.innerHTML = '<div class="msg">' + m + '</div><button class="go" id="start">▶ もんだいに ちょうせん</button>';
+    $('start').onclick = function () { sfx.tap(); play(i, QN, false); };
+  }
+  function peekLobby() {
+    var i = cur, f = FLOORS[i], isNext = i === S.level + 1;
+    drawScene(i);
+    var h = '<div class="msg">👀 のぞきみ ちゅう…<br>ここは 「' + f.what + '」の かい。</div>';
+    if (isNext) {
+      h += '<div class="msg"><small>' + (S.peek[i] ? 'もう ' + f.id + ' の もんだいが できたね！ あとは しんきゅうテストで 🔑を もらう だけ！'
+        : 'だれが すんで いるのかな？ ' + PEEKN + 'もん できたら かおを みせて くれるよ') + '</small></div>' +
+        '<button class="go blue" id="start">👀 ちょっとだけ ちょうせん</button>';
+    } else {
+      var q = GEN[i]();
+      h += '<div class="msg"><small>こんな もんだいを するよ</small></div><div class="quest">' + q.html + ' ' + q.ans + '</div>' +
+        '<div class="msg"><small>🔒 ' + FLOORS[S.level + 1].id + ' かい から じゅんばんに のぼって いこう！</small></div>';
+    }
+    body.innerHTML = h;
+    if (isNext) $('start').onclick = function () { sfx.tap(); play(i, PEEKN, true); };
+  }
+
+  function play(i, total, peek) {
+    var n = 0, q, missed;
+    function next() {
+      if (n >= total) return finish();
+      q = GEN[i](); missed = false;
+      var d = '';
+      for (var k = 0; k < total; k++) d += '<i class="' + (k < n ? 'ok' : k === n ? 'now' : '') + '"></i>';
+      body.innerHTML = '<div class="dots">' + d + '</div><div class="quest">' + q.html + '</div>' +
+        '<div class="hint" id="hint" style="' + (peek ? '' : 'visibility:hidden') + '">💡 ' + q.hint + '</div><div class="choices" id="ch"></div>';
+      q.ch.forEach(function (c) {
+        var b = document.createElement('button'); b.innerHTML = c;
+        b.onclick = function () { answer(b, c); };
+        $('ch').appendChild(b);
+      });
+    }
+    var lock = false;
+    function answer(b, c) {
+      if (lock || b.classList.contains('ng')) return;
+      if (c === q.ans) {
+        lock = true; b.classList.add('ok'); sfx.ok(); n++;
+        setTimeout(function () { lock = false; next(); }, 650);
+      } else {
+        b.classList.add('ng'); sfx.ng(); missed = true;
+        $('hint').style.visibility = 'visible';
+      }
+    }
+    function finish() {
+      var got, h;
+      if (peek) {
+        var first = !S.peek[i]; S.peek[i] = true; got = addPower(1);
+        $('rttl').textContent = FLOORS[i].id + ' かい　' + FLOORS[i].name;
+        drawScene(i, first ? -2 : -1); sfx.star(); confetti(20);
+        h = '<div class="msg">すごい！ ' + FLOORS[i].id + ' の もんだいが できた！<br>' + FLOORS[i].who + '「' + S.name + '、はやく のぼって きてね！<br>しんきゅうテスト おうえん してるよ」</div>';
+      } else {
+        var k = S.stars[i];
+        if (k < 3) S.stars[i]++;
+        got = addPower(1);
+        drawScene(i, k < 3 ? k : -1); sfx.star(); confetti(k < 3 ? 24 : 10);
+        h = '<div class="msg">' + (k < 3 ? '⭐ ほしを ゲット！ ' + FLOORS[i].items[k] + ' を もらったよ' : 'ぜんぶ せいかい！ ⚡パワー アップ') + '</div>';
+      }
+      if (got) h += '<div class="hint">🎁 エレベーターの あたらしい かざり「' + got.n + ' ' + got.d + '」を ゲット！</div>';
+      h += '<button class="go" id="again">🔁 もう いっかい</button><button class="go blue" id="bk">🛗 エレベーターに もどる</button>';
+      body.innerHTML = h;
+      $('again').onclick = function () { sfx.tap(); play(i, total, peek); };
+      $('bk').onclick = closeRoom;
+    }
+    next();
+  }
+
+  /* ── えんしゅつ ── */
+  function confetti(n) {
+    var fx = $('fx'), E = ['🎉', '⭐', '✨', '🎊', '🌟', '🎈'];
+    for (var i = 0; i < n; i++) {
+      var s = document.createElement('span');
+      s.textContent = pick(E); s.style.left = R(0, 96) + '%';
+      s.style.animationDuration = (R(18, 34) / 10) + 's'; s.style.animationDelay = (R(0, 8) / 10) + 's';
+      fx.appendChild(s);
+      setTimeout((function (s) { return function () { s.remove(); }; })(s), 4600);
+    }
+  }
+  var toastT;
+  function toast(h) {
+    var t = $('toast'); t.innerHTML = h; t.style.display = 'block';
+    clearTimeout(toastT); toastT = setTimeout(function () { t.style.display = 'none'; }, 2800);
+  }
+  function modal(h) { $('mcard').innerHTML = h; $('modal').classList.add('show'); }
+  function modalOff() { $('modal').classList.remove('show'); }
+
+  /* ながおし（1びょう） */
+  function hold(el, fn) {
+    var t = null;
+    function up() { if (t) { clearTimeout(t); t = null; } el.classList.remove('holding'); }
+    el.addEventListener('pointerdown', function () {
+      up(); el.classList.add('holding');
+      t = setTimeout(function () { up(); fn(); }, 1000);
+    });
+    ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (e) { el.addEventListener(e, up); });
+    el.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+  }
+  hold($('print'), function () {
+    if (S.print === today()) { toast('きょうの ぶんは もう もらったよ。<br>また あした！'); return; }
+    S.print = today();
+    var got = addPower(3);
+    sfx.star(); confetti(24);
+    modal('<div class="bigemo">📄⚡</div><h2>プリント おつかれさま！</h2><p>エレベーター パワーが 3つ たまったよ。<br>まいにちの プリントが うえの かいへの ちかみち！</p>' +
+      (got ? '<p>🎁 あたらしい かざり「' + got.n + ' ' + got.d + '」を ゲット！</p>' : '') +
+      '<div class="rowb"><button class="pri" id="mok">やったー！</button></div>');
+    $('mok').onclick = function () { sfx.tap(); modalOff(); };
+  });
+  $('print').addEventListener('click', function () { if (S.print !== today()) toast('プリントが おわったら<br>ボタンを ながーく おしてね'); });
+
+  $('snd').onclick = function () { S.sound = !S.sound; save(); paint(); if (S.sound) sfx.tap(); else humStop(); };
+
+  /* ── おうちの ひと ── */
+  $('key').addEventListener('click', function () { toast('🔑 は おうちの ひと よう（ながおし）'); });
+  hold($('key'), function () {
+    var opt = FLOORS.map(function (f, i) { return '<option value="' + i + '"' + (i === S.level ? ' selected' : '') + '>' + f.id + '</option>'; }).join('');
+    modal('<h2>🔑 おうちの ひと むけ</h2>' +
+      '<p style="font-size:14px;text-align:left">お子さんが いま学習している教材に合わせてください。進級テストに合格したら「進級した！」を押すと、エレベーターが新しい階へ上がります。</p>' +
+      '<label for="pn">よびかた</label><input id="pn" maxlength="12" value="' + S.name.replace(/[&<>"]/g, '') + '">' +
+      '<label for="pl">いまの教材</label><select id="pl">' + opt + '</select>' +
+      '<div class="rowb"><button class="pri" id="pup"' + (S.level >= 9 ? ' disabled' : '') + '>🎉 進級した！（1つ上へ）</button></div>' +
+      '<div class="rowb"><button id="pok">保存して閉じる</button><button class="warn" id="prs">記録を消す</button></div>' +
+      '<p style="font-size:12px;text-align:left;opacity:.75">※ 各階の問題は教材のイメージに合わせたアプリ独自のもので、公文式の公式教材ではありません。</p>');
+    function nm() { var v = $('pn').value.trim(); if (v) S.name = v; }
+    $('pok').onclick = function () {
+      nm(); var nl = +$('pl').value, up = nl > S.level; modalOff();
+      if (up) levelUp(nl); else { S.level = nl; save(); paint(); }
+    };
+    $('pup').onclick = function () { nm(); modalOff(); levelUp(S.level + 1); };
+    $('prs').onclick = function () {
+      if (!confirm('ほしや かざりの きろくを ぜんぶ けします。よろしいですか？')) return;
+      try { localStorage.removeItem(KEY); } catch (e) {}
+      location.reload();
+    };
+  });
+  $('modal').addEventListener('click', function (e) { if (e.target === $('modal') && !$('pn')) modalOff(); });
+
+  function levelUp(nl) {
+    nl = Math.min(9, nl);
+    S.level = nl; save(); paint();
+    var f = FLOORS[nl];
+    sfx.fanfare(); confetti(60);
+    modal('<div class="bigemo">🔑🎉</div><h2>しんきゅう おめでとう！</h2><p><b>' + S.name + '</b> は <b>' + f.id + ' かい</b>の カギを てに いれた！<br>' +
+      f.who + '「' + f.name + ' へ ようこそ！」</p><div class="rowb"><button class="pri" id="mok">🛗 ' + f.id + ' かいへ のぼる！</button></div>');
+    $('mok').onclick = function () { modalOff(); room.classList.remove('show', 'open'); goFloor(nl); };
+  }
+
+  build();
+  if (!localStorage.getItem(KEY)) {
+    modal('<div class="bigemo">🛗</div><h2>くもん エレベーター</h2><p>5A から F まで 10かい だての ビル。<br>いきたい かいを タッチ すると エレベーターが うごくよ！</p>' +
+      '<p style="font-size:14px">うえの かいの 🔑は、<br>くもんの しんきゅうテストで もらえるよ。</p><div class="rowb"><button class="pri" id="mok">▶ のる！</button></div>');
+    $('mok').onclick = function () { sfx.tap(); modalOff(); save(); };
+  }
+})();
+</script>
+</body>
+</html>
