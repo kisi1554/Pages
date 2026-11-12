@@ -416,8 +416,13 @@
     { id: 'milk', e: '🥛', price: 200 }, { id: 'egg', e: '🥚', price: 230 }, { id: 'bread', e: '🍞', price: 150 },
     { id: 'banana', e: '🍌', price: 130 }, { id: 'carrot', e: '🥕', price: 100 }, { id: 'apple', e: '🍎', price: 120 },
   ];
-  function okstore() {
-    clear('🛒 オーケー', 'みなとみらい 6ちょうめ ・ スーパー（ねだん は ゲームの めやす）', 'ok');
+  const STORES = {
+    ok: { t: '🛒 オーケー', sub: 'みなとみらい 6ちょうめ ・ スーパー（ねだん は ゲームの めやす）', cls: 'ok' },
+    maruetsu: { t: '🛒 マルエツ プチ', sub: 'はなさきちょう 6ちょうめ（よこはま MID ベースタワー 1かい）・ 9:00〜22:00 ・ ねだん は ゲームの めやす', cls: 'mp' },
+  };
+  function okstore(which) {
+    which = which || 'ok'; const ST = STORES[which] || STORES.ok, again = () => okstore(which);
+    clear(ST.t, ST.sub, ST.cls);
     const e = api.errand, names = api.errandItems || {};
     if (e) root.appendChild(el('div', 'memo2', '📝 ママの メモ： ' + e.list.map((k) => (e.got.includes(k) ? '✅ ' : '⬜ ') + names[k]).join('　')));
     else root.appendChild(el('div', 'memo2', '📝 おうちで ママに「おつかい」を たのまれると、ここで かうよ'));
@@ -426,7 +431,7 @@
     OK_ITEMS.forEach((it) => {
       const need = e && e.list.includes(it.id) && !e.got.includes(it.id);
       const c = el('button', 'kitem' + (need ? ' hot' : ''), `<i>${it.e}</i><span>${names[it.id] || it.id}</span><b>${yen(it.price)}</b>${need ? '<em>メモに ある</em>' : ''}`);
-      c.addEventListener('click', () => pay(it.price, names[it.id], () => { api.reward && api.reward({ errand: it.id }); sfx('pick'); okstore(); }, okstore));
+      c.addEventListener('click', () => pay(it.price, names[it.id], () => { api.reward && api.reward({ errand: it.id }); sfx('pick'); again(); }, again));
       g.appendChild(c);
     });
     root.appendChild(g);
@@ -452,6 +457,7 @@
       else if (kind === 'ticket') attractionTicket(a.arg);
       else if (kind === 'konbini') konbini(a.arg);
       else if (kind === 'okstore') okstore();
+      else if (kind === 'maruetsu') okstore('maruetsu');
       else if (kind === 'seabass') seabass(a.arg);
       else if (window.Odekake && window.Odekake.has(kind)) window.Odekake.open(kind, { api, root, pay, clear, el, btn, sfx, toast, yen }, a.arg);
       else walletView();
