@@ -21,6 +21,8 @@ const Art = (function () {
   <linearGradient id="nDark" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#15181c"/><stop offset=".3" stop-color="#3a4048"/><stop offset=".6" stop-color="#262b31"/><stop offset="1" stop-color="#0e1013"/></linearGradient>
   <linearGradient id="nWheel" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a2e33"/><stop offset=".5" stop-color="#8b939b"/><stop offset="1" stop-color="#2a2e33"/></linearGradient>
   <linearGradient id="nE235" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b7dc3c"/><stop offset="1" stop-color="#6fa512"/></linearGradient>
+  <linearGradient id="nSkyB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4fd0f7"/><stop offset="1" stop-color="#0090cf"/></linearGradient>
+  <linearGradient id="nRedB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f2253a"/><stop offset="1" stop-color="#b3000f"/></linearGradient>
   <linearGradient id="nBlue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a86e0"/><stop offset="1" stop-color="#0a4fa3"/></linearGradient>
   <linearGradient id="nShadeX" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#000" stop-opacity=".55"/><stop offset=".22" stop-color="#000" stop-opacity=".08"/><stop offset=".38" stop-color="#fff" stop-opacity=".22"/><stop offset=".6" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".6"/></linearGradient>
   <linearGradient id="nShadeY" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".25"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></linearGradient>
@@ -68,12 +70,13 @@ const Art = (function () {
       <rect class="hit" x="-46" y="-306" width="92" height="56" fill="transparent"/></g>`;
   }
 
-  /* ---------- つうきん でんしゃ（やまのてせん E235 / ブルーライン 3000V） ---------- */
+  /* ---------- つうきん でんしゃ（やまのて E235 / ブルーライン 3000V / けいひんとうほく E233 / とうよこ 5050） ---------- */
   function commuter(kind) {
     const e = kind === 'e235';
+    const top = kind !== 'blue';            // ライトが うえに ある
     let s = '<g class="tr">';
-    if (e) s += panta();
-    s += beams(e ? [[-70, -206], [70, -206]] : [[-68, -82], [68, -82]]);
+    if (kind !== 'blue') s += panta();
+    s += beams(top ? [[-68, -206], [68, -206]] : [[-68, -82], [68, -82]]);
     s += `<path d="M-97 -234 Q-97 -253 -66 -256 H66 Q97 -253 97 -234Z" fill="#4c555f"/>
       <rect x="-46" y="-264" width="92" height="12" rx="3" fill="#69727c"/><rect x="-40" y="-261" width="80" height="2" fill="#8b949d"/>`;
     s += bogie(72);
@@ -90,7 +93,6 @@ const Art = (function () {
           <g class="wiper" transform="translate(40 -118)"><path d="M0 0 L-34 -56" stroke="#0a0c10" stroke-width="3" stroke-linecap="round"/></g></g>
         <rect x="-52" y="-225" width="104" height="27" rx="3" fill="#020304" stroke="#2c3138" stroke-width="1"/>
         <text class="led" x="0" y="-205" text-anchor="middle" font-size="16" font-weight="700" fill="#ffb21a">やまのて</text>`;
-      /* グラデーションの てんてん */
       let dots = '';
       for (let r = 0; r < 4; r += 1) for (let x = -80; x <= 80; x += 8) dots += `<circle cx="${x + (r % 2 ? 4 : 0)}" cy="${-103 - r * 7}" r="${3 - r * 0.65}"/>`;
       s += `<rect x="-99" y="-99" width="198" height="42" fill="url(#nE235)"/><g fill="#9fd02a">${dots}</g>
@@ -98,12 +100,40 @@ const Art = (function () {
         <text x="72" y="-66" text-anchor="middle" font-size="9" fill="#27400a" font-weight="700">E235</text>`;
       s += `<circle cx="-52" cy="-206" r="4" fill="url(#nRed)" opacity=".65"/><circle cx="52" cy="-206" r="4" fill="url(#nRed)" opacity=".65"/>`;
       s += eye(-70, -206, 8, 'L') + eye(70, -206, 8, 'R');
+    } else if (kind === 'e233') {
+      /* しろい かお ＋ くろい まど ＋ そらいろの おび */
+      s += `<rect x="-93" y="-235" width="186" height="180" rx="16" fill="#e6ebef"/><rect x="-93" y="-235" width="186" height="180" rx="16" fill="url(#nShadeY)" opacity=".45"/>
+        <path d="M-84 -214 Q-84 -227 -70 -227 H70 Q84 -227 84 -214 V-124 Q84 -112 70 -112 H-70 Q-84 -112 -84 -124Z" fill="url(#nGlass)"/>
+        <g data-part="window"><rect x="-74" y="-188" width="148" height="68" rx="7" fill="url(#nCab)"/>
+          <path d="M-74 -188 h66 l-40 68 h-26z" fill="url(#nShine)"/><path d="M-6 -120 q26 -18 52 0" fill="#0a0e16"/><rect x="-22" y="-188" width="3" height="68" fill="#04060a"/>
+          <g class="wiper" transform="translate(44 -122)"><path d="M0 0 L-32 -52" stroke="#0a0c10" stroke-width="3" stroke-linecap="round"/></g></g>
+        <rect x="-48" y="-223" width="96" height="26" rx="3" fill="#020304" stroke="#2c3138" stroke-width="1"/>
+        <text class="led" x="0" y="-204" text-anchor="middle" font-size="16" font-weight="700" fill="#ffb21a">けいひん</text>
+        <rect x="-99" y="-108" width="198" height="22" fill="url(#nSkyB)"/><rect x="-99" y="-108" width="198" height="22" fill="url(#nShadeX)" opacity=".5"/>
+        <text x="66" y="-64" text-anchor="middle" font-size="9" fill="#5b6670" font-weight="700">E233</text><text x="-62" y="-64" text-anchor="middle" font-size="9" fill="#0093d0" font-weight="800">JR</text>`;
+      s += `<rect x="-76" y="-196" width="12" height="4" rx="2" fill="url(#nRed)" opacity=".7"/><rect x="64" y="-196" width="12" height="4" rx="2" fill="url(#nRed)" opacity=".7"/>`;
+      s += eye(-68, -208, 7.5, 'L') + eye(68, -208, 7.5, 'R');
+    } else if (kind === 'tokyu') {
+      /* くろい まど ＋ ひじょうとびら ＋ あかい おび と さくらいろの せん */
+      s += `<rect x="-99" y="-240" width="198" height="9" fill="#d7000f" opacity=".9"/>
+        <rect x="-88" y="-230" width="176" height="108" rx="12" fill="url(#nGlass)"/>
+        <g data-part="window"><rect x="-22" y="-190" width="100" height="62" rx="6" fill="url(#nCab)"/>
+          <path d="M-22 -190 h52 l-34 62 h-18z" fill="url(#nShine)"/><path d="M14 -128 q22 -16 44 0" fill="#0a0e16"/>
+          <g class="wiper" transform="translate(50 -130)"><path d="M0 0 L-30 -50" stroke="#0a0c10" stroke-width="3" stroke-linecap="round"/></g></g>
+        <rect x="-76" y="-190" width="40" height="62" rx="5" fill="url(#nCab)"/><path d="M-76 -190 h22 l-14 62 h-8z" fill="url(#nShine)"/>
+        <rect x="-18" y="-224" width="70" height="25" rx="3" fill="#020304" stroke="#2c3138" stroke-width="1"/>
+        <text class="led" x="17" y="-205" text-anchor="middle" font-size="15" font-weight="700" fill="#ffb21a">とうよこ</text>
+        <rect x="-99" y="-122" width="198" height="20" fill="url(#nRedB)"/><rect x="-99" y="-100" width="198" height="4.5" fill="#f4a6c6"/>
+        <rect x="-99" y="-122" width="198" height="27" fill="url(#nShadeX)" opacity=".5"/>
+        <rect x="-82" y="-226" width="52" height="172" rx="6" fill="none" stroke="#59626b" stroke-width="1.4"/><rect x="-40" y="-90" width="5" height="16" rx="2" fill="#4a535c"/>
+        <text x="56" y="-64" text-anchor="middle" font-size="9" fill="#39424b" font-weight="700">5050</text>`;
+      s += `<circle cx="-50" cy="-76" r="4.2" fill="url(#nRed)" opacity=".65"/><circle cx="50" cy="-76" r="4.2" fill="url(#nRed)" opacity=".65"/>`;
+      s += eye(-68, -208, 7.5, 'L') + eye(68, -208, 7.5, 'R');
     } else {
       s += `<rect x="-88" y="-230" width="176" height="112" rx="12" fill="url(#nGlass)"/>
         <g data-part="window"><rect x="-22" y="-192" width="100" height="66" rx="6" fill="url(#nCab)"/>
           <path d="M-22 -192 h52 l-36 66 h-16z" fill="url(#nShine)"/><path d="M14 -126 q22 -16 44 0" fill="#0a0e16"/>
           <g class="wiper" transform="translate(50 -128)"><path d="M0 0 L-30 -52" stroke="#0a0c10" stroke-width="3" stroke-linecap="round"/></g></g>
-        <rect x="-82" y="-224" width="52" height="170" rx="6" fill="none" stroke="#6d7781" stroke-width="1.6"/>
         <rect x="-76" y="-192" width="40" height="66" rx="5" fill="url(#nCab)"/><path d="M-76 -192 h22 l-14 66 h-8z" fill="url(#nShine)"/>
         <rect x="-40" y="-100" width="5" height="16" rx="2" fill="#4a535c"/>
         <rect x="-18" y="-224" width="96" height="25" rx="3" fill="#020304" stroke="#2c3138" stroke-width="1"/>
@@ -206,6 +236,8 @@ const Art = (function () {
   function train(id) {
     if (id === 'yamanote') return commuter('e235');
     if (id === 'blue') return commuter('blue');
+    if (id === 'keihin') return commuter('e233');
+    if (id === 'toyoko') return commuter('tokyu');
     if (id === 'hayabusa') return shinkansen('e5');
     if (id === 'doctor') return shinkansen('dy');
     return d51();

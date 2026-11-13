@@ -4,7 +4,36 @@
  * ジャンルは genre-*.js が Naisho.addGenre() で たして いく。
  * あたらしい ジャンルを ふやす ときは README の「ジャンルの ふやしかた」を みる。
  */
+/* ならびじゅん ＝ えらぶ がめんの じゅん。まず よこはまの みぢかな 4つ、そのあとに「そのほか」 */
 const TRAINS = [
+  {
+    id: 'blue', name: 'ブルーライン', sub: 'よこはまの ちかてつ 3000V', horn: 'commuter', color: '#4aa3ff', led: 'ブルーライン',
+    voice: { pitch: 1.55, rate: 0.95 }, me: 'わたし', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 6, shapes: { maru: 'light', shikaku: 'window' },
+    hello: '{n}、こんばんは。{me}は ブルーライン。よこはまの じめんの したを はしる ちかてつ{da}。',
+    again: ['{n}、きてくれたの? {me}、ちかから いそいで あがって きた{nda}。', 'あ、{n}{da}! きょうも よこはまの はなし、する?'],
+    cheer: 'すいすい〜!',
+  },
+  {
+    id: 'keihin', name: 'けいひん とうほくせん', sub: 'そらいろの E233けい', horn: 'commuter', color: '#35c3f0', led: 'けいひん',
+    voice: { pitch: 1.1, rate: 1.0 }, me: 'ぼく', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 10, shapes: { maru: 'light', shikaku: 'window' },
+    hello: 'やあ {n}。{me}は けいひんとうほくせん。そらいろの おびが めじるし{da}。よこはまも とうきょうも はしる{nda}。',
+    again: ['{n}、また あえた{ne}。きょうも そらいろ、ぴかぴか{da}。', 'おっ {n}! おおみやから おおふなまで はしって きた{yo}。'],
+    cheer: 'そらいろ パワー!',
+  },
+  {
+    id: 'toyoko', name: 'とうよこせん', sub: 'あかい おびの とうきゅう 5050けい', horn: 'commuter', color: '#ff5a6e', led: 'とうよこ',
+    voice: { pitch: 1.45, rate: 1.02 }, me: 'わたし', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 8, shapes: { maru: 'light', shikaku: 'window' },
+    hello: 'こんばんは {n}。{me}は とうよこせん。しぶやと よこはまを むすぶ、あかい おびの でんしゃ{da}。',
+    again: ['{n}、きてくれて うれしい{yo}。きょうは どこまで はなそうか?', 'あら {n}! しぶやから ひとっぱしり して きた{nda}。'],
+    cheer: 'とっきゅう きぶん!',
+  },
+  {
+    id: 'yamanote', name: 'やまのてせん', sub: 'ぐるぐる まわる E235けい', horn: 'commuter', color: '#9fd02a', led: 'やまのて',
+    voice: { pitch: 1.4, rate: 1.0 }, me: 'ぼく', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 11, shapes: { maru: 'light', shikaku: 'window' },
+    hello: 'わーい、{n}が きた! {me}は やまのてせん。とうきょうを ぐるぐる まわって いる{nda}。',
+    again: ['{n}! ぐるっと まわって また あえた{ne}!', 'やっほー {n}! きょうは なんしゅう はなそうか?'],
+    cheer: 'ぐるぐる〜!',
+  },
   {
     id: 'hayabusa', name: 'はやぶさ', sub: 'しんかんせん E5けい', horn: 'shinkansen', color: '#19c48a',
     voice: { pitch: 1.25, rate: 1.05 }, me: 'ぼく', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 10, shapes: {},
@@ -13,25 +42,11 @@ const TRAINS = [
     cheer: 'ビューン!',
   },
   {
-    id: 'doctor', name: 'ドクターイエロー', sub: 'せんろの おいしゃさん', horn: 'shinkansen', color: '#ffd200',
+    id: 'doctor', name: 'ドクター イエロー', sub: 'せんろの おいしゃさん', horn: 'shinkansen', color: '#ffd200',
     voice: { pitch: 1.0, rate: 0.92 }, me: 'わたし', da: 'ですよ', dane: 'ですね', nda: 'んです', cars: 7, shapes: { maru: 'light' },
     hello: 'こんばんは {n}。{me}は ドクターイエロー。せんろの おいしゃさん{da}。',
     again: ['{n}、また あえました{ne}。みると しあわせに なる きいろ{da}。', 'おや {n}。きょうも げんきそう{dane}。しんさつ いらず{da}。'],
     cheer: 'いじょう なし!',
-  },
-  {
-    id: 'yamanote', name: 'やまのてせん', sub: 'ぐるぐる まわる E235けい', horn: 'commuter', color: '#9fd02a',
-    voice: { pitch: 1.4, rate: 1.0 }, me: 'ぼく', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 11, shapes: { maru: 'light', shikaku: 'window' },
-    hello: 'わーい、{n}が きた! {me}は やまのてせん。とうきょうを ぐるぐる まわって いる{nda}。',
-    again: ['{n}! ぐるっと まわって また あえた{ne}!', 'やっほー {n}! きょうは なんしゅう はなそうか?'],
-    cheer: 'ぐるぐる〜!',
-  },
-  {
-    id: 'blue', name: 'ブルーライン', sub: 'よこはまの ちかてつ 3000V', horn: 'commuter', color: '#4aa3ff',
-    voice: { pitch: 1.55, rate: 0.95 }, me: 'わたし', da: 'だよ', dane: 'だね', nda: 'んだ', cars: 6, shapes: { maru: 'light', shikaku: 'window' },
-    hello: '{n}、こんばんは。{me}は ブルーライン。よこはまの じめんの したを はしる ちかてつ{da}。',
-    again: ['{n}、きてくれたの? {me}、ちかから いそいで あがって きた{nda}。', 'あ、{n}{da}! きょうも よこはまの はなし、する?'],
-    cheer: 'すいすい〜!',
   },
   {
     id: 'd51', name: 'デゴイチ', sub: 'じょうき きかんしゃ D51', horn: 'sl', color: '#e0a83a',

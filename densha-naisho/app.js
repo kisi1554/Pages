@@ -23,7 +23,7 @@
 
   /* ---------- ことばづかい ---------- */
   function fmt(s) {
-    const t = T0 || TRAINS[2];
+    const t = T0 || TRAINS[0];
     const sl = t.id === 'd51';
     return String(s).replace(/\{n\}/g, st.name).replace(/\{me\}/g, t.me).replace(/\{dane\}/g, t.dane).replace(/\{da\}/g, t.da)
       .replace(/\{nda\}/g, t.nda).replace(/\{yo\}/g, sl ? 'ぞ' : 'よ').replace(/\{ne\}/g, sl ? 'のう' : 'ね');
@@ -75,7 +75,7 @@
     el.classList.remove(name); void el.getBoundingClientRect(); el.classList.add(name);
     if (ms) setTimeout(function () { el.classList.remove(name); }, ms);
   }
-  function led(text) { const e = trainEl && trainEl.querySelector('.led'); if (e) e.textContent = text || (T0.id === 'blue' ? 'ブルーライン' : 'やまのて'); }
+  function led(text) { const e = trainEl && trainEl.querySelector('.led'); if (e) e.textContent = text || T0.led || ''; }
 
   function fx(name) {
     if (!name) return;
@@ -414,7 +414,7 @@
   function init() {
     load();
     $('defs').innerHTML = Art.DEFS;
-    $('titleTrain').innerHTML = Art.card('yamanote');
+    $('titleTrain').innerHTML = Art.card('blue');
     setToggles(); setStars(); buildDepot();
 
     $('btnStart').onclick = function () { Sound.unlock(); Sound.play('door'); show('scDepot'); };
