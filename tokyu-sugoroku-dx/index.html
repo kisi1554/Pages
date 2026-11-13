@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>東急線すごろく DX</title>
+<style>
+  :root { --red:#da0442; --ink:#2b2f3a; --paper:#fffaf0; --panel:#ffffff; --line:#e6dfd0; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--paper); color:var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Noto Sans JP", sans-serif;
+    user-select:none; -webkit-user-select:none; }
+  button { font:inherit; color:inherit; cursor:pointer; border:none; }
+  rt { font-size:.5em; }
+  .hidden { display:none !important; }
+  .screen { position:fixed; inset:0; display:flex; flex-direction:column; }
+
+  /* ---- タイトル ---- */
+  #title { overflow-y:auto; align-items:center; padding:18px 16px 28px; gap:14px;
+    background:linear-gradient(#ffe9ec, var(--paper) 45%); }
+  #title h1 { margin:6px 0 0; font-size:clamp(26px, 7vw, 40px); color:var(--red); text-align:center; line-height:1.5; }
+  #title .sub { margin:0; font-size:16px; text-align:center; line-height:1.7; }
+  .box { width:100%; max-width:560px; background:var(--panel); border:3px solid var(--line); border-radius:20px; padding:14px; }
+  .box h2 { margin:0 0 10px; font-size:18px; }
+  .slots { display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; }
+  .slot { display:flex; align-items:center; gap:10px; min-height:68px; padding:8px 12px; border-radius:16px;
+    background:#f4f1ea; border:3px solid transparent; font-size:17px; font-weight:bold; text-align:left; }
+  .slot .tk { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:24px; flex:none; }
+  .slot small { display:block; font-size:14px; font-weight:normal; opacity:.8; white-space:nowrap; }
+  .slot.on { background:#fff; border-color:var(--c); }
+  .slot.off { opacity:.55; }
+  .big { width:100%; max-width:560px; min-height:68px; border-radius:22px; font-size:24px; font-weight:bold;
+    background:var(--red); color:#fff; box-shadow:0 6px 0 #9c0330; }
+  .big:active { transform:translateY(4px); box-shadow:0 2px 0 #9c0330; }
+  .mid { min-height:56px; padding:0 20px; border-radius:18px; font-size:18px; font-weight:bold;
+    background:#fff; border:3px solid var(--line); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; justify-content:center; width:100%; max-width:560px; }
+  .row .mid { flex:1; white-space:nowrap; padding:0 10px; }
+  .how { margin:0; padding-left:1.3em; font-size:15px; line-height:1.9; }
+
+  /* ---- ゲーム ---- */
+  #game { background:#eaf4ee; }
+  .topbar { display:flex; align-items:center; gap:8px; padding:6px 8px; background:var(--panel); border-bottom:3px solid var(--line); }
+  .topbar .ic { width:48px; height:48px; border-radius:14px; background:#f4f1ea; font-size:22px; flex:none; }
+  .topbar .ic.wide { width:auto; padding:0 12px; font-size:15px; font-weight:bold; }
+  #msg { flex:1; font-size:15px; font-weight:bold; line-height:1.35; min-height:2.7em; display:flex; align-items:center; }
+  .main { flex:1; display:flex; flex-direction:column; min-height:0; }
+  .mapwrap { flex:1; min-height:0; position:relative; }
+  #map { width:100%; height:100%; display:block; touch-action:none; }
+  .panel { background:var(--panel); border-top:3px solid var(--line); padding:8px 10px calc(10px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:8px; }
+  .chips { display:flex; gap:6px; }
+  .chip { flex:1; min-width:0; border-radius:14px; padding:5px 6px; background:#f4f1ea; border:3px solid transparent;
+    display:flex; align-items:center; gap:6px; font-size:14px; font-weight:bold; }
+  .chip .tk { width:32px; height:32px; border-radius:50%; display:grid; place-items:center; font-size:18px; flex:none; }
+  .chip.cur { background:#fff; border-color:var(--c); }
+  .chip.done { opacity:.6; }
+  .chip .st { font-size:16px; white-space:nowrap; }
+  .chip .ex { font-size:12px; font-weight:normal; white-space:nowrap; overflow:hidden; }
+  .acts { display:flex; gap:8px; align-items:stretch; }
+  #roll { flex:2; min-height:66px; border-radius:20px; font-size:22px; font-weight:bold; background:var(--red); color:#fff; box-shadow:0 5px 0 #9c0330; }
+  #roll:active { transform:translateY(3px); box-shadow:0 2px 0 #9c0330; }
+  .cardbtn { flex:1; min-height:66px; border-radius:20px; font-size:14px; font-weight:bold; background:#fff7d6; border:3px solid #f0c330; line-height:1.3; }
+  .cardbtn b { display:block; font-size:24px; }
+  .acts button:disabled { opacity:.4; box-shadow:none; transform:none; }
+  @media (orientation: landscape) and (min-width: 700px) {
+    .main { flex-direction:row; }
+    .panel { width:320px; border-top:none; border-left:3px solid var(--line); justify-content:flex-end; }
+    .chips { flex-direction:column; }
+    .acts { flex-wrap:wrap; }
+    #roll { flex-basis:100%; }
+  }
+
+  /* さいころ */
+  #dice { position:absolute; left:50%; top:38%; transform:translate(-50%,-50%); display:flex; gap:14px; pointer-events:none; }
+  .die { width:92px; height:92px; border-radius:20px; background:#fff; border:4px solid var(--ink); box-shadow:0 8px 0 rgba(0,0,0,.25);
+    display:grid; grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr); padding:12px; }
+  .die i { width:16px; height:16px; border-radius:50%; background:var(--red); place-self:center; visibility:hidden; }
+  .die i.p { visibility:visible; }
+  .die.spin { animation:spin .12s linear infinite; }
+  @keyframes spin { 50% { transform:rotate(14deg) scale(1.06); } }
+
+  /* ---- SVG ---- */
+  .lbl { font-size:25px; font-weight:bold; fill:var(--ink); paint-order:stroke; stroke:#eaf4ee; stroke-width:7px; stroke-linejoin:round; }
+  .ico { font-size:24px; text-anchor:middle; dominant-baseline:central; }
+  .piece { transition:transform .28s ease; }
+  .piece.cur circle { stroke:#fff; stroke-width:5px; }
+  .piece text { font-size:30px; text-anchor:middle; dominant-baseline:central; }
+  .ring { fill:none; stroke:#ffb400; stroke-width:6; stroke-dasharray:10 8; animation:rot 3s linear infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes rot { to { transform:rotate(360deg); } }
+
+  /* ---- モーダル ---- */
+  #ov, #qov { position:fixed; inset:0; background:rgba(30,30,40,.45); display:grid; place-items:center; padding:14px; z-index:10; }
+  .modal { width:100%; max-width:480px; max-height:92vh; overflow-y:auto; background:#fff; border-radius:26px; padding:18px 16px; text-align:center;
+    border:5px solid var(--mc, var(--red)); animation:pop .2s ease; }
+  @keyframes pop { from { transform:scale(.85); opacity:0; } }
+  .modal .mi { font-size:52px; line-height:1.1; }
+  .modal h3 { margin:6px 0 8px; font-size:24px; line-height:1.6; }
+  .modal .mb { font-size:18px; line-height:1.8; margin:0 0 12px; }
+  .modal .who { display:inline-block; padding:3px 12px; border-radius:99px; color:#fff; font-size:14px; font-weight:bold; margin-bottom:4px; }
+  .modal .btns { display:flex; flex-direction:column; gap:10px; }
+  .modal .btns button { min-height:62px; border-radius:18px; font-size:20px; font-weight:bold; background:#f4f1ea; border:3px solid var(--line); padding:8px 12px; line-height:1.4; }
+  .modal .btns button.pri { background:var(--red); color:#fff; border-color:var(--red); }
+  .modal .btns button.ok { background:#d9f6dc; border-color:#3bb54a; }
+  .modal .btns button.ng { background:#ffe1e1; border-color:#e25555; }
+  .modal .btns button small { display:block; font-size:14px; font-weight:normal; }
+  .modal .btns.h { flex-direction:row; } .modal .btns.h button { flex:1; }
+  .newst { display:inline-block; background:#fff0f3; color:var(--red); border:2px dashed var(--red); border-radius:12px; padding:2px 10px; font-size:15px; font-weight:bold; }
+  .rank { list-style:none; margin:0 0 12px; padding:0; text-align:left; }
+  .rank li { display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:14px; font-size:18px; font-weight:bold; }
+  .rank li:first-child { background:#fff4c7; font-size:21px; }
+
+  /* ---- スタンプちょう ---- */
+  #book { background:var(--paper); }
+  #book .head { display:flex; align-items:center; gap:10px; padding:8px 10px; background:#fff; border-bottom:3px solid var(--line); font-size:18px; font-weight:bold; }
+  #bookgrid { flex:1; overflow-y:auto; padding:12px; display:grid; grid-template-columns:repeat(auto-fill, minmax(104px, 1fr)); gap:10px; align-content:start; }
+  .stp { aspect-ratio:1; border-radius:50%; border:4px dashed #cfc8b8; background:#fff; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:13px; color:#b5ad9c; text-align:center; padding:6px; line-height:1.3; }
+  .stp.got { border:5px double var(--c); color:var(--c); transform:rotate(-6deg); font-weight:bold; }
+  .stp.got b { font-size:19px; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section id="title" class="screen">
+  <h1>🚃 <ruby>東急線<rt>とうきゅうせん</rt></ruby>すごろく DX</h1>
+  <p class="sub">しぶやから しんよこはま まで。<br>わかれみちを えらんで<br>⭐を いちばん あつめよう！</p>
+  <div class="box">
+    <h2>だれが あそぶ？（タッチで かわるよ）</h2>
+    <div class="slots" id="slots"></div>
+  </div>
+  <button class="big" id="start">▶ しゅっぱつ しんこう！</button>
+  <div class="row">
+    <button class="mid" id="openbook">📕 スタンプちょう <span id="bookcnt"></span></button>
+    <button class="mid" id="snd0">🔊 おと</button>
+  </div>
+  <div class="box">
+    <h2>あそびかた</h2>
+    <ol class="how">
+      <li>🎲 サイコロ（1〜3）を ふって すすむ</li>
+      <li>わかれみちは「ちかみち」か「とおまわり」を えらぶ。<br>とおまわりは ⭐が たくさん！</li>
+      <li>❓クイズに せいかいで ⭐2こ、⭐マスでも ⭐が もらえる</li>
+      <li>🎁カードマスで「とっきゅう」「すきなかず」カードを ゲット</li>
+      <li>はやく ゴールすると ボーナス⭐。みんな ゴールしたら ⭐の おおい ひとの かち！</li>
+    </ol>
+    <p id="best" style="margin:8px 0 0; font-size:15px;"></p>
+  </div>
+</section>
+
+<!-- ゲーム -->
+<section id="game" class="screen hidden">
+  <div class="topbar">
+    <button class="ic" id="home" aria-label="やめる">🏠</button>
+    <div id="msg"></div>
+    <button class="ic wide" id="view">🗺️ ぜんたい</button>
+    <button class="ic" id="snd1" aria-label="おと">🔊</button>
+  </div>
+  <div class="main">
+    <div class="mapwrap">
+      <svg id="map" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="dice" class="hidden"></div>
+    </div>
+    <div class="panel">
+      <div class="chips" id="chips"></div>
+      <div class="acts" id="acts">
+        <button id="roll">🎲 サイコロを ふる</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- スタンプちょう -->
+<section id="book" class="screen hidden">
+  <div class="head"><button class="mid" id="closebook">← もどる</button><span id="booktitle"></span></div>
+  <div id="bookgrid"></div>
+</section>
+
+<div id="ov" class="hidden"><div class="modal" id="modal"></div></div>
+<div id="qov" class="hidden" style="z-index:20"><div class="modal">
+  <div class="mi">🏠</div><h3>やめて タイトルに もどる？</h3>
+  <div class="btns h"><button id="qn" class="pri">つづける</button><button id="qy">やめる</button></div>
+</div></div>
+
+<script>
+"use strict";
+/* ================= データ ================= */
+const LINES = {
+  ty: { name: "とうよこせん", color: "#da0442" },
+  dt: { name: "でんえんとしせん", color: "#20a288" },
+  om: { name: "おおいまちせん", color: "#f18c43" },
+  mg: { name: "めぐろせん", color: "#009cd2" },
+  sh: { name: "しんよこはません", color: "#8e6bb5" },
+  jr: { name: "JR よこはません", color: "#6aa82f" },
+};
+// t: start / goal / fact(まめちしき) / quiz / star / event / card
+const ST = {
+  shibuya:   { k: "渋谷", y: "しぶや", t: "start", lb: [0, -64, "middle"], f: "ハチこうの どうぞうが ある、とっても おおきな えき。ここから しゅっぱつ！" },
+  // とうよこせん
+  daikanyama:{ k: "代官山", y: "だいかんやま", t: "fact", f: "おしゃれな おみせが ならぶ まち。しぶやの となりの えきだよ。" },
+  nakameguro:{ k: "中目黒", y: "なかめぐろ", t: "star", n: 1, f: "めぐろがわの さくらが とっても きれい！" },
+  yutenji:   { k: "祐天寺", y: "ゆうてんじ", t: "quiz", f: "えきの ちかくに「ゆうてんじ」という おてらが あるよ。" },
+  gakugei:   { k: "学芸大学", y: "がくげいだいがく", t: "event", ev: { go: 2 }, f: "きゅうこうに のれた！ びゅーんと 2マス すすむ。" },
+  toritsu:   { k: "都立大学", y: "とりつだいがく", t: "card", f: "なまえに「だいがく」と つくけれど、いまは だいがくは ひっこして ちかくに ないんだ。" },
+  // でんえんとしせん
+  ikejiri:   { k: "池尻大橋", y: "いけじりおおはし", t: "star", n: 1, lb: [12, -34, "end"], f: "しぶやを でて すぐ、ちかの えきだよ。" },
+  sangen:    { k: "三軒茶屋", y: "さんげんぢゃや", t: "card", lb: [12, -34, "end"], f: "2りょうの かわいい でんしゃ「せたがやせん」に のりかえできる えき。" },
+  komazawa:  { k: "駒沢大学", y: "こまざわだいがく", t: "quiz", f: "おおきな こうえん「こまざわオリンピックこうえん」が ちかいよ。" },
+  sakura:    { k: "桜新町", y: "さくらしんまち", t: "star", n: 2, f: "「サザエさん」の まち。とおりに どうぞうが たっているよ。" },
+  yoga:      { k: "用賀", y: "ようが", t: "event", ev: { go: 1 }, f: "ちかの えき。つぎの えきの てまえで そとに でるよ。わくわくして 1マス すすむ！" },
+  futako:    { k: "二子玉川", y: "ふたこたまがわ", t: "star", n: 2, lb: "l", ln: "dt", f: "たまがわの すぐ そば。ホームから かわが みえるよ。" },
+  // おおいまちせん
+  kaminoge:  { k: "上野毛", y: "かみのげ", t: "quiz", lb: [-34, 22, "end"], f: "「かみのげ」と よむよ。むずかしい よみかたの えき。" },
+  todoroki:  { k: "等々力", y: "とどろき", t: "star", n: 2, lb: "u", f: "えきの ちかくに「とどろきけいこく」という みどりの たにが あるよ。" },
+  oyamadai:  { k: "尾山台", y: "おやまだい", t: "event", ev: { back: 1 }, lb: "d", f: "しょうてんがいで おかいもの。たのしくて 1マス もどっちゃった。" },
+  kuhonbutsu:{ k: "九品仏", y: "くほんぶつ", t: "fact", lb: "u", f: "ホームが みじかくて、いちぶの ドアが ひらかない めずらしい えき。" },
+  jiyugaoka: { k: "自由が丘", y: "じゆうがおか", t: "fact", lb: [38, -14, "start"], f: "ケーキや おかしの おみせが いっぱいの「スイーツの まち」。" },
+  midori:    { k: "緑が丘", y: "みどりがおか", t: "star", n: 2, lb: [-24, 58, "middle"], f: "なまえの とおり みどりが おおい しずかな えき。" },
+  ookayama:  { k: "大岡山", y: "おおおかやま", t: "quiz", lb: "r", ln: "mg", f: "えきの うえに びょういんが ある めずらしい えき。" },
+  okusawa:   { k: "奥沢", y: "おくさわ", t: "card", lb: "r", f: "めぐろせんの でんしゃの しゃこが あるよ。" },
+  denen:     { k: "田園調布", y: "でんえんちょうふ", t: "fact", lb: "l", f: "とんがりやねの むかしの えきしゃが のこっている えき。" },
+  // とうよこせん・めぐろせん
+  tamagawa:  { k: "多摩川", y: "たまがわ", t: "star", n: 1, f: "すぐ となりを たまがわが ながれているよ。" },
+  shinmaruko:{ k: "新丸子", y: "しんまるこ", t: "quiz", f: "たまがわの てっきょうを わたると かながわけん！" },
+  kosugi:    { k: "武蔵小杉", y: "むさしこすぎ", t: "event", ev: { skip: 1 }, f: "たかい ビルが いっぱい。ホームが こんでいて のれなかった… 1かい やすみ。" },
+  motosumi:  { k: "元住吉", y: "もとすみよし", t: "card", f: "でんしゃが やすむ しゃこが ある えき。" },
+  hiyoshi:   { k: "日吉", y: "ひよし", t: "fact", lb: "l", f: "しんよこはません との わかれみち。どっちへ いく？" },
+  // しんよこはません
+  shintsuna: { k: "新綱島", y: "しんつなしま", t: "quiz", lb: "l", f: "2023ねんに できた あたらしい ちかの えき。" },
+  // とうよこせん → JR
+  tsunashima:{ k: "綱島", y: "つなしま", t: "quiz", lb: "u", f: "むかしは おんせんの まちで にぎわった えき。" },
+  okurayama: { k: "大倉山", y: "おおくらやま", t: "star", n: 3, f: "うめの はなが さく こうえんが あるよ。" },
+  kikuna:    { k: "菊名", y: "きくな", t: "star", n: 2, f: "JR よこはません に のりかえ！ しんよこはまは すぐ となり。" },
+  shinyoko:  { k: "新横浜", y: "しんよこはま", t: "goal", ln: "sh", lb: [-34, 50, "end"], f: "しんかんせんに のりかえできる えき。ゴール！" },
+};
+// 路線（pts の はじめ＝from、おわり＝to。mid は そのあいだに ひとしく ならぶ）
+const CHAINS = [
+  { line: "ty", from: "shibuya", to: "jiyugaoka", mid: ["daikanyama", "nakameguro", "yutenji", "gakugei", "toritsu"], pts: [[500,90],[760,250],[760,470],[600,570],[600,680]], lb: "r", hint: "ちかみち 🏃" },
+  { line: "dt", from: "shibuya", to: "futako", mid: ["ikejiri", "sangen", "komazawa", "sakura", "yoga"], pts: [[500,90],[240,200],[110,400],[110,560]], lb: "r", hint: "とおまわり ⭐たくさん" },
+  { line: "om", from: "futako", to: "jiyugaoka", mid: ["kaminoge", "todoroki", "oyamadai", "kuhonbutsu"], pts: [[110,560],[250,680],[600,680]], lb: "d" },
+  { line: "ty", from: "jiyugaoka", to: "denen", mid: [], pts: [[600,680],[600,900]], hint: "ちかみち 🏃" },
+  { line: "om", from: "jiyugaoka", to: "ookayama", mid: ["midori"], pts: [[600,680],[800,770]], lb: "d", hint: "とおまわり ⭐🎁❓" },
+  { line: "mg", from: "ookayama", to: "denen", mid: ["okusawa"], pts: [[800,770],[600,900]], lb: "r" },
+  { line: "ty", from: "denen", to: "hiyoshi", mid: ["tamagawa", "shinmaruko", "kosugi", "motosumi"], pts: [[600,900],[600,1000],[400,1150],[400,1380]], lb: "r" },
+  { line: "sh", from: "hiyoshi", to: "shinyoko", mid: ["shintsuna"], pts: [[400,1380],[330,1550],[330,1720]], lb: "l", hint: "ちかみち 🏃" },
+  { line: "ty", from: "hiyoshi", to: "kikuna", mid: ["tsunashima", "okurayama"], pts: [[400,1380],[680,1450],[680,1720]], lb: "r", hint: "とおまわり ⭐たくさん" },
+  { line: "jr", from: "kikuna", to: "shinyoko", mid: [], pts: [[680,1720],[330,1720]] },
+];
+const MAPW = 1000, MAPH = 1820, GOAL = "shinyoko", START = "shibuya";
+const TYPE_ICON = { quiz: "❓", star: "⭐", event: "⚡", card: "🎁", start: "🚩", goal: "🏁", fact: "" };
+
+const QUIZ = [
+  ["しぶやえきに ある ゆうめいな いぬの どうぞうは？", ["ハチこう", "ポチこう", "タロこう"], "ごしゅじんを ずっと まっていた いぬだよ。"],
+  ["とうよこせんは しぶやと どこを むすぶ？", ["よこはま", "おおさか", "さっぽろ"], "「とう」きょうと「よこ」はまで とうよこせん。"],
+  ["しんよこはまえきで のりかえできる はやい でんしゃは？", ["しんかんせん", "モノレール", "ロープウェイ"], "とうかいどう しんかんせんが とまるよ。"],
+  ["とうよこせんの いろは？", ["あか", "みどり", "むらさき"], "ちずの あかい せんが とうよこせん。"],
+  ["でんえんとしせんの いろは？", ["みどり", "あか", "きいろ"], "ちずの みどりの せんだよ。"],
+  ["おおいまちせんの いろは？", ["オレンジ", "くろ", "ピンク"], "ちずの オレンジの せんだよ。"],
+  ["めぐろせんの いろは？", ["みずいろ", "ちゃいろ", "しろ"], "ちずの みずいろの せんだよ。"],
+  ["せたがやせんに のりかえできる えきは？", ["さんげんぢゃや", "ひよし", "きくな"], "2りょうの かわいい でんしゃが はしっているよ。"],
+  ["いちばん たくさんの えきに とまるのは？", ["かくえきていしゃ", "きゅうこう", "とっきゅう"], "かくえきていしゃは ぜんぶの えきに とまるよ。"],
+  ["えきで でんしゃを まつ ばしょは？", ["ホーム", "プール", "ステージ"], "プラットホームを みじかくして ホーム。"],
+  ["ホームでは どこで でんしゃを まつ？", ["きいろい ブロックの うしろ", "せんろの うえ", "ホームの はしっこ"], "きいろい ブロックより うしろが あんぜん。"],
+  ["ふみきりが カンカン なったら？", ["とまって まつ", "はしって わたる", "くぐる"], "でんしゃが とおりすぎるまで まとうね。"],
+  ["でんしゃの なかでは どうする？", ["しずかに する", "はしりまわる", "おおごえで うたう"], "みんなが きもちよく のれるようにね。"],
+  ["「こどものくにせん」の しゅうてんは？", ["こどものくに", "おとなのくに", "ゆめのくに"], "ひろい こうえん「こどものくに」が あるよ。"],
+  ["でんしゃを うんてんする ひとは？", ["うんてんし", "パイロット", "せんちょう"], "パイロットは ひこうき、せんちょうは ふね。"],
+  ["ドアを しめたり ほうそうを する ひとは？", ["しゃしょう", "コック", "だいく"], "でんしゃの うしろに のっているよ。"],
+  ["たまがわは なに？", ["かわ", "やま", "うみ"], "とうきょうと かながわの あいだを ながれる かわ。"],
+  ["しぶやを でて さいしょの とうよこせんの えきは？", ["だいかんやま", "なかめぐろ", "じゆうがおか"], "しぶやの すぐ となりだよ。"],
+  ["でんしゃが はしる てつの みちは？", ["せんろ", "どうろ", "かいだん"], "レールとも いうよ。"],
+  ["ひよしから しんよこはまへ いく あたらしい せんは？", ["しんよこはません", "せたがやせん", "いけがみせん"], "2023ねんに できたよ。"],
+  ["でんしゃは なにの ちからで はしる？", ["でんき", "かぜ", "ゆげ"], "うえの でんせんから でんきを もらうよ。"],
+  ["3りょうと 5りょうを つなぐと なんりょう？", ["8りょう", "7りょう", "9りょう"], "3 + 5 = 8。"],
+  ["しんよこはまえきが あるのは？", ["かながわけん", "ちばけん", "さいたまけん"], "よこはましに あるよ。"],
+  ["でんしゃに のるとき、さきに するのは？", ["おりる ひとを まつ", "いそいで のる", "ドアの まえに たつ"], "おりる ひとが さき、のる ひとは あと。"],
+  ["「ゆうせんせき」は どんな ひとの せき？", ["おとしよりや からだが たいへんな ひと", "いちばん はやく きた ひと", "うんてんし"], "こまっている ひとに ゆずろうね。"],
+  ["10りょうの でんしゃから 2りょう はずすと？", ["8りょう", "12りょう", "6りょう"], "10 - 2 = 8。"],
+];
+const CARDS = {
+  exp: { ic: "🚄", name: "とっきゅう", desc: "サイコロを 2こ ふれる" },
+  pick:{ ic: "🎯", name: "すきなかず", desc: "1・2・3 から えらべる" },
+};
+const TOKENS = [
+  { e: "🚃", name: "あか", c: "#da0442" },
+  { e: "🚄", name: "あお", c: "#0f7fd0" },
+  { e: "🚋", name: "みどり", c: "#1f9d55" },
+  { e: "🚅", name: "きいろ", c: "#e0a100" },
+];
+const GOAL_BONUS = [5, 3, 1, 0];
+
+/* ================= どうぐ ================= */
+const $ = (id) => document.getElementById(id);
+const delay = (ms) => new Promise((r) => setTimeout(r, ms));
+const rnd = (n) => Math.floor(Math.random() * n);
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const ruby = (id) => `<ruby>${ST[id].k}<rt>${ST[id].y}</rt></ruby>`;
+
+/* ---- ほぞん ---- */
+const KEY = "tokyu-sugoroku-dx:v1";
+let save = { stamps: {}, best: 0, plays: 0, sound: true, slots: ["human", "cpu", "off", "off"] };
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && typeof s === "object") save = Object.assign(save, s); } catch (e) {}
+if (!save.stamps || typeof save.stamps !== "object") save.stamps = {};
+if (!Array.isArray(save.slots) || save.slots.length !== 4) save.slots = ["human", "cpu", "off", "off"];
+save.slots[0] = "human";
+function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+/* ---- おと（WebAudio の ごうせいおん） ---- */
+let actx = null;
+function tone(freq, dur, when = 0, type = "triangle", vol = 0.16) {
+  if (!save.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === "suspended") actx.resume();
+    const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+    o.type = type; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.05);
+  } catch (e) {}
+}
+const sfx = {
+  tick: () => tone(700 + rnd(300), 0.05, 0, "square", 0.06),
+  step: () => tone(520, 0.09),
+  back: () => tone(300, 0.12),
+  star: () => { tone(880, 0.12); tone(1175, 0.12, 0.1); tone(1568, 0.2, 0.2); },
+  ok: () => { tone(660, 0.12); tone(880, 0.12, 0.12); tone(1320, 0.25, 0.24); },
+  ng: () => { tone(300, 0.18, 0, "sawtooth", 0.08); tone(230, 0.3, 0.16, "sawtooth", 0.08); },
+  card: () => { tone(523, 0.1); tone(784, 0.2, 0.1); },
+  horn: () => { tone(392, 0.35, 0, "square", 0.07); tone(494, 0.35, 0, "square", 0.07); },
+  fan: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, 0.22, i * 0.15)),
+};
+function drawSound() { const t = save.sound ? "🔊" : "🔇"; $("snd0").textContent = t + " おと"; $("snd1").textContent = t; }
+function toggleSound() { save.sound = !save.sound; store(); drawSound(); if (save.sound) sfx.card(); }
+
+/* ================= ちず ================= */
+const POS = {}, NEXT = {}, LBL = {}, STLINE = {};
+(function buildGraph() {
+  for (const ch of CHAINS) {
+    const ids = [ch.from, ...ch.mid, ch.to], P = ch.pts;
+    const seg = []; let total = 0;
+    for (let i = 1; i < P.length; i++) { const d = Math.hypot(P[i][0] - P[i-1][0], P[i][1] - P[i-1][1]); seg.push(d); total += d; }
+    ids.forEach((id, n) => {
+      let d = total * n / (ids.length - 1), i = 0;
+      while (i < seg.length - 1 && d > seg[i]) { d -= seg[i]; i++; }
+      const r = d / seg[i];
+      if (!POS[id]) POS[id] = [P[i][0] + (P[i+1][0] - P[i][0]) * r, P[i][1] + (P[i+1][1] - P[i][1]) * r];
+      if (n > 0 && n < ids.length - 1) { LBL[id] = ST[id].lb || ch.lb || "r"; STLINE[id] = ch.line; }
+      if (n < ids.length - 1) (NEXT[id] = NEXT[id] || []).push({ to: ids[n + 1], ch });
+    });
+  }
+  for (const id in ST) { if (!LBL[id]) LBL[id] = ST[id].lb || "r"; if (!STLINE[id]) STLINE[id] = ST[id].ln || "ty"; }
+})();
+const ALL_IDS = Object.keys(ST);
+
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+const svg = $("map");
+let pieceLayer;
+function drawMap() {
+  svg.innerHTML = "";
+  // かわ（たまがわ）
+  svg.appendChild(el("path", { d: "M-80 470 C 60 520, 20 760, 200 800 S 520 960, 640 1040 S 900 1080, 1100 1180", fill: "none", stroke: "#bfe3f5", "stroke-width": 46, "stroke-linecap": "round" }));
+  svg.appendChild(el("text", { x: 60, y: 850, class: "lbl", style: "fill:#6fb1d1;font-size:22px", transform: "rotate(20 60 850)" }, "〜 たまがわ 〜"));
+  for (const ch of CHAINS) {
+    const d = "M" + ch.pts.map((p) => p.join(" ")).join(" L");
+    svg.appendChild(el("path", { d, fill: "none", stroke: "#fff", "stroke-width": 22, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+    svg.appendChild(el("path", { d, fill: "none", stroke: LINES[ch.line].color, "stroke-width": 14, "stroke-linecap": "round", "stroke-linejoin": "round" }));
+  }
+  // ろせんめい
+  [["ty", 600, 330, "とうよこせん"], ["dt", 20, 190, "でんえんとしせん"], ["om", 250, 760, "おおいまちせん"], ["mg", 790, 880, "めぐろせん"],
+   ["sh", 110, 1640, "しんよこはません"], ["jr", 430, 1780, "JR よこはません"], ["ty", 720, 1620, "とうよこせん"]].forEach(([l, x, y, t]) => {
+    svg.appendChild(el("text", { x, y, class: "lbl", style: `fill:${LINES[l].color};font-size:21px` }, t));
+  });
+  for (const id of ALL_IDS) {
+    const s = ST[id], [x, y] = POS[id], big = (NEXT[id] || []).length > 1 || s.t === "start" || s.t === "goal";
+    const col = s.t === "goal" ? "#ffb400" : LINES[STLINE[id]].color;
+    svg.appendChild(el("circle", { cx: x, cy: y, r: big ? 30 : 24, fill: "#fff", stroke: big ? "#2b2f3a" : col, "stroke-width": 6 }));
+    if (TYPE_ICON[s.t]) svg.appendChild(el("text", { x, y: y + 1, class: "ico" }, TYPE_ICON[s.t]));
+    const lb = LBL[id]; let tx, ty, an;
+    if (Array.isArray(lb)) { tx = x + lb[0]; ty = y + lb[1]; an = lb[2]; }
+    else if (lb === "l") { tx = x - 36; ty = y + 9; an = "end"; }
+    else if (lb === "u") { tx = x; ty = y - 38; an = "middle"; }
+    else if (lb === "d") { tx = x; ty = y + 56; an = "middle"; }
+    else { tx = x + 36; ty = y + 9; an = "start"; }
+    svg.appendChild(el("text", { x: tx, y: ty, class: "lbl", "text-anchor": an }, s.y));
+  }
+  pieceLayer = el("g", {}); svg.appendChild(pieceLayer);
+}
+
+/* ---- カメラ ---- */
+let cam = { x: 0, y: 0, w: MAPW, h: MAPH }, overview = false, camRaf = 0, focusId = START;
+function camTarget() {
+  const r = svg.getBoundingClientRect(), asp = (r.height || 1) / (r.width || 1);
+  const M = 70;
+  if (overview) { let w = MAPW + M * 2, h = w * asp; if (h < MAPH + M * 2) { h = MAPH + M * 2; w = h / asp; } return { x: MAPW / 2 - w / 2, y: MAPH / 2 - h / 2, w, h }; }
+  const S = 600; let w, h; if (asp >= 1) { w = S; h = S * asp; } else { h = S; w = S / asp; }
+  const [px, py] = POS[focusId];
+  const cl = (v, lo, hi) => (lo > hi ? (lo + hi) / 2 : Math.max(lo, Math.min(hi, v)));
+  return { x: cl(px - w / 2, -M, MAPW + M - w), y: cl(py - h / 2, -M, MAPH + M - h), w, h };
+}
+function camLoop() {
+  const t = camTarget(); let far = false;
+  for (const k of ["x", "y", "w", "h"]) { const d = t[k] - cam[k]; if (Math.abs(d) > 0.5) { cam[k] += d * 0.16; far = true; } else cam[k] = t[k]; }
+  svg.setAttribute("viewBox", `${cam.x} ${cam.y} ${cam.w} ${cam.h}`);
+  camRaf = far ? requestAnimationFrame(camLoop) : 0;
+}
+function camGo(snap) { if (snap) { cam = camTarget(); } if (!camRaf) camRaf = requestAnimationFrame(camLoop); }
+window.addEventListener("resize", () => camGo());
+
+/* ================= ゲーム ================= */
+let players = [], turn = 0, goalCount = 0, quizPool = [], playing = false, busy = false, gameId = 0;
+const curP = () => players[turn];
+class Quit extends Error {}
+function alive(id) { if (id !== gameId) throw new Quit(); }
+
+function drawSlots() {
+  const w = $("slots"); w.innerHTML = "";
+  TOKENS.forEach((tk, i) => {
+    const mode = save.slots[i], b = document.createElement("button");
+    b.className = "slot " + (mode === "off" ? "off" : "on"); b.style.setProperty("--c", tk.c);
+    const label = mode === "human" ? "🙂 ひと" : mode === "cpu" ? "🤖 ロボ" : "💤 おやすみ";
+    b.innerHTML = `<span class="tk" style="background:${tk.c}">${tk.e}</span><span>${tk.name}<small>${label}</small></span>`;
+    b.onclick = () => {
+      const order = i === 0 ? ["human"] : ["human", "cpu", "off"];
+      save.slots[i] = order[(order.indexOf(mode) + 1) % order.length];
+      store(); sfx.tick(); drawSlots();
+    };
+    w.appendChild(b);
+  });
+}
+function drawTitle() {
+  drawSlots(); drawSound();
+  const n = ALL_IDS.filter((id) => save.stamps[id]).length;
+  $("bookcnt").textContent = `${n}/${ALL_IDS.length}`;
+  $("best").textContent = save.plays ? `これまで ${save.plays}かい あそんだよ。さいこう ⭐${save.best}こ！` : "";
+}
+function show(id) { ["title", "game", "book"].forEach((s) => $(s).classList.toggle("hidden", s !== id)); }
+
+function startGame() {
+  gameId++; playing = true; busy = false; goalCount = 0; turn = 0; overview = false; focusId = START;
+  players = [];
+  save.slots.forEach((m, i) => { if (m !== "off") players.push({ ...TOKENS[i], cpu: m === "cpu", pos: START, path: [], star: 0, cards: [], skip: false, done: false, rank: 0, g: null }); });
+  quizPool = shuffle(QUIZ);
+  show("game"); drawMap();
+  players.forEach((p, i) => {
+    p.g = el("g", { class: "piece" });
+    p.g.appendChild(el("circle", { r: 26, fill: p.c, stroke: "#2b2f3a", "stroke-width": 3 }));
+    p.g.appendChild(el("text", {}, p.e));
+    pieceLayer.appendChild(p.g);
+  });
+  place(); drawView(); camGo(true); sfx.horn();
+  beginTurn(gameId).catch(onErr);
+}
+function onErr(e) { if (!(e instanceof Quit)) { console.error(e); } }
+
+function place() {
+  const groups = {};
+  players.forEach((p) => (groups[p.pos] = groups[p.pos] || []).push(p));
+  for (const id in groups) {
+    const g = groups[id], [x, y] = POS[id];
+    g.sort((a, b) => (a === curP()) - (b === curP()));
+    g.forEach((p, i) => {
+      const off = g.length === 1 ? [0, 0] : [[-20, -16], [20, -16], [-20, 18], [20, 18]][i];
+      p.g.style.transform = `translate(${x + off[0]}px, ${y + off[1] - 4}px)`;
+      p.g.classList.toggle("cur", p === curP());
+      if (p === curP()) pieceLayer.appendChild(p.g);
+    });
+  }
+}
+function drawChips() {
+  const w = $("chips"); w.innerHTML = "";
+  players.forEach((p, i) => {
+    const d = document.createElement("div");
+    d.className = "chip" + (i === turn && !p.done ? " cur" : "") + (p.done ? " done" : ""); d.style.setProperty("--c", p.c);
+    const ex = p.done ? `🏁${p.rank}ばん` : (p.cards.map((c) => CARDS[c].ic).join("") + (p.skip ? "💤" : "")) || (p.cpu ? "🤖" : "");
+    d.innerHTML = `<span class="tk" style="background:${p.c}">${p.e}</span><span><span class="st">⭐${p.star}</span><br><span class="ex">${ex}</span></span>`;
+    w.appendChild(d);
+  });
+}
+function drawActs() {
+  const a = $("acts"), p = curP(), can = playing && !busy && !p.cpu && !p.done;
+  a.querySelectorAll(".cardbtn").forEach((b) => b.remove());
+  $("roll").disabled = !can;
+  if (!p.cpu) [...new Set(p.cards)].forEach((c) => {
+    const b = document.createElement("button"); b.className = "cardbtn"; b.disabled = !can;
+    const n = p.cards.filter((x) => x === c).length;
+    b.innerHTML = `<b>${CARDS[c].ic}</b>${CARDS[c].name}${n > 1 ? " ×" + n : ""}`;
+    b.onclick = () => humanAct(c);
+    a.appendChild(b);
+  });
+}
+function drawView() { $("view").textContent = overview ? "🔍 ちかく" : "🗺️ ぜんたい"; drawChips(); drawActs(); }
+function say(t) { $("msg").innerHTML = t; }
+const pname = (p) => `${p.e} ${p.name}${p.cpu ? "🤖" : ""}`;
+
+/* ---- モーダル ---- */
+// btns: [{html, cls, val}]。auto: {ms, val} で じどうで とじる（ロボの ばん）
+function modal({ p, icon, title, body, btns, horiz, color, auto }) {
+  const id = gameId;
+  return new Promise((resolve, reject) => {
+    const m = $("modal"); m.style.setProperty("--mc", color || (p ? p.c : "#da0442"));
+    m.innerHTML = (p ? `<div class="who" style="background:${p.c}">${pname(p)}</div>` : "") +
+      (icon ? `<div class="mi">${icon}</div>` : "") + (title ? `<h3>${title}</h3>` : "") + (body ? `<p class="mb">${body}</p>` : "") +
+      `<div class="btns${horiz ? " h" : ""}"></div>`;
+    const bw = m.querySelector(".btns"); let done = false, timer = 0;
+    const fin = (v) => { if (done) return; done = true; clearTimeout(timer); if (id !== gameId) return reject(new Quit()); $("ov").classList.add("hidden"); resolve(v); };
+    (btns || [{ html: "OK", cls: "pri", val: true }]).forEach((b) => {
+      const e = document.createElement("button"); e.className = b.cls || ""; e.innerHTML = b.html;
+      e.onclick = () => fin(b.val); bw.appendChild(e);
+    });
+    $("ov").classList.remove("hidden");
+    if (auto) timer = setTimeout(() => fin(auto.val), auto.ms);
+  });
+}
+const autoOf = (p, ms, val = true) => (p.cpu ? { ms, val } : null);
+
+/* ---- さいころ ---- */
+const PIPS = { 1: [4], 2: [0, 8], 3: [0, 4, 8] };
+function dieHtml(n) { let h = '<div class="die spin">'; for (let i = 0; i < 9; i++) h += `<i class="${PIPS[n].includes(i) ? "p" : ""}"></i>`; return h + "</div>"; }
+async function rollDice(count, id) {
+  const d = $("dice"); d.classList.remove("hidden");
+  let vals = [];
+  for (let i = 0; i < 9; i++) { vals = Array.from({ length: count }, () => 1 + rnd(3)); d.innerHTML = vals.map(dieHtml).join(""); sfx.tick(); await delay(70); alive(id); }
+  d.querySelectorAll(".die").forEach((x) => x.classList.remove("spin"));
+  tone(880, 0.15); await delay(750); alive(id);
+  d.classList.add("hidden");
+  return vals.reduce((a, b) => a + b, 0);
+}
+
+/* ---- ターン ---- */
+async function beginTurn(id) {
+  alive(id);
+  const p = curP(); focusId = p.pos; place(); drawView(); camGo();
+  if (p.skip) {
+    p.skip = false; say(`${pname(p)} は 1かい やすみ 💤`); drawView();
+    await delay(1300); return endTurn(id);
+  }
+  say(`${pname(p)} の ばん！ ${p.cpu ? "" : "サイコロを ふってね"}`);
+  if (p.cpu) {
+    busy = true; drawActs(); await delay(650); alive(id);
+    const c = p.cards.includes("exp") ? "exp" : (p.cards.includes("pick") && rnd(2) ? "pick" : null);
+    await act(c, id);
+  }
+}
+function humanAct(c) { if (busy || !playing || curP().cpu) return; busy = true; drawActs(); act(c, gameId).catch(onErr); }
+async function act(card, id) {
+  const p = curP(); let n;
+  if (card) { p.cards.splice(p.cards.indexOf(card), 1); sfx.card(); drawChips(); }
+  if (card === "pick") {
+    n = await modal({ p, icon: "🎯", title: "すきなかず カード", body: "いくつ すすむ？", horiz: true,
+      btns: [1, 2, 3].map((v) => ({ html: String(v), cls: "pri", val: v })), auto: autoOf(p, 1200, 3) });
+    alive(id);
+  } else {
+    if (card === "exp") say(`${pname(p)} は 🚄とっきゅうカード！ サイコロ 2こ！`);
+    n = await rollDice(card === "exp" ? 2 : 1, id);
+  }
+  say(`${pname(p)} は <b style="font-size:1.3em">&nbsp;${n}&nbsp;</b> マス すすむ`);
+  await move(p, n, id);
+  if (p.pos === GOAL) await reachGoal(p, id); else await land(p, id, true);
+  await endTurn(id);
+}
+async function move(p, n, id) {
+  for (let i = 0; i < n; i++) {
+    const outs = NEXT[p.pos]; if (!outs) break;
+    let e = outs[0];
+    if (outs.length > 1) { e = await chooseBranch(p, outs, n - i); alive(id); }
+    p.path.push(p.pos); p.pos = e.to; focusId = p.pos; place(); camGo(); sfx.step();
+    await delay(380); alive(id);
+    if (p.pos === GOAL) break;
+  }
+}
+async function moveBack(p, n, id) {
+  for (let i = 0; i < n && p.path.length; i++) { p.pos = p.path.pop(); focusId = p.pos; place(); camGo(); sfx.back(); await delay(380); alive(id); }
+}
+function chooseBranch(p, outs, left) {
+  const btns = outs.map((o, i) => {
+    const L = LINES[o.ch.line];
+    return { val: o, html: `<span style="color:${L.color}">●</span> ${L.name}<small>${ST[o.to].y} ほうめん ／ ${o.ch.hint || ""}</small>` };
+  });
+  const pick = outs[rnd(outs.length)];
+  return modal({ p, icon: "🔀", title: `${ruby(p.pos)} わかれみち`, body: `どっちへ いく？（あと ${left}マス）`, btns, auto: autoOf(p, 1100, pick) });
+}
+function addStamp(p) {
+  if (p.cpu || save.stamps[p.pos]) return "";
+  save.stamps[p.pos] = 1; store();
+  return `<br><span class="newst">📕 あたらしい えきスタンプ！</span>`;
+}
+async function land(p, id, effect) {
+  const s = ST[p.pos], stamp = addStamp(p), title = `${ruby(p.pos)} えき`;
+  if (!effect || s.t === "fact" || s.t === "start") {
+    await modal({ p, icon: "🚉", title, body: s.f + stamp, auto: autoOf(p, 1600) });
+  } else if (s.t === "star") {
+    p.star += s.n; sfx.star(); drawChips();
+    await modal({ p, icon: "⭐".repeat(s.n), title, body: `${s.f}<br><b>⭐を ${s.n}こ ゲット！</b>${stamp}`, auto: autoOf(p, 1600) });
+  } else if (s.t === "card") {
+    const c = rnd(2) ? "exp" : "pick"; sfx.card();
+    let extra;
+    if (p.cards.length >= 3) { p.star += 1; extra = `カードは 3まい まで。かわりに <b>⭐1こ</b>！`; }
+    else { p.cards.push(c); extra = `<b>${CARDS[c].ic} ${CARDS[c].name}カード</b> を ゲット！<br>（${CARDS[c].desc}）`; }
+    drawChips();
+    await modal({ p, icon: "🎁", title, body: `${s.f}<br>${extra}${stamp}`, auto: autoOf(p, 1700) });
+  } else if (s.t === "event") {
+    const ev = s.ev; (ev.go ? sfx.ok : sfx.ng)();
+    await modal({ p, icon: ev.go ? "💨" : ev.back ? "↩️" : "💤", title, body: s.f + stamp, auto: autoOf(p, 1800) });
+    alive(id);
+    if (ev.go) { await move(p, ev.go, id); if (p.pos === GOAL) return reachGoal(p, id); await land(p, id, false); }
+    else if (ev.back) { await moveBack(p, ev.back, id); await land(p, id, false); }
+    else if (ev.skip) { p.skip = true; drawChips(); }
+  } else if (s.t === "quiz") {
+    await quiz(p, id, title, stamp);
+  }
+  alive(id);
+}
+async function quiz(p, id, title, stamp) {
+  if (!quizPool.length) quizPool = shuffle(QUIZ);
+  const [q, ch, note] = quizPool.pop(), opts = shuffle(ch.map((t, i) => ({ t, ok: i === 0 })));
+  const cpuPick = opts.find((o) => (rnd(100) < 65 ? o.ok : !o.ok));
+  const pick = await modal({ p, icon: "❓", title: `${title} クイズ`, body: q, btns: opts.map((o) => ({ html: o.t, val: o })), auto: autoOf(p, 1800, cpuPick) });
+  alive(id);
+  if (pick.ok) { p.star += 2; sfx.ok(); } else sfx.ng();
+  drawChips();
+  await modal({ p, icon: pick.ok ? "⭕" : "❌", title: pick.ok ? "せいかい！ ⭐2こ ゲット！" : "ざんねん…",
+    body: `こたえは「<b>${ch[0]}</b>」<br>${note}${stamp}`, color: pick.ok ? "#3bb54a" : "#e25555", auto: autoOf(p, 1800) });
+}
+async function reachGoal(p, id) {
+  p.done = true; p.rank = ++goalCount; const bonus = GOAL_BONUS[p.rank - 1] || 0; p.star += bonus;
+  const stamp = addStamp(p); sfx.fan(); drawChips();
+  await modal({ p, icon: "🏁", title: `${ruby(GOAL)} に ゴール！`, body: `${p.rank}ばんめに とうちゃく！${bonus ? `<br><b>ボーナス ⭐${bonus}こ！</b>` : ""}${stamp}`, auto: autoOf(p, 2400) });
+  alive(id);
+}
+async function endTurn(id) {
+  alive(id);
+  if (players.every((p) => p.done)) return finish();
+  do { turn = (turn + 1) % players.length; } while (curP().done);
+  busy = false;
+  await delay(250);
+  return beginTurn(id);
+}
+async function finish() {
+  playing = false; busy = true; drawActs();
+  const rank = players.slice().sort((a, b) => b.star - a.star || a.rank - b.rank);
+  const bestHuman = Math.max(0, ...players.filter((p) => !p.cpu).map((p) => p.star));
+  save.plays++; if (bestHuman > save.best) save.best = bestHuman; store();
+  overview = true; camGo(); sfx.fan();
+  const medals = ["🥇", "🥈", "🥉", "🎖️"];
+  const v = await modal({ icon: "🎉", title: `${pname(rank[0])} の かち！`, color: rank[0].c,
+    body: `<ol class="rank">${rank.map((p, i) => `<li>${medals[i]} <span>${pname(p)}</span><span style="margin-left:auto">⭐${p.star}</span></li>`).join("")}</ol>`,
+    btns: [{ html: "🔁 もういちど", cls: "pri", val: "again" }, { html: "🏠 タイトルへ", val: "home" }] });
+  if (v === "again") startGame(); else goTitle();
+}
+function goTitle() { gameId++; playing = false; busy = false; $("ov").classList.add("hidden"); $("dice").classList.add("hidden"); drawTitle(); show("title"); }
+
+/* ---- スタンプちょう ---- */
+function openBook() {
+  const g = $("bookgrid"); g.innerHTML = ""; let n = 0;
+  ALL_IDS.forEach((id) => {
+    const got = !!save.stamps[id], d = document.createElement("div"); if (got) n++;
+    d.className = "stp" + (got ? " got" : ""); d.style.setProperty("--c", LINES[STLINE[id]].color);
+    d.innerHTML = got ? `<b>${ST[id].k}</b>${ST[id].y}` : `？<br>${ST[id].y}`;
+    g.appendChild(d);
+  });
+  $("booktitle").textContent = `📕 えきスタンプちょう ${n}/${ALL_IDS.length}` + (n === ALL_IDS.length ? " 🎉 コンプリート！" : "");
+  show("book");
+}
+
+/* ---- ボタン ---- */
+$("start").onclick = startGame;
+$("roll").onclick = () => humanAct(null);
+$("snd0").onclick = toggleSound; $("snd1").onclick = toggleSound;
+$("view").onclick = () => { overview = !overview; $("view").textContent = overview ? "🔍 ちかく" : "🗺️ ぜんたい"; camGo(); };
+$("openbook").onclick = openBook;
+$("closebook").onclick = () => { drawTitle(); show("title"); };
+$("home").onclick = () => $("qov").classList.remove("hidden");
+$("qn").onclick = () => $("qov").classList.add("hidden");
+$("qy").onclick = () => { $("qov").classList.add("hidden"); goTitle(); };
+drawTitle();
+</script>
+</body>
+</html>
