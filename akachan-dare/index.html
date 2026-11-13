@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>あかちゃん だあれ？ ｜ いきものの そだちかた</title>
+<meta name="description" content="あかちゃんの えを みて、おとなに なったら だれか あてよう。そだつ じゅんばんを ならべて、いきものの へんしんを しる アプリ。">
+<meta name="theme-color" content="#4c9a52">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐣</text></svg>">
+<style>
+:root{
+  --bg:#f3f9ec; --ink:#2f3a2a; --sub:#6b7a62; --card:#fff; --line:#d9e8cc;
+  --green:#4c9a52; --green-d:#357a3b; --orange:#f08c2e; --pink:#f06595; --blue:#3b8fd8;
+  --ok:#2fb35a; --ng:#e8590c; --shadow:0 4px 0 rgba(60,90,40,.18);
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg) radial-gradient(circle at 15% 10%,#fffbe6 0,transparent 40%) fixed;color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","Hiragino Sans","BIZ UDPGothic","Meiryo",system-ui,sans-serif;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+svg{display:block}
+.app{max-width:1100px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;
+  padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+header{display:flex;align-items:center;gap:8px;min-height:52px}
+header h1{flex:1;margin:0;font-size:clamp(18px,4.6vw,26px);letter-spacing:.04em;color:var(--green-d)}
+.ibtn{min-width:52px;height:52px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);font-size:24px;
+  display:flex;align-items:center;justify-content:center;padding:0 10px;font-weight:700}
+.ibtn:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(60,90,40,.18)}
+.ibtn small{font-size:14px;margin-left:4px}
+main{flex:1;display:flex;flex-direction:column}
+.screen{display:none;flex:1;flex-direction:column;gap:12px;animation:fadein .3s}
+.screen.on{display:flex}
+@keyframes fadein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* メニュー */
+.hero{text-align:center;padding:6px 0 0}
+.hero .pics{display:flex;justify-content:center;align-items:center;gap:6px;flex-wrap:wrap}
+.hero .pics svg{width:clamp(54px,15vw,90px);height:auto}
+.hero .arrow{font-size:22px;color:var(--sub)}
+.hero p{margin:10px 0 0;font-size:clamp(16px,4vw,20px);line-height:1.7}
+.menu-btns{display:grid;gap:12px;grid-template-columns:1fr;margin-top:8px}
+@media (min-width:700px){.menu-btns{grid-template-columns:repeat(3,1fr)}}
+.big{display:flex;align-items:center;gap:14px;background:var(--card);border-radius:22px;padding:14px 18px;
+  box-shadow:var(--shadow);border:3px solid var(--c,#4c9a52);text-align:left;min-height:84px}
+.big:active{transform:translateY(3px)}
+.big .em{font-size:40px}
+.big b{display:block;font-size:22px;color:var(--c)}
+.big span{font-size:15px;color:var(--sub);line-height:1.5}
+.note{font-size:14px;color:var(--sub);text-align:center;margin:4px 0 0}
+
+/* すすみぐあい */
+.prog{display:flex;align-items:center;justify-content:center;gap:8px;font-size:15px;color:var(--sub);min-height:28px}
+.prog i{width:16px;height:16px;border-radius:50%;background:#dfe9d4;display:inline-block}
+.prog i.done{background:var(--ok)}
+.prog i.now{background:var(--orange);transform:scale(1.25)}
+.bar{height:12px;border-radius:8px;background:#dfe9d4;overflow:hidden}
+.bar>div{height:100%;background:var(--ok);width:0;transition:width .4s}
+.ask{text-align:center;font-size:clamp(20px,5vw,28px);font-weight:700;margin:2px 0;line-height:1.5}
+.ask small{display:block;font-size:15px;font-weight:400;color:var(--sub)}
+
+/* だれの あかちゃん */
+.quiz{display:flex;flex-direction:column;gap:14px;align-items:center;flex:1}
+.baby{background:var(--card);border-radius:26px;padding:10px;box-shadow:var(--shadow);text-align:center;
+  width:min(62vw,300px)}
+.baby svg{width:100%;height:auto}
+.baby .lb{font-size:22px;font-weight:700;margin:6px 0 2px}
+.choices{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;max-width:560px}
+.choice{background:var(--card);border-radius:20px;padding:8px 6px 10px;box-shadow:var(--shadow);border:3px solid transparent;
+  display:flex;flex-direction:column;align-items:center;gap:4px;font-size:clamp(15px,4vw,19px);font-weight:700}
+.choice svg{width:100%;height:auto;max-width:150px}
+.choice:active{transform:translateY(3px)}
+.choice.ng{opacity:.4;border-color:#ddd}
+.choice.ok{border-color:var(--ok);background:#eafbe9}
+@media (orientation:landscape) and (min-width:700px){
+  .quiz{flex-direction:row;justify-content:center;align-items:center;gap:28px}
+  .baby{width:min(38vw,320px)}
+  .choices{grid-template-columns:1fr 1fr 1fr;max-width:520px}
+}
+
+/* ならべる */
+.slots{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;flex-wrap:nowrap}
+.slot{flex:1 1 0;max-width:200px;aspect-ratio:3/4;border-radius:18px;border:3px dashed #b9cfa8;background:#fbfdf8;
+  position:relative;display:flex;align-items:center;justify-content:center}
+.slot .no{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;
+  width:26px;height:26px;border-radius:50%;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;z-index:2}
+.slot.lock{border:3px solid var(--ok);background:#eafbe9}
+.sarrow{flex:0 0 auto;color:#9bb487;font-size:18px;font-weight:700}
+.pool{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;min-height:120px;width:100%}
+.st{width:clamp(80px,22vw,170px);background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:5px 5px 7px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;font-size:clamp(12px,3.3vw,16px);font-weight:700;line-height:1.25;text-align:center}
+.st svg{width:100%;height:auto}
+.slot .st{width:100%;height:100%;box-shadow:none;background:transparent;justify-content:center}
+.st:active{transform:scale(.96)}
+.hint{text-align:center;color:var(--sub);font-size:15px;min-height:22px;margin:0}
+
+/* そだつ アニメ */
+.grow{display:flex;flex-direction:column;align-items:center;gap:10px;flex:1}
+.gview{width:min(70vw,340px);background:var(--card);border-radius:28px;box-shadow:var(--shadow);padding:10px;text-align:center;position:relative}
+.gview svg{width:100%;height:auto}
+.gview .lb{font-size:24px;font-weight:700;margin:4px 0 2px;min-height:34px}
+.pop{animation:popin .7s cubic-bezier(.3,1.6,.5,1)}
+@keyframes popin{0%{transform:scale(.4);opacity:0;filter:brightness(1.8)}100%{transform:none;opacity:1;filter:none}}
+.thumbs{display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:center}
+.thumbs .t{width:clamp(50px,13vw,96px);border-radius:12px;background:var(--card);padding:3px;opacity:.35;transition:all .3s;border:2px solid transparent}
+.thumbs .t.on{opacity:1;border-color:var(--orange);transform:scale(1.08)}
+.thumbs .t.seen{opacity:1}
+.badge{display:inline-block;background:#fff0f6;color:#c2255c;border:2px solid #f783ac;border-radius:999px;padding:4px 14px;font-weight:700;font-size:16px}
+.badge.b2{background:#e7f5ff;color:#1864ab;border-color:#74c0fc}
+.fact{background:#fffbe6;border:2px solid #f5d76e;border-radius:18px;padding:12px 16px;font-size:clamp(16px,4.2vw,19px);line-height:1.8;max-width:640px;width:100%}
+.fact b{color:var(--green-d)}
+.row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;width:100%}
+.btn{min-height:60px;min-width:150px;padding:0 22px;border-radius:20px;font-size:21px;font-weight:700;color:#fff;background:var(--green);box-shadow:0 5px 0 var(--green-d)}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--green-d)}
+.btn.sub{background:#fff;color:var(--green-d);box-shadow:0 5px 0 #c8dbb8;border:2px solid #c8dbb8}
+.btn.or{background:var(--orange);box-shadow:0 5px 0 #c26d1c}
+.hide{visibility:hidden}
+@media (orientation:landscape) and (min-width:700px){
+  .grow{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"v t" "v b" "v f" "v r";align-items:center;column-gap:24px;row-gap:10px;justify-items:center}
+  .gview{grid-area:v;width:min(36vw,340px)}
+  .thumbs{grid-area:t}.grow .bwrap{grid-area:b}.fact{grid-area:f}.grow .row{grid-area:r}
+}
+
+/* なかまわけ */
+.sortq{display:flex;flex-direction:column;align-items:center;gap:12px;flex:1}
+.bins{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:620px}
+.bin{min-height:120px;border-radius:24px;background:var(--card);box-shadow:var(--shadow);border:4px solid var(--c);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:clamp(17px,4.4vw,22px);font-weight:700;color:var(--c);padding:8px}
+.bin .em{font-size:44px}
+.bin:active{transform:translateY(3px)}
+.bin.ng{opacity:.4}
+.bin.ok{background:#eafbe9}
+@media (orientation:landscape) and (min-width:700px){
+  .sortq{display:grid;grid-template-columns:auto 1fr;grid-template-areas:"a q" "a b" "a f" "a r";column-gap:28px;align-items:center;justify-items:center}
+  .sortq .baby{grid-area:a;width:min(34vw,300px)} .sortq .ask{grid-area:q}.bins{grid-area:b}.sortq .fact{grid-area:f}.sortq .row{grid-area:r}
+}
+
+/* ずかん */
+.zgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.zc{background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:6px 6px 8px;display:flex;flex-direction:column;align-items:center;font-weight:700;font-size:16px;gap:2px}
+.zc svg{width:100%;height:auto}
+.zc.no svg{filter:brightness(0);opacity:.18}
+.zc.no{color:#aaa}
+
+/* けっか */
+.result{align-items:center;justify-content:center;text-align:center;gap:14px}
+.hana{font-size:clamp(70px,22vw,130px);line-height:1;animation:spin 1.6s ease-out}
+@keyframes spin{from{transform:rotate(-200deg) scale(.2)}to{transform:none}}
+.result h2{margin:0;font-size:clamp(28px,7vw,40px);color:var(--pink)}
+.result p{margin:0;font-size:19px;line-height:1.7}
+.stars{font-size:44px;letter-spacing:6px}
+.rpics{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.rpics svg{width:clamp(70px,20vw,110px);height:auto;border-radius:16px;background:#fff;box-shadow:var(--shadow)}
+
+/* えんしゅつ */
+.shake{animation:shake .45s}
+@keyframes shake{0%,100%{transform:none}20%{transform:translateX(-9px)}40%{transform:translateX(8px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.toast{position:fixed;left:50%;top:38%;transform:translate(-50%,-50%) scale(.6);opacity:0;pointer-events:none;z-index:50;
+  background:#fff;border-radius:28px;padding:14px 28px;font-size:clamp(28px,8vw,46px);font-weight:800;color:var(--pink);box-shadow:0 10px 30px rgba(0,0,0,.15);white-space:nowrap}
+.toast.go{animation:toast 1.1s ease-out}
+.toast.ngt{color:var(--ng);font-size:clamp(22px,6vw,32px)}
+@keyframes toast{0%{opacity:0;transform:translate(-50%,-50%) scale(.5)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.1)}70%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-70%) scale(1)}}
+.conf{position:fixed;top:-20px;font-size:26px;pointer-events:none;z-index:40;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div class="app">
+  <header>
+    <button class="ibtn" id="homeBtn" aria-label="メニューへ" hidden>🏠</button>
+    <h1 id="title">🐣 あかちゃん だあれ？</h1>
+    <button class="ibtn" id="sndBtn" aria-label="おと オン・オフ">🔊<small>オン</small></button>
+  </header>
+  <main>
+    <!-- メニュー -->
+    <section class="screen on" id="sMenu">
+      <div class="hero">
+        <div class="pics" id="heroPics"></div>
+        <p>いきものの あかちゃんは、おとなと <b>かたちが ちがう</b> ことも あるよ。<br>だれの あかちゃんか あてて みよう！</p>
+      </div>
+      <div class="menu-btns">
+        <button class="big" style="--c:#4c9a52" id="goPlay"><span class="em">🐣</span><span><b>だれの あかちゃん？</b>あてて、そだつ じゅんばんに ならべよう</span></button>
+        <button class="big" style="--c:#e8590c" id="goSort"><span class="em">🥚</span><span><b>なかまわけ</b>たまごで うまれる？ さなぎに なる？</span></button>
+        <button class="big" style="--c:#3b8fd8" id="goZukan"><span class="em">📖</span><span><b>ずかん</b><span id="zCount">0 / 12</span></span></button>
+      </div>
+      <p class="note">1かい 1〜3ぷん。まちがえても なんどでも やりなおせるよ。</p>
+    </section>
+
+    <!-- だれの あかちゃん？ -->
+    <section class="screen" id="sQuiz">
+      <div class="prog" id="qProg"></div>
+      <div class="ask">この あかちゃん、<br>おとなに なったら だあれ？</div>
+      <div class="quiz">
+        <div class="baby" id="qBaby"></div>
+        <div class="choices" id="qChoices"></div>
+      </div>
+    </section>
+
+    <!-- ならべる -->
+    <section class="screen" id="sOrder">
+      <div class="prog" id="oProg"></div>
+      <div class="ask" id="oAsk">そだつ じゅんばんに ならべよう<small>カードを タップすると あいている ところに はいるよ</small></div>
+      <div class="slots" id="oSlots"></div>
+      <p class="hint" id="oHint"></p>
+      <div class="pool" id="oPool"></div>
+    </section>
+
+    <!-- そだつ ようす -->
+    <section class="screen" id="sGrow">
+      <div class="prog" id="gProg"></div>
+      <div class="grow">
+        <div class="gview" id="gView"></div>
+        <div class="thumbs" id="gThumbs"></div>
+        <div class="bwrap" id="gBadge"></div>
+        <div class="fact hide" id="gFact"></div>
+        <div class="row hide" id="gRow">
+          <button class="btn sub" id="gAgain">🔁 もういちど みる</button>
+          <button class="btn" id="gNext">つぎへ ▶</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- なかまわけ -->
+    <section class="screen" id="sSort">
+      <div class="bar"><div id="sBar"></div></div>
+      <div class="sortq">
+        <div class="baby" id="sPic"></div>
+        <div class="ask" id="sAsk"></div>
+        <div class="bins" id="sBins"></div>
+        <div class="fact hide" id="sFact"></div>
+        <div class="row hide" id="sRow"><button class="btn" id="sNext">つぎへ ▶</button></div>
+      </div>
+    </section>
+
+    <!-- ずかん -->
+    <section class="screen" id="sZukan">
+      <div class="ask">いきもの ずかん<small>タップすると そだつ ようすが みられるよ</small></div>
+      <div class="zgrid" id="zGrid"></div>
+    </section>
+
+    <!-- けっか -->
+    <section class="screen result" id="sResult">
+      <div class="hana">💮</div>
+      <h2 id="rTitle">はなまる！</h2>
+      <div class="stars" id="rStars"></div>
+      <p id="rMsg"></p>
+      <div class="rpics" id="rPics"></div>
+      <div class="row">
+        <button class="btn or" id="rAgain">🔁 もういっかい</button>
+        <button class="btn sub" id="rMenu">🏠 メニュー</button>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ================= え（SVG） ================= */
+const E = (x, y, r = 3.2) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#222"/><circle cx="${x + r * .35}" cy="${y - r * .35}" r="${r * .38}" fill="#fff"/>`;
+const flip = s => `<g transform="translate(100 0) scale(-1 1)">${s}</g>`;
+const BG = {
+  water: `<rect width="100" height="100" rx="16" fill="#d6effa"/><path d="M6 18q8-5 16 0t16 0 16 0 16 0 16 0 16 0" stroke="#a9d8ef" stroke-width="2.5" fill="none"/>`,
+  soil: `<rect width="100" height="100" rx="16" fill="#ecd6b4"/><g fill="#d2b187"><circle cx="16" cy="18" r="2.5"/><circle cx="82" cy="14" r="2"/><circle cx="86" cy="84" r="3"/><circle cx="14" cy="86" r="2"/><circle cx="30" cy="90" r="1.6"/><circle cx="74" cy="22" r="1.4"/></g>`,
+  sand: `<rect width="100" height="100" rx="16" fill="#f7e8c4"/><g fill="#e6cf9a"><circle cx="15" cy="80" r="1.6"/><circle cx="85" cy="70" r="1.6"/><circle cx="70" cy="90" r="1.4"/><circle cx="25" cy="60" r="1.2"/></g>`,
+  leaf: `<rect width="100" height="100" rx="16" fill="#eef8e6"/><path d="M4 84Q44 26 98 46Q66 104 4 84Z" fill="#9ad877"/><path d="M4 84Q52 64 98 46" stroke="#73b552" stroke-width="2" fill="none"/>`,
+  sky: `<rect width="100" height="100" rx="16" fill="#e4f3ff"/><g fill="#fff"><ellipse cx="22" cy="20" rx="12" ry="5"/><ellipse cx="80" cy="84" rx="10" ry="4"/></g>`,
+  grass: `<rect width="100" height="100" rx="16" fill="#eef8e4"/><path d="M0 84h100v0a16 16 0 0 1-16 16H16A16 16 0 0 1 0 84z" fill="#bfe3a0"/>`,
+  ice: `<rect width="100" height="100" rx="16" fill="#eef6fc"/><path d="M0 86h100a16 16 0 0 1-16 14H16A16 16 0 0 1 0 86z" fill="#fff" stroke="#cfe3f2" stroke-width="1.5"/>`,
+  sea: `<rect width="100" height="100" rx="16" fill="#c4e6f7"/><path d="M6 80q8-4 16 0t16 0 16 0 16 0 16 0 16 0" stroke="#9fd2ec" stroke-width="2.5" fill="none"/>`,
+  room: `<rect width="100" height="100" rx="16" fill="#fff1e6"/>`,
+  none: `<rect width="100" height="100" rx="16" fill="#fffdf6"/>`
+};
+const fish = (cx, cy, L, H, body, belly, extra = "") =>
+  `<path d="M${cx - L / 2 + 3} ${cy}L${cx - L / 2 - L * .24} ${cy - H * .55}L${cx - L / 2 - L * .18} ${cy}L${cx - L / 2 - L * .24} ${cy + H * .55}Z" fill="${body}"/>` +
+  `<ellipse cx="${cx}" cy="${cy}" rx="${L / 2}" ry="${H / 2}" fill="${body}"/>` +
+  `<ellipse cx="${cx + 2}" cy="${cy + H * .2}" rx="${L * .4}" ry="${H * .24}" fill="${belly}"/>` + extra +
+  E(cx + L * .33, cy - H * .1, Math.max(1.6, H * .12));
+const turtle = (cx, cy, s, shell, skin, dark) => `<g transform="translate(${cx} ${cy}) scale(${s})">
+  <ellipse cx="-17" cy="-12" rx="13" ry="5" transform="rotate(-35 -17 -12)" fill="${skin}"/><ellipse cx="17" cy="-12" rx="13" ry="5" transform="rotate(35 17 -12)" fill="${skin}"/>
+  <ellipse cx="-12" cy="15" rx="7" ry="4" transform="rotate(30 -12 15)" fill="${skin}"/><ellipse cx="12" cy="15" rx="7" ry="4" transform="rotate(-30 12 15)" fill="${skin}"/>
+  <ellipse cx="0" cy="-24" rx="7" ry="8" fill="${skin}"/>${E(-3.5, -26, 1.8)}${E(3.5, -26, 1.8)}
+  <ellipse cx="0" cy="0" rx="16" ry="21" fill="${shell}"/>
+  <g fill="${dark}"><ellipse cx="0" cy="-8" rx="5" ry="5"/><ellipse cx="0" cy="5" rx="5" ry="5"/><ellipse cx="-9" cy="-1" rx="3.5" ry="5"/><ellipse cx="9" cy="-1" rx="3.5" ry="5"/></g></g>`;
+const kangaroo = joey => `
+  <path d="M34 78Q14 84 6 66" stroke="#b5733a" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <ellipse cx="48" cy="58" rx="19" ry="26" transform="rotate(-14 48 58)" fill="#c98345"/>
+  <ellipse cx="53" cy="62" rx="10" ry="17" transform="rotate(-14 53 62)" fill="#ecc596"/>
+  <ellipse cx="42" cy="76" rx="14" ry="11" fill="#b5733a"/><ellipse cx="50" cy="90" rx="18" ry="4.5" fill="#a5672f"/>
+  <ellipse cx="57" cy="13" rx="3.6" ry="9" transform="rotate(-12 57 13)" fill="#b5733a"/><ellipse cx="64" cy="13" rx="3.6" ry="9" transform="rotate(14 64 13)" fill="#b5733a"/>
+  <ellipse cx="63" cy="29" rx="12" ry="10" fill="#c98345"/><ellipse cx="73" cy="32" rx="7" ry="5" fill="#d69a60"/><circle cx="79" cy="31" r="2" fill="#333"/>${E(65, 26, 2.4)}
+  <path d="M60 46l8 9M62 46l9 6" stroke="#b5733a" stroke-width="4" stroke-linecap="round"/>` +
+  (joey ? `<circle cx="58" cy="57" r="7.5" fill="#d69a60"/><ellipse cx="56" cy="49" rx="2" ry="5" fill="#c98345"/><ellipse cx="62" cy="50" rx="2" ry="5" transform="rotate(20 62 50)" fill="#c98345"/>${E(60, 56, 1.7)}<circle cx="65" cy="59" r="1.3" fill="#333"/><path d="M45 61Q55 70 66 61" stroke="#b5733a" stroke-width="3" fill="none"/>` : "");
+const person = (h, shirt, hair, pants) => {
+  const s = h / 60, top = 92 - h;
+  return `<g transform="translate(50 ${top}) scale(${s})">
+    <rect x="-7" y="36" width="6" height="20" rx="3" fill="${pants}"/><rect x="1" y="36" width="6" height="20" rx="3" fill="${pants}"/>
+    <rect x="-11" y="14" width="22" height="25" rx="8" fill="${shirt}"/>
+    <rect x="-16" y="16" width="6" height="18" rx="3" fill="${shirt}" transform="rotate(12 -13 16)"/><rect x="10" y="16" width="6" height="18" rx="3" fill="${shirt}" transform="rotate(-12 13 16)"/>
+    <circle cx="0" cy="3" r="11" fill="#ffd9b8"/><path d="M-11 2Q-11-10 0-10Q11-10 11 2Q6-4 0-4Q-6-4-11 2Z" fill="${hair}"/>
+    ${E(-4, 4, 1.6)}${E(4, 4, 1.6)}<path d="M-3 9Q0 11 3 9" stroke="#c0605a" stroke-width="1.2" fill="none"/></g>`;
+};
+const ART = {
+  /* カエル */
+  kaeru0: BG.water + [[34, 46], [50, 40], [66, 47], [42, 59], [58, 61], [50, 51], [28, 62], [72, 62], [50, 72], [36, 72], [64, 73]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="#ffffffcc" stroke="#9fc9dd" stroke-width="1.5"/><circle cx="${x}" cy="${y}" r="2.8" fill="#222"/>`).join(""),
+  kaeru1: BG.water + `<path d="M48 52Q64 42 76 54T94 50Q84 64 66 60Q58 63 48 60Z" fill="#6a6a55"/><ellipse cx="38" cy="56" rx="18" ry="14" fill="#4d4d3c"/>${E(30, 52, 3.2)}`,
+  kaeru2: BG.water + `<path d="M52 52Q66 46 74 54T88 52Q80 62 66 60Q58 63 50 60Z" fill="#6a6a55"/><path d="M48 64q6 6 2 14l6 2M42 66q2 8-4 14l6 1" stroke="#5b5b47" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M28 64q-4 6-1 10" stroke="#5b5b47" stroke-width="3.5" fill="none" stroke-linecap="round"/><ellipse cx="38" cy="56" rx="18" ry="14" fill="#5a6a42"/>${E(30, 51, 3.4)}`,
+  kaeru3: BG.grass + `<ellipse cx="22" cy="82" rx="12" ry="6" fill="#479f4a"/><ellipse cx="78" cy="82" rx="12" ry="6" fill="#479f4a"/><ellipse cx="50" cy="66" rx="31" ry="21" fill="#58b85a"/><ellipse cx="50" cy="73" rx="18" ry="11" fill="#cdecb4"/>
+    <circle cx="35" cy="45" r="11" fill="#58b85a"/><circle cx="65" cy="45" r="11" fill="#58b85a"/><circle cx="35" cy="44" r="7" fill="#fff"/><circle cx="65" cy="44" r="7" fill="#fff"/>${E(36, 44, 3.6)}${E(66, 44, 3.6)}
+    <path d="M37 61Q50 70 63 61" stroke="#2e6b30" stroke-width="2.5" fill="none" stroke-linecap="round"/><circle cx="29" cy="59" r="3.5" fill="#ff9aa2" opacity=".7"/><circle cx="71" cy="59" r="3.5" fill="#ff9aa2" opacity=".7"/>`,
+  /* チョウ（モンシロチョウ） */
+  chou0: BG.leaf + `<ellipse cx="52" cy="54" rx="5" ry="11" fill="#f5d547" stroke="#d8a928" stroke-width="1.5"/><path d="M50 46v16M54 46v16" stroke="#e0b93a" stroke-width="1"/><ellipse cx="50.5" cy="49" rx="1.5" ry="3" fill="#fff8" />`,
+  chou1: BG.leaf + [20, 29, 38, 47, 56, 65].map((x, i) => `<circle cx="${x}" cy="${58 - Math.sin(i * .9) * 4}" r="9" fill="${i % 2 ? '#86d35e' : '#7cc853'}"/><circle cx="${x}" cy="${66 - Math.sin(i * .9) * 4}" r="2" fill="#5d9c3c"/>`).join("") +
+    `<circle cx="76" cy="52" r="11" fill="#86d35e"/>${E(80, 49, 2.6)}<path d="M76 58q4 2 7-1" stroke="#4a8030" stroke-width="1.6" fill="none"/>`,
+  chou2: BG.sky + `<rect x="68" y="4" width="7" height="92" rx="3" fill="#a07a4c"/><path d="M66 16Q42 28 40 52Q42 78 64 90Q56 62 66 16Z" fill="#a8d672" stroke="#7fae4f" stroke-width="2"/><path d="M48 48L70 44" stroke="#fff" stroke-width="1.6"/><path d="M60 26Q50 50 58 80" stroke="#8cbf5a" stroke-width="1.5" fill="none"/>`,
+  chou3: BG.sky + (() => { const w = `<path d="M50 50Q22 6 10 30Q4 54 50 56Z" fill="#fff" stroke="#555" stroke-width="2"/><path d="M50 56Q20 58 26 80Q38 92 50 62Z" fill="#fffef4" stroke="#555" stroke-width="2"/><circle cx="26" cy="38" r="4" fill="#333"/><path d="M14 25Q18 18 26 18" stroke="#333" stroke-width="4" fill="none" stroke-linecap="round"/>`; return w + flip(w); })() +
+    `<ellipse cx="50" cy="56" rx="3.5" ry="17" fill="#444"/><circle cx="50" cy="38" r="4.5" fill="#444"/><path d="M48 35Q42 22 38 20M52 35Q58 22 62 20" stroke="#444" stroke-width="1.5" fill="none"/>`,
+  /* トンボ */
+  tonbo0: BG.water + `<path d="M20 100Q26 62 20 26" stroke="#6bb04a" stroke-width="4" fill="none"/>` + [[46, 66], [52, 70], [58, 64], [50, 76], [62, 72], [44, 74], [56, 78], [66, 66]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.4" fill="#fff4c2" stroke="#d6b452" stroke-width="1"/>`).join(""),
+  tonbo1: BG.water + `<g stroke="#6b5a35" stroke-width="2.6" fill="none" stroke-linecap="round"><path d="M30 50l-6-14-6 2M34 50l2-16 6-2M30 62l-6 14-6-2M34 62l2 16 6 2M38 52l10-12M38 60l10 12"/></g>
+    <ellipse cx="64" cy="56" rx="26" ry="11" fill="#8a7445"/><path d="M50 46v20M58 45v22M66 45v22M74 46v20M82 48v16" stroke="#6f5d34" stroke-width="1.4"/>
+    <ellipse cx="37" cy="56" rx="10" ry="10" fill="#7d6a3e"/><ellipse cx="38" cy="50" rx="6" ry="3" fill="#9a8552"/><ellipse cx="22" cy="56" rx="9" ry="11" fill="#7d6a3e"/>${E(19, 49, 3.2)}${E(19, 63, 3.2)}`,
+  tonbo2: BG.sky + `<rect x="24" y="0" width="7" height="100" fill="#79b85a"/>
+    <g transform="translate(38 70)"><ellipse cx="0" cy="8" rx="8" ry="16" fill="#9a8552" opacity=".9"/><path d="M-7-2l-8-6M-7 10l-9 2M-6 20l-8 8" stroke="#8a7445" stroke-width="2.4" stroke-linecap="round"/><ellipse cx="0" cy="-8" rx="6" ry="6" fill="#8a7445"/></g>
+    <g transform="translate(40 34)"><path d="M0 0l16-10l2 8z M0 4l14 6l-4 6z" fill="#eef6ee" stroke="#a7c8b0" stroke-width="1.2"/><rect x="-3" y="-4" width="6" height="40" rx="3" fill="#dcead2"/><circle cx="0" cy="-8" r="6" fill="#cfe5c6"/>${E(-3, -10, 2)}${E(3, -10, 2)}</g>`,
+  tonbo3: BG.sky + `<g fill="#f2f9ffcc" stroke="#8ab0c8" stroke-width="1.6"><ellipse cx="38" cy="26" rx="7" ry="22" transform="rotate(-8 38 26)"/><ellipse cx="48" cy="28" rx="7" ry="22" transform="rotate(10 48 28)"/><ellipse cx="38" cy="74" rx="7" ry="22" transform="rotate(8 38 74)"/><ellipse cx="48" cy="72" rx="7" ry="22" transform="rotate(-10 48 72)"/></g>
+    <rect x="46" y="47" width="46" height="6" rx="3" fill="#e0502f"/><path d="M56 47v6M64 47v6M72 47v6M80 47v6" stroke="#b63a20" stroke-width="1.2"/>
+    <ellipse cx="40" cy="50" rx="10" ry="7" fill="#d9542e"/><circle cx="26" cy="44" r="7" fill="#c9442a"/><circle cx="26" cy="56" r="7" fill="#c9442a"/>${E(25, 44, 2.6)}${E(25, 56, 2.6)}`,
+  /* セミ */
+  semi0: BG.sky + `<path d="M0 82L100 30" stroke="#8a6440" stroke-width="16" stroke-linecap="round"/>` + [[30, 66], [44, 59], [58, 52], [72, 45]]
+    .map(([x, y]) => `<g transform="rotate(-27 ${x} ${y})"><rect x="${x - 6}" y="${y - 3}" width="12" height="6" rx="2" fill="#5b3e22"/><ellipse cx="${x - 2}" cy="${y}" rx="3" ry="1.5" fill="#fffbe8"/><ellipse cx="${x + 3}" cy="${y}" rx="3" ry="1.5" fill="#fffbe8"/></g>`).join(""),
+  semi1: BG.soil + `<path d="M8 30Q30 38 34 60M80 20Q70 34 60 38" stroke="#c49a6a" stroke-width="3" fill="none"/>
+    <ellipse cx="60" cy="60" rx="22" ry="15" fill="#b07a3e"/><path d="M48 49v22M56 46v28M64 46v28M72 49v22" stroke="#94632e" stroke-width="1.4"/>
+    <ellipse cx="44" cy="58" rx="10" ry="11" fill="#c4904f"/><circle cx="32" cy="56" r="10" fill="#b07a3e"/>${E(28, 51, 2.4)}
+    <path d="M28 64q-8 2-10 10l5-1M36 66q-4 8 0 14" stroke="#94632e" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M50 70l-4 10M60 74l2 8" stroke="#94632e" stroke-width="3" stroke-linecap="round"/>`,
+  semi2: BG.sky + `<rect x="62" y="0" width="22" height="100" fill="#8a6440"/><path d="M66 10v80M76 4v90" stroke="#74532f" stroke-width="1.5"/>
+    <g transform="translate(56 74)"><ellipse cx="0" cy="0" rx="9" ry="13" fill="#b07a3e" opacity=".85"/><path d="M-1-12l-1 18" stroke="#ecd6b4" stroke-width="2"/><path d="M5-6l8-2M6 4l8 2" stroke="#94632e" stroke-width="2.5" stroke-linecap="round"/></g>
+    <g transform="translate(52 38)"><path d="M-2-6Q-24-2-20 18Q-10 6-2 4Z" fill="#e9f5df" stroke="#b9d6aa" stroke-width="1.2"/><ellipse cx="0" cy="4" rx="7" ry="16" fill="#cfe8bf"/><circle cx="0" cy="-14" r="7" fill="#bfe0ad"/>${E(-4, -16, 2)}${E(4, -16, 2)}</g>`,
+  semi3: BG.sky + `<g fill="#c8a37acc" stroke="#7d5a34" stroke-width="1.5"><path d="M48 32Q22 50 34 92Q44 80 50 40Z"/><path d="M52 32Q78 50 66 92Q56 80 50 40Z"/></g>
+    <ellipse cx="50" cy="44" rx="12" ry="14" fill="#5a4024"/><path d="M40 40h20" stroke="#7d5a34" stroke-width="2"/><ellipse cx="50" cy="26" rx="15" ry="7" fill="#4a331b"/><circle cx="37" cy="25" r="4.5" fill="#6b4a2a"/><circle cx="63" cy="25" r="4.5" fill="#6b4a2a"/>${E(37, 25, 2.2)}${E(63, 25, 2.2)}`,
+  /* カブトムシ */
+  kabuto0: BG.soil + `<ellipse cx="50" cy="56" rx="12" ry="11" fill="#fffaf0" stroke="#e6d8bc" stroke-width="2"/><ellipse cx="46" cy="52" rx="3.5" ry="2.5" fill="#fff"/>`,
+  kabuto1: BG.soil + `<path d="M64 34A22 22 0 1 0 64 76" stroke="#fff3d6" stroke-width="22" fill="none" stroke-linecap="round"/><path d="M60 72a10 10 0 0 0 6 6" stroke="#8a6a4a" stroke-width="12" stroke-linecap="round" opacity=".55"/>
+    <path d="M30 44l5 4M28 54l6 2M30 64l6 0" stroke="#e5c99a" stroke-width="2" /><circle cx="66" cy="31" r="10" fill="#d9822b"/>${E(69, 28, 1.8)}<path d="M58 40l-6 6M62 44l-4 8M66 44l-1 8" stroke="#c46f20" stroke-width="2.5" stroke-linecap="round"/>`,
+  kabuto2: BG.soil + `<ellipse cx="50" cy="62" rx="18" ry="26" fill="#e1a35a"/><path d="M34 60h32M35 70h30M38 79h24" stroke="#c98a40" stroke-width="1.6"/><ellipse cx="50" cy="36" rx="13" ry="9" fill="#d89648"/>
+    <path d="M50 30Q44 14 38 10Q46 8 50 20" fill="#d89648"/><path d="M46 44Q30 50 34 76" stroke="#d1903f" stroke-width="5" fill="none" stroke-linecap="round"/>${E(55, 36, 1.8)}`,
+  kabuto3: BG.grass + `<g stroke="#3d2412" stroke-width="3" stroke-linecap="round" fill="none"><path d="M32 46l-12-6M30 60l-14 2M32 74l-12 10M68 46l12-6M70 60l14 2M68 74l12 10"/></g>
+    <ellipse cx="50" cy="64" rx="22" ry="25" fill="#5a3418"/><path d="M50 42v46" stroke="#3d2412" stroke-width="2"/><ellipse cx="44" cy="56" rx="5" ry="8" fill="#7b4a26" opacity=".7"/>
+    <ellipse cx="50" cy="38" rx="16" ry="10" fill="#4a2a12"/><path d="M50 36l0-8" stroke="#4a2a12" stroke-width="4" stroke-linecap="round"/><path d="M50 32Q49 14 50 6M50 10l-6-5M50 10l6-5" stroke="#3d2412" stroke-width="5" stroke-linecap="round" fill="none"/>`,
+  /* テントウムシ */
+  tentou0: BG.leaf + [[42, 52], [48, 50], [54, 52], [60, 54], [45, 60], [51, 58], [57, 60], [63, 62], [48, 66], [54, 66]]
+    .map(([x, y]) => `<ellipse cx="${x}" cy="${y}" rx="2.8" ry="4.5" fill="#f7c948" stroke="#d99a1e" stroke-width=".8"/>`).join(""),
+  tentou1: BG.leaf + `<g stroke="#2a2a2a" stroke-width="2.4" stroke-linecap="round"><path d="M34 52l-6-8M40 52l-2-10M46 52l2-10M34 64l-6 8M40 64l-2 10M46 64l2 10"/></g>
+    <path d="M24 58Q30 46 46 48Q70 50 88 58Q70 66 46 68Q30 70 24 58Z" fill="#3a3a3a"/><circle cx="24" cy="58" r="7" fill="#2a2a2a"/>
+    <g fill="#f08c2e"><circle cx="40" cy="52" r="2.6"/><circle cx="40" cy="64" r="2.6"/><circle cx="56" cy="53" r="2.4"/><circle cx="56" cy="63" r="2.4"/></g>
+    <g fill="#666"><circle cx="48" cy="58" r="1.6"/><circle cx="64" cy="58" r="1.6"/><circle cx="72" cy="56" r="1.3"/><circle cx="72" cy="61" r="1.3"/></g>`,
+  tentou2: BG.leaf + `<ellipse cx="52" cy="58" rx="17" ry="13" fill="#f39a3d"/><ellipse cx="52" cy="54" rx="13" ry="8" fill="#f7b45f"/><g fill="#3a2a1a"><circle cx="44" cy="56" r="2.5"/><circle cx="52" cy="52" r="2.5"/><circle cx="60" cy="56" r="2.5"/><circle cx="48" cy="63" r="2"/><circle cx="57" cy="63" r="2"/></g><path d="M36 64q-4 4-8 3" stroke="#3a3a3a" stroke-width="3" stroke-linecap="round" fill="none"/>`,
+  tentou3: BG.leaf + `<g stroke="#222" stroke-width="2.4" stroke-linecap="round"><path d="M36 50l-8-4M34 60l-9 0M36 70l-8 5M68 50l8-4M70 60l9 0M68 70l8 5"/></g>
+    <path d="M38 40a14 10 0 0 1 28 0z" fill="#222"/><circle cx="44" cy="37" r="2.6" fill="#fff"/><circle cx="60" cy="37" r="2.6" fill="#fff"/>
+    <circle cx="52" cy="60" r="22" fill="#e03131"/><path d="M52 38v44" stroke="#222" stroke-width="2"/><g fill="#222"><circle cx="52" cy="42" r="4"/><circle cx="41" cy="52" r="4.5"/><circle cx="63" cy="52" r="4.5"/><circle cx="40" cy="68" r="4"/><circle cx="64" cy="68" r="4"/><circle cx="47" cy="76" r="3"/><circle cx="57" cy="76" r="3"/></g>
+    <ellipse cx="44" cy="46" rx="4" ry="2" fill="#fff8" transform="rotate(-30 44 46)"/>`,
+  /* ニワトリ */
+  niwatori0: BG.room + `<ellipse cx="50" cy="78" rx="36" ry="12" fill="#d9a85b"/><path d="M18 76l10-6M30 82l6-8M66 82l-4-8M80 76l-10-6" stroke="#b9873d" stroke-width="2"/>
+    <path d="M50 26C66 26 72 50 72 60C72 74 62 82 50 82C38 82 28 74 28 60C28 50 34 26 50 26Z" fill="#fbe7cb" stroke="#e2c9a2" stroke-width="2"/><ellipse cx="42" cy="44" rx="4" ry="7" fill="#fff" opacity=".7"/>`,
+  niwatori1: BG.grass + `<path d="M44 80v8l-5 2M56 80v8l5 2" stroke="#f59f00" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="50" cy="62" r="21" fill="#ffd43b"/><circle cx="50" cy="38" r="15" fill="#ffe066"/>
+    <path d="M38 62q-2 10 8 12" stroke="#f5c400" stroke-width="3" fill="none"/>${E(44, 36, 2.8)}${E(56, 36, 2.8)}<path d="M46 43l4 6 4-6z" fill="#f59f00"/><path d="M48 23q2-6 4 0" stroke="#ffd43b" stroke-width="3" fill="none"/>`,
+  niwatori2: BG.grass + `<path d="M44 76v12l-6 2M54 76v12l6 2" stroke="#f59f00" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M28 56Q8 40 14 22Q24 38 34 44Z" fill="#2f6b3c"/>
+    <ellipse cx="48" cy="60" rx="24" ry="19" fill="#fff" stroke="#e5e5e5" stroke-width="1.5"/><path d="M36 58q8 12 22 6" stroke="#e5e5e5" stroke-width="2.4" fill="none"/>
+    <path d="M62 54Q60 30 66 24Q76 22 78 32Q76 44 70 56Z" fill="#fff" stroke="#e5e5e5" stroke-width="1.5"/>
+    <path d="M62 24q2-10 6-4q2-8 6-2q4-4 4 4q-6 2-16 2z" fill="#e03131"/><path d="M77 32l9 3-8 3z" fill="#f59f00"/><path d="M75 39q2 8-2 8q-3-2-1-8z" fill="#e03131"/>${E(71, 30, 2.4)}`,
+  /* ペンギン */
+  pengin0: BG.ice + `<path d="M34 86q6-8 14-2M52 84q8-6 14 2" stroke="#f08c2e" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M50 30C64 30 70 52 70 62C70 76 61 84 50 84C39 84 30 76 30 62C30 52 36 30 50 30Z" fill="#fffdf6" stroke="#d9dde3" stroke-width="2"/><ellipse cx="42" cy="46" rx="4" ry="7" fill="#fff"/>`,
+  pengin1: BG.ice + `<path d="M38 88h10M52 88h10" stroke="#555" stroke-width="5" stroke-linecap="round"/><ellipse cx="50" cy="64" rx="24" ry="24" fill="#b7bcc4"/><g fill="#c9cdd3"><circle cx="34" cy="58" r="5"/><circle cx="64" cy="62" r="6"/><circle cx="48" cy="76" r="6"/></g>
+    <circle cx="50" cy="34" r="17" fill="#2b2b2b"/><path d="M38 34Q38 46 50 46Q62 46 62 34Q56 28 50 34Q44 28 38 34Z" fill="#fff"/>${E(44, 36, 2.6)}${E(56, 36, 2.6)}<path d="M47 41l3 4 3-4z" fill="#333"/>`,
+  pengin2: BG.ice + `<path d="M38 90h10M52 90h10" stroke="#f08c2e" stroke-width="5" stroke-linecap="round"/><path d="M28 50Q14 66 22 78L32 64Z" fill="#26324a"/><path d="M72 50Q86 66 78 78L68 64Z" fill="#26324a"/>
+    <ellipse cx="50" cy="56" rx="22" ry="34" fill="#26324a"/><ellipse cx="50" cy="62" rx="15" ry="26" fill="#fff"/><path d="M38 40Q36 30 42 26" stroke="#ffc94a" stroke-width="5" fill="none" stroke-linecap="round"/><path d="M62 40Q64 30 58 26" stroke="#ffc94a" stroke-width="5" fill="none" stroke-linecap="round"/>
+    ${E(43, 27, 2.6)}${E(57, 27, 2.6)}<path d="M46 32l4 9 4-9z" fill="#f08c2e"/>`,
+  /* サケ */
+  sake0: BG.water + `<g fill="#c9c3b6"><ellipse cx="18" cy="86" rx="12" ry="7"/><ellipse cx="44" cy="90" rx="13" ry="7"/><ellipse cx="72" cy="88" rx="14" ry="8"/><ellipse cx="90" cy="80" rx="8" ry="6"/></g>` + [[34, 62], [48, 58], [62, 62], [41, 74], [56, 74], [70, 72], [28, 74]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="7" fill="#f7884a" opacity=".92"/><circle cx="${x - 2}" cy="${y - 2}" r="2" fill="#fff8"/><circle cx="${x + 2}" cy="${y + 1}" r="1.6" fill="#333"/>`).join(""),
+  sake1: BG.water + `<g fill="#c9c3b6"><ellipse cx="20" cy="88" rx="12" ry="6"/><ellipse cx="74" cy="90" rx="14" ry="7"/></g><path d="M18 52Q40 44 76 50Q84 52 80 56Q60 60 18 56Z" fill="#cfd6cf" stroke="#a9b3a9" stroke-width="1"/><path d="M18 52l-8-5 3 7-3 7 8-5" fill="#cfd6cf"/>
+    <ellipse cx="52" cy="62" rx="13" ry="9" fill="#ff8a3d"/><ellipse cx="49" cy="60" rx="4" ry="2.5" fill="#ffc29a"/>${E(72, 51, 2.6)}`,
+  sake2: BG.water + fish(52, 56, 46, 15, "#9fb0a2", "#e9efe6", `<g fill="#6d7f72" opacity=".8"><ellipse cx="38" cy="56" rx="3" ry="5"/><ellipse cx="47" cy="56" rx="3" ry="5"/><ellipse cx="56" cy="56" rx="3" ry="5"/><ellipse cx="65" cy="56" rx="3" ry="5"/></g>`),
+  sake3: BG.sea + fish(54, 52, 64, 24, "#7d93a8", "#f2c4b8", `<path d="M30 44Q54 38 80 44" stroke="#5f7489" stroke-width="2" fill="none"/><path d="M50 40l8-8 6 8z" fill="#7d93a8"/>`),
+  /* ウミガメ */
+  umigame0: BG.sand + `<ellipse cx="50" cy="64" rx="34" ry="22" fill="#e2c98f"/>` + [[38, 58], [52, 56], [64, 60], [44, 70], [58, 70], [70, 70], [32, 68]]
+    .map(([x, y]) => `<circle cx="${x}" cy="${y}" r="8" fill="#fffdf4" stroke="#e8dfc6" stroke-width="1.5"/>`).join(""),
+  umigame1: BG.sand + `<path d="M0 0h100v26H0z" fill="#9fd4ef"/><path d="M0 26q8 6 16 0t16 0 16 0 16 0 16 0 16 0" fill="#fff" opacity=".8"/><path d="M50 98l-2-12M50 98l2-12" stroke="#e2c98f" stroke-width="2"/>` + turtle(50, 62, .75, "#4a4f45", "#5d6457", "#3c4038"),
+  umigame2: BG.sea + `<path d="M10 92q6-10 12 0M80 94q6-12 12 0" stroke="#5aa86a" stroke-width="4" fill="none"/>` + turtle(50, 52, 1.35, "#8a6a3c", "#9cb58a", "#6e5430"),
+  /* カンガルー */
+  kangaroo0: BG.room + `<ellipse cx="50" cy="80" rx="30" ry="6" fill="#f3d9c4"/><path d="M40 60Q38 44 52 44Q64 46 62 60Q60 72 50 72Q42 72 40 60Z" fill="#f7a8b8"/><path d="M48 58l-6 6M54 60l2 7" stroke="#f08ca0" stroke-width="2.4" stroke-linecap="round"/>${E(56, 50, 1.8)}
+    <text x="50" y="26" text-anchor="middle" font-size="8" fill="#c26d1c" font-weight="700">ほんとは</text><text x="50" y="36" text-anchor="middle" font-size="8" fill="#c26d1c" font-weight="700">ゆびさき くらい</text>`,
+  kangaroo1: BG.grass + kangaroo(true),
+  kangaroo2: BG.grass + kangaroo(false),
+  /* ヒト */
+  hito0: BG.room + `<path d="M24 64Q24 36 50 34Q78 36 78 64Q78 86 50 88Q22 86 24 64Z" fill="#a5d8ff"/><path d="M30 64Q50 76 72 62" stroke="#74c0fc" stroke-width="3" fill="none"/>
+    <circle cx="50" cy="48" r="15" fill="#ffd9b8"/><path d="M42 47q3 3 6 0M52 47q3 3 6 0" stroke="#333" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="41" cy="53" r="3" fill="#ffa8a8" opacity=".7"/><circle cx="59" cy="53" r="3" fill="#ffa8a8" opacity=".7"/><path d="M48 55q2 2 4 0" stroke="#c0605a" stroke-width="1.4" fill="none"/>`,
+  hito1: BG.grass + person(54, "#ffa94d", "#5c3b1e", "#4dabf7"),
+  hito2: BG.grass + person(82, "#69db7c", "#3b2a1a", "#495057")
+};
+const emojiArt = (em, bg = BG.none) => bg + `<text x="50" y="72" text-anchor="middle" font-size="58">${em}</text>`;
+const svg = (inner, label = "") => `<svg viewBox="0 0 100 100" role="img" aria-label="${label}">${inner}</svg>`;
+
+/* ================= データ ================= */
+// 事実は 図鑑で ふつうに のっている ないようだけを ひらがなで みじかく（くわしくは README の「じじつ メモ」）。
+const SP = [
+  { id: "kaeru", name: "カエル", birth: "egg", pupa: null, kind: "henshin", baby: 1,
+    st: ["たまご", "おたまじゃくし", "あしが はえる", "カエル"],
+    fact: "おたまじゃくしは みずの なかで しっぽを ふって およぐよ。<b>うしろあし → まえあし</b>の じゅんに はえて、しっぽが なくなると カエルに なって りくにも あがれるよ。" },
+  { id: "chou", name: "チョウ", birth: "egg", pupa: true, kind: "henshin", baby: 1,
+    st: ["たまご", "あおむし", "さなぎ", "チョウ"],
+    fact: "モンシロチョウの あおむしは キャベツの はっぱを もりもり たべて、かわを ぬいで おおきく なるよ。<b>さなぎ</b>の なかで からだを つくりかえて チョウに なるよ。" },
+  { id: "tonbo", name: "トンボ", birth: "egg", pupa: false, kind: "henshin", baby: 1,
+    st: ["たまご", "ヤゴ", "からを ぬぐ", "トンボ"],
+    fact: "トンボの あかちゃん <b>ヤゴ</b>は みずの なかで くらして、ちいさな むしなどを たべるよ。<b>さなぎには ならないで</b>、くさに のぼって からを ぬぎ、トンボに なるよ。" },
+  { id: "semi", name: "セミ", birth: "egg", pupa: false, kind: "henshin", baby: 1,
+    st: ["たまご", "ようちゅう", "からを ぬぐ", "セミ"],
+    fact: "セミの ようちゅうは <b>つちの なかで なんねんも</b> くらして、きの ねっこの しるを すうよ。<b>さなぎには ならないで</b>、よる きに のぼって からを ぬぎ、セミに なるよ。" },
+  { id: "kabuto", name: "カブトムシ", birth: "egg", pupa: true, kind: "henshin", baby: 1,
+    st: ["たまご", "ようちゅう", "さなぎ", "カブトムシ"],
+    fact: "カブトムシの ようちゅうは つちの なかで くさった はっぱ（ふようど）を たべて、どんどん おおきく なるよ。<b>さなぎ</b>に なってから カブトムシに なるよ。" },
+  { id: "tentou", name: "テントウムシ", birth: "egg", pupa: true, kind: "henshin", baby: 1,
+    st: ["たまご", "ようちゅう", "さなぎ", "テントウムシ"],
+    fact: "ナナホシテントウの ようちゅうは、おやと ぜんぜん ちがう かたち！ ようちゅうも おとなも アブラムシを たべるよ。<b>さなぎ</b>に なってから テントウムシに なるよ。" },
+  { id: "niwatori", name: "ニワトリ", birth: "egg", pupa: null, kind: "bird", baby: 1,
+    st: ["たまご", "ひよこ", "ニワトリ"],
+    fact: "たまごを あたためると <b>21にちくらい</b>で ひよこが うまれるよ。ひよこは うまれて すぐに あるいて、じぶんで えさを ついばむよ。" },
+  { id: "pengin", name: "ペンギン", birth: "egg", pupa: null, kind: "bird", baby: 1,
+    st: ["たまご", "ひな", "ペンギン"],
+    fact: "コウテイペンギンは <b>おとうさんが あしの うえに たまごを のせて</b> あたためるよ。ひなは はいいろの ふわふわの はねに つつまれて いるよ。" },
+  { id: "sake", name: "サケ", birth: "egg", pupa: null, kind: "fish", baby: 1,
+    st: ["たまご", "あかちゃん", "こども", "サケ"],
+    fact: "サケは <b>かわで うまれて うみで おおきく</b> なるよ。うまれた ばかりの あかちゃんは、おなかの ふくろの えいようで そだつよ。おとなに なると うまれた かわに かえってきて たまごを うむよ。" },
+  { id: "umigame", name: "ウミガメ", birth: "egg", pupa: null, kind: "reptile", baby: 1,
+    st: ["たまご", "こガメ", "ウミガメ"],
+    fact: "ウミガメは よる、<b>すなはまに あなを ほって</b> たまごを うむよ。うまれた こガメは すなから でてきて、じぶんで うみへ むかって すすむよ。" },
+  { id: "kangaroo", name: "カンガルー", birth: "baby", pupa: null, kind: "mammal", baby: 0,
+    st: ["あかちゃん", "ふくろの なか", "カンガルー"],
+    fact: "カンガルーの あかちゃんは うまれた とき <b>2センチくらい</b>（ゆびさきくらい）！ じぶんで おかあさんの おなかの <b>ふくろ</b>に はいって、おちちを のんで そだつよ。" },
+  { id: "hito", name: "ヒト", birth: "baby", pupa: null, kind: "mammal", baby: 0,
+    st: ["あかちゃん", "こども", "おとな"],
+    fact: "ヒトの あかちゃんは <b>おかあさんの おなかの なか</b>で そだって うまれるよ。おちちや ミルクを のんで すこしずつ おおきく なるよ。きみも むかしは あかちゃんだったね！" }
+];
+const art = (sp, i) => ART[sp.id + i];
+const adult = sp => art(sp, sp.st.length - 1);
+// なかまわけ だけに でる なかま
+const EXTRA = [
+  { name: "イヌ", art: emojiArt("🐶"), birth: "baby", fact: "イヌは あかちゃんで うまれて、おかあさんの おちちを のんで そだつよ。" },
+  { name: "ネコ", art: emojiArt("🐱"), birth: "baby", fact: "ネコは いちどに なんびきも あかちゃんが うまれるよ。" },
+  { name: "イルカ", art: emojiArt("🐬", BG.sea), birth: "baby", fact: "イルカは うみに すむけど さかなじゃ ないよ。あかちゃんで うまれて おちちを のむよ。" },
+  { name: "ウシ", art: emojiArt("🐮", BG.grass), birth: "baby", fact: "ウシの あかちゃんは うまれて すこし すると じぶんで たちあがるよ。" },
+  { name: "ワニ", art: emojiArt("🐊", BG.water), birth: "egg", fact: "ワニは みずべに すを つくって たまごを うむよ。おかあさんが すを まもるよ。" },
+  { name: "ミツバチ", art: emojiArt("🐝", BG.sky), pupa: true, fact: "ミツバチの ようちゅうは すの ちいさな へやで そだって、さなぎに なるよ。" },
+  { name: "アリ", art: emojiArt("🐜", BG.soil), pupa: true, fact: "アリも たまご → ようちゅう → さなぎ → アリ の じゅんに そだつよ。" },
+  { name: "コオロギ", art: emojiArt("🦗", BG.grass), pupa: false, fact: "コオロギは さなぎに ならないで、かわを ぬぐ たびに おおきく なるよ。" }
+];
+
+/* ================= ほぞん ================= */
+const KEY = "akachan-dare:v1";
+let S = { sound: true, seen: {}, plays: 0, sorts: 0 };
+try { const d = JSON.parse(localStorage.getItem(KEY) || "null"); if (d && typeof d === "object") S = Object.assign(S, d); } catch (e) { }
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } };
+
+/* ================= おと（WebAudio） ================= */
+let AC = null;
+function ac() {
+  if (!S.sound) return null;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+  } catch (e) { return null; }
+  return AC;
+}
+function tone(f, d = .15, type = "sine", at = 0, vol = .18, f2) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + at, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .015); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + d + .05);
+}
+const SFX = {
+  tap: () => tone(660, .08, "triangle", 0, .12),
+  pop: () => tone(420, .12, "sine", 0, .2, 900),
+  ok: () => [784, 988, 1319].forEach((f, i) => tone(f, .18, "triangle", i * .09, .16)),
+  ng: () => { tone(300, .18, "square", 0, .06, 220); tone(240, .22, "square", .16, .06, 180); },
+  grow: () => tone(330, .5, "sine", 0, .14, 880),
+  fan: () => [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i === 5 ? .5 : .16, "triangle", i * .13, .16))
+};
+
+/* ================= きほん ================= */
+const $ = id => document.getElementById(id);
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; };
+const PRAISE = ["すごい！", "せいかい！", "やったね！", "はなまる！", "よく できたね！"];
+let timers = [];
+const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+function toast(msg, ng) {
+  const t = $("toast"); t.textContent = msg; t.className = "toast" + (ng ? " ngt" : "");
+  void t.offsetWidth; t.classList.add("go");
+}
+function confetti(n = 24) {
+  const em = ["🌸", "⭐", "🎉", "✨", "🍀", "💮"];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span"); s.className = "conf"; s.textContent = em[i % em.length];
+    s.style.left = Math.random() * 100 + "vw"; s.style.animationDuration = (1.8 + Math.random() * 1.6) + "s"; s.style.animationDelay = Math.random() * .5 + "s";
+    document.body.appendChild(s); setTimeout(() => s.remove(), 4200);
+  }
+}
+const shake = el => { el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); };
+let cur = "sMenu";
+function show(id) {
+  clearTimers();
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+  $("homeBtn").hidden = id === "sMenu"; cur = id; window.scrollTo(0, 0);
+  if (id === "sMenu") renderMenu();
+}
+function renderSnd() { $("sndBtn").innerHTML = S.sound ? "🔊<small>オン</small>" : "🔇<small>オフ</small>"; }
+$("sndBtn").onclick = () => { S.sound = !S.sound; save(); renderSnd(); SFX.tap(); };
+$("homeBtn").onclick = () => { SFX.tap(); show("sMenu"); };
+
+/* ================= メニュー ================= */
+function renderMenu() {
+  const f = SP[0];
+  $("heroPics").innerHTML = f.st.map((_, i) => svg(art(f, i))).join('<span class="arrow">▶</span>');
+  $("zCount").textContent = `みつけた いきもの ${SP.filter(s => S.seen[s.id]).length} / ${SP.length}`;
+}
+$("goPlay").onclick = () => { SFX.tap(); startRound(); };
+$("goSort").onclick = () => { SFX.tap(); startSort(); };
+$("goZukan").onclick = () => { SFX.tap(); renderZukan(); show("sZukan"); };
+
+/* ================= だれの あかちゃん？（1かい 3しゅるい） ================= */
+let R = null; // { list, i, miss }
+function startRound() {
+  const unseen = shuffle(SP.filter(s => !S.seen[s.id])), seen = shuffle(SP.filter(s => S.seen[s.id]));
+  R = { list: unseen.concat(seen).slice(0, 3), i: 0, miss: 0 };
+  R.list = shuffle(R.list);
+  showQuiz();
+}
+function progHTML(step) {
+  return R.list.map((s, i) => `<i class="${i < R.i ? "done" : i === R.i ? "now" : ""}"></i>`).join("") +
+    `<span>${R.i + 1} / ${R.list.length}　${["① だれの あかちゃん？", "② ならべる", "③ そだつ ようす"][step]}</span>`;
+}
+function showQuiz() {
+  const sp = R.list[R.i];
+  $("qProg").innerHTML = progHTML(0);
+  $("qBaby").innerHTML = svg(art(sp, sp.baby), sp.st[sp.baby]) + `<div class="lb">${sp.st[sp.baby]}</div>`;
+  const others = shuffle(SP.filter(s => s !== sp)).slice(0, 2);
+  const opts = shuffle([sp, ...others]);
+  $("qChoices").innerHTML = "";
+  let done = false;
+  opts.forEach(o => {
+    const b = document.createElement("button");
+    b.className = "choice"; b.innerHTML = svg(adult(o), o.name) + `<span>${o.name}</span>`;
+    b.onclick = () => {
+      if (done || b.classList.contains("ng")) return;
+      if (o === sp) {
+        done = true; b.classList.add("ok"); SFX.ok(); toast(PRAISE[Math.random() * PRAISE.length | 0]);
+        later(() => showOrder(), 1100);
+      } else {
+        R.miss++; b.classList.add("ng"); shake(b); SFX.ng(); toast("ちがうよ。もういちど！", true);
+      }
+    };
+    $("qChoices").appendChild(b);
+  });
+  show("sQuiz");
+}
+
+/* ---- ならべる ---- */
+function stCard(sp, i) {
+  const b = document.createElement("button");
+  b.className = "st"; b.dataset.i = i;
+  b.innerHTML = svg(art(sp, i), sp.st[i]) + `<span>${sp.st[i]}</span>`;
+  return b;
+}
+function showOrder() {
+  const sp = R.list[R.i], n = sp.st.length;
+  $("oProg").innerHTML = progHTML(1);
+  $("oHint").textContent = "";
+  const slots = $("oSlots"); slots.innerHTML = "";
+  for (let i = 0; i < n; i++) {
+    if (i) slots.insertAdjacentHTML("beforeend", '<span class="sarrow">▶</span>');
+    const s = document.createElement("div"); s.className = "slot"; s.dataset.k = i;
+    s.innerHTML = `<span class="no">${i + 1}</span>`; slots.appendChild(s);
+  }
+  let order; do { order = shuffle([...Array(n).keys()]); } while (order.every((v, i) => v === i));
+  const pool = $("oPool"); pool.innerHTML = "";
+  const slotEls = () => [...slots.querySelectorAll(".slot")];
+  let busy = false;
+  order.forEach(i => {
+    const c = stCard(sp, i);
+    c.onclick = () => {
+      if (busy) return;
+      const inSlot = c.parentElement.classList.contains("slot");
+      if (inSlot) {
+        if (c.parentElement.classList.contains("lock")) return;
+        SFX.tap(); pool.appendChild(c); return;
+      }
+      const empty = slotEls().find(s => !s.querySelector(".st"));
+      if (!empty) return;
+      SFX.pop(); empty.appendChild(c); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
+      if (slotEls().every(s => s.querySelector(".st"))) { busy = true; later(check, 450); }
+    };
+    pool.appendChild(c);
+  });
+  function check() {
+    let wrong = 0;
+    slotEls().forEach(s => {
+      const c = s.querySelector(".st");
+      if (+c.dataset.i === +s.dataset.k) s.classList.add("lock");
+      else { wrong++; shake(c); }
+    });
+    if (!wrong) {
+      SFX.ok(); toast(PRAISE[Math.random() * PRAISE.length | 0]);
+      later(() => showGrow(sp, false), 1200);
+    } else {
+      R.miss++; SFX.ng();
+      $("oHint").textContent = `${wrong}まい ちがうよ。みどりの わくは あってるよ！`;
+      later(() => {
+        slotEls().forEach(s => { if (!s.classList.contains("lock")) { const c = s.querySelector(".st"); if (c) pool.appendChild(c); } });
+        busy = false;
+      }, 650);
+    }
+  }
+  show("sOrder");
+}
+
+/* ---- そだつ ようす（ずかんからも つかう） ---- */
+let growFrom = "play";
+function showGrow(sp, fromZukan) {
+  growFrom = fromZukan ? "zukan" : "play";
+  if (!S.seen[sp.id]) { S.seen[sp.id] = 1; save(); }
+  $("gProg").innerHTML = fromZukan ? `<span>${sp.name}の そだちかた</span>` : progHTML(2);
+  $("gThumbs").innerHTML = sp.st.map((n, i) => (i ? '<span class="sarrow">▶</span>' : "") + `<div class="t" data-i="${i}">${svg(art(sp, i), n)}</div>`).join("");
+  const born = sp.birth === "egg" ? "🥚 たまごで うまれる" : "👶 あかちゃんで うまれる";
+  const extra = sp.kind === "henshin" ? (sp.pupa ? "🦋 さなぎに なって へんしん！" : sp.pupa === false ? "✨ さなぎに ならずに へんしん！" : "✨ おやと かたちが ちがう！") : "";
+  $("gBadge").innerHTML = `<span class="badge b2">${born}</span> ` + (extra ? `<span class="badge">${extra}</span>` : "");
+  $("gFact").innerHTML = sp.fact;
+  $("gNext").textContent = fromZukan ? "📖 ずかんへ" : (R && R.i + 1 >= R.list.length ? "おわり ▶" : "つぎの いきもの ▶");
+  show("sGrow");
+  play(sp);
+}
+function play(sp) {
+  clearTimers();
+  $("gFact").classList.add("hide"); $("gRow").classList.add("hide");
+  const thumbs = [...$("gThumbs").querySelectorAll(".t")];
+  thumbs.forEach(t => t.className = "t");
+  const step = i => {
+    const v = $("gView");
+    v.innerHTML = svg(art(sp, i), sp.st[i]) + `<div class="lb">${sp.st[i]}</div>`;
+    v.classList.remove("pop"); void v.offsetWidth; v.classList.add("pop");
+    thumbs.forEach((t, k) => t.className = "t" + (k === i ? " on" : k < i ? " seen" : ""));
+    if (i < sp.st.length - 1) { SFX.grow(); later(() => step(i + 1), 1500); }
+    else {
+      SFX.fan(); confetti(18);
+      later(() => { thumbs.forEach(t => t.className = "t seen"); $("gFact").classList.remove("hide"); $("gRow").classList.remove("hide"); }, 700);
+    }
+  };
+  step(0);
+  $("gAgain").onclick = () => { SFX.tap(); play(sp); };
+}
+$("gNext").onclick = () => {
+  SFX.tap();
+  if (growFrom === "zukan") { renderZukan(); show("sZukan"); return; }
+  R.i++;
+  if (R.i < R.list.length) showQuiz();
+  else finish("play");
+};
+
+/* ================= なかまわけ ================= */
+let Q = null;
+function startSort() {
+  const birth = shuffle(SP.map(s => ({ name: s.name, art: adult(s), type: "birth", ans: s.birth, fact: s.fact.replace(/<\/?b>/g, "") }))
+    .concat(EXTRA.filter(e => e.birth).map(e => ({ name: e.name, art: e.art, type: "birth", ans: e.birth, fact: e.fact }))));
+  const babies = birth.filter(q => q.ans === "baby"), eggs = birth.filter(q => q.ans === "egg");
+  const pupa = shuffle(SP.filter(s => s.pupa !== null).map(s => ({ name: s.name, art: adult(s), type: "pupa", ans: s.pupa ? "yes" : "no", fact: s.fact.replace(/<\/?b>/g, "") }))
+    .concat(EXTRA.filter(e => e.pupa !== undefined).map(e => ({ name: e.name, art: e.art, type: "pupa", ans: e.pupa ? "yes" : "no", fact: e.fact }))));
+  const pYes = pupa.filter(q => q.ans === "yes"), pNo = pupa.filter(q => q.ans === "no");
+  Q = { list: shuffle([...babies.slice(0, 3), ...eggs.slice(0, 2), ...pYes.slice(0, 2), ...pNo.slice(0, 1)]), i: 0, miss: 0 };
+  showSortQ();
+}
+function showSortQ() {
+  const q = Q.list[Q.i];
+  $("sBar").style.width = (Q.i / Q.list.length * 100) + "%";
+  $("sPic").innerHTML = svg(q.art, q.name) + `<div class="lb">${q.name}</div>`;
+  const bins = q.type === "birth"
+    ? [["egg", "🥚", "たまごで うまれる", "#e8590c"], ["baby", "👶", "あかちゃんで うまれる", "#d6336c"]]
+    : [["yes", "⭕", "さなぎに なる", "#7048e8"], ["no", "❌", "さなぎに ならない", "#1c7ed6"]];
+  $("sAsk").innerHTML = q.type === "birth" ? `${q.name}は どう うまれる？` : `${q.name}は さなぎに なる？`;
+  $("sFact").classList.add("hide"); $("sRow").classList.add("hide");
+  $("sBins").innerHTML = "";
+  let done = false;
+  bins.forEach(([v, em, lb, c]) => {
+    const b = document.createElement("button"); b.className = "bin"; b.style.setProperty("--c", c);
+    b.innerHTML = `<span class="em">${em}</span>${lb}`;
+    b.onclick = () => {
+      if (done || b.classList.contains("ng")) return;
+      if (v === q.ans) {
+        done = true; b.classList.add("ok"); SFX.ok(); toast(PRAISE[Math.random() * PRAISE.length | 0]);
+        $("sFact").textContent = q.fact; $("sFact").classList.remove("hide"); $("sRow").classList.remove("hide");
+        $("sBar").style.width = ((Q.i + 1) / Q.list.length * 100) + "%";
+      } else { Q.miss++; b.classList.add("ng"); shake(b); SFX.ng(); toast("ざんねん！ もういっぽうかな？", true); }
+    };
+    $("sBins").appendChild(b);
+  });
+  show("sSort");
+}
+$("sNext").onclick = () => { SFX.tap(); Q.i++; if (Q.i < Q.list.length) showSortQ(); else finish("sort"); };
+
+/* ================= けっか ================= */
+let lastMode = "play";
+function finish(mode) {
+  lastMode = mode;
+  const miss = mode === "play" ? R.miss : Q.miss;
+  if (mode === "play") S.plays = (S.plays || 0) + 1; else S.sorts = (S.sorts || 0) + 1;
+  save();
+  const stars = miss === 0 ? 3 : miss <= 2 ? 2 : 1;
+  $("rStars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  $("rTitle").textContent = miss === 0 ? "パーフェクト！" : "はなまる！";
+  $("rMsg").innerHTML = mode === "play"
+    ? (miss === 0 ? "ぜんぶ いっかいで できたね！<br>いきものはかせだ！" : "さいごまで よく がんばったね！<br>そだつ じゅんばん、おぼえたかな？")
+    : (miss === 0 ? "なかまわけ ぜんもん せいかい！<br>すごい！" : "ぜんぶ わけられたね！<br>まちがえた ところも もう ばっちり！");
+  $("rPics").innerHTML = mode === "play" ? R.list.map(s => svg(adult(s), s.name)).join("") : "";
+  show("sResult"); SFX.fan(); confetti(36);
+}
+$("rAgain").onclick = () => { SFX.tap(); lastMode === "play" ? startRound() : startSort(); };
+$("rMenu").onclick = () => { SFX.tap(); show("sMenu"); };
+
+/* ================= ずかん ================= */
+function renderZukan() {
+  const g = $("zGrid"); g.innerHTML = "";
+  SP.forEach(sp => {
+    const on = !!S.seen[sp.id];
+    const b = document.createElement("button"); b.className = "zc" + (on ? "" : " no");
+    b.innerHTML = svg(adult(sp), on ? sp.name : "？") + `<span>${on ? sp.name : "？？？"}</span>`;
+    b.onclick = () => {
+      if (!on) { SFX.ng(); shake(b); toast("あそぶと みつかるよ", true); return; }
+      SFX.tap(); showGrow(sp, true);
+    };
+    g.appendChild(b);
+  });
+}
+
+renderSnd();
+renderMenu();
+// テスト用
+window.__akachan = { SP, state: () => S, now: () => R && R.list[R.i], svgOf: (sp, i) => svg(art(sp, i)) };
+</script>
+</body>
+</html>
