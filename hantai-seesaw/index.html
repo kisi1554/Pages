@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>はんたい シーソー</title>
+<style>
+  :root {
+    --bg: #fff8e7;
+    --ink: #3d2c1e;
+    --sub: #8a6d52;
+    --plank: #c0773a;
+    --plank-dark: #8f5226;
+    --accent: #e8590c;
+    --ok: #2f9e44;
+    --ng: #e03131;
+    --card: #ffffff;
+    --shadow: 0 4px 0 rgba(61,44,30,.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 10%, #ffe8b3 0 60px, transparent 61px),
+      linear-gradient(#cfeeff 0 58%, #bfe6a6 58% 100%);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(10px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+
+  /* ---- 上のバー ---- */
+  .bar { width: 100%; max-width: 980px; display: flex; align-items: center; gap: 10px; min-height: 56px; }
+  .bar .grow { flex: 1; text-align: center; font-weight: 800; font-size: clamp(18px, 4.6vw, 26px); }
+  .round-btn { width: 56px; height: 56px; border-radius: 50%; background: #fff; box-shadow: var(--shadow);
+    font-size: 28px; display: grid; place-items: center; text-decoration: none; color: inherit; flex: none; }
+  .round-btn:active { transform: translateY(3px); box-shadow: none; }
+
+  /* ---- タイトル ---- */
+  #title { overflow-y: auto; }
+  .logo { margin: 6px 0 2px; font-size: clamp(34px, 9vw, 60px); font-weight: 900; letter-spacing: .04em;
+    color: var(--accent); text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.12); text-align: center; }
+  .logo-sub { color: var(--sub); font-weight: 700; font-size: clamp(15px, 3.8vw, 19px); margin-bottom: 10px; text-align: center; }
+  .levels { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .level { background: var(--card); border-radius: 22px; padding: 14px 12px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 130px; border: 4px solid transparent; }
+  .level:active { transform: translateY(3px); box-shadow: none; }
+  .level .lv-emo { font-size: 38px; line-height: 1.1; }
+  .level .lv-name { font-weight: 900; font-size: clamp(16px, 4.4vw, 20px); white-space: nowrap; }
+  .level .lv-desc { font-size: 14px; color: var(--sub); text-align: center; }
+  .level .lv-dots { display: flex; gap: 2px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+  .level .lv-dots i { width: 10px; height: 10px; border-radius: 50%; background: #eadfce; }
+  .level .lv-dots i.got { background: #fab005; box-shadow: 0 0 0 2px #fff3bf inset; }
+  .level.done { border-color: #fab005; }
+  .title-row { display: flex; gap: 12px; margin-top: 14px; flex-wrap: wrap; justify-content: center; }
+  .big-btn { background: var(--accent); color: #fff; font-weight: 900; font-size: 22px; border-radius: 999px;
+    padding: 14px 28px; box-shadow: 0 5px 0 #a8410a; min-height: 60px; }
+  .big-btn.alt { background: #fff; color: var(--ink); box-shadow: var(--shadow); }
+  .big-btn:active { transform: translateY(4px); box-shadow: none; }
+  .total { margin-top: 10px; color: var(--sub); font-weight: 700; }
+
+  /* ---- あそぶ画面 ---- */
+  #play .board { flex: 1; width: 100%; max-width: 1100px; display: flex; flex-direction: column; align-items: center;
+    justify-content: space-evenly; min-height: 0; gap: 6px; }
+  .progress { display: flex; gap: 8px; }
+  .progress i { width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,.8); border: 3px solid #e9d8c0; }
+  .progress i.now { border-color: var(--accent); background: #fff; transform: scale(1.2); }
+  .progress i.ok { background: #fab005; border-color: #f08c00; }
+  .progress i.ok2 { background: #74c0fc; border-color: #339af0; }
+  .ask { font-weight: 800; font-size: clamp(17px, 4.4vw, 24px); text-align: center; min-height: 1.4em;
+    background: rgba(255,255,255,.85); border-radius: 999px; padding: 4px 18px; }
+  .ask b { color: var(--accent); }
+
+  .seesaw-wrap { width: min(96vw, 680px, 112vh); container-type: inline-size; }
+  .seesaw { position: relative; width: 100%; aspect-ratio: 1.75 / 1; }
+  .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 6%; background: #8ccf6b; border-radius: 999px; }
+  .fulcrum { position: absolute; left: 50%; bottom: 4%; width: 15%; height: 23%; transform: translateX(-50%);
+    background: linear-gradient(#7b5ca8, #5f3dc4); clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+  .fulcrum::after { content: ""; position: absolute; left: 50%; top: 4%; width: 22%; aspect-ratio: 1; transform: translateX(-50%);
+    border-radius: 50%; background: #ffd43b; }
+  .plank { position: absolute; left: 2%; right: 2%; bottom: 25%; height: 6%;
+    transform: rotate(var(--tilt, -11deg)); transform-origin: 50% 50%;
+    transition: transform .7s cubic-bezier(.25, 1.5, .45, 1); }
+  .plank .wood { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(var(--plank), var(--plank-dark));
+    box-shadow: 0 3px 0 rgba(0,0,0,.15); }
+  .seat { position: absolute; bottom: 100%; width: 35%; aspect-ratio: 1 / 1.02; display: flex; align-items: flex-end; justify-content: center; }
+  .seat.left { left: 1%; }
+  .seat.right { right: 1%; }
+  .slot { width: 100%; height: 100%; border-radius: 9cqw 9cqw 3cqw 3cqw; border: .7cqw dashed #b08968;
+    background: rgba(255,255,255,.55); display: grid; place-items: center; font-size: 9cqw; color: #c9b39b; font-weight: 900; }
+  .plank.balanced .wood { background: linear-gradient(#ffc078, #e8590c); }
+
+  /* 絵カード（シーソーの上） */
+  .pic { width: 100%; height: 100%; border-radius: 9cqw 9cqw 3cqw 3cqw; background: var(--card); box-shadow: 0 1cqw 0 rgba(0,0,0,.15);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; position: relative; }
+  .pic .emo { font-size: 10cqw; line-height: 1.15; white-space: nowrap; transition: transform .3s; }
+  .pic .word { font-size: 4.6cqw; font-weight: 900; margin-top: 1cqw; }
+  .pic.enter { animation: drop .55s cubic-bezier(.3,1.5,.5,1); }
+  @keyframes drop { from { transform: translateY(-60%); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* ひと目で わかる 対比の かざり */
+  .fx-big .emo { transform: scale(1.45); }
+  .fx-small .emo { transform: scale(.6); }
+  .fx-dark { background: #343a40 !important; color: #fff; }
+  .fx-dark .emo { filter: brightness(.55); }
+  .fx-glow { background: radial-gradient(circle, #fff9db 0 40%, #ffe066 100%) !important; }
+  .fx-hot { background: linear-gradient(#ffe3e3, #ffa8a8) !important; }
+  .fx-cold { background: linear-gradient(#e7f5ff, #a5d8ff) !important; }
+  .fx-fade .emo { opacity: .45; filter: grayscale(.6); }
+  .fx-fade.fx-small .emo { transform: scale(.55); }
+  .fx-flip .emo { transform: scaleX(-1); }
+  .fx-wide .emo { letter-spacing: -.12em; }
+  .fx-night { background: linear-gradient(#364fc7, #1c2a6b) !important; color: #fff; }
+  .fx-morning { background: linear-gradient(#ffe8cc, #ffc9c9) !important; }
+
+  /* したの カード */
+  .tray { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .tray.three { grid-template-columns: 1fr 1fr 1fr; }
+  .opt { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); min-height: 96px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px 4px;
+    border: 4px solid transparent; transition: opacity .2s, transform .15s; }
+  .opt .emo { font-size: clamp(34px, 9vw, 48px); line-height: 1.15; white-space: nowrap; }
+  .opt .word { font-weight: 900; font-size: clamp(18px, 4.6vw, 24px); }
+  .opt:active { transform: translateY(3px); box-shadow: none; }
+  .opt.gone { visibility: hidden; }
+  .opt.tried { opacity: .5; }
+  .opt.hint { border-color: #fab005; animation: pulse 1s infinite; }
+  .opt.shake { animation: shake .45s; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+  @keyframes shake { 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+  .tray.lock .opt { pointer-events: none; }
+
+  .fly { position: fixed; z-index: 50; pointer-events: none; margin: 0; }
+
+  /* ほめる ふきだし */
+  .praise { position: fixed; left: 50%; top: 22%; transform: translate(-50%, 0) scale(.4); opacity: 0; z-index: 60;
+    background: #fff; border-radius: 28px; padding: 12px 26px; font-size: clamp(26px, 7vw, 44px); font-weight: 900;
+    color: var(--ok); box-shadow: 0 6px 0 rgba(0,0,0,.12); pointer-events: none; white-space: nowrap;
+    transition: transform .35s cubic-bezier(.3,1.6,.5,1), opacity .25s; }
+  .praise.ng { color: var(--ng); }
+  .praise.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
+  .spark { position: fixed; z-index: 55; pointer-events: none; font-size: 28px; }
+
+  /* けっか */
+  #result, #zukan { overflow-y: auto; }
+  .result-head { text-align: center; margin: 8px 0; }
+  .stars { font-size: clamp(40px, 11vw, 64px); letter-spacing: .1em; }
+  .stars span { display: inline-block; animation: pop .5s backwards; }
+  .stars span.off { filter: grayscale(1); opacity: .35; }
+  @keyframes pop { from { transform: scale(0) rotate(-90deg); } }
+  .result-msg { font-size: clamp(22px, 6vw, 32px); font-weight: 900; color: var(--accent); }
+  .pairs { width: 100%; max-width: 720px; display: grid; gap: 10px; margin: 10px 0; }
+  .pair-row { background: #fff; border-radius: 20px; box-shadow: var(--shadow); display: grid;
+    grid-template-columns: 1fr auto 1fr; align-items: center; padding: 8px 10px; position: relative; animation: drop .5s backwards; }
+  .pair-row .side { display: flex; align-items: center; gap: 6px; justify-content: center; }
+  .pair-row .side .emo { font-size: 34px; }
+  .pair-row .side .word { font-size: 20px; font-weight: 900; }
+  .pair-row .vs { font-size: 26px; color: var(--accent); font-weight: 900; padding: 0 6px; }
+  .pair-row .new { position: absolute; top: -8px; right: 10px; background: #e03131; color: #fff; font-size: 13px; font-weight: 900;
+    border-radius: 999px; padding: 2px 8px; }
+
+  /* ずかん */
+  .zk-stage { width: 100%; max-width: 900px; margin-top: 10px; }
+  .zk-stage h2 { font-size: 20px; margin: 6px 4px; }
+  .zk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .zk { background: #fff; border-radius: 18px; box-shadow: var(--shadow); min-height: 84px; padding: 6px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .zk .emo { font-size: 28px; white-space: nowrap; }
+  .zk .word { font-size: 15px; font-weight: 800; }
+  .zk.lock { background: rgba(255,255,255,.55); color: #b8a58f; font-size: 30px; font-weight: 900; box-shadow: none; border: 3px dashed #d9c7b0; }
+  .zk:not(.lock):active { transform: translateY(3px); box-shadow: none; }
+
+  .modal { position: fixed; inset: 0; background: rgba(40,30,20,.55); display: none; align-items: center; justify-content: center; z-index: 80; padding: 16px; }
+  .modal.on { display: flex; }
+  .modal-box { background: var(--bg); border-radius: 28px; padding: 16px; width: min(94vw, 640px); display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .modal-box .seesaw-wrap { width: 100%; }
+
+  /* 横持ち（タブレット・スマホ横） */
+  @media (orientation: landscape) and (min-width: 640px) {
+    #play .board { display: grid; grid-template-columns: 1.25fr 1fr; grid-template-rows: auto 1fr; align-items: center;
+      justify-items: center; column-gap: 18px; }
+    #play .ask { grid-column: 1 / 3; }
+    #play .seesaw-wrap { width: min(100%, 110vh); }
+    #play .opt { min-height: clamp(70px, 19vh, 170px); }
+    #play .opt .emo { font-size: clamp(30px, 7vh, 64px); }
+    #play .opt .word { font-size: clamp(18px, 3.4vh, 28px); }
+    .levels { grid-template-columns: repeat(4, 1fr); max-width: 980px; }
+  }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .bar { min-height: 46px; }
+    .round-btn { width: 46px; height: 46px; font-size: 24px; }
+    .opt { min-height: 70px; }
+    .opt .emo { font-size: 30px; }
+    .opt .word { font-size: 18px; }
+    .logo { font-size: 32px; margin: 0; }
+    .level { min-height: 100px; padding: 8px; }
+    .level .lv-emo { font-size: 28px; }
+  }
+  @media (orientation: portrait) {
+    #play .board { justify-content: space-around; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section class="screen on" id="title">
+  <div class="bar">
+    <a class="round-btn" href="../" aria-label="メニューへ">🏠</a>
+    <div class="grow"></div>
+    <button class="round-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="logo">🔁 はんたい シーソー</div>
+  <div class="logo-sub">はんたい の ことば を のせて、シーソー を まっすぐ に しよう！</div>
+  <div class="levels" id="levels"></div>
+  <div class="title-row">
+    <button class="big-btn alt" id="toZukan">📖 ずかん</button>
+  </div>
+  <div class="total" id="total"></div>
+</section>
+
+<!-- あそぶ -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="round-btn" id="quit" aria-label="もどる">↩️</button>
+    <div class="grow"><div class="progress" id="progress" style="justify-content:center"></div></div>
+    <button class="round-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="board">
+    <div class="ask" id="ask"></div>
+    <div class="seesaw-wrap">
+      <div class="seesaw" id="seesaw">
+        <div class="ground"></div>
+        <div class="fulcrum"></div>
+        <div class="plank" id="plank">
+          <div class="wood"></div>
+          <div class="seat left" id="seatL"></div>
+          <div class="seat right" id="seatR"><div class="slot" id="slot">？</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="tray" id="tray"></div>
+  </div>
+</section>
+
+<!-- けっか -->
+<section class="screen" id="result">
+  <div class="bar">
+    <div class="grow">きょう あつめた はんたい</div>
+    <button class="round-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="result-head">
+    <div class="stars" id="stars"></div>
+    <div class="result-msg" id="resultMsg"></div>
+  </div>
+  <div class="pairs" id="pairs"></div>
+  <div class="title-row">
+    <button class="big-btn" id="again">もういちど ▶</button>
+    <button class="big-btn alt" id="resZukan">📖 ずかん</button>
+    <button class="big-btn alt" id="resHome">🔙 もどる</button>
+  </div>
+</section>
+
+<!-- ずかん -->
+<section class="screen" id="zukan">
+  <div class="bar">
+    <button class="round-btn" id="zkBack" aria-label="もどる">↩️</button>
+    <div class="grow">📖 はんたい ずかん <span id="zkCount"></span></div>
+    <button class="round-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div id="zkList" style="width:100%;display:flex;flex-direction:column;align-items:center;padding-bottom:20px"></div>
+</section>
+
+<div class="modal" id="modal">
+  <div class="modal-box">
+    <div class="seesaw-wrap">
+      <div class="seesaw">
+        <div class="ground"></div>
+        <div class="fulcrum"></div>
+        <div class="plank balanced" style="--tilt:0deg">
+          <div class="wood"></div>
+          <div class="seat left" id="mL"></div>
+          <div class="seat right" id="mR"></div>
+        </div>
+      </div>
+    </div>
+    <button class="big-btn" id="mClose">とじる</button>
+  </div>
+</div>
+
+<div class="praise" id="praise"></div>
+
+<script>
+'use strict';
+// ------------------------------------------------------------
+// はんたいことば 40くみ（4だんかい × 10）
+//  [ことば, え, かざり]  かざり: big small dark glow hot cold fade flip night morning
+// ------------------------------------------------------------
+const STAGES = [
+  { name: 'ようす', emo: '🐘🐭', desc: 'おおきい・ちいさい など' },
+  { name: 'ようす ２', emo: '🍰🌶️', desc: 'あまい・からい など' },
+  { name: 'うごき', emo: '📖📕', desc: 'あける・しめる など' },
+  { name: 'とき・ばしょ', emo: '🌅🌙', desc: 'あさ・よる など' },
+];
+const PAIRS = [
+  // 1. ようす
+  [0, ['おおきい', '🐘', 'big'], ['ちいさい', '🐭', 'small']],
+  [0, ['ながい', '🚃🚃🚃', 'wide'], ['みじかい', '🚃', '']],
+  [0, ['たかい', '🗼', 'big'], ['ひくい', '🏠', 'small']],
+  [0, ['あつい', '🥵', 'hot'], ['さむい', '🥶', 'cold']],
+  [0, ['あかるい', '🌞', 'glow'], ['くらい', '🌚', 'dark']],
+  [0, ['おもい', '🪨', 'big'], ['かるい', '🪶', '']],
+  [0, ['はやい', '🐆💨', ''], ['おそい', '🐌', '']],
+  [0, ['おおい', '🍎🍎🍎', 'wide'], ['すくない', '🍎', '']],
+  [0, ['うれしい', '😄', ''], ['かなしい', '😢', '']],
+  [0, ['ふとい', '🪵', 'big'], ['ほそい', '🥢', '']],
+  // 2. ようす ２
+  [1, ['かたい', '🧱', ''], ['やわらかい', '🍮', '']],
+  [1, ['あまい', '🍰', ''], ['からい', '🌶️', 'hot']],
+  [1, ['きれい', '🧼✨', ''], ['きたない', '💩', '']],
+  [1, ['つよい', '🦁', 'big'], ['よわい', '🐣', 'small']],
+  [1, ['うるさい', '📢', ''], ['しずか', '🤫', '']],
+  [1, ['あたらしい', '📦✨', ''], ['ふるい', '📦🕸️', 'fade']],
+  [1, ['ちかい', '⛰️', 'big'], ['とおい', '⛰️', 'fade small']],
+  [1, ['いっぱい', '🥛', ''], ['からっぽ', '🫙', '']],
+  [1, ['たのしい', '🥳', ''], ['つまらない', '😑', '']],
+  [1, ['ひろい', '🏞️', 'big'], ['せまい', '📦🐱', '']],
+  // 3. うごき
+  [2, ['のぼる', '🧗⬆️', ''], ['おりる', '🪂⬇️', '']],
+  [2, ['あける', '📖', ''], ['しめる', '📕', '']],
+  [2, ['たつ', '🧍', ''], ['すわる', '🪑', '']],
+  [2, ['ねる', '😴', 'night'], ['おきる', '⏰', 'morning']],
+  [2, ['なく', '😭', ''], ['わらう', '🤣', '']],
+  [2, ['いれる', '📥', ''], ['だす', '📤', '']],
+  [2, ['つける', '💡', 'glow'], ['けす', '💡', 'dark']],
+  [2, ['いく', '🚶➡️', ''], ['くる', '⬅️🚶', '']],
+  [2, ['かつ', '🏆', ''], ['まける', '😣', '']],
+  [2, ['あげる', '🎁', ''], ['もらう', '🤲', '']],
+  // 4. とき・ばしょ・ひと
+  [3, ['あさ', '🌅', 'morning'], ['よる', '🌙', 'night']],
+  [3, ['うえ', '⬆️', ''], ['した', '⬇️', '']],
+  [3, ['みぎ', '👉', ''], ['ひだり', '👈', '']],
+  [3, ['はじめ', '🚦', ''], ['おわり', '🏁', '']],
+  [3, ['なつ', '🍉', 'hot'], ['ふゆ', '☃️', 'cold']],
+  [3, ['そと', '🌳', ''], ['なか', '🏠', '']],
+  [3, ['おとな', '🧑', 'big'], ['こども', '🧒', 'small']],
+  [3, ['おとこのこ', '👦', ''], ['おんなのこ', '👧', '']],
+  [3, ['きのう', '⬅️📅', ''], ['あした', '📅➡️', '']],
+  [3, ['たて', '↕️', ''], ['よこ', '↔️', '']],
+].map((p, i) => ({ id: i, stage: p[0], a: { w: p[1][0], e: p[1][1], fx: p[1][2] }, b: { w: p[2][0], e: p[2][1], fx: p[2][2] } }));
+window.HS_PAIRS = PAIRS; // テスト用
+
+// ------------------------------------------------------------
+// ほぞん
+// ------------------------------------------------------------
+const KEY = 'hantai-seesaw-v1';
+let save = { got: {}, sound: true, plays: 0 };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch (e) {}
+if (!save.got || typeof save.got !== 'object') save.got = {};
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+// ------------------------------------------------------------
+// おと（WebAudio の 合成音のみ）
+// ------------------------------------------------------------
+let ac = null;
+function audio() {
+  if (!save.sound) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { return null; }
+  return ac;
+}
+function tone(freq, t0, dur, type = 'sine', vol = .2, slideTo) {
+  const c = audio(); if (!c) return;
+  const t = c.currentTime + t0;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t + .015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .05);
+}
+const SND = {
+  tap() { tone(660, 0, .08, 'triangle', .15); },
+  whoosh() { tone(300, 0, .25, 'sine', .08, 900); },
+  ok() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, .3, 'triangle', .18)); tone(1568, .38, .5, 'sine', .08); },
+  ng() { tone(220, 0, .22, 'square', .07, 160); tone(180, .2, .3, 'square', .06, 120); },
+  creak() { tone(140, 0, .35, 'sawtooth', .04, 110); },
+  fanfare() { [523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .13, i === 6 ? .7 : .18, 'triangle', .17)); },
+};
+function refreshSnd() { document.querySelectorAll('.snd').forEach(b => b.textContent = save.sound ? '🔊' : '🔇'); }
+document.querySelectorAll('.snd').forEach(b => b.addEventListener('click', () => {
+  save.sound = !save.sound; persist(); refreshSnd(); if (save.sound) SND.tap();
+}));
+refreshSnd();
+
+// ------------------------------------------------------------
+// がめん
+// ------------------------------------------------------------
+const $ = id => document.getElementById(id);
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function picHTML(side, cls = 'pic') {
+  const fx = side.fx ? side.fx.split(' ').map(f => 'fx-' + f).join(' ') : '';
+  return `<div class="${cls} ${fx}"><span class="emo">${side.e}</span><span class="word">${side.w}</span></div>`;
+}
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function renderTitle() {
+  const box = $('levels'); box.innerHTML = '';
+  STAGES.forEach((st, si) => {
+    const ps = PAIRS.filter(p => p.stage === si);
+    const n = ps.filter(p => save.got[p.id]).length;
+    const b = document.createElement('button');
+    b.className = 'level' + (n === ps.length ? ' done' : '');
+    b.dataset.stage = si;
+    b.innerHTML = `<span class="lv-emo">${st.emo}</span><span class="lv-name">${si + 1}. ${st.name}</span>
+      <span class="lv-desc">${st.desc}</span>
+      <span class="lv-dots">${ps.map(p => `<i class="${save.got[p.id] ? 'got' : ''}"></i>`).join('')}</span>`;
+    b.addEventListener('click', () => { SND.tap(); startRound(si); });
+    box.appendChild(b);
+  });
+  const all = PAIRS.filter(p => save.got[p.id]).length;
+  $('total').textContent = `あつめた はんたい: ${all} / ${PAIRS.length} くみ` + (all === PAIRS.length ? ' 🎉 ぜんぶ！' : '');
+}
+
+// ------------------------------------------------------------
+// あそぶ
+// ------------------------------------------------------------
+const ROUND = 5;
+let G = null;
+
+function startRound(stage) {
+  const pool = PAIRS.filter(p => p.stage === stage);
+  const fresh = shuffle(pool.filter(p => !save.got[p.id]));
+  const old = shuffle(pool.filter(p => save.got[p.id]));
+  const qs = fresh.concat(old).slice(0, ROUND);
+  shuffle(qs);
+  G = { stage, qs: qs.map(p => ({ p, flip: Math.random() < .5, miss: 0 })), i: 0, busy: false, newly: [] };
+  show('play');
+  $('progress').innerHTML = qs.map(() => '<i></i>').join('');
+  nextQ();
+}
+
+function sides(q) { return q.flip ? [q.p.b, q.p.a] : [q.p.a, q.p.b]; }
+
+function nextQ() {
+  const q = G.qs[G.i];
+  const [L, R] = sides(q);
+  [...$('progress').children].forEach((d, k) => {
+    d.className = k < G.i ? (G.qs[k].miss ? 'ok2' : 'ok') : k === G.i ? 'now' : '';
+  });
+  $('ask').innerHTML = `<b>${L.w}</b> の はんたい は どれ？`;
+  $('seatL').innerHTML = picHTML(L, 'pic enter');
+  $('seatR').innerHTML = '<div class="slot" id="slot">？</div>';
+  setTilt(-11, false);
+  // カード: ただしい 1まい ＋ ほかの ことば
+  const nOpt = G.stage === 0 ? 3 : 4;
+  const others = [];
+  const same = shuffle(PAIRS.filter(p => p.stage === G.stage && p !== q.p));
+  const rest = shuffle(PAIRS.filter(p => p.stage !== G.stage));
+  for (const p of same.concat(rest)) {
+    if (others.length >= nOpt - 1) break;
+    others.push(Math.random() < .5 ? p.a : p.b);
+  }
+  const opts = shuffle([{ s: R, ok: true }].concat(others.map(s => ({ s, ok: false }))));
+  const tray = $('tray');
+  tray.className = 'tray' + (nOpt === 3 ? ' three' : '');
+  tray.innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.dataset.word = o.s.w;
+    if (o.ok) b.dataset.ok = '1';
+    b.innerHTML = `<span class="emo">${o.s.e}</span><span class="word">${o.s.w}</span>`;
+    b.addEventListener('click', () => choose(b, o));
+    tray.appendChild(b);
+  });
+  G.busy = false;
+}
+
+function setTilt(deg, balanced) {
+  const pl = $('plank');
+  pl.style.setProperty('--tilt', deg + 'deg');
+  pl.classList.toggle('balanced', !!balanced);
+}
+
+function flyFrom(fromEl, toEl, side, back) {
+  const a = fromEl.getBoundingClientRect(), b = toEl.getBoundingClientRect();
+  const fly = document.createElement('div');
+  fly.className = 'fly opt';
+  fly.innerHTML = `<span class="emo">${side.e}</span><span class="word">${side.w}</span>`;
+  const src = back ? b : a, dst = back ? a : b;
+  Object.assign(fly.style, { left: src.left + 'px', top: src.top + 'px', width: src.width + 'px', height: src.height + 'px' });
+  document.body.appendChild(fly);
+  const dx = dst.left - src.left, dy = dst.top - src.top;
+  const sx = dst.width / src.width, sy = dst.height / src.height;
+  fly.style.transformOrigin = '0 0';
+  const anim = fly.animate([
+    { transform: 'translate(0,0) scale(1,1)' },
+    { transform: `translate(${dx * .5}px, ${dy * .5 - 60}px) scale(${(1 + sx) / 2}, ${(1 + sy) / 2})`, offset: .55 },
+    { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+  ], { duration: 480, easing: 'ease-in-out', fill: 'forwards' });
+  return new Promise(r => { const done = () => { fly.remove(); r(); }; anim.onfinish = done; setTimeout(done, 700); });
+}
+
+async function choose(btn, o) {
+  if (G.busy) return;
+  G.busy = true;
+  $('tray').classList.add('lock');
+  SND.whoosh();
+  btn.classList.add('gone');
+  const slot = $('slot');
+  await flyFrom(btn, slot, o.s, false);
+  $('seatR').innerHTML = picHTML(o.s, 'pic');
+  const q = G.qs[G.i];
+  if (o.ok) {
+    setTilt(0, true);
+    SND.ok();
+    sparkle();
+    praise(['せいかい！', 'すごい！', 'ぴったり！', 'やったね！', 'はんたい だね！'][Math.floor(Math.random() * 5)], true);
+    if (!save.got[q.p.id]) { save.got[q.p.id] = true; G.newly.push(q.p.id); persist(); }
+    await sleep(1700);
+    G.i++;
+    $('tray').classList.remove('lock');
+    if (G.i >= G.qs.length) finish(); else nextQ();
+  } else {
+    q.miss++;
+    setTilt(13, false);
+    SND.creak(); SND.ng();
+    praise('あれれ？ もういちど！', false);
+    await sleep(850);
+    const pic = $('seatR').firstElementChild;
+    $('seatR').innerHTML = '<div class="slot" id="slot">？</div>';
+    setTilt(-11, false);
+    await flyFrom(btn, $('slot'), o.s, true);
+    btn.classList.remove('gone');
+    btn.classList.add('tried', 'shake');
+    if (q.miss >= 2) { const c = $('tray').querySelector('[data-ok]'); if (c) c.classList.add('hint'); }
+    $('tray').classList.remove('lock');
+    G.busy = false;
+  }
+}
+
+let praiseT = 0;
+function praise(text, ok) {
+  const p = $('praise');
+  p.textContent = text; p.classList.toggle('ng', !ok); p.classList.add('show');
+  clearTimeout(praiseT); praiseT = setTimeout(() => p.classList.remove('show'), ok ? 1300 : 900);
+}
+function sparkle() {
+  const r = $('seesaw').getBoundingClientRect();
+  const marks = ['⭐', '✨', '🌟', '🎉', '💛'];
+  for (let k = 0; k < 14; k++) {
+    const s = document.createElement('div');
+    s.className = 'spark'; s.textContent = marks[k % marks.length];
+    const x = r.left + r.width / 2, y = r.top + r.height * .45;
+    s.style.left = x + 'px'; s.style.top = y + 'px';
+    document.body.appendChild(s);
+    const ang = Math.random() * Math.PI * 2, d = 80 + Math.random() * 140;
+    s.animate([{ transform: 'translate(-50%,-50%) scale(.3)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${Math.cos(ang) * d}px), calc(-50% + ${Math.sin(ang) * d - 40}px)) scale(1.2)`, opacity: 0 }],
+      { duration: 900 + Math.random() * 400, easing: 'cubic-bezier(.2,.8,.3,1)' }).onfinish = () => s.remove();
+  }
+}
+
+function finish() {
+  save.plays = (save.plays || 0) + 1; persist();
+  const perfect = G.qs.filter(q => !q.miss).length;
+  const nStars = perfect >= 5 ? 3 : perfect >= 3 ? 2 : 1;
+  $('stars').innerHTML = [0, 1, 2].map(k => `<span class="${k < nStars ? '' : 'off'}" style="animation-delay:${k * .2}s">⭐</span>`).join('');
+  $('resultMsg').textContent = perfect === 5 ? 'ぜんぶ いっぱつ！ てんさい！' : perfect >= 3 ? 'よく できました！' : 'さいごまで できたね！ えらい！';
+  $('pairs').innerHTML = G.qs.map((q, k) => {
+    const [L, R] = sides(q);
+    return `<div class="pair-row" style="animation-delay:${.3 + k * .12}s">
+      <div class="side"><span class="emo">${L.e}</span><span class="word">${L.w}</span></div>
+      <div class="vs">⇄</div>
+      <div class="side"><span class="word">${R.w}</span><span class="emo">${R.e}</span></div>
+      ${G.newly.includes(q.p.id) ? '<span class="new">あたらしい！</span>' : ''}</div>`;
+  }).join('');
+  show('result');
+  SND.fanfare();
+}
+
+// ------------------------------------------------------------
+// ずかん
+// ------------------------------------------------------------
+let zkFrom = 'title';
+function openZukan(from) {
+  zkFrom = from;
+  const n = PAIRS.filter(p => save.got[p.id]).length;
+  $('zkCount').textContent = `${n}/${PAIRS.length}`;
+  $('zkList').innerHTML = STAGES.map((st, si) => `<div class="zk-stage"><h2>${si + 1}. ${st.name}</h2><div class="zk-grid">` +
+    PAIRS.filter(p => p.stage === si).map(p => save.got[p.id]
+      ? `<button class="zk" data-id="${p.id}"><span class="emo">${p.a.e} ${p.b.e}</span><span class="word">${p.a.w} ⇄ ${p.b.w}</span></button>`
+      : `<div class="zk lock">？</div>`).join('') + '</div></div>').join('');
+  $('zkList').querySelectorAll('.zk[data-id]').forEach(b => b.addEventListener('click', () => {
+    const p = PAIRS[+b.dataset.id];
+    $('mL').innerHTML = picHTML(p.a, 'pic enter');
+    $('mR').innerHTML = picHTML(p.b, 'pic enter');
+    $('modal').classList.add('on');
+    SND.ok();
+  }));
+  show('zukan');
+}
+$('mClose').addEventListener('click', () => { $('modal').classList.remove('on'); SND.tap(); });
+$('modal').addEventListener('click', e => { if (e.target.id === 'modal') $('modal').classList.remove('on'); });
+
+$('toZukan').addEventListener('click', () => { SND.tap(); openZukan('title'); });
+$('resZukan').addEventListener('click', () => { SND.tap(); openZukan('result'); });
+$('zkBack').addEventListener('click', () => { SND.tap(); if (zkFrom === 'result') show('result'); else { renderTitle(); show('title'); } });
+$('again').addEventListener('click', () => { SND.tap(); startRound(G.stage); });
+$('resHome').addEventListener('click', () => { SND.tap(); renderTitle(); show('title'); });
+$('quit').addEventListener('click', () => { SND.tap(); renderTitle(); show('title'); });
+
+renderTitle();
+</script>
+</body>
+</html>
