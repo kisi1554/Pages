@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>エレベーターがかり</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #2b2f38;
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", sans-serif;
+    color: #222; user-select: none; -webkit-user-select: none; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+
+  #app { height: 100vh; height: 100dvh; display: grid; grid-template-rows: auto 1fr auto;
+    grid-template-columns: 100%; }
+
+  /* ---- うえの バー ---- */
+  header { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: #1d2027; color: #fff; }
+  header .ttl { font-weight: 800; font-size: 15px; flex: 1; min-width: 0; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; }
+  .hbtn { min-width: 44px; height: 40px; padding: 0 10px; border-radius: 12px; background: #3a404d;
+    color: #fff; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center;
+    justify-content: center; text-decoration: none; white-space: nowrap; }
+  .hbtn:active { background: #566; }
+  #stars { font-weight: 800; font-size: 16px; color: #ffd84a; white-space: nowrap; }
+
+  /* ---- エレベーターの なか ---- */
+  #stage { position: relative; min-height: 0; overflow: hidden; background: #15171c;
+    display: flex; align-items: center; justify-content: center; }
+  #car { --u: 4px; position: relative; overflow: hidden; will-change: transform;
+    background: linear-gradient(90deg, #a79a86 0%, #d9cfbd 12%, #e9e1d2 50%, #d9cfbd 88%, #a79a86 100%); }
+  .ceil { position: absolute; left: 0; right: 0; top: 0; height: 5%;
+    background: linear-gradient(#fffbe6, #f3ead0); box-shadow: 0 0 calc(var(--u)*6) #fff8; }
+  .carfloor { position: absolute; left: 0; right: 0; bottom: 0; height: 9%;
+    background: linear-gradient(#6b4a3a, #3f2a20); border-top: calc(var(--u)*.6) solid #2a1b14; }
+  .rail { position: absolute; left: 0; right: 0; bottom: 30%; height: calc(var(--u)*1.6);
+    background: linear-gradient(#f4f4f4, #9aa0a6); box-shadow: 0 calc(var(--u)*.5) calc(var(--u)*.8) #0004; }
+
+  #ind { position: absolute; left: 50%; top: 6.5%; transform: translateX(-50%);
+    width: 30%; height: 9%; background: #0d0d0f; border-radius: calc(var(--u)*1.5);
+    border: calc(var(--u)*.5) solid #555; color: #ff9d2e; font-weight: 900;
+    font-size: calc(var(--u)*7); display: flex; align-items: center; justify-content: center;
+    gap: calc(var(--u)*2); text-shadow: 0 0 calc(var(--u)*1.5) #ff7a00; font-variant-numeric: tabular-nums; }
+  #indArrow { font-size: .7em; width: 1em; text-align: center; }
+  #indArrow.mv { animation: blink .7s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .25; } }
+
+  #frame { position: absolute; left: 24%; right: 24%; top: 17%; bottom: 9%;
+    border: calc(var(--u)*1.2) solid #70757d; border-bottom: 0; background: #111; overflow: hidden; }
+  #view { position: absolute; inset: 0; overflow: hidden; background: #1b1b1f; }
+  #strip { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; will-change: transform; }
+  .fl { position: absolute; left: 0; right: 0; height: 100%; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; }
+  .fl .sign { margin-top: 5%; padding: .2em .7em; background: #fff; border-radius: 99px;
+    font-weight: 900; font-size: calc(var(--u)*4.2); border: calc(var(--u)*.5) solid #333; white-space: nowrap; }
+  .fl .sign b { font-size: 1.5em; color: #d6336c; }
+  .fl .pic { font-size: calc(var(--u)*17); line-height: 1.1; margin-top: 4%; }
+  .fl .deco { position: absolute; bottom: 14%; left: 0; right: 0; display: flex;
+    justify-content: space-between; padding: 0 4%; font-size: calc(var(--u)*8); }
+  .fl .ground { position: absolute; left: 0; right: 0; bottom: 0; height: 15%;
+    background: repeating-linear-gradient(90deg, #cfc6b4 0 12%, #bdb3a0 12% 24%); border-top: 2px solid #8a8171; }
+  .fl .guest { position: absolute; bottom: 5%; left: 50%; transform: translateX(-50%);
+    font-size: calc(var(--u)*13); line-height: 1; }
+  .fl .guest.bye { animation: bye .5s ease-in-out infinite alternate; }
+  @keyframes bye { to { transform: translateX(-50%) rotate(10deg) translateY(-6%); } }
+  .gap { position: absolute; left: 0; right: 0; height: 50%;
+    background: repeating-linear-gradient(#3b3d44 0 8%, #2c2e34 8% 16%);
+    border-top: calc(var(--u)*1.6) solid #6d6f76; border-bottom: calc(var(--u)*1.6) solid #6d6f76;
+    display: flex; align-items: center; justify-content: center; color: #ffd84a;
+    font-weight: 900; font-size: calc(var(--u)*9); opacity: .95; }
+
+  .door { position: absolute; top: 0; bottom: 0; width: 50%; overflow: hidden;
+    transition: transform 1.3s cubic-bezier(.45,.05,.4,1); }
+  .door.L { left: 0; border-right: 1px solid #555; }
+  .door.R { right: 0; border-left: 1px solid #555; }
+  .open .door.L { transform: translateX(-93%); }
+  .open .door.R { transform: translateX(93%); }
+  .door .win { position: absolute; top: 14%; height: 40%; left: 30%; right: 30%;
+    border-radius: calc(var(--u)*1.2); box-shadow: 0 0 0 200vmax #b4bbc3, inset 0 0 0 calc(var(--u)*.6) #5d646c; }
+  .door::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(100deg, #fff0 0 30%, #fff5 42%, #fff0 55%, #0001 100%); }
+
+  /* かいの あんないばん（すうじの はしご） */
+  #board { position: absolute; left: 2.5%; width: 18%; top: 17%; bottom: 12%;
+    background: #fdfdfb; border: calc(var(--u)*.6) solid #6b6f76; border-radius: calc(var(--u)*1.5);
+    display: flex; flex-direction: column-reverse; padding: 1%; overflow: hidden; }
+  .row { flex: 1; min-height: 0; display: flex; align-items: center; gap: 4%; padding: 0 5%;
+    border-radius: calc(var(--u)*1); font-weight: 900; line-height: 1; white-space: nowrap; position: relative; }
+  .row b { min-width: 1.3em; text-align: right; font-variant-numeric: tabular-nums; }
+  .row i { font-style: normal; font-size: .85em; }
+  .row em { font-style: normal; position: absolute; right: 4%; font-size: .8em; color: #fff;
+    background: #f76707; border-radius: 99px; padding: .1em .35em; display: none; }
+  .row.here { background: #ffd84a; }
+  .row.here::after { content: "◀"; position: absolute; right: 2%; font-size: .7em; color: #d6336c; }
+  .row.start { outline: calc(var(--u)*.6) solid #1c7ed6; outline-offset: calc(var(--u)*-.6); }
+  .row.hop em { display: block; }
+  .row.hop i, .row.hop.here::after { display: none; }
+
+  #rider { position: absolute; font-size: calc(var(--u)*20); line-height: 1; display: none;
+    left: 86%; bottom: 3%; transform: translateX(-50%); transform-origin: 50% 100%;
+    transition: left 1s ease-in-out, bottom 1s ease-in-out, transform 1s ease-in-out;
+    filter: drop-shadow(0 calc(var(--u)*.6) calc(var(--u)*.8) #0005); pointer-events: none; }
+  #rider.door { left: 50%; bottom: 11%; transform: translateX(-50%) scale(.6); }
+  #pop { position: absolute; left: 50%; top: 30%; transform: translate(-50%,-50%); pointer-events: none;
+    font-size: calc(var(--u)*16); font-weight: 900; color: #fff; -webkit-text-stroke: calc(var(--u)*.5) #f76707;
+    text-shadow: 0 calc(var(--u)*.6) 0 #0006; opacity: 0; }
+  #pop.go { animation: pop .7s ease-out; }
+  @keyframes pop { 0% { opacity: 0; transform: translate(-50%,-20%) scale(.5); }
+    25% { opacity: 1; transform: translate(-50%,-50%) scale(1.15); }
+    100% { opacity: 0; transform: translate(-50%,-90%) scale(1); } }
+  .conf { position: absolute; top: -8%; font-size: calc(var(--u)*8); pointer-events: none;
+    animation: fall 1.8s ease-in forwards; }
+  @keyframes fall { to { transform: translateY(1200%) rotate(360deg); opacity: .2; } }
+
+  /* ---- したの そうさばん ---- */
+  #side { background: #ececec; padding: 8px; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  #msg { background: #fff; border-radius: 14px; border: 3px solid #ffd84a; padding: 6px 10px;
+    min-height: 92px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  #text { font-size: 16px; font-weight: 700; line-height: 1.35; }
+  #formula { font-size: 30px; font-weight: 900; line-height: 1.15; letter-spacing: .05em; min-height: 0; }
+  #formula .a { color: #1c7ed6; } #formula .b { color: #f76707; } #formula .c { color: #d6336c; }
+  #dots { font-size: 13px; letter-spacing: 1px; line-height: 1; }
+  #panel { background: linear-gradient(#c9ced4, #aab0b8); border-radius: 14px; padding: 8px;
+    border: 2px solid #7d838b; display: flex; flex-direction: column; gap: 8px; min-height: 0; flex: 1; }
+  #floors { --cols: 5; display: flex; flex-wrap: wrap-reverse; gap: 6px; flex: 1; min-height: 0; align-content: stretch; }
+  .fb { width: calc((100% - (var(--cols) - 1) * 6px) / var(--cols)); min-height: 44px; border-radius: 50px;
+    background: radial-gradient(circle at 35% 30%, #fff, #dcdfe3 70%); border: 3px solid #6b7078;
+    font-size: 22px; font-weight: 900; color: #333; box-shadow: 0 2px 0 #5a5f66; }
+  .n20 .fb { min-height: 38px; font-size: 18px; }
+  .fb:active { transform: translateY(2px); box-shadow: none; }
+  .fb.lit { background: radial-gradient(circle at 35% 30%, #fff7c2, #ffb300 70%); border-color: #e8590c;
+    color: #7a2e00; box-shadow: 0 0 12px #ffb300; }
+  .fb.tip { animation: tip .6s ease-in-out infinite alternate; }
+  @keyframes tip { to { box-shadow: 0 0 0 5px #1c7ed6; } }
+  .dbtns { display: flex; gap: 6px; }
+  .db { flex: 1; min-width: 0; padding: 0 4px; min-height: 48px; border-radius: 12px; font-size: 16px; font-weight: 900;
+    border: 3px solid #6b7078; box-shadow: 0 2px 0 #5a5f66; white-space: nowrap; }
+  .db:active { transform: translateY(2px); box-shadow: none; }
+  #btnOpen { background: #d3f9d8; color: #1b6e2c; } #btnClose { background: #ffe3e3; color: #a51111; }
+  #btnHint { flex: 0 0 64px; background: #fff3bf; }
+
+  @media (orientation: landscape) and (min-width: 560px) {
+    #app { grid-template-rows: auto 1fr; grid-template-columns: 1fr minmax(250px, 36%); }
+    header { grid-column: 1 / 3; padding: 4px 8px; }
+    .hbtn { height: 36px; }
+    #msg { min-height: 84px; }
+  }
+  @media (max-width: 520px) { header .ttl { visibility: hidden; } }
+  @media (max-height: 420px) {
+    #text { font-size: 14px; } #formula { font-size: 24px; } #msg { min-height: 70px; }
+    .fb, .n20 .fb { min-height: 28px; font-size: 17px; } .db { min-height: 38px; font-size: 14px; }
+    #btnHint { flex-basis: 44px; } #side { padding: 5px; gap: 4px; } #panel { padding: 5px; gap: 5px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header>
+    <a class="hbtn" href="../" aria-label="メニューへ">🏠</a>
+    <div class="ttl">🛗 エレベーターがかり</div>
+    <span id="stars">⭐ 0</span>
+    <button class="hbtn" id="btnMode"></button>
+    <button class="hbtn" id="btnLv"></button>
+    <button class="hbtn" id="btnSnd" aria-label="おと"></button>
+  </header>
+
+  <main id="stage">
+    <div id="car">
+      <div class="ceil"></div>
+      <div class="rail"></div>
+      <div id="board"></div>
+      <div id="ind"><span id="indArrow"></span><span id="indNum">1</span></div>
+      <div id="frame">
+        <div id="view"><div id="strip"></div></div>
+        <div class="door L"><div class="win"></div></div>
+        <div class="door R"><div class="win"></div></div>
+      </div>
+      <div class="carfloor"></div>
+      <div id="rider"></div>
+      <div id="pop"></div>
+    </div>
+  </main>
+
+  <section id="side">
+    <div id="msg">
+      <div id="text"></div>
+      <div id="formula"></div>
+      <div id="dots"></div>
+    </div>
+    <div id="panel">
+      <div id="floors"></div>
+      <div class="dbtns">
+        <button class="db" id="btnOpen">◀▶ ひらく</button>
+        <button class="db" id="btnClose">▶◀ しめる</button>
+        <button class="db" id="btnHint" aria-label="ヒント">💡</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const KEY = 'elevator-gakari';
+const LV = [ { n: 5, label: '★ 5かい' }, { n: 10, label: '★★ 10かい' }, { n: 20, label: '★★★ 20かい' } ];
+const FLOORS = [
+  ['ロビー','🛎️'],['ぱんやさん','🥐'],['ほんやさん','📚'],['おもちゃやさん','🧸'],['レストラン','🍝'],
+  ['はなやさん','💐'],['すいぞくかん','🐠'],['ゲームコーナー','🎮'],['えいがかん','🎬'],['てんぼうだい','🔭'],
+  ['くだものやさん','🍎'],['プール','🏊'],['びじゅつかん','🖼️'],['がっきやさん','🎹'],['ケーキやさん','🍰'],
+  ['としょかん','📖'],['でんしゃやさん','🚃'],['プラネタリウム','🪐'],['おんせん','♨️'],['おくじょう','🌇']
+];
+const GUESTS = [ ['🐰','うさぎさん'],['🐻','くまさん'],['🐱','ねこさん'],['🐶','いぬさん'],
+  ['🐼','パンダさん'],['🦊','きつねさん'],['🐸','かえるさん'],['🐧','ペンギンさん'] ];
+const DOOR_MS = 1350;
+
+/* ---------- ほぞん ---------- */
+const S = { lv: 1, mode: 'job', snd: true, stars: 0 };
+try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+if (!LV[S.lv]) S.lv = 1;
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ---------- おと（WebAudio の ごうせいおん） ---------- */
+let ac = null, hum = null;
+function audio() {
+  if (!S.snd) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+}
+function tone(f, t0, dur, type, vol) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+  o.type = type || 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol || .15, t + .015);
+  g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .05);
+}
+const sBtn = () => tone(1250, 0, .09, 'square', .05);
+const sTick = () => tone(520, 0, .05, 'triangle', .05);
+const sDing = () => { tone(1047, 0, .9, 'sine', .2); tone(784, .35, 1.1, 'sine', .2); };
+const sOk = () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .11, .35, 'triangle', .16));
+const sNg = () => { tone(330, 0, .25, 'sine', .14); tone(262, .2, .4, 'sine', .14); };
+function sDoor() {
+  const a = audio(); if (!a) return;
+  const len = a.sampleRate * 1.3, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  const src = a.createBufferSource(), bp = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime;
+  src.buffer = buf; bp.type = 'bandpass'; bp.frequency.value = 500; bp.Q.value = .8;
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(.09, t + .15);
+  g.gain.setValueAtTime(.09, t + 1.0); g.gain.linearRampToValueAtTime(0, t + 1.3);
+  src.connect(bp).connect(g).connect(a.destination); src.start(t);
+  tone(90, 1.25, .15, 'sine', .25);
+}
+function humStart() {
+  const a = audio(); if (!a) return;
+  humStop();
+  const o = a.createOscillator(), o2 = a.createOscillator(), lp = a.createBiquadFilter(), g = a.createGain();
+  o.type = 'sawtooth'; o.frequency.value = 50; o2.type = 'sine'; o2.frequency.value = 100;
+  lp.type = 'lowpass'; lp.frequency.value = 260;
+  g.gain.value = 0; g.gain.linearRampToValueAtTime(.07, a.currentTime + .5);
+  o.connect(lp); o2.connect(lp); lp.connect(g).connect(a.destination); o.start(); o2.start();
+  hum = { o, o2, g };
+}
+function humSet(r) { if (hum && ac) { hum.o.frequency.value = 50 + 45 * r; hum.o2.frequency.value = 100 + 90 * r; } }
+function humStop() {
+  if (!hum || !ac) { hum = null; return; }
+  const h = hum; hum = null;
+  try { h.g.gain.cancelScheduledValues(ac.currentTime); h.g.gain.setValueAtTime(h.g.gain.value, ac.currentTime);
+    h.g.gain.linearRampToValueAtTime(0, ac.currentTime + .3); h.o.stop(ac.currentTime + .35); h.o2.stop(ac.currentTime + .35); } catch (e) {}
+}
+function say(t, flush) {
+  if (!S.snd || !('speechSynthesis' in window)) return;
+  try {
+    if (flush) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(t.replace(/(\d+)かい/g, '$1階').replace(/[「」🔔]/g, ' '));
+    u.lang = 'ja-JP'; u.rate = 1.05; u.pitch = 1.1; speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ---------- じょうたい ---------- */
+let N = LV[S.lv].n;
+let pos = 1, cur = 1, moving = false, dir = 0, from = 1;
+let door = 'closed', doorTok = 0, closeTimer = 0, arrivedPending = false, busy = false;
+const targets = new Set();
+let M = null;        // おしごと: {e, n, c, b, ans, phase, tries}
+let gen = 0;         // モードや レベルを かえたら ふるい タイマーを むこうに する
+
+const car = $('car'), frame = $('frame'), strip = $('strip'), board = $('board'), floorsEl = $('floors'),
+  rider = $('rider'), pop = $('pop');
+
+function later(ms, fn) { const g = gen; setTimeout(() => { if (g === gen) fn(); }, ms); }
+
+/* ---------- ビルを つくる ---------- */
+function build() {
+  strip.innerHTML = ''; board.innerHTML = ''; floorsEl.innerHTML = '';
+  for (let f = 1; f <= N; f++) {
+    const [name, pic] = FLOORS[f - 1];
+    const fl = document.createElement('div');
+    fl.className = 'fl'; fl.dataset.f = f;
+    fl.style.bottom = (f - 1) * 150 + '%';
+    fl.style.background = `linear-gradient(hsl(${f * 47 % 360} 70% 90%), hsl(${f * 47 % 360} 60% 82%))`;
+    fl.innerHTML = `<div class="sign"><b>${f}</b>かい ${name}</div><div class="pic">${pic}</div>` +
+      `<div class="deco"><span>🪴</span><span>🪴</span></div><div class="ground"></div><div class="guest"></div>`;
+    strip.appendChild(fl);
+    if (f < N) {
+      const gp = document.createElement('div');
+      gp.className = 'gap'; gp.style.bottom = ((f - 1) * 150 + 100) + '%';
+      gp.textContent = dirGapLabel(f);
+      strip.appendChild(gp);
+    }
+    const row = document.createElement('div');
+    row.className = 'row'; row.dataset.f = f;
+    row.innerHTML = `<b>${f}</b><i>${N <= 10 ? pic : ''}</i><em></em>`;
+    board.appendChild(row);
+    const b = document.createElement('button');
+    b.className = 'fb'; b.dataset.f = f; b.textContent = f;
+    b.addEventListener('click', () => pressFloor(f));
+    floorsEl.appendChild(b);
+  }
+  $('panel').classList.toggle('n20', N > 10);
+  layout(); render();
+}
+function dirGapLabel(f) { return f + ' ▲ ' + (f + 1); }
+
+function layout() {
+  const st = $('stage'), W = st.clientWidth, H = st.clientHeight;
+  const w = Math.min(W, H * 1.25), h = H;
+  car.style.width = w + 'px'; car.style.height = h + 'px';
+  car.style.setProperty('--u', (Math.min(w, h) / 100) + 'px');
+  const land = matchMedia('(orientation: landscape) and (min-width: 560px)').matches;
+  floorsEl.style.setProperty('--cols', land ? (innerHeight <= 420 ? 5 : N > 10 ? 4 : 2) : 5);
+  const rh = board.clientHeight / N;
+  board.style.fontSize = Math.max(7, Math.min(rh * .62, board.clientWidth * .3)) + 'px';
+}
+addEventListener('resize', layout);
+
+function render() {
+  strip.style.transform = `translateY(${(pos - 1) * 150}%)`;
+  $('indNum').textContent = cur;
+  board.querySelectorAll('.row').forEach(r => r.classList.toggle('here', +r.dataset.f === cur));
+}
+function lightBtns() {
+  floorsEl.querySelectorAll('.fb').forEach(b => b.classList.toggle('lit', targets.has(+b.dataset.f)));
+}
+function flBlock(f) { return strip.querySelector(`.fl[data-f="${f}"]`); }
+function setGuest(f, emoji, bye) {
+  const g = flBlock(f) && flBlock(f).querySelector('.guest'); if (!g) return;
+  g.textContent = emoji || ''; g.classList.toggle('bye', !!bye);
+}
+function clearGuests() { strip.querySelectorAll('.guest').forEach(g => { g.textContent = ''; g.classList.remove('bye'); }); }
+
+/* ---------- メッセージ ---------- */
+function setMsg(t, speak) {
+  $('text').textContent = t;
+  if (speak !== false) say(typeof speak === 'string' ? speak : t);
+}
+function setFormula(a, b, c) {
+  const f = $('formula'), d = $('dots');
+  if (a == null) { f.innerHTML = ''; d.textContent = ''; return; }
+  f.innerHTML = `<span class="a">${a}</span> + <span class="b">${b}</span> = <span class="c">${c == null ? '？' : c + ' ⭕'}</span>`;
+  d.textContent = (a + b <= 10) ? '🟦'.repeat(a) + ' ' + '🟧'.repeat(b) : '';
+}
+function clearHint() {
+  board.querySelectorAll('.row').forEach(r => r.classList.remove('start', 'hop'));
+  floorsEl.querySelectorAll('.fb').forEach(b => b.classList.remove('tip'));
+}
+function showHint(strong) {
+  if (!M || M.phase !== 'ride') return;
+  board.querySelectorAll('.row').forEach(r => {
+    const f = +r.dataset.f, k = f - M.c;
+    r.classList.toggle('start', f === M.c);
+    r.classList.toggle('hop', k >= 1 && k <= M.b);
+    if (k >= 1 && k <= M.b) r.querySelector('em').textContent = '+' + k;
+  });
+  if (strong) floorsEl.querySelector(`.fb[data-f="${M.ans}"]`).classList.add('tip');
+}
+
+/* ---------- ドア ---------- */
+function scheduleClose(ms) {
+  clearTimeout(closeTimer);
+  const g = gen;
+  closeTimer = setTimeout(() => { if (g === gen) closeDoors(); }, ms);
+}
+function openDoors() {
+  if (moving) return;
+  if (door === 'open') { scheduleClose(targets.size ? 2500 : 6000); return; }
+  if (door === 'opening') return;
+  door = 'opening'; const tk = ++doorTok;
+  frame.classList.add('open'); sDoor();
+  later(DOOR_MS, () => {
+    if (tk !== doorTok) return;
+    door = 'open';
+    if (arrivedPending) { arrivedPending = false; onArrive(cur); }
+    scheduleClose(targets.size ? 1800 : 6000);
+  });
+}
+function closeDoors() {
+  if (door !== 'open') return;
+  if (busy) { scheduleClose(800); return; }
+  clearTimeout(closeTimer);
+  door = 'closing'; const tk = ++doorTok;
+  frame.classList.remove('open'); sDoor();
+  later(DOOR_MS, () => {
+    if (tk !== doorTok) return;
+    door = 'closed';
+    if (targets.size) later(350, depart);
+  });
+}
+$('btnOpen').addEventListener('click', () => {
+  sBtn();
+  if (moving) return;
+  if (door === 'closing') {            // しまりかけを もういちど ひらく
+    door = 'opening'; const tk = ++doorTok; frame.classList.add('open');
+    later(DOOR_MS, () => { if (tk === doorTok) { door = 'open'; scheduleClose(targets.size ? 2500 : 6000); } });
+  } else openDoors();
+});
+$('btnClose').addEventListener('click', () => { sBtn(); closeDoors(); });
+$('btnHint').addEventListener('click', () => {
+  sBtn();
+  if (M && M.phase === 'ride') {
+    showHint(false);
+    setMsg(`${M.c}かいから うえへ ${M.b}こ かぞえて みよう。あんないばんを みてね`);
+  } else setMsg('おきゃくさんが のったら ヒントが つかえるよ');
+});
+
+/* ---------- かいの ボタン ---------- */
+function pressFloor(f) {
+  sBtn();
+  if (busy) return;
+  if (moving) {
+    if (S.mode === 'free' && f !== Math.round(pos)) { targets.add(f); lightBtns(); }
+    return;
+  }
+  if (f === cur) { openDoors(); return; }
+  if (S.mode === 'job') targets.clear();
+  targets.add(f); lightBtns();
+  if (door === 'closed') later(350, depart);
+  else if (door === 'open') scheduleClose(1800);
+}
+
+/* ---------- うごく ---------- */
+function pickTarget() {
+  let best = null;
+  for (const t of targets) {
+    const ahead = dir === 0 || (t - cur) * dir > 0;
+    const score = Math.abs(t - cur) + (ahead ? 0 : 100);
+    if (best == null || score < best.s) best = { t, s: score };
+  }
+  return best && best.t;
+}
+function depart() {
+  if (moving || door !== 'closed') return;
+  const t = pickTarget(); if (t == null) return;
+  if (t === cur) { targets.delete(t); lightBtns(); openDoors(); return; }
+  moving = true; dir = t > cur ? 1 : -1; from = cur;
+  const d = Math.abs(t - cur);
+  const T = (d <= 5 ? 1.6 + .8 * d : 5.6 + .5 * (d - 5)) * 1000, a = Math.min(900, T / 2.5);
+  const vmax = d / (T - a), t0 = performance.now(), g = gen;
+  const u = parseFloat(car.style.getPropertyValue('--u')) || 4;
+  const arrow = $('indArrow');
+  arrow.textContent = dir > 0 ? '▲' : '▼'; arrow.classList.add('mv');
+  say(dir > 0 ? 'うえへ まいります' : 'したへ まいります', true);
+  humStart();
+  let last = cur;
+  function step(now) {
+    if (g !== gen) { humStop(); return; }
+    const tt = Math.min(now - t0, T);
+    let s, acc = 0, v = vmax;
+    if (tt < a) { s = .5 * vmax * tt * tt / a; acc = 1; v = vmax * tt / a; }
+    else if (tt <= T - a) { s = vmax * (tt - a / 2); }
+    else { const r = T - tt; s = d - .5 * vmax * r * r / a; acc = -1; v = vmax * r / a; }
+    pos = from + dir * s;
+    const fl = Math.round(pos);
+    if (fl !== last) {
+      last = fl; cur = fl; sTick();
+      if (dir > 0) popUp('+' + (fl - from));
+    }
+    render(); humSet(v / vmax);
+    car.style.transform = `translateY(${(dir * acc * u * .7 + Math.sin(now / 45) * u * .07).toFixed(2)}px)`;
+    if (tt < T) requestAnimationFrame(step); else arrive(t);
+  }
+  requestAnimationFrame(step);
+}
+function popUp(t) {
+  pop.textContent = t; pop.classList.remove('go'); void pop.offsetWidth; pop.classList.add('go');
+}
+function arrive(t) {
+  pos = cur = t; moving = false;
+  targets.delete(t); lightBtns(); render(); humStop();
+  car.style.transform = '';
+  const arrow = $('indArrow'); arrow.classList.remove('mv'); arrow.textContent = '';
+  if (!targets.size) dir = 0;
+  sDing(); say(t + 'かいです', true);
+  arrivedPending = true;
+  later(600, openDoors);
+}
+
+/* ---------- ついた とき ---------- */
+function onArrive(f) {
+  if (S.mode === 'free') {
+    if (f > from) {
+      setFormula(from, f - from, f);
+      setMsg(`${from}かいから ${f - from}かい あがって ${f}かい！ ${FLOORS[f - 1][0]}だよ`);
+    } else if (f < from) {
+      setFormula(null);
+      setMsg(`${from - f}かい さがって ${f}かいに ついたよ。${FLOORS[f - 1][0]}だよ`);
+    }
+    from = f;
+    return;
+  }
+  if (!M) return;
+  if (M.phase === 'call') {
+    if (f !== M.c) { setMsg(`ここは ${f}かい。${M.n}は ${M.c}かいで まっているよ`); return; }
+    busy = true;
+    setGuest(M.c, '');
+    rider.textContent = M.e; rider.className = 'door'; rider.style.display = 'block';
+    void rider.offsetWidth; rider.className = '';
+    later(1100, () => {
+      busy = false; M.phase = 'ride';
+      setFormula(M.c, M.b, null);
+      setMsg(`${M.e}「${M.b}かい うえに いきたいな」 なんかいの ボタンを おす？`,
+        `${M.b}かい うえに いきたいな。${M.c} たす ${M.b} は？ なんかいの ボタンを おす？`);
+    });
+  } else if (M.phase === 'ride') {
+    if (f === M.ans) {
+      busy = true; M.phase = 'done'; clearHint(); sOk(); confetti();
+      S.stars++; save(); $('stars').textContent = '⭐ ' + S.stars;
+      setFormula(M.c, M.b, M.ans);
+      setMsg(`せいかい！ ${M.e}「${M.ans}かいだ。ありがとう！」`, `せいかい！ ${M.c} たす ${M.b} は ${M.ans}。ありがとう！`);
+      rider.className = 'door';
+      const m = M;
+      later(1100, () => { rider.style.display = 'none'; setGuest(m.ans, m.e + '👋', true); });
+      later(3200, () => { busy = false; setGuest(m.ans, ''); newMission(); });
+    } else {
+      M.tries++; sNg(); showHint(M.tries >= 2);
+      setMsg(`ここは ${f}かい。${M.e}「あれれ、ここじゃ ないよ」 ${M.c}かいから ${M.b}こ うえへ かぞえて みよう`);
+    }
+  }
+}
+function confetti() {
+  for (let i = 0; i < 14; i++) {
+    const s = document.createElement('span');
+    s.className = 'conf'; s.textContent = '⭐🎉✨'.match(/./gu)[i % 3];
+    s.style.left = (5 + Math.random() * 90) + '%'; s.style.animationDelay = (Math.random() * .5) + 's';
+    car.appendChild(s); setTimeout(() => s.remove(), 2600);
+  }
+}
+
+/* ---------- おしごと（たしざん） ---------- */
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+function newMission() {
+  const g = GUESTS[rnd(0, GUESTS.length - 1)];
+  let c, b, guard = 0;
+  do {
+    if (N === 5) { c = rnd(1, 4); b = rnd(1, 5 - c); }
+    else if (N === 10) { c = rnd(1, 8); b = rnd(1, Math.min(6, 10 - c)); }
+    else { c = rnd(2, 15); b = rnd(2, Math.min(9, 20 - c)); }
+  } while ((c === cur || (M && c === M.c && b === M.b)) && ++guard < 30);
+  if (c === cur) c = cur > 1 ? cur - 1 : 2, b = Math.min(b, N - c);
+  M = { e: g[0], n: g[1], c, b, ans: c + b, phase: 'call', tries: 0 };
+  clearHint(); setFormula(null); setGuest(c, g[0]);
+  rider.style.display = 'none';
+  setMsg(`🔔 ${c}かいで ${g[0]}${g[1]}が よんでいるよ！ ${c}の ボタンを おして むかえに いこう`,
+    `${c}かいで ${g[1]}が よんでいるよ。${c}の ボタンを おして むかえに いこう`);
+}
+
+/* ---------- モード・レベル・おと ---------- */
+function labels() {
+  $('btnMode').textContent = S.mode === 'job' ? '🧑‍✈️ おしごと' : '🎈 じゆう';
+  $('btnLv').textContent = LV[S.lv].label;
+  $('btnSnd').textContent = S.snd ? '🔊' : '🔇';
+  $('stars').textContent = '⭐ ' + S.stars;
+  $('btnHint').style.display = S.mode === 'job' ? '' : 'none';
+}
+function reset(rebuild) {
+  gen++; clearTimeout(closeTimer); humStop();
+  try { speechSynthesis.cancel(); } catch (e) {}
+  moving = false; busy = false; arrivedPending = false; dir = 0; targets.clear(); M = null;
+  car.style.transform = ''; $('indArrow').textContent = ''; $('indArrow').classList.remove('mv');
+  rider.style.display = 'none';
+  if (rebuild) { N = LV[S.lv].n; pos = cur = from = 1; door = 'closed'; doorTok++; frame.classList.remove('open'); build(); }
+  else { pos = cur = from = Math.round(pos); door = frame.classList.contains('open') ? 'open' : 'closed'; doorTok++;
+    clearGuests(); clearHint(); render(); if (door === 'open') scheduleClose(6000); }
+  lightBtns(); labels(); setFormula(null);
+  if (S.mode === 'job') newMission();
+  else setMsg('すきな かいの ボタンを おして でかけよう！ うえに いくと たしざんが でるよ');
+}
+$('btnMode').addEventListener('click', () => { S.mode = S.mode === 'job' ? 'free' : 'job'; save(); audio(); sBtn(); reset(false); });
+$('btnLv').addEventListener('click', () => { S.lv = (S.lv + 1) % LV.length; save(); audio(); sBtn(); reset(true); });
+$('btnSnd').addEventListener('click', () => {
+  S.snd = !S.snd; save(); labels();
+  if (!S.snd) { humStop(); try { speechSynthesis.cancel(); } catch (e) {} } else { audio(); sBtn(); }
+});
+
+build(); labels();
+if (S.mode === 'job') newMission();
+else setMsg('すきな かいの ボタンを おして でかけよう！ うえに いくと たしざんが でるよ', false);
+})();
+</script>
+</body>
+</html>
