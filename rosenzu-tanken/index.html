@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ろせんずたんけん</title>
+<meta name="theme-color" content="#1a6fb5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚃</text></svg>">
+<style>
+*,*::before,*::after{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg-top:#eaf4fd;--bg-bottom:#fdf6e8;--ink:#1d2b3a;--ink-soft:#4a5f75;--card:#fff;--line:#cfe0f0;
+  --accent:#1a6fb5;--shadow:0 3px 0 rgba(26,111,181,.18);--ok:#2e9d5b;--ng:#d84a00;
+}
+html,body{height:100%;margin:0}
+body{
+  font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN","Hiragino Sans","Yu Gothic","游ゴシック体","Meiryo",system-ui,sans-serif;
+  background:linear-gradient(170deg,var(--bg-top) 0%,var(--bg-bottom) 100%);color:var(--ink);
+  display:flex;flex-direction:column;overflow:hidden;user-select:none;-webkit-user-select:none;-webkit-text-size-adjust:100%;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+button{font-family:inherit;color:inherit;cursor:pointer}
+header{display:flex;align-items:center;gap:8px;padding:8px 10px 6px}
+header h1{font-size:clamp(15px,4.4vw,20px);margin:0;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.04em}
+.round-btn{flex:none;width:48px;height:48px;border-radius:50%;background:#fff;box-shadow:var(--shadow);border:2px solid var(--line);
+  display:flex;align-items:center;justify-content:center;font-size:24px;text-decoration:none;padding:0}
+.round-btn:active,.chip:active,.go:active,.menu button:active,.choices button:active,nav button:active{transform:translateY(2px);box-shadow:none}
+.pill{flex:none;background:#fff;border:2px solid var(--line);border-radius:99px;padding:4px 9px;font-size:14px;font-weight:700;white-space:nowrap}
+#linebar{display:flex;gap:6px;padding:4px 10px 8px;overflow-x:auto;scrollbar-width:none}
+#linebar::-webkit-scrollbar{display:none}
+.chip{flex:none;border:2px solid var(--c,#4a5f75);color:var(--c,#4a5f75);background:#fff;border-radius:99px;min-height:40px;padding:4px 13px;font-size:14px;font-weight:700}
+.chip.sel{background:var(--c,#4a5f75);color:#fff}
+main{flex:1;min-height:0;display:flex;flex-direction:column}
+#mapbox{position:relative;flex:1;min-height:120px;margin:0 10px;border-radius:18px;overflow:hidden;border:2px solid var(--line);background:#fbfaf5}
+#mapwrap{position:absolute;inset:0;overflow:auto;touch-action:none;scrollbar-width:none;cursor:grab}
+#mapwrap::-webkit-scrollbar{display:none}
+#mapwrap svg{display:block}
+#zoom{position:absolute;right:8px;top:8px;display:flex;flex-direction:column;gap:8px}
+#zoom button{width:46px;height:46px;border-radius:50%;border:2px solid var(--line);background:#ffffffee;color:var(--accent);font-size:24px;font-weight:800;box-shadow:var(--shadow);padding:0}
+#side{display:flex;flex-direction:column;min-height:0}
+#panel{background:var(--card);border-radius:18px;border:2px solid var(--line);box-shadow:var(--shadow);margin:8px 10px 0;padding:10px 12px;max-height:46vh;overflow-y:auto}
+nav{display:flex;gap:8px;padding:8px 10px}
+nav button{flex:1;border:2px solid var(--line);background:#fff;color:var(--ink-soft);border-radius:99px;font-size:16px;font-weight:800;min-height:48px;box-shadow:var(--shadow)}
+nav button.sel{background:var(--accent);border-color:var(--accent);color:#fff}
+.ln{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+.lb{font-size:13px;font-weight:700;fill:#1d2b3a;paint-order:stroke;stroke:#fbfaf5;stroke-width:4px;stroke-linejoin:round}
+.tag{font-size:15px;font-weight:700;fill:#fff}
+.st{cursor:pointer}
+.ring{fill:none;stroke:#ff9800;stroke-width:4;opacity:0}
+.st.hl .ring{opacity:1;animation:pulse 1s ease-in-out infinite}
+.st.hl .lb{fill:#d84a00}
+.st.fd .mk{fill:#ffe680}
+.dim .ln:not(.on),.dim .st:not(.on),.dim .tagg:not(.on){opacity:.13}
+@keyframes pulse{0%,100%{stroke-width:3}50%{stroke-width:7}}
+@keyframes shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+.hint{color:var(--ink-soft);font-size:15px;text-align:center;padding:8px 0}
+.sname{font-size:30px;font-weight:800;line-height:1.15}
+.syomi{font-size:17px;color:var(--ng);font-weight:700}
+.row{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap}
+.badge{display:inline-flex;align-items:center;justify-content:center;min-width:50px;height:32px;padding:0 7px;border-radius:8px;border:3px solid var(--c);background:#fff;font-weight:800;font-size:13px}
+.lname{font-size:13px;font-weight:700;color:var(--c)}
+.nb{border:2px solid var(--line);background:#f4f9fe;border-radius:12px;min-height:40px;padding:6px 10px;font-size:15px;font-weight:700}
+.spk{flex:none;border:none;background:#ffc94d;border-radius:50%;width:48px;height:48px;font-size:22px;box-shadow:0 3px 0 #d99a00}
+.menu{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.menu button{border:none;border-radius:16px;padding:10px 6px;background:var(--bg);font-size:15px;font-weight:800;line-height:1.3;box-shadow:0 3px 0 rgba(0,0,0,.12)}
+.menu button small{display:block;font-size:11px;font-weight:600;color:var(--ink-soft)}
+.menu .em{font-size:24px;display:block}
+.q{font-size:17px;font-weight:800;line-height:1.5;text-align:center}
+.q .big{font-size:28px}
+.q .k{color:var(--accent);background:#eaf4fd;border-radius:6px;padding:0 5px}
+.choices{display:grid;gap:8px;margin-top:10px}
+.choices button{border:3px solid var(--accent);background:#fff;border-radius:16px;min-height:56px;padding:8px 4px;font-size:21px;font-weight:800;color:var(--accent);line-height:1.2;box-shadow:var(--shadow)}
+.choices button small{display:block;font-size:12px;color:var(--ng);font-weight:700}
+.choices button.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+.choices button.ok small{color:#fff}
+.choices button.ng{opacity:.35;animation:shake .3s}
+.msg{text-align:center;font-weight:800;font-size:16px;min-height:24px;margin-top:8px}
+.msg.good{color:var(--ok)}.msg.bad{color:var(--ng)}
+.bar{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.dots{flex:1;display:flex;gap:5px}
+.dots i{width:14px;height:14px;border-radius:50%;background:#dde3ea}
+.dots i.d{background:#ffb300}.dots i.c{outline:3px solid var(--accent)}
+.sbtn{border:2px solid var(--line);background:#fff;border-radius:99px;min-height:40px;padding:4px 10px;font-size:13px;font-weight:700;color:var(--ink-soft);white-space:nowrap}
+.go{display:block;width:100%;margin-top:10px;border:none;border-radius:99px;background:var(--accent);color:#fff;font-size:18px;font-weight:800;min-height:50px;padding:10px;box-shadow:0 3px 0 #0f4f85}
+.go.sub{background:#fff;color:var(--accent);border:3px solid var(--accent);box-shadow:var(--shadow)}
+.res{text-align:center}.res .stars{font-size:36px;letter-spacing:4px}
+@media (max-width:480px){
+  header{gap:6px}
+  header h1{font-size:clamp(11px,3.3vw,16px);letter-spacing:0}
+  header .round-btn{width:44px;height:44px;font-size:22px}
+  .pill{font-size:13px;padding:3px 7px}
+}
+/* よこもち タブレット：ろせんずを ひだり、パネルを みぎ */
+@media (orientation:landscape) and (min-width:700px){
+  main{flex-direction:row}
+  #mapbox{margin:0 0 10px 10px}
+  #side{width:min(42vw,440px);flex:none}
+  #panel{flex:1;max-height:none;margin-top:0}
+}
+@media (orientation:landscape) and (max-height:480px){
+  header{padding:4px 10px}.round-btn{width:42px;height:42px;font-size:20px}
+  #linebar{padding-bottom:4px}
+}
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <a class="round-btn" href="../" aria-label="メニューへ">🏠</a>
+  <h1>ろせんずたんけん</h1>
+  <span class="pill" id="pStar">⭐ 0</span><span class="pill" id="pFound">🚉 0</span>
+  <button class="round-btn" id="snd" aria-label="おと オン/オフ">🔊</button>
+</header>
+<div id="linebar"></div>
+<main>
+  <div id="mapbox"><div id="mapwrap"></div><div id="zoom"><button id="zin" aria-label="おおきく">＋</button><button id="zout" aria-label="ちいさく">－</button></div></div>
+  <div id="side">
+    <section id="panel"></section>
+    <nav><button id="tabE" class="sel">🗺 たんけん</button><button id="tabQ">🎮 あそぶ</button></nav>
+  </div>
+</main>
+<script>
+"use strict";
+/* ===== 駅のよみ ===== */
+const YOMI={};
+("湘南台:しょうなんだい,下飯田:しもいいだ,立場:たてば,中田:なかだ,踊場:おどりば,戸塚:とつか,舞岡:まいおか,下永谷:しもながや,上永谷:かみながや,港南中央:こうなんちゅうおう,上大岡:かみおおおか,弘明寺:ぐみょうじ,蒔田:まいた,吉野町:よしのちょう,阪東橋:ばんどうばし,伊勢佐木長者町:いせざきちょうじゃまち,関内:かんない,桜木町:さくらぎちょう,高島町:たかしまちょう,横浜:よこはま,三ツ沢下町:みつざわしもちょう,三ツ沢上町:みつざわかみちょう,片倉町:かたくらちょう,岸根公園:きしねこうえん,新横浜:しんよこはま,北新横浜:きたしんよこはま,新羽:にっぱ,仲町台:なかまちだい,センター南:せんたーみなみ,センター北:せんたーきた,中川:なかがわ,あざみ野:あざみの,"+
+"大宮:おおみや,さいたま新都心:さいたましんとしん,与野:よの,北浦和:きたうらわ,浦和:うらわ,南浦和:みなみうらわ,蕨:わらび,西川口:にしかわぐち,川口:かわぐち,赤羽:あかばね,東十条:ひがしじゅうじょう,王子:おうじ,上中里:かみなかざと,田端:たばた,西日暮里:にしにっぽり,日暮里:にっぽり,鶯谷:うぐいすだに,上野:うえの,御徒町:おかちまち,秋葉原:あきはばら,神田:かんだ,東京:とうきょう,有楽町:ゆうらくちょう,新橋:しんばし,浜松町:はままつちょう,田町:たまち,高輪ゲートウェイ:たかなわげーとうぇい,品川:しながわ,大井町:おおいまち,大森:おおもり,蒲田:かまた,川崎:かわさき,鶴見:つるみ,新子安:しんこやす,東神奈川:ひがしかながわ,石川町:いしかわちょう,山手:やまて,根岸:ねぎし,磯子:いそご,新杉田:しんすぎた,洋光台:ようこうだい,港南台:こうなんだい,本郷台:ほんごうだい,大船:おおふな,"+
+"駒込:こまごめ,巣鴨:すがも,大塚:おおつか,池袋:いけぶくろ,目白:めじろ,高田馬場:たかだのばば,新大久保:しんおおくぼ,新宿:しんじゅく,代々木:よよぎ,原宿:はらじゅく,渋谷:しぶや,恵比寿:えびす,目黒:めぐろ,五反田:ごたんだ,大崎:おおさき,"+
+"代官山:だいかんやま,中目黒:なかめぐろ,祐天寺:ゆうてんじ,学芸大学:がくげいだいがく,都立大学:とりつだいがく,自由が丘:じゆうがおか,田園調布:でんえんちょうふ,多摩川:たまがわ,新丸子:しんまるこ,武蔵小杉:むさしこすぎ,元住吉:もとすみよし,日吉:ひよし,綱島:つなしま,大倉山:おおくらやま,菊名:きくな,妙蓮寺:みょうれんじ,白楽:はくらく,東白楽:ひがしはくらく,反町:たんまち,"+
+"北品川:きたしながわ,新馬場:しんばんば,青物横丁:あおものよこちょう,鮫洲:さめず,立会川:たちあいがわ,大森海岸:おおもりかいがん,平和島:へいわじま,大森町:おおもりまち,梅屋敷:うめやしき,京急蒲田:けいきゅうかまた,雑色:ぞうしき,六郷土手:ろくごうどて,京急川崎:けいきゅうかわさき,八丁畷:はっちょうなわて,鶴見市場:つるみいちば,京急鶴見:けいきゅうつるみ,花月総持寺:かげつそうじじ,生麦:なまむぎ,京急新子安:けいきゅうしんこやす,子安:こやす,神奈川新町:かながわしんまち,京急東神奈川:けいきゅうひがしかながわ,神奈川:かながわ,戸部:とべ,日ノ出町:ひのでちょう,黄金町:こがねちょう,南太田:みなみおおた,井土ヶ谷:いどがや,屏風浦:びょうぶがうら,杉田:すぎた,京急富岡:けいきゅうとみおか,能見台:のうけんだい,金沢文庫:かなざわぶんこ,金沢八景:かなざわはっけい,追浜:おっぱま,京急田浦:けいきゅうたうら,安針塚:あんじんづか,逸見:へみ,汐入:しおいり,横須賀中央:よこすかちゅうおう,県立大学:けんりつだいがく,堀ノ内:ほりのうち,京急大津:けいきゅうおおつ,馬堀海岸:まぼりかいがん,浦賀:うらが")
+.split(",").forEach(p=>{const[a,b]=p.split(":");YOMI[a]=b;});
+
+/* ===== 路線データ（[駅,x,y]は位置の決まった駅、{s}はラベルの向き） ===== */
+// 京急本線の駅番号は 空港線・大師線・逗子線の ぶんが とんでいる
+const KKN=[];for(const[a,b]of[[1,11],[18,20],[27,50],[54,64]])for(let n=a;n<=b;n++)KKN.push(n);
+const LINES=[
+{id:"B",name:"ブルーライン",yomi:"ぶるーらいん",color:"#0b5fb5",tag:[290,1160],num:i=>32-i,path:[
+ {s:"l"},["あざみ野",290,1198],"中川","センター北","センター南",["仲町台",290,1334],{s:"r"},"新羽","北新横浜",["新横浜",440,1484],"岸根公園","片倉町",
+ {s:"b"},["三ツ沢上町",560,1604],"三ツ沢下町",["横浜",726,1604],{s:"l"},["高島町",726,1666],["桜木町",726,1726],["関内",726,1786],
+ {s:"r"},"伊勢佐木長者町","阪東橋","吉野町","蒔田","弘明寺",["上大岡",664,1942],{s:"l"},"港南中央","上永谷","下永谷","舞岡","戸塚","踊場","中田","立場","下飯田",["湘南台",364,2202]]},
+{id:"TY",name:"東横線",yomi:"とうよこせん",color:"#d6246a",tag:[515,1150],num:i=>i+1,path:[
+ {s:"l"},["渋谷",420,980],"代官山","中目黒","祐天寺","学芸大学","都立大学","自由が丘","田園調布","多摩川","新丸子",["武蔵小杉",420,1280],
+ "元住吉","日吉","綱島","大倉山","菊名","妙蓮寺","白楽","東白楽","反町",["横浜",740,1604]]},
+{id:"KK",name:"京急線",yomi:"けいきゅうせん",color:"#e8430a",tag:[905,1230],num:i=>KKN[i],path:[
+ {s:"r"},["品川",768,980],"北品川","新馬場","青物横丁","鮫洲","立会川","大森海岸","平和島","大森町","梅屋敷","京急蒲田","雑色","六郷土手","京急川崎","八丁畷","鶴見市場","京急鶴見","花月総持寺","生麦","京急新子安","子安","神奈川新町","京急東神奈川","神奈川",["横浜",768,1604],
+ {s:"l"},["戸部",650,1666],"日ノ出町","黄金町","南太田","井土ヶ谷","弘明寺#KK",["上大岡",650,1942],
+ {s:"r"},"屏風浦","杉田",{s:"l"},"京急富岡",{s:"r"},"能見台","金沢文庫","金沢八景","追浜","京急田浦","安針塚","逸見","汐入","横須賀中央","県立大学","堀ノ内","京急大津","馬堀海岸",["浦賀",1010,2384]]},
+{id:"JK",name:"京浜東北線",yomi:"けいひんとうほくせん",color:"#00a3e0",tag:[754,138],num:i=>47-i,path:[
+ {s:"r"},["大宮",754,170],"さいたま新都心","与野","北浦和","浦和","南浦和","蕨","西川口","川口","赤羽","東十条","王子","上中里",["田端",754,560],
+ "西日暮里","日暮里","鶯谷","上野","御徒町","秋葉原","神田","東京","有楽町","新橋","浜松町","田町","高輪ゲートウェイ",["品川",754,980],
+ {s:"l"},"大井町","大森","蒲田","川崎","鶴見","新子安","東神奈川",["横浜",754,1604],["桜木町",754,1726],["関内",754,1786],
+ {s:"t"},["石川町",850,1786],{s:"r"},["山手",900,1836],["根岸",900,1886],["磯子",860,1936],["新杉田",800,1986],["洋光台",670,2066],"港南台","本郷台",["大船",490,2177]]},
+{id:"JY",name:"山手線",yomi:"やまのてせん",color:"#7ab317",tag:[580,770],loop:true,num:i=>i+1,path:[
+ {s:"r"},["東京",740,800],"神田","秋葉原","御徒町","上野","鶯谷","日暮里","西日暮里",["田端",740,560],{s:"t"},"駒込","巣鴨","大塚",["池袋",420,560],
+ {s:"l"},"目白","高田馬場","新大久保","新宿","代々木","原宿",["渋谷",420,980],{s:"b"},"恵比寿","目黒","五反田","大崎",["品川",740,980],
+ {s:"r"},"高輪ゲートウェイ","田町","浜松町","新橋","有楽町"]}
+];
+const SIDE={"田端":"r","品川":"r","渋谷":"l","池袋":"l","横浜":"r","桜木町":"l","関内":"l","上大岡":"l","東京":"r"};
+const VB=[195,105,900,2330];
+const LMAP={},ST={},STL=[];
+for(const L of LINES){
+  LMAP[L.id]=L;let side="r";const it=[];
+  for(const e of L.path){if(e.s){side=e.s;continue;}const a=Array.isArray(e)?e:[e];it.push({k:a[0],x:a[1],y:a[2],side});}
+  const an=[];it.forEach((p,i)=>{if(p.x!=null)an.push(i);});
+  const lerp=(i0,i1,p0,p1)=>{const n=i1-i0;for(let j=1;j<n;j++){const p=it[i0+j];p.x=p0.x+(p1.x-p0.x)*j/n;p.y=p0.y+(p1.y-p0.y)*j/n;}};
+  for(let j=0;j<an.length-1;j++)lerp(an[j],an[j+1],it[an[j]],it[an[j+1]]);
+  if(L.loop)lerp(an[an.length-1],it.length,it[an[an.length-1]],it[0]);
+  L.st=it.map((p,i)=>{
+    let s=ST[p.k];
+    if(!s){const name=p.k.split("#")[0];s=ST[p.k]={k:p.k,name,yomi:YOMI[name],on:[],side:SIDE[p.k]||p.side};STL.push(s);}
+    s.on.push({L,i,num:L.id+String(L.num(i)).padStart(2,"0"),x:p.x,y:p.y});return s;});
+}
+for(const s of STL){const xs=s.on.map(o=>o.x),ys=s.on.map(o=>o.y);
+  s.x0=Math.min(...xs);s.x1=Math.max(...xs);s.y0=Math.min(...ys);s.y1=Math.max(...ys);s.x=(s.x0+s.x1)/2;s.y=(s.y0+s.y1)/2;}
+
+/* ===== ほぞん ===== */
+const KEY="ao-rosenzu";
+const SAVE={stars:0,found:{},snd:true};
+try{const d=JSON.parse(localStorage.getItem(KEY)||"null");if(d){SAVE.stars=d.stars||0;SAVE.found=d.found||{};SAVE.snd=d.snd!==false;}}catch(e){}
+const $=id=>document.getElementById(id);
+function save(){try{localStorage.setItem(KEY,JSON.stringify(SAVE));}catch(e){}
+  $("pStar").textContent="⭐ "+SAVE.stars;$("pFound").textContent="🚉 "+Object.keys(SAVE.found).length+"/"+STL.length;
+  $("snd").textContent=SAVE.snd?"🔊":"🔇";}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ===== 路線図をかく ===== */
+let Z=1.15;const wrap=$("mapwrap");
+function drawMap(){
+  let h=`<svg id="svg" viewBox="${VB.join(" ")}" xmlns="http://www.w3.org/2000/svg">`;
+  for(const L of LINES){const pts=L.st.map((s,i)=>{const o=s.on.find(o=>o.L===L&&o.i===i);return o.x.toFixed(1)+","+o.y.toFixed(1);});
+    h+=`<${L.loop?"polygon":"polyline"} class="ln" data-l="${L.id}" stroke="${L.color}" points="${pts.join(" ")}"/>`;}
+  for(const L of LINES){const w=L.name.length*15+18;
+    h+=`<g class="tagg" data-l="${L.id}"><rect x="${L.tag[0]-w/2}" y="${L.tag[1]-17}" width="${w}" height="24" rx="12" fill="${L.color}"/><text class="tag" x="${L.tag[0]}" y="${L.tag[1]}" text-anchor="middle">${L.name}</text></g>`;}
+  for(const s of STL){
+    h+=`<g class="st${SAVE.found[s.k]?" fd":""}" data-k="${s.k}" data-l="${s.on.map(o=>o.L.id).join(" ")}">`;
+    h+=`<rect x="${s.x0-17}" y="${s.y0-13}" width="${s.x1-s.x0+34}" height="${s.y1-s.y0+26}" fill="transparent"/>`;
+    h+=`<rect class="ring" x="${s.x0-14}" y="${s.y0-14}" width="${s.x1-s.x0+28}" height="${s.y1-s.y0+28}" rx="14"/>`;
+    if(s.on.length>1){h+=`<rect class="mk" x="${s.x0-8}" y="${s.y0-8}" width="${s.x1-s.x0+16}" height="${s.y1-s.y0+16}" rx="8" fill="#fff" stroke="#22303c" stroke-width="3"/>`;}
+    else h+=`<circle class="mk" cx="${s.x}" cy="${s.y}" r="6" fill="#fff" stroke="${s.on[0].L.color}" stroke-width="3"/>`;
+    let x,y,a;
+    if(s.side==="r"){x=s.x1+12;y=s.y+4.5;a="start";}else if(s.side==="l"){x=s.x0-12;y=s.y+4.5;a="end";}
+    else if(s.side==="t"){x=s.x;y=s.y0-12;a="middle";}else{x=s.x;y=s.y1+22;a="middle";}
+    h+=`<text class="lb" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${a}">${s.name}</text></g>`;
+  }
+  wrap.innerHTML=h+"</svg>";setZoom(Z);
+}
+// px,py: ズームしても うごかさない 画面上の点（mapwrap の左上から）。なければ まんなか
+function setZoom(z,px,py){
+  const svg=$("svg");if(px==null){px=wrap.clientWidth/2;py=wrap.clientHeight/2;}
+  const cx=(wrap.scrollLeft+px)/Z,cy=(wrap.scrollTop+py)/Z;
+  Z=Math.max(.45,Math.min(2.4,z));svg.setAttribute("width",VB[2]*Z);svg.setAttribute("height",VB[3]*Z);
+  wrap.scrollLeft=cx*Z-px;wrap.scrollTop=cy*Z-py;
+}
+function focusAt(x,y,smooth){wrap.scrollTo({left:(x-VB[0])*Z-wrap.clientWidth/2,top:(y-VB[1])*Z-wrap.clientHeight/2,behavior:smooth===false?"auto":"smooth"});}
+function setHL(keys){document.querySelectorAll(".st.hl").forEach(e=>e.classList.remove("hl"));
+  for(const k of keys||[]){const e=document.querySelector(`.st[data-k="${k}"]`);if(e)e.classList.add("hl");}}
+function setDim(ids){const svg=$("svg");svg.classList.toggle("dim",!!ids);
+  svg.querySelectorAll(".ln,.st,.tagg").forEach(e=>{e.classList.toggle("on",!!ids&&e.dataset.l.split(" ").some(l=>ids.includes(l)));});}
+$("zin").onclick=()=>setZoom(Z*1.25);$("zout").onclick=()=>setZoom(Z/1.25);
+
+/* ゆび1本で うごかす／2本で おおきさを かえる（ページの ズームは させない） */
+const PT=new Map();let drag=null,pinch=null,moved=false;
+const pdist=()=>{const[a,b]=[...PT.values()];return Math.hypot(a.x-b.x,a.y-b.y)||1;};
+wrap.addEventListener("pointerdown",e=>{
+  if(e.pointerType==="mouse"&&e.button!==0)return;
+  PT.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(PT.size===1){drag={x:e.clientX,y:e.clientY,l:wrap.scrollLeft,t:wrap.scrollTop};moved=false;}
+  else if(PT.size===2){pinch={d:pdist(),z:Z};drag=null;moved=true;}
+});
+window.addEventListener("pointermove",e=>{
+  const p=PT.get(e.pointerId);if(!p)return;p.x=e.clientX;p.y=e.clientY;
+  if(pinch&&PT.size>=2){const r=wrap.getBoundingClientRect(),[a,b]=[...PT.values()];
+    setZoom(pinch.z*pdist()/pinch.d,(a.x+b.x)/2-r.left,(a.y+b.y)/2-r.top);}
+  else if(drag){const dx=e.clientX-drag.x,dy=e.clientY-drag.y;if(Math.hypot(dx,dy)>8)moved=true;
+    if(moved){wrap.scrollLeft=drag.l-dx;wrap.scrollTop=drag.t-dy;}}
+});
+function pEnd(e){if(!PT.delete(e.pointerId))return;pinch=null;
+  if(PT.size===1){const p=[...PT.values()][0];drag={x:p.x,y:p.y,l:wrap.scrollLeft,t:wrap.scrollTop};}else drag=null;}
+window.addEventListener("pointerup",pEnd);window.addEventListener("pointercancel",pEnd);
+wrap.addEventListener("click",e=>{if(moved){moved=false;return;}const g=e.target.closest(".st");if(g)onStation(ST[g.dataset.k]);});
+
+/* ===== おと ===== */
+let AC=null;
+function beep(ok){if(!SAVE.snd)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state==="suspended")AC.resume();const t=AC.currentTime;
+  (ok?[660,880,1320]:[220,180]).forEach((f,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.type=ok?"triangle":"sawtooth";o.frequency.value=f;
+    g.gain.setValueAtTime(.18,t+i*.11);g.gain.exponentialRampToValueAtTime(.001,t+i*.11+.2);o.connect(g).connect(AC.destination);o.start(t+i*.11);o.stop(t+i*.11+.22);});}catch(e){}}
+function say(t){if(!SAVE.snd)return;try{const u=new SpeechSynthesisUtterance(t);u.lang="ja-JP";u.rate=.9;speechSynthesis.cancel();speechSynthesis.speak(u);}catch(e){}}
+$("snd").onclick=()=>{SAVE.snd=!SAVE.snd;save();if(SAVE.snd)beep(true);else try{speechSynthesis.cancel();}catch(e){}};
+
+/* ===== 路線えらび ===== */
+let FILTER=null,TAB="E";
+function drawChips(){
+  $("linebar").innerHTML=`<button class="chip${FILTER?"":" sel"}" data-l="">ぜんぶ</button>`+
+    LINES.map(L=>`<button class="chip${FILTER===L.id?" sel":""}" data-l="${L.id}" style="--c:${L.color}">${L.name}</button>`).join("");
+}
+$("linebar").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;FILTER=b.dataset.l||null;drawChips();
+  if(TAB==="E"){setDim(FILTER?[FILTER]:null);if(FILTER){const s=LMAP[FILTER].st[0];focusAt(s.x,s.y);say(LMAP[FILTER].yomi);}}
+  else showMenu();};
+const scopeLines=()=>FILTER?[LMAP[FILTER]]:LINES;
+
+/* ===== たんけん ===== */
+const panel=$("panel");
+function showExplore(s){
+  TAB="E";$("tabE").classList.add("sel");$("tabQ").classList.remove("sel");G.q=null;
+  setDim(FILTER?[FILTER]:null);
+  if(!s){setHL([]);panel.innerHTML=`<div class="hint">えきを タップしてみよう！<br>よみかたと のりかえが わかるよ 🚉</div>`;return;}
+  setHL([s.k]);focusAt(s.x,s.y);
+  let h=`<div class="row" style="margin-top:0"><div style="flex:1"><div class="syomi">${s.yomi}</div><div class="sname">${s.name}</div></div><button class="spk" id="spk" aria-label="よみあげ">🔊</button></div>`;
+  if(s.on.length>1)h+=`<div class="row"><b>🔁 のりかえ できるよ！</b></div>`;
+  for(const o of s.on){const n=o.L.st.length,L=o.L;
+    const pv=L.loop?L.st[(o.i-1+n)%n]:L.st[o.i-1],nx=L.loop?L.st[(o.i+1)%n]:L.st[o.i+1];
+    h+=`<div class="row" style="--c:${L.color}"><span class="badge">${o.num}</span><span class="lname">${L.name}</span>`+
+      (pv?`<button class="nb" data-k="${pv.k}">◀ ${pv.name}</button>`:"")+(nx?`<button class="nb" data-k="${nx.k}">${nx.name} ▶</button>`:"")+`</div>`;}
+  panel.innerHTML=h;$("spk").onclick=()=>say(s.yomi);
+  panel.querySelectorAll(".nb").forEach(b=>b.onclick=()=>pick(ST[b.dataset.k]));
+}
+function pick(s){if(!SAVE.found[s.k]){SAVE.found[s.k]=1;save();const e=document.querySelector(`.st[data-k="${s.k}"]`);if(e)e.classList.add("fd");}
+  say(s.yomi);showExplore(s);}
+function onStation(s){if(TAB==="E")pick(s);else if(G.q&&G.q.tap&&!G.done)answer(s.k===G.q.tap,null,s);}
+
+/* ===== あそぶ ===== */
+const GAMES=[
+ {id:"yomi",em:"📖",name:"よみかた",sub:"かんじを よもう",bg:"#ffe9b8"},
+ {id:"find",em:"🔍",name:"えきさがし",sub:"ろせんずで みつけよう",bg:"#cfeadb"},
+ {id:"next",em:"➡️",name:"つぎの えき",sub:"じゅんばんを おぼえよう",bg:"#d5e6fa"},
+ {id:"count",em:"🔢",name:"いくつ すすむ？",sub:"えきを かぞえよう",bg:"#f9d9e3"},
+ {id:"norikae",em:"🔁",name:"のりかえ",sub:"どこで のりかえる？",bg:"#e4dcf7"},
+ {id:"line",em:"🎨",name:"なにせん？",sub:"いろで わかるかな",bg:"#fbe0cc"}];
+const G={id:null,n:0,score:0,q:null,first:true,done:false,hint:false};
+const QN=5,rnd=a=>a[Math.floor(Math.random()*a.length)],ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const K=s=>`<span class="k">${s.name}</span>`;
+function showMenu(){
+  TAB="Q";$("tabQ").classList.add("sel");$("tabE").classList.remove("sel");G.q=null;setHL([]);setDim(FILTER?[FILTER]:null);
+  panel.innerHTML=`<div class="hint" style="padding:0 0 8px">${FILTER?LMAP[FILTER].name+" で":"ぜんぶの ろせんで"} あそぼう！</div><div class="menu">`+
+    GAMES.map(g=>`<button data-g="${g.id}" style="--bg:${g.bg}"><span class="em">${g.em}</span>${g.name}<small>${g.sub}</small></button>`).join("")+`</div>`;
+  panel.querySelectorAll("[data-g]").forEach(b=>b.onclick=()=>{G.id=b.dataset.g;G.n=0;G.score=0;nextQ();});
+}
+function nextQ(){if(G.n>=QN)return showResult();G.n++;G.first=true;G.done=false;G.hint=false;G.q=GEN[G.id]();renderQ();
+  const q=G.q;setDim(q.dim||null);setHL(q.hl||[]);focusAt(q.focus[0],q.focus[1]);if(q.say)say(q.say);}
+function renderQ(){
+  const q=G.q,canHint=q.choices&&q.choices.some(c=>c.yomi);
+  let h=`<div class="bar"><div class="dots">`;for(let i=1;i<=QN;i++)h+=`<i class="${i<G.n?"d":i===G.n?"c":""}"></i>`;
+  h+=`</div>${q.say?`<button class="sbtn" id="again">🔊 もういちど</button>`:""}${canHint?`<button class="sbtn" id="hintb">💡 よみかた</button>`:""}<button class="sbtn" id="quit">✕ やめる</button></div><div class="q">${q.html}</div>`;
+  if(q.choices)h+=`<div class="choices" style="grid-template-columns:repeat(${q.choices.length},1fr)">`+q.choices.map((c,i)=>
+    `<button data-i="${i}" style="${c.label.length>5?"font-size:15px":c.label.length>3?"font-size:17px":""}">${G.hint&&c.yomi?`<small>${c.yomi}</small>`:""}${esc(c.label)}</button>`).join("")+`</div>`;
+  h+=`<div class="msg" id="msg"></div><div id="after"></div>`;panel.innerHTML=h;
+  panel.querySelectorAll(".choices button").forEach(b=>b.onclick=()=>{if(!G.done)answer(q.choices[b.dataset.i].ok,b);});
+  $("quit").onclick=showMenu;if($("again"))$("again").onclick=()=>say(q.say);
+  if($("hintb"))$("hintb").onclick=()=>{G.hint=!G.hint;renderQ();};
+}
+function answer(ok,btn,tapped){
+  const m=$("msg");
+  if(!ok){G.first=false;beep(false);m.className="msg bad";
+    const want=G.q.tap&&ST[G.q.tap];
+    if(tapped&&want&&tapped.name===want.name)   // おなじ なまえの べつの えき（弘明寺）
+      m.textContent=`そこは ${tapped.on[0].L.name}の「${tapped.yomi}」だよ。${want.on[0].L.name}で さがしてね！`;
+    else m.textContent=tapped?`そこは「${tapped.yomi}」だよ。もういちど！`:"おしい！ もういちど！";
+    if(btn){btn.classList.add("ng");btn.disabled=true;}return;}
+  G.done=true;beep(true);if(G.first){G.score++;SAVE.stars++;save();}
+  if(btn)btn.classList.add("ok");const q=G.q;setHL(q.show||q.hl||[]);
+  if(q.tap){const s=ST[q.tap];focusAt(s.x,s.y);}
+  m.className="msg good";m.innerHTML=(G.first?"⭐ せいかい！ ":"せいかい！ ")+(q.after||"");
+  $("after").innerHTML=`<button class="go" id="nx">${G.n>=QN?"けっかを みる":"つぎへ ▶"}</button>`;$("nx").onclick=nextQ;
+  $("nx").scrollIntoView({block:"nearest"});
+}
+function showResult(){
+  G.q=null;setHL([]);setDim(FILTER?[FILTER]:null);
+  panel.innerHTML=`<div class="res"><div class="q">${G.score===QN?"ぜんぶ せいかい！ すごい！":G.score>=3?"よく できました！":"がんばったね！"}</div>
+  <div class="stars">${"⭐".repeat(G.score)}${"☆".repeat(QN-G.score)}</div></div>
+  <button class="go" id="re">もういちど</button><button class="go sub" id="mn">ほかの あそび</button>`;
+  $("re").onclick=()=>{G.n=0;G.score=0;nextQ();};$("mn").onclick=showMenu;
+}
+const stChoice=s=>({label:s.name,yomi:s.yomi});
+const GEN={
+ yomi(){const L=rnd(scopeLines()),s=rnd(L.st),set=new Set([s.yomi]);
+   while(set.size<3)set.add(rnd(L.st).yomi);
+   return{html:`<span class="big">${s.name}</span><br>この えきの よみかたは？`,hl:[s.k],dim:[L.id],focus:[s.x,s.y],
+     choices:shuffle([...set].map(y=>({label:y,ok:y===s.yomi}))),after:`「${s.yomi}」`};},
+ find(){const L=rnd(scopeLines()),n=L.st.length,i=ri(0,n-1),s=L.st[i],d=rnd([-4,-3,-2,2,3,4]);
+   const f=L.loop?L.st[(i+d+n)%n]:L.st[Math.max(0,Math.min(n-1,i+d))];
+   return{html:`<span class="big" style="color:#d84a00">${s.yomi}</span><br>${L.name}の えきだよ。ろせんずで タップ！`,tap:s.k,dim:[L.id],hl:[],show:[s.k],
+     focus:[f.x,f.y],say:s.yomi,after:`${s.name}（${s.yomi}）`};},
+ next(){const L=rnd(scopeLines()),n=L.st.length,d=rnd([1,-1]),i=L.loop?ri(0,n-1):ri(1,n-2),at=j=>L.loop?L.st[(j%n+n)%n]:L.st[j];
+   const pv=at(i-d),cur=at(i),nx=at(i+d),bad=new Set([pv.k,cur.k,nx.k]),pool=[];
+   for(let j=i-6;j<=i+6;j++){const s=at(j);if(s&&!bad.has(s.k)){bad.add(s.k);pool.push(s);}}
+   const ch=shuffle([nx,...shuffle(pool).slice(0,2)]).map(s=>({...stChoice(s),ok:s===nx}));
+   return{html:`${L.name}<br>${K(pv)} → ${K(cur)} → <span class="big">？</span><br>つぎの えきは どれ？`,hl:[cur.k],show:[nx.k],dim:[L.id],focus:[cur.x,cur.y],choices:ch,after:`${nx.name}（${nx.yomi}）`};},
+ count(){const L=rnd(scopeLines()),n=L.st.length,c=ri(1,5),i=L.loop?ri(0,n-1):ri(0,n-1-c),j=(i+c)%n;
+   let a=L.st[i],b=L.st[j];if(Math.random()<.5)[a,b]=[b,a];
+   const opts=new Set([c]);while(opts.size<3)opts.add(Math.max(1,c+ri(-2,2)));
+   const na=a.on.find(o=>o.L===L).num,nb=b.on.find(o=>o.L===L).num;
+   return{html:`${L.name}<br>${K(a)} から ${K(b)} まで<br>えきを いくつ すすむ？`,hl:[a.k,b.k],dim:[L.id],focus:[(a.x+b.x)/2,(a.y+b.y)/2],
+     choices:[...opts].sort((x,y)=>x-y).map(v=>({label:String(v),ok:v===c})),after:`${c}こ すすむよ（${na} → ${nb}）`};},
+ norikae(){
+   for(;;){const X=rnd(LINES),Y=rnd(LINES);if(X===Y)continue;
+     const sh=X.st.filter(s=>Y.st.includes(s));if(!sh.length)continue;
+     const as=X.st.filter(s=>!Y.st.includes(s)),bs=Y.st.filter(s=>!X.st.includes(s));if(!as.length||!bs.length)continue;
+     const A=rnd(as),B=rnd(bs),dist=(L,p,q)=>{const d=Math.abs(L.st.indexOf(p)-L.st.indexOf(q));return L.loop?Math.min(d,L.st.length-d):d;};
+     // いちばん ちかい のりかえ駅が 1つに きまる くみあわせ だけ だす
+     let best=null,bd=1e9,tie=false;for(const c of sh){const d=dist(X,A,c)+dist(Y,c,B);if(d<bd){bd=d;best=c;tie=false;}else if(d===bd)tie=true;}
+     if(tie)continue;
+     // おなじ なまえの えきが 両方の ろせんに ある（弘明寺）ものは、まぎらわしいので えらぶものに いれない
+     const both=s=>X.st.some(t=>t.name===s.name)&&Y.st.some(t=>t.name===s.name);
+     const seen=new Set([A.name,B.name,best.name]),pool=shuffle([...as,...bs]).filter(s=>!both(s)&&!seen.has(s.name)&&seen.add(s.name)).slice(0,2);
+     return{html:`${K(A)} から ${K(B)} へ いくよ。<br><span style="color:${X.color}">${X.name}</span> → <span style="color:${Y.color}">${Y.name}</span><br>どこで のりかえる？`,
+       hl:[A.k,B.k],show:[A.k,B.k,best.k],dim:[X.id,Y.id],focus:[A.x,A.y],
+       choices:shuffle([best,...pool]).map(s=>({...stChoice(s),ok:s===best})),after:`${best.name}（${best.yomi}）で のりかえ！`};}},
+ line(){const s=rnd(STL.filter(s=>s.on.length===1)),L=s.on[0].L;
+   // おなじ なまえの えきが ある ろせん（弘明寺の ブルーライン／京急線）は えらぶものに いれない
+   const others=LINES.filter(x=>x!==L&&!x.st.some(t=>t.name===s.name));
+   const ch=shuffle([L,...shuffle(others).slice(0,2)]).map(x=>({label:x.name,yomi:x.yomi,ok:x===L}));
+   return{html:`${K(s)} は<br>なにせんの えき かな？`,hl:[s.k],focus:[s.x,s.y],choices:ch,after:`${L.name}（${s.on[0].num}）`};}
+};
+
+/* ===== はじめる ===== */
+$("tabE").onclick=()=>showExplore(null);$("tabQ").onclick=showMenu;
+drawChips();drawMap();save();showExplore(null);
+const home=ST["高島町"];focusAt(home.x,home.y,false);
+window.__rosenzu={LINES,STL,ST,GEN,setFilter:f=>{FILTER=f;}};   // 自動チェック用（tools/rosenzu-tanken/check.js）
+</script>
+</body>
+</html>
