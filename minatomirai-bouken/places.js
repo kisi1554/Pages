@@ -137,6 +137,7 @@
     if (cups.length) { root.appendChild(el('div', 'tlabel', `🍜 マイカップヌードル（${cups.length}こ）`)); root.appendChild(window.Odekake.cupGrid()); }
     const row0 = el('div', 'brow'); row0.appendChild(btn('🛏️ へやの かざりつけ', 'sbig', myRoom)); row0.appendChild(btn('🐷 ちょきんばこ', 'sbig', () => piggy())); root.appendChild(row0);
     root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
+    if (api.zukan) root.appendChild(btn('📖 ことば ずかん', 'sbig sub', () => api.zukan(root, home)));
     root.appendChild(btn('🖼️ しゃしんの アルバム（' + api.photos().length + 'まい）', 'sbig sub', () => album(true)));
     if (api.errand) root.appendChild(el('div', 'memo2', '📝 おつかい ちゅう： ' + api.errand.list.length + 'こ の うち ' + api.errand.got.length + 'こ かった'));
     else root.appendChild(btn('📝 ママから おつかいを たのまれる', 'sbig', () => api.onClose({ errand: true })));
@@ -218,11 +219,12 @@
   }
   // ================= おたんじょうび =================
   function birthday() {
-    clear('🎂 おたんじょうび おめでとう！', 'パパ と ママ と いっしょに おいわい', 'home');
+    const age = api.age || 5;
+    clear(`🎂 ${age}さい の おたんじょうび おめでとう！`, '2021ねん 7がつ 29にち うまれ ・ パパ と ママ と いっしょに おいわい', 'home');
     const cake = el('div', 'cake', '<div class="candles"></div><i>🎂</i>'); root.appendChild(cake);
     say('👩', 'ママ「ろうそくを ふーっと けしてね！（ろうそくを タップ）」');
-    let left = 5;
-    for (let i = 0; i < 5; i++) { const c = el('button', 'candle', '🕯️'); c.addEventListener('click', () => { if (c.classList.contains('off')) return; c.classList.add('off'); c.textContent = '💨'; left--; api.tone && api.tone(300, 0.2, 'sine', 0.04, 150); if (!left) party(); }); cake.firstChild.appendChild(c); }
+    let left = age;
+    for (let i = 0; i < age; i++) { const c = el('button', 'candle', '🕯️'); c.addEventListener('click', () => { if (c.classList.contains('off')) return; c.classList.add('off'); c.textContent = '💨'; left--; api.tone && api.tone(300, 0.2, 'sine', 0.04, 150); if (!left) party(); }); cake.firstChild.appendChild(c); }
     const party = () => {
       api.confetti && api.confetti(); [523, 523, 587, 523, 698, 659, 523, 523, 587, 523, 784, 698].forEach((f, i) => api.tone && api.tone(f, 0.28, 'triangle', 0.06, null, i * 0.3));
       say('👨', 'パパ「おめでとう、あおちゃん！ プレゼントを ひとつ えらんでね 🎁」');
