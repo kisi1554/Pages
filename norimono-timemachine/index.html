@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>のりもの タイムマシン</title>
+<style>
+  :root {
+    --ink: #2b2a33;
+    --navy: #1d2b53;
+    --gold: #ffc93c;
+    --paper: #fff8e7;
+    --line: #d8c9a3;
+    --ok: #2f9e44;
+    --ng: #e8590c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--ink);
+    background: var(--navy);
+    overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+  .screen { display: none; height: 100vh; height: 100dvh; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  /* ---- 共通ヘッダー ---- */
+  .bar {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+    background: var(--navy); color: #fff;
+  }
+  .bar h1, .bar h2 { flex: 1; margin: 0; font-size: 20px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ibtn {
+    flex: none; min-width: 52px; height: 48px; padding: 0 10px; border-radius: 14px;
+    background: #34457e; color: #fff; font-size: 16px; font-weight: bold;
+  }
+  .ibtn.off { background: #55597a; opacity: .75; }
+
+  /* ---- ホーム ---- */
+  #home { background: linear-gradient(#1d2b53, #3a2f6b 60%, #7b4a8a); }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 14px 28px; }
+  .hero { text-align: center; color: #fff; margin: 4px 0 12px; }
+  .hero .mc { font-size: 54px; line-height: 1; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+  .hero h1 { margin: 6px 0 4px; font-size: 28px; letter-spacing: .04em; }
+  .hero p { margin: 0; font-size: 16px; opacity: .92; word-break: keep-all; overflow-wrap: anywhere; }
+  @keyframes bob { 50% { transform: translateY(-6px) rotate(-4deg); } }
+  .lv { display: flex; gap: 8px; justify-content: center; margin: 12px auto; max-width: 560px; }
+  .lv button {
+    flex: 1; min-height: 60px; border-radius: 16px; background: #fff; font-size: 16px; font-weight: bold;
+    border: 4px solid transparent; line-height: 1.3;
+  }
+  .lv button small { display: block; font-size: 13px; font-weight: normal; }
+  .lv button.sel { border-color: var(--gold); background: #fff6c9; }
+  .topics { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-width: 900px; margin: 0 auto; }
+  .topic {
+    background: var(--paper); border-radius: 20px; padding: 10px 8px 12px; text-align: center;
+    border: 4px solid #fff; box-shadow: 0 5px 0 rgba(0,0,0,.25); min-height: 150px;
+  }
+  .topic:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .topic svg { width: 100%; max-width: 130px; height: auto; display: block; margin: 0 auto; }
+  .topic b { display: block; font-size: 20px; margin-top: 2px; }
+  .topic span { display: block; font-size: 14px; color: #6b5d3a; }
+  .big {
+    display: block; width: 100%; max-width: 420px; margin: 16px auto 0; min-height: 60px; border-radius: 18px;
+    background: var(--gold); color: var(--ink); font-size: 20px; font-weight: bold; box-shadow: 0 5px 0 #b98a00;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #b98a00; }
+  .big.sub { background: #fff; box-shadow: 0 5px 0 #b9b2a0; }
+
+  /* ---- ならべる ---- */
+  #play { background: #2a3a6e; }
+  .pmain { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 8px 12px max(10px, env(safe-area-inset-bottom)); }
+  .wrap { flex: 1; min-height: 0; display: grid; grid-template: "a" auto "c" 1fr "b" auto / 1fr; gap: 4px; }
+  .ax { color: #fff; font-size: 16px; font-weight: bold; text-align: center; }
+  .axA { grid-area: a; } .axB { grid-area: b; }
+  .cards { grid-area: c; min-height: 0; display: flex; flex-direction: column; gap: 8px; justify-content: center; }
+  .tcard {
+    position: relative; flex: 1 1 0; min-height: 0; max-height: 112px;
+    display: flex; align-items: center; gap: 12px; padding: 6px 12px;
+    background: var(--paper); border: 4px solid #fff; border-radius: 18px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.3); touch-action: none; cursor: grab;
+  }
+  .tcard svg { flex: none; height: 100%; max-height: 84px; width: auto; aspect-ratio: 4 / 3; pointer-events: none; }
+  .tcard .tx { flex: 1; min-width: 0; pointer-events: none; }
+  .tcard .nm { font-size: 19px; font-weight: bold; line-height: 1.25; word-break: keep-all; overflow-wrap: anywhere; }
+  .tcard .hint { display: none; font-size: 15px; color: #7a4a1e; margin-top: 2px; line-height: 1.25; }
+  .cards.hints .hint { display: block; }
+  .tcard.drag { z-index: 10; box-shadow: 0 14px 18px rgba(0,0,0,.4); border-color: var(--gold); cursor: grabbing; }
+  .tcard.sel { border-color: var(--gold); background: #fff6c9; }
+  .tcard.ok { border-color: var(--ok); }
+  .tcard.ok::after {
+    content: "✓"; position: absolute; right: 8px; top: 6px; width: 30px; height: 30px; border-radius: 50%;
+    background: var(--ok); color: #fff; font-weight: bold; font-size: 20px; line-height: 30px; text-align: center;
+  }
+  .machine {
+    flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+    background: linear-gradient(#8b93a7, #5d6477); border-radius: 20px; border: 4px solid #c9cfdd;
+  }
+  .machine.shake { animation: shake .45s; }
+  @keyframes shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+  .msg { flex: 1; min-width: 0; background: #10182f; color: #9ff7c1; border-radius: 12px; padding: 8px 10px; font-size: 17px; font-weight: bold; line-height: 1.4; min-height: 64px; display: flex; align-items: center; }
+  .msg.ng { color: #ffd0a8; }
+  .hbtn { flex: none; width: 64px; min-height: 64px; border-radius: 14px; background: #fff6c9; font-size: 14px; font-weight: bold; line-height: 1.2; }
+  .hbtn i { display: block; font-style: normal; font-size: 24px; }
+  .leverbox { flex: none; text-align: center; color: #fff; font-size: 14px; font-weight: bold; }
+  .lever { position: relative; width: 72px; height: 112px; margin: 0 auto 2px; background: #22283a; border-radius: 18px; border: 3px solid #c9cfdd; touch-action: none; cursor: pointer; }
+  .lever::before { content: ""; position: absolute; left: 50%; top: 14px; bottom: 14px; width: 10px; margin-left: -5px; border-radius: 5px; background: #0c0f18; }
+  .knob {
+    position: absolute; left: 50%; top: 4px; width: 56px; height: 56px; margin-left: -28px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ff9a9a, #e03131 60%, #a51111); border: 3px solid #fff;
+    box-shadow: 0 3px 5px rgba(0,0,0,.5);
+  }
+  .knob.back { transition: transform .25s; }
+  .lever.glow { animation: glow 1.2s infinite; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(255,201,60,.55); } }
+
+  @media (orientation: landscape) {
+    .pmain { flex-direction: row; gap: 12px; }
+    .wrap { grid-template: "a b" auto "c c" 1fr / 1fr 1fr; }
+    .axA { text-align: left; } .axB { text-align: right; }
+    .cards { flex-direction: row; align-items: center; }
+    .tcard { flex-direction: column; justify-content: center; text-align: center; height: 100%; max-height: 320px; max-width: 220px; padding: 10px 6px; gap: 6px; }
+    .tcard svg { width: 100%; height: auto; max-height: 55%; }
+    .tcard .tx { flex: none; width: 100%; }
+    .machine { flex-direction: column; width: 176px; justify-content: space-between; }
+    .msg { flex: 1; width: 100%; font-size: 16px; align-items: flex-start; }
+    .hbtn { width: 100%; min-height: 52px; }
+    .hbtn i { display: inline; font-size: 20px; }
+  }
+  @media (orientation: landscape) and (max-height: 480px) {
+    .bar { padding-top: 4px; padding-bottom: 4px; } .ibtn { height: 40px; }
+    .tcard .nm { font-size: 16px; } .msg { font-size: 14px; min-height: 0; padding: 6px; }
+    .lever { height: 92px; } .knob { width: 48px; height: 48px; margin-left: -24px; }
+    .hbtn { min-height: 40px; }
+  }
+  @media (orientation: portrait) and (max-height: 640px) {
+    .tcard .nm { font-size: 17px; } .lever { height: 96px; } .knob { width: 50px; height: 50px; margin-left: -25px; }
+  }
+
+  /* ---- タイムトラベル ---- */
+  #trip { background: #10182f; color: #fff; }
+  .tmain { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 8px 14px; }
+  .scene {
+    position: relative; flex: 1 1 0; min-height: 120px; border-radius: 26px; overflow: hidden;
+    border: 6px solid #c9cfdd; background: #89c2f5; display: flex; align-items: center; justify-content: center;
+  }
+  .scene .sky, .scene .gnd { position: absolute; left: 0; right: 0; }
+  .scene .sky { top: 0; bottom: 26%; } .scene .gnd { bottom: 0; height: 26%; }
+  .scene.edo .sky { background: linear-gradient(#f3d9a4, #fbeed0); } .scene.edo .gnd { background: #b9935a; }
+  .scene.meiji .sky { background: linear-gradient(#d9c7a0, #f2e6c8); } .scene.meiji .gnd { background: #8f7a55; }
+  .scene.showa .sky { background: linear-gradient(#ffb86b, #ffe3b0); } .scene.showa .gnd { background: #8d8a80; }
+  .scene.ima .sky { background: linear-gradient(#6ab7ff, #d6eeff); } .scene.ima .gnd { background: #7bbf6a; }
+  .scene.mirai .sky { background: linear-gradient(#4b3fa8, #b79cf5); } .scene.mirai .gnd { background: #5ad1c8; }
+  .scene svg.art { position: relative; height: 86%; max-width: 92%; width: auto; aspect-ratio: 4 / 3; filter: drop-shadow(0 6px 4px rgba(0,0,0,.25)); }
+  .scene.show svg.art { animation: arrive .6s cubic-bezier(.2,1.3,.5,1); }
+  @keyframes arrive { from { transform: translateX(60%) scale(.6); opacity: 0; } }
+  .warp { position: absolute; inset: 0; display: none; background: repeating-linear-gradient(100deg, #1d2b53 0 26px, #6a5acd 26px 40px, #ffc93c 40px 46px, #1d2b53 46px 80px); background-size: 240px 100%; }
+  .scene.warping .warp { display: block; animation: warp .25s linear infinite; }
+  .scene.warping svg.art { visibility: hidden; }
+  @keyframes warp { to { background-position: -240px 0; } }
+  .ybadge {
+    position: absolute; left: 10px; top: 10px; background: #10182f; color: var(--gold); border: 3px solid var(--gold);
+    border-radius: 12px; padding: 4px 12px; font-size: 20px; font-weight: bold; font-variant-numeric: tabular-nums;
+  }
+  .info { flex: none; background: var(--paper); color: var(--ink); border-radius: 20px; padding: 10px 14px; }
+  .info .era { display: inline-block; background: var(--navy); color: #fff; border-radius: 999px; padding: 3px 14px; font-size: 16px; font-weight: bold; }
+  .info .nm { word-break: keep-all; overflow-wrap: anywhere; font-size: 24px; font-weight: bold; margin: 4px 0 2px; line-height: 1.25; }
+  .info .tv { font-size: 18px; line-height: 1.55; margin: 0; }
+  .info .tv::before { content: "💡 "; }
+  .trow { flex: none; display: flex; gap: 10px; }
+  .trow .big { margin: 0; flex: 1; max-width: none; }
+  .trow .say { flex: none; width: 76px; min-height: 60px; border-radius: 18px; background: #fff; color: var(--ink); font-size: 16px; font-weight: bold; box-shadow: 0 5px 0 #b9b2a0; }
+  .tline { flex: none; position: relative; display: flex; align-items: flex-end; height: 62px; padding: 0 8px max(6px, env(safe-area-inset-bottom)); }
+  .tline::before { content: ""; position: absolute; left: 8%; right: 8%; bottom: 31px; height: 6px; border-radius: 3px; background: #4a5a94; }
+  .tline .st { position: relative; flex: 1; text-align: center; font-size: 13px; color: #b9c2e6; line-height: 1.2; }
+  .tline .st i { display: block; width: 18px; height: 18px; margin: 0 auto 4px; border-radius: 50%; background: #4a5a94; border: 3px solid #10182f; }
+  .tline .st.done i { background: var(--gold); }
+  .tline .st.now { color: #fff; font-weight: bold; }
+  .tline .st.now i { width: auto; height: 26px; margin-bottom: 0; background: none; border: 0; font-style: normal; font-size: 22px; line-height: 26px; }
+  .tline .st.now i::before { content: "🕰️"; }
+  @media (orientation: landscape) {
+    .tmain { display: grid; grid-template: "s i" 1fr "s r" auto / 1.1fr 1fr; gap: 10px 14px; }
+    .scene { grid-area: s; } .info { grid-area: i; overflow-y: auto; align-self: stretch; } .trow { grid-area: r; }
+  }
+  @media (orientation: landscape) and (max-height: 480px) {
+    .info .nm { font-size: 19px; } .info .tv { font-size: 15px; } .tline { height: 50px; }
+    .trow .big, .trow .say { min-height: 46px; }
+  }
+
+  /* ---- できた！ ---- */
+  .over { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 14px; background: rgba(16,24,47,.82); }
+  .over.on { display: flex; }
+  .panel { position: relative; width: 100%; max-width: 620px; max-height: 100%; overflow-y: auto; background: var(--paper); border-radius: 26px; border: 6px solid var(--gold); padding: 16px; text-align: center; }
+  .panel h2 { margin: 0 0 4px; font-size: 26px; }
+  .panel p { margin: 4px 0; font-size: 18px; line-height: 1.5; }
+  .stars { font-size: 40px; letter-spacing: 6px; }
+  .stars span { display: inline-block; animation: pop .5s backwards; }
+  .stars span:nth-child(2) { animation-delay: .2s; } .stars span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pop { from { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3); } }
+  .gain { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 10px 0; }
+  .mini { position: relative; width: 104px; background: #fff; border: 3px solid var(--line); border-radius: 14px; padding: 4px 4px 6px; font-size: 13px; font-weight: bold; line-height: 1.25; color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; }
+  .mini svg { width: 100%; height: auto; display: block; }
+  .mini .new { position: absolute; left: -6px; top: -8px; background: #e03131; color: #fff; border-radius: 999px; padding: 1px 8px; font-size: 12px; transform: rotate(-10deg); }
+  .mini small { display: block; font-weight: normal; color: #7a4a1e; font-size: 12px; }
+  .mini.lock { background: #e9e2cf; color: #9a8f70; }
+  .mini.lock .q { height: 70px; display: flex; align-items: center; justify-content: center; font-size: 34px; }
+  .pbtns { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 10px; }
+  .pbtns .big { margin: 0; max-width: none; font-size: 18px; }
+  .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 60; pointer-events: none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+
+  /* ---- ずかん ---- */
+  #zukan { background: #efe6cf; }
+  .ztotal { text-align: center; font-size: 18px; font-weight: bold; margin: 0 0 10px; }
+  .zsec { background: #fff8e7; border-radius: 20px; border: 3px solid var(--line); padding: 10px 10px 12px; margin: 0 auto 12px; max-width: 900px; }
+  .zsec h3 { margin: 0 0 8px; font-size: 20px; }
+  .zsec h3 small { font-size: 15px; color: #7a4a1e; margin-left: 6px; }
+  .zrow { display: flex; gap: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding: 8px 2px 6px; align-items: stretch; }
+  .zrow .mini { flex: none; }
+  .zrow .arrow { flex: none; align-self: center; color: #b39a5a; font-size: 20px; font-weight: bold; }
+  .detail svg { width: 100%; max-width: 300px; height: auto; }
+  .detail .era { display: inline-block; background: var(--navy); color: #fff; border-radius: 999px; padding: 3px 14px; font-size: 16px; font-weight: bold; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ホーム -->
+<section class="screen on" id="home">
+  <div class="bar">
+    <h2>🕰️ タイムマシン</h2>
+    <button class="ibtn" id="sndBtn" aria-label="おとの オン オフ">🔊 おと</button>
+    <button class="ibtn" id="voiceBtn" aria-label="こえの オン オフ">🗣 こえ</button>
+  </div>
+  <div class="scroll">
+    <div class="hero">
+      <span class="mc">🕰️</span>
+      <h1>のりもの タイムマシン</h1>
+      <p>カードを <b>ふるい じゅん</b>に ならべて、むかしへ しゅっぱつ！</p>
+    </div>
+    <div class="lv" id="lv"></div>
+    <div class="topics" id="topics"></div>
+    <button class="big sub" id="toZukan">📖 ねんぴょう ずかん</button>
+  </div>
+</section>
+
+<!-- ならべる -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="ibtn" data-home aria-label="さいしょに もどる">🏠</button>
+    <h2 id="playTitle"></h2>
+  </div>
+  <div class="pmain">
+    <div class="wrap">
+      <div class="ax axA" id="axA"></div>
+      <div class="cards" id="cards"></div>
+      <div class="ax axB" id="axB"></div>
+    </div>
+    <div class="machine" id="machine">
+      <div class="msg" id="msg"></div>
+      <button class="hbtn" id="hintBtn"><i>💡</i>ヒント</button>
+      <div class="leverbox">
+        <div class="lever" id="lever" role="button" aria-label="レバーを ひく"><div class="knob" id="knob"></div></div>
+        ひく ⬇
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- タイムトラベル -->
+<section class="screen" id="trip">
+  <div class="bar">
+    <button class="ibtn" data-home aria-label="さいしょに もどる">🏠</button>
+    <h2>🕰️ タイムトラベル ちゅう</h2>
+  </div>
+  <div class="tmain">
+    <div class="scene" id="scene">
+      <div class="sky"></div><div class="gnd"></div>
+      <svg class="art" id="sceneArt" viewBox="0 0 120 90"></svg>
+      <div class="warp"></div>
+      <div class="ybadge" id="ybadge"></div>
+    </div>
+    <div class="info">
+      <span class="era" id="tEra"></span>
+      <div class="nm" id="tName"></div>
+      <p class="tv" id="tTrivia"></p>
+    </div>
+    <div class="trow">
+      <button class="say" id="sayBtn">🗣<br>よむ</button>
+      <button class="big" id="nextBtn"></button>
+    </div>
+  </div>
+  <div class="tline" id="tline"></div>
+</section>
+
+<!-- ずかん -->
+<section class="screen" id="zukan">
+  <div class="bar">
+    <button class="ibtn" data-home aria-label="さいしょに もどる">🏠</button>
+    <h2>📖 ねんぴょう ずかん</h2>
+  </div>
+  <div class="scroll">
+    <p class="ztotal" id="ztotal"></p>
+    <div id="zbody"></div>
+  </div>
+</section>
+
+<!-- できた！ -->
+<div class="over" id="doneOver">
+  <div class="panel">
+    <div class="stars"><span>⭐</span><span>⭐</span><span>⭐</span></div>
+    <h2>タイムトラベル だいせいこう！</h2>
+    <p id="doneMsg"></p>
+    <div class="gain" id="gain"></div>
+    <div class="pbtns">
+      <button class="big" id="againBtn">🔁 もういちど</button>
+      <button class="big sub" id="otherBtn">🏠 ほかの たび</button>
+      <button class="big sub" id="doneZukan">📖 ずかんを みる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ずかんの くわしい カード -->
+<div class="over" id="detailOver">
+  <div class="panel detail">
+    <svg id="dArt" viewBox="0 0 120 90"></svg>
+    <div><span class="era" id="dEra"></span></div>
+    <h2 id="dName"></h2>
+    <p id="dYear" style="color:#7a4a1e;font-weight:bold"></p>
+    <p id="dTrivia" style="text-align:left"></p>
+    <div class="pbtns">
+      <button class="big sub" id="dSay">🗣 よむ</button>
+      <button class="big" id="dClose">とじる</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ========== え（SVG）の ぶひん ========== */
+const SK = '#f2c9a0';
+const W = (x, y, r, c = '#333') =>
+  `<circle cx="${x}" cy="${y}" r="${r}" fill="#fff" stroke="${c}" stroke-width="3"/>` +
+  `<path d="M${x - r} ${y}H${x + r}M${x} ${y - r}V${y + r}" stroke="${c}" stroke-width="1.5"/>` +
+  `<circle cx="${x}" cy="${y}" r="2" fill="${c}"/>`;
+const T = (x, y, r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#333"/><circle cx="${x}" cy="${y}" r="${r * 0.45}" fill="#cfd4da"/>`;
+const P = (x, y, c) =>
+  `<path d="M${x - 3} ${y + 24}V${y + 38}M${x + 3} ${y + 24}V${y + 38}" stroke="#444" stroke-width="3" stroke-linecap="round"/>` +
+  `<rect x="${x - 6}" y="${y + 5}" width="12" height="21" rx="4" fill="${c}"/><circle cx="${x}" cy="${y}" r="5.5" fill="${SK}"/>`;
+const WAVES = '<path d="M0 72 Q10 66 20 72 T40 72 T60 72 T80 72 T100 72 T120 72 V90 H0Z" fill="#74c0fc"/>';
+const RAYS = (x, y, r1, r2, c = '#ffc93c') => {
+  let d = '';
+  for (let i = 0; i < 8; i++) {
+    const a = Math.PI * (i / 4 + 0.125);
+    d += `M${(x + r1 * Math.cos(a)).toFixed(1)} ${(y + r1 * Math.sin(a)).toFixed(1)}L${(x + r2 * Math.cos(a)).toFixed(1)} ${(y + r2 * Math.sin(a)).toFixed(1)}`;
+  }
+  return `<path d="${d}" stroke="${c}" stroke-width="3" stroke-linecap="round"/>`;
+};
+const GRID = (x0, y0, cols, rows, w, h, gx, gy, fill, extra = '') => {
+  let s = '';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const f = Array.isArray(fill) ? fill[(r * cols + c * 2 + r) % fill.length] : fill;
+    s += `<rect x="${x0 + c * gx}" y="${y0 + r * gy}" width="${w}" height="${h}" fill="${f}" ${extra}/>`;
+  }
+  return s;
+};
+const PHONE = (body, line) =>
+  `<path d="M24 76 L32 46 Q60 38 88 46 L96 76Z" fill="${body}" stroke="${line}" stroke-width="2"/>` +
+  `<path d="M18 34 Q18 24 30 26 L90 26 Q102 24 102 34 L102 40 Q94 45 88 39 L88 35 L32 35 L32 39 Q26 45 18 40Z" fill="${body}" stroke="${line}" stroke-width="2"/>` +
+  `<rect x="38" y="35" width="6" height="8" fill="${line}"/><rect x="76" y="35" width="6" height="8" fill="${line}"/>`;
+
+const ART = {
+  kago: P(16, 40, '#3b5ba5') + P(104, 40, '#3b5ba5') +
+    '<path d="M34 56 L60 45 L86 56Z" fill="#5b3a1a"/><rect x="38" y="56" width="44" height="22" rx="3" fill="#d9a05b" stroke="#7a4a1e" stroke-width="2"/>' +
+    `<rect x="48" y="60" width="24" height="13" rx="2" fill="#fff3d6"/><circle cx="60" cy="67" r="4.5" fill="${SK}"/>` +
+    '<rect x="6" y="47" width="108" height="4" rx="2" fill="#7a4a1e"/>',
+  sl: '<circle cx="30" cy="18" r="7" fill="#ddd"/><circle cx="43" cy="11" r="9" fill="#eee"/><circle cx="59" cy="9" r="7" fill="#f4f4f4"/>' +
+    '<rect x="24" y="28" width="9" height="16" fill="#222"/><rect x="20" y="25" width="17" height="5" rx="2" fill="#222"/>' +
+    '<rect x="16" y="42" width="62" height="24" rx="10" fill="#2b2b2b"/><rect x="74" y="30" width="30" height="36" rx="3" fill="#2b2b2b"/>' +
+    '<rect x="80" y="36" width="16" height="12" fill="#ffe9a8"/><rect x="52" y="34" width="8" height="9" rx="3" fill="#c9a227"/>' +
+    '<rect x="10" y="64" width="98" height="5" fill="#b3261e"/><path d="M10 69 L2 82 L16 82Z" fill="#555"/>' +
+    W(30, 74, 8, '#b3261e') + W(56, 72, 10, '#b3261e') + W(84, 72, 10, '#b3261e'),
+  densha: '<path d="M0 10H120" stroke="#555" stroke-width="1.5"/><path d="M60 30 L86 10" stroke="#555" stroke-width="2"/>' +
+    '<rect x="20" y="28" width="80" height="6" rx="3" fill="#6b4a2b"/><rect x="24" y="34" width="72" height="34" rx="4" fill="#8a2f2f"/>' +
+    '<rect x="24" y="54" width="72" height="14" fill="#d9b36a"/>' + GRID(29, 38, 5, 1, 10, 13, 13, 0, '#cfe9ff') +
+    W(40, 75, 7) + W(80, 75, 7),
+  shinkansen: '<path d="M0 74H120" stroke="#777" stroke-width="2"/>' +
+    '<path d="M6 68 Q4 46 34 40 L120 40 L120 70 L10 70 Q6 70 6 68Z" fill="#f7f4ea" stroke="#999" stroke-width="1.5"/>' +
+    '<rect x="42" y="45" width="78" height="9" fill="#1f4fa3"/>' + GRID(46, 47, 7, 1, 7, 5, 10.5, 0, '#fff') +
+    '<path d="M8 63 H120 V70 H10 Q6 70 7 66Z" fill="#1f4fa3"/><path d="M24 48 L38 43 L38 49 L22 51Z" fill="#334"/>' +
+    '<circle cx="11" cy="58" r="5" fill="#e3e3e3" stroke="#999"/>',
+  linear: '<rect x="0" y="72" width="120" height="8" fill="#9aa1a9"/><path d="M14 69h16M44 69h16M74 69h16M100 69h14" stroke="#22d3ee" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<path d="M2 63 Q30 59 52 45 Q58 41 70 41 L120 41 L120 65 L2 65Z" fill="#fff" stroke="#999" stroke-width="1.5"/>' +
+    '<path d="M2 63.5 Q34 61 56 51 L120 51 L120 56 L52 57 Q30 63 2 64.5Z" fill="#1f4fa3"/>' + GRID(76, 44, 5, 1, 5, 4, 9, 0, '#334'),
+  jinrikisha: `<path d="M70 37 Q72 16 97 23 L91 37Z" fill="#333"/><circle cx="73" cy="31" r="5" fill="${SK}"/><rect x="67" y="36" width="12" height="11" rx="3" fill="#7b4fa3"/>` +
+    '<path d="M58 51 L89 51 L89 35 L82 35 L82 45 L58 45Z" fill="#b3261e"/>' + W(75, 64, 16) +
+    '<path d="M60 50 L24 54" stroke="#7a4a1e" stroke-width="3" stroke-linecap="round"/>' + P(18, 40, '#2b4a7a') +
+    '<path d="M9 38 L27 38 L18 30Z" fill="#d9b36a"/>',
+  benz: '<path d="M26 68 L50 53 L98 53" fill="none" stroke="#333" stroke-width="3"/>' +
+    '<rect x="58" y="37" width="30" height="13" rx="3" fill="#6b3f1d"/><rect x="85" y="26" width="5" height="26" rx="2" fill="#6b3f1d"/>' +
+    '<path d="M50 53 L46 34 M41 34h10" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<rect x="92" y="42" width="14" height="12" fill="#888"/><ellipse cx="102" cy="58" rx="11" ry="3" fill="#c9a227"/>' +
+    W(84, 64, 16) + W(26, 70, 10),
+  tford: '<rect x="36" y="20" width="64" height="5" rx="2" fill="#222"/><path d="M40 25V46M68 25V46M97 25V46" stroke="#222" stroke-width="3"/>' +
+    '<rect x="43" y="28" width="23" height="16" fill="#cfe9ff" opacity=".8"/><rect x="30" y="44" width="70" height="22" rx="3" fill="#222"/>' +
+    '<rect x="12" y="48" width="22" height="18" fill="#222"/><rect x="8" y="46" width="5" height="20" fill="#c9a227"/>' +
+    '<circle cx="17" cy="44" r="3.5" fill="#ffe27a" stroke="#222"/><path d="M14 62 Q28 52 42 66 M72 66 Q86 52 100 62" fill="none" stroke="#222" stroke-width="3"/>' +
+    W(28, 72, 10) + W(86, 72, 10),
+  subaru: '<path d="M12 70 Q10 52 30 48 Q40 28 66 28 Q92 28 100 50 Q110 54 108 70Z" fill="#f3ecd2" stroke="#8a8266" stroke-width="2"/>' +
+    '<path d="M40 48 Q46 34 62 34 L62 48Z" fill="#cfe9ff"/><path d="M66 34 Q84 34 90 48 L66 48Z" fill="#cfe9ff"/>' +
+    '<circle cx="15" cy="58" r="4" fill="#ffe27a" stroke="#8a8266"/>' + T(32, 72, 9) + T(86, 72, 9),
+  hybrid: '<path d="M8 70 L10 56 Q24 50 40 48 Q52 32 76 32 Q96 32 104 50 L112 54 L112 70Z" fill="#9fc5b8" stroke="#55786c" stroke-width="2"/>' +
+    '<path d="M46 48 Q54 37 68 37 L68 48Z" fill="#e3f4ff"/><path d="M72 37 Q90 37 97 48 L72 48Z" fill="#e3f4ff"/>' +
+    '<text x="61" y="65" font-size="11" text-anchor="middle">⛽＋⚡</text>' + T(30, 72, 9) + T(92, 72, 9),
+  ev: '<rect x="100" y="34" width="14" height="42" rx="3" fill="#2f9e44"/><text x="107" y="50" font-size="10" text-anchor="middle">⚡</text>' +
+    '<path d="M100 58 Q92 68 86 58" fill="none" stroke="#333" stroke-width="2.5"/>' +
+    '<path d="M6 70 L8 58 Q18 52 30 50 Q40 34 60 34 Q78 34 86 52 L92 56 L92 70Z" fill="#4dabf7" stroke="#1c5d99" stroke-width="2"/>' +
+    '<path d="M34 50 Q42 39 58 39 Q72 39 78 50Z" fill="#e3f4ff"/>' + T(26, 72, 8) + T(74, 72, 8),
+  maruki: `<circle cx="60" cy="36" r="6" fill="${SK}"/><rect x="54" y="42" width="12" height="20" rx="3" fill="#c98b4a"/>` +
+    '<path d="M68 36 L84 72" stroke="#5b3a1a" stroke-width="3" stroke-linecap="round"/><ellipse cx="85" cy="74" rx="4" ry="6" fill="#5b3a1a"/>' +
+    '<path d="M12 58 Q60 74 108 58 L102 70 Q60 84 18 70Z" fill="#8b5a2b" stroke="#5b3a1a" stroke-width="2"/>' + WAVES,
+  hokake: '<rect x="58" y="8" width="4" height="54" fill="#5b3a1a"/><rect x="32" y="12" width="56" height="38" rx="2" fill="#fff" stroke="#999" stroke-width="1.5"/>' +
+    '<path d="M46 12V50M60 12V50M74 12V50" stroke="#ddd" stroke-width="1.5"/><path d="M20 60 L100 60 L92 78 L28 78Z" fill="#7a4a1e"/>' + WAVES,
+  kurofune: '<circle cx="66" cy="22" r="6" fill="#bbb"/><circle cx="76" cy="14" r="8" fill="#ccc"/><circle cx="90" cy="10" r="6" fill="#ddd"/>' +
+    '<path d="M28 12V56M96 16V56" stroke="#5b3a1a" stroke-width="2.5"/><path d="M18 24H38M86 28H106" stroke="#5b3a1a" stroke-width="2"/>' +
+    '<rect x="56" y="28" width="10" height="28" fill="#222"/><path d="M10 56 L0 48" stroke="#222" stroke-width="2.5"/>' +
+    '<path d="M10 56 L112 56 L104 76 L18 76Z" fill="#222"/><circle cx="62" cy="64" r="13" fill="#444" stroke="#b3261e" stroke-width="2.5"/>' +
+    '<path d="M49 64H75M62 51V77M53 55L71 73M71 55L53 73" stroke="#b3261e" stroke-width="1.5"/>' + WAVES,
+  hikawa: '<path d="M20 18V54M100 18V54" stroke="#5b3a1a" stroke-width="2"/><rect x="54" y="12" width="14" height="22" fill="#222"/>' +
+    '<rect x="54" y="17" width="14" height="10" fill="#fff"/><rect x="54" y="19" width="14" height="2" fill="#d62828"/><rect x="54" y="23" width="14" height="2" fill="#d62828"/>' +
+    '<rect x="38" y="32" width="44" height="11" fill="#fff" stroke="#999"/><rect x="30" y="43" width="60" height="12" fill="#fff" stroke="#999"/>' +
+    GRID(34, 47, 9, 1, 3, 3, 6, 0, '#334') + '<path d="M6 54 L114 54 L106 76 L14 76Z" fill="#222"/><path d="M11 68 L109 68 L106 76 L14 76Z" fill="#b3261e"/>' + WAVES,
+  container: '<rect x="97" y="16" width="6" height="10" fill="#e8590c"/><rect x="92" y="26" width="16" height="30" fill="#fff" stroke="#999"/><rect x="94" y="29" width="12" height="4" fill="#334"/>' +
+    GRID(12, 32, 6, 3, 12, 8, 13, 8, ['#e03131', '#f59f00', '#2f9e44', '#1c7ed6', '#ae3ec9'], 'stroke="#fff" stroke-width=".6"') +
+    '<path d="M4 56 L116 56 L110 78 L10 78Z" fill="#1c5d99"/>' + WAVES,
+  kikyu: '<path d="M44 58 L52 74 L68 74 L76 58Z" fill="#2f5fc0"/><ellipse cx="60" cy="33" rx="30" ry="31" fill="#3b6fd4"/>' +
+    '<path d="M31 30 Q60 44 89 30" fill="none" stroke="#f2c94c" stroke-width="4"/><path d="M60 2V64" stroke="#f2c94c" stroke-width="2"/>' +
+    '<path d="M45 8 Q38 34 50 62M75 8 Q82 34 70 62" fill="none" stroke="#f2c94c" stroke-width="1.5"/>' +
+    '<path d="M60 64 l-4 9 h8z" fill="#ff922b"/><rect x="50" y="76" width="20" height="10" rx="2" fill="#b07a3b" stroke="#7a4a1e"/>',
+  wright: '<path d="M18 38 L30 30 M18 46 L30 56 M104 30 L110 34 M104 56 L110 50" stroke="#7a6a48" stroke-width="1.5"/>' +
+    '<rect x="2" y="36" width="16" height="3" fill="#e8dcc0" stroke="#7a6a48"/><rect x="2" y="44" width="16" height="3" fill="#e8dcc0" stroke="#7a6a48"/>' +
+    '<rect x="108" y="30" width="3" height="24" fill="#e8dcc0" stroke="#7a6a48"/>' +
+    '<path d="M28 30V54M48 30V54M68 30V54M88 30V54M100 30V54" stroke="#7a6a48" stroke-width="1.5"/>' +
+    '<ellipse cx="74" cy="42" rx="2" ry="10" fill="#7a4a1e"/><ellipse cx="92" cy="42" rx="2" ry="10" fill="#7a4a1e"/>' +
+    `<ellipse cx="58" cy="51" rx="9" ry="3" fill="#334"/><circle cx="47" cy="50" r="3.5" fill="${SK}"/>` +
+    '<rect x="20" y="26" width="84" height="4" fill="#e8dcc0" stroke="#7a6a48"/><rect x="20" y="54" width="84" height="4" fill="#e8dcc0" stroke="#7a6a48"/>' +
+    '<path d="M24 66H96M34 58V66M86 58V66" stroke="#7a6a48" stroke-width="2"/>',
+  dc3: '<path d="M98 34 L106 12 L114 14 L112 30Z" fill="#cfd4da" stroke="#6b7178" stroke-width="1.5"/>' +
+    '<path d="M10 44 Q14 34 34 34 L84 36 L112 28 L114 32 L100 48 Q60 56 24 52 Q10 50 10 44Z" fill="#cfd4da" stroke="#6b7178" stroke-width="1.5"/>' +
+    GRID(36, 39, 7, 1, 4, 4, 7, 0, '#334') + '<path d="M16 40 L26 37 L26 42 L15 43Z" fill="#334"/>' +
+    '<path d="M48 56V68" stroke="#555" stroke-width="2.5"/>' + T(48, 71, 5) + T(104, 53, 2.5) +
+    '<path d="M40 48 L76 48 L66 59 L46 59Z" fill="#aab1b9" stroke="#6b7178"/><ellipse cx="45" cy="52" rx="11" ry="5" fill="#8a9099"/>' +
+    '<ellipse cx="33" cy="52" rx="1.8" ry="14" fill="#333"/><circle cx="33" cy="52" r="2.5" fill="#333"/>',
+  jet: '<path d="M2 26h18M0 60h14M6 70h20" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".9"/>' +
+    '<path d="M98 36 L108 10 L116 12 L112 32Z" fill="#f4f6f8" stroke="#6b7178" stroke-width="1.5"/>' +
+    '<path d="M6 44 Q16 34 36 34 L100 36 L116 30 L116 36 L104 48 Q60 54 24 52 Q8 50 6 44Z" fill="#f4f6f8" stroke="#6b7178" stroke-width="1.5"/>' +
+    '<path d="M11 44H102" stroke="#1f4fa3" stroke-width="2"/>' + GRID(34, 38, 9, 1, 3.5, 3.5, 7, 0, '#334') +
+    '<path d="M15 40 L25 37 L25 41 L14 42Z" fill="#334"/><path d="M44 47 L78 47 L98 66 L86 66Z" fill="#cfd4da" stroke="#6b7178"/>' +
+    '<ellipse cx="57" cy="49" rx="3.5" ry="2" fill="#333"/><ellipse cx="66" cy="49" rx="3.5" ry="2" fill="#333"/>',
+  jumbo: '<path d="M98 36 L106 6 L116 8 L113 32Z" fill="#1f4fa3" stroke="#6b7178" stroke-width="1.5"/>' +
+    '<path d="M4 48 Q8 38 22 34 Q30 25 48 25 Q58 25 62 34 L100 36 L116 30 L117 36 L106 50 Q60 60 20 56 Q4 54 4 48Z" fill="#fff" stroke="#6b7178" stroke-width="1.5"/>' +
+    GRID(30, 30, 5, 1, 3, 3, 5.5, 0, '#334') + GRID(26, 42, 12, 1, 3, 3, 6, 0, '#334') +
+    '<path d="M12 42 L21 38 L22 42 L11 45Z" fill="#334"/><path d="M8 50 H104" stroke="#1f4fa3" stroke-width="1.5"/>' +
+    '<path d="M46 51 L76 51 L98 72 L86 72Z" fill="#cfd4da" stroke="#6b7178"/><ellipse cx="60" cy="61" rx="7" ry="4" fill="#8a9099"/><ellipse cx="79" cy="68" rx="7" ry="4" fill="#8a9099"/>',
+  tel1890: '<circle cx="50" cy="15" r="7" fill="#c9a227" stroke="#7a5a12" stroke-width="1.5"/><circle cx="70" cy="15" r="7" fill="#c9a227" stroke="#7a5a12" stroke-width="1.5"/>' +
+    '<rect x="40" y="22" width="40" height="56" rx="3" fill="#a8703a" stroke="#5b3a1a" stroke-width="2"/>' +
+    '<path d="M56 52 L64 52 L62 44 L58 44Z" fill="#222"/><circle cx="60" cy="42" r="7" fill="#222"/><circle cx="60" cy="42" r="3" fill="#666"/>' +
+    '<rect x="40" y="62" width="40" height="4" fill="#5b3a1a"/><path d="M80 38 H91 V48" fill="none" stroke="#333" stroke-width="2.5"/><circle cx="91" cy="50" r="3" fill="#333"/>' +
+    '<path d="M40 34 H28" stroke="#333" stroke-width="2.5"/><rect x="23" y="32" width="9" height="24" rx="3" fill="#222"/><path d="M27 56 Q25 74 42 74" fill="none" stroke="#333" stroke-width="1.5"/>',
+  kuro: PHONE('#222', '#111') + '<circle cx="60" cy="59" r="13" fill="#eee" stroke="#111" stroke-width="2"/>' +
+    Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (0.25 + i * 0.2); return `<circle cx="${(60 + 9 * Math.cos(a)).toFixed(1)}" cy="${(59 - 9 * Math.sin(a)).toFixed(1)}" r="2" fill="#222"/>`; }).join('') +
+    '<circle cx="60" cy="59" r="4" fill="#fff" stroke="#999"/>',
+  push: PHONE('#e9e2cf', '#8a8266') + GRID(48, 47, 3, 4, 6, 5, 9, 7, '#fff', 'rx="1.5" stroke="#8a8266"'),
+  keitai: '<rect x="49" y="2" width="4" height="22" rx="2" fill="#222"/><rect x="44" y="20" width="32" height="66" rx="6" fill="#3a3f45"/>' +
+    '<path d="M54 27h12M54 30h12" stroke="#111" stroke-width="1.5"/><rect x="49" y="34" width="22" height="10" rx="1.5" fill="#b9d3a0"/>' +
+    GRID(49, 49, 3, 4, 6, 5, 8, 8, '#cfd4da', 'rx="1.5"'),
+  sumaho: '<rect x="38" y="4" width="44" height="82" rx="8" fill="#222"/><rect x="41" y="8" width="38" height="74" rx="5" fill="#4dabf7"/>' +
+    GRID(45, 14, 3, 4, 8, 8, 11, 12, ['#ffd43b', '#ff6b6b', '#51cf66', '#fff', '#f783ac', '#845ef7'], 'rx="2.5"') +
+    '<rect x="52" y="76" width="16" height="2.5" rx="1.2" fill="#fff"/>',
+  andon: '<circle cx="54" cy="46" r="34" fill="#ffd43b" opacity=".3"/><rect x="32" y="16" width="44" height="6" fill="#5b3a1a"/>' +
+    '<rect x="36" y="22" width="36" height="48" fill="#fff3c4" stroke="#5b3a1a" stroke-width="3"/><path d="M54 22V70M36 46H72" stroke="#5b3a1a" stroke-width="1.5"/>' +
+    '<ellipse cx="54" cy="50" rx="4" ry="8" fill="#ff922b" opacity=".85"/><path d="M38 70V84M70 70V84" stroke="#5b3a1a" stroke-width="3"/><rect x="32" y="82" width="44" height="4" fill="#5b3a1a"/>' +
+    '<rect x="94" y="56" width="9" height="26" fill="#fff" stroke="#999"/><ellipse cx="98.500" cy="49" rx="3.5" ry="7" fill="#ff922b"/><rect x="89" y="82" width="19" height="4" fill="#7a4a1e"/>',
+  gas: '<circle cx="60" cy="26" r="26" fill="#ffd43b" opacity=".35"/><rect x="57" y="38" width="6" height="44" fill="#2f4f3a"/><rect x="48" y="80" width="24" height="6" rx="2" fill="#2f4f3a"/>' +
+    '<path d="M47 46H73" stroke="#2f4f3a" stroke-width="3"/><path d="M48 16 L72 16 L67 38 L53 38Z" fill="#fff3c4" stroke="#2f4f3a" stroke-width="2.5"/>' +
+    '<path d="M45 16 L60 5 L75 16Z" fill="#2f4f3a"/><ellipse cx="60" cy="28" rx="3" ry="6" fill="#ff922b"/>',
+  bulb: RAYS(60, 34, 30, 38) + '<path d="M60 10 A24 24 0 0 1 74 54 L72 62 L48 62 L46 54 A24 24 0 0 1 60 10Z" fill="#fff3a8" stroke="#c9a227" stroke-width="2"/>' +
+    '<path d="M53 61 L55 42 Q57.500 32 60 42 Q62.500 32 65 42 L67 61" fill="none" stroke="#e8590c" stroke-width="1.8"/>' +
+    '<rect x="48" y="62" width="24" height="14" rx="2" fill="#9aa1a9"/><path d="M48 67H72M48 72H72" stroke="#6b7178"/><rect x="55" y="76" width="10" height="6" rx="2" fill="#555"/>',
+  keiko: '<ellipse cx="60" cy="52" rx="54" ry="24" fill="#e7f5ff"/><path d="M36 6V24M84 6V24" stroke="#8a9099" stroke-width="2"/>' +
+    '<rect x="12" y="24" width="96" height="9" rx="2" fill="#dfe3e8" stroke="#8a9099"/><rect x="15" y="33" width="7" height="11" fill="#8a9099"/><rect x="98" y="33" width="7" height="11" fill="#8a9099"/>' +
+    '<rect x="22" y="35" width="76" height="8" rx="4" fill="#fff" stroke="#bcd"/><path d="M60 33V66" stroke="#8a9099"/><circle cx="60" cy="68" r="2.500" fill="#8a9099"/>',
+  led: RAYS(60, 34, 28, 36, '#74c0fc') + '<path d="M40 38 A20 20 0 0 1 80 38 L80 42 L40 42Z" fill="#fff" stroke="#adb5bd" stroke-width="2"/>' +
+    '<path d="M40 42 L80 42 L72 64 L48 64Z" fill="#dfe3e8" stroke="#8a9099" stroke-width="2"/><text x="60" y="57" font-size="10" font-weight="bold" text-anchor="middle" fill="#1c5d99">LED</text>' +
+    '<rect x="49" y="64" width="22" height="12" rx="2" fill="#9aa1a9"/><path d="M49 68H71M49 72H71" stroke="#6b7178"/><rect x="55" y="76" width="10" height="6" rx="2" fill="#555"/>',
+  tarai: '<path d="M10 52 L17 78 Q56 90 95 78 L102 52" fill="#c98b4a" stroke="#7a4a1e" stroke-width="2"/><path d="M13 62 Q56 76 99 62" fill="none" stroke="#7a4a1e" stroke-width="2"/>' +
+    '<ellipse cx="56" cy="52" rx="46" ry="12" fill="#9ad0f5" stroke="#7a4a1e" stroke-width="3"/>' +
+    '<g transform="rotate(16 76 38)"><rect x="62" y="12" width="28" height="46" rx="2" fill="#d9b36a" stroke="#7a4a1e" stroke-width="2"/><path d="M66 24H86M66 30H86M66 36H86M66 42H86M66 48H86" stroke="#7a4a1e" stroke-width="1.5"/></g>' +
+    '<circle cx="34" cy="48" r="5" fill="#fff" opacity=".9"/><circle cx="44" cy="52" r="3.500" fill="#fff" opacity=".9"/><circle cx="26" cy="54" r="3" fill="#fff" opacity=".9"/>',
+  w1930: '<path d="M70 8V26M96 8V26" stroke="#6b7178" stroke-width="2.5"/><rect x="70" y="11" width="26" height="5" rx="2.5" fill="#f1e3c0" stroke="#7a6a48"/><rect x="70" y="18" width="26" height="5" rx="2.5" fill="#f1e3c0" stroke="#7a6a48"/>' +
+    '<path d="M96 17 H106 V26" fill="none" stroke="#333" stroke-width="2.5"/><path d="M40 62V84M80 62V84" stroke="#6b7178" stroke-width="3.5"/>' +
+    '<rect x="34" y="30" width="52" height="36" rx="6" fill="#e9eef2" stroke="#6b7178" stroke-width="2"/><ellipse cx="60" cy="30" rx="26" ry="6" fill="#cfd8df" stroke="#6b7178" stroke-width="2"/>' +
+    '<rect x="50" y="66" width="20" height="10" fill="#555"/>',
+  w1953: '<path d="M84 22V40M104 22V40" stroke="#6b7178" stroke-width="2.5"/><rect x="84" y="25" width="20" height="5" rx="2.5" fill="#f1e3c0" stroke="#7a6a48"/><rect x="84" y="32" width="20" height="5" rx="2.5" fill="#f1e3c0" stroke="#7a6a48"/>' +
+    '<path d="M104 31 H113 V42" fill="none" stroke="#333" stroke-width="2.5"/><circle cx="113" cy="44" r="3" fill="#b3261e"/>' +
+    '<rect x="30" y="28" width="54" height="54" rx="4" fill="#fff" stroke="#6b7178" stroke-width="2"/><rect x="28" y="23" width="58" height="7" rx="2" fill="#dfe3e8" stroke="#6b7178"/>' +
+    '<circle cx="44" cy="44" r="6" fill="#4dabf7" stroke="#1c5d99"/><path d="M44 44V39" stroke="#fff" stroke-width="2"/><rect x="54" y="60" width="24" height="12" rx="2" fill="#e7f5ff" stroke="#9ab"/>' +
+    '<path d="M36 82V86M78 82V86" stroke="#555" stroke-width="4"/>',
+  w1960: '<rect x="14" y="30" width="92" height="50" rx="4" fill="#fff" stroke="#6b7178" stroke-width="2"/><rect x="14" y="20" width="92" height="12" rx="3" fill="#a5d8ff" stroke="#6b7178" stroke-width="2"/>' +
+    '<path d="M68 32V80" stroke="#6b7178" stroke-width="2"/><circle cx="30" cy="26" r="3.500" fill="#fff" stroke="#333"/><circle cx="50" cy="26" r="3.500" fill="#fff" stroke="#333"/><circle cx="87" cy="26" r="3.500" fill="#fff" stroke="#333"/>' +
+    '<text x="41" y="60" font-size="10" text-anchor="middle" fill="#1c5d99">あらう</text><text x="87" y="60" font-size="8" text-anchor="middle" fill="#1c5d99">だっすい</text>' +
+    '<path d="M22 80V85M98 80V85" stroke="#555" stroke-width="4"/>',
+  wauto: '<rect x="32" y="10" width="56" height="18" rx="3" fill="#dfe3e8" stroke="#6b7178" stroke-width="2"/><circle cx="43" cy="19" r="3.500" fill="#2f9e44"/><circle cx="54" cy="19" r="3.500" fill="#1c7ed6"/><rect x="63" y="15" width="19" height="8" fill="#334"/>' +
+    '<rect x="32" y="26" width="56" height="58" rx="4" fill="#fff" stroke="#6b7178" stroke-width="2"/><rect x="38" y="31" width="44" height="20" rx="3" fill="#e7f5ff" stroke="#9ab"/>' +
+    '<text x="60" y="72" font-size="9" text-anchor="middle" fill="#1c5d99">ぜんじどう</text>',
+  drum: '<rect x="30" y="8" width="60" height="78" rx="5" fill="#fff" stroke="#6b7178" stroke-width="2"/><path d="M30 22H90" stroke="#6b7178" stroke-width="2"/>' +
+    '<rect x="64" y="12" width="20" height="6" fill="#334"/><circle cx="40" cy="15" r="3" fill="#2f9e44"/><circle cx="60" cy="53" r="23" fill="#cfd4da" stroke="#6b7178" stroke-width="3"/>' +
+    '<circle cx="60" cy="53" r="16" fill="#74c0fc"/><path d="M50 56 Q56 46 62 54 T72 50" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><circle cx="54" cy="46" r="2.500" fill="#fff"/>',
+};
+
+/* ========== なかみ（k: ならべる じゅんばんの もとに なる 年） ========== */
+const TOPICS = [
+  { id: 'rail', name: 'てつどう', emoji: '🚂', cover: 'sl', items: [
+    { id: 'kago', k: 1700, name: 'かご', era: 'えどじだい（200ねん いじょう まえ）', y: 'えどじだい',
+      tv: 'ひとが かついで はこぶ のりもの。えどから きょうとまで、あるいて 2しゅうかん くらい かかったよ。' },
+    { id: 'sl', k: 1872, name: 'じょうき きかんしゃ', era: '150ねん いじょう まえ', y: '1872ねん',
+      tv: 'にほんで はじめての てつどう。しんばし から よこはま までを 53ぷんで はしったよ。' },
+    { id: 'densha', k: 1895, name: 'でんしゃ', era: '130ねん くらい まえ', y: '1895ねん',
+      tv: 'きょうとで にほんで はじめての でんしゃが はしった。でんきで うごくから けむりが でないよ。' },
+    { id: 'shinkansen', k: 1964, name: 'しんかんせん', era: 'おじいちゃんが こどもの ころ', y: '1964ねん',
+      tv: 'とうきょう と しんおおさかを 4じかんで むすんだ。じそく 210キロ！「ゆめの ちょうとっきゅう」と よばれたよ。' },
+    { id: 'linear', k: 2040, name: 'リニア', era: 'これから（みらい）', y: 'みらい',
+      tv: 'じしゃくの ちからで うかんで はしる。2015ねんの テストで じそく 603キロを だしたよ。いま つくっている ところ。' },
+  ] },
+  { id: 'car', name: 'くるま', emoji: '🚗', cover: 'subaru', items: [
+    { id: 'jinrikisha', k: 1870, name: 'じんりきしゃ', era: '150ねん いじょう まえ', y: '1870ねん',
+      tv: 'ひとが ひっぱって はしる くるま。にほんで うまれて、とうきょうの にほんばしで はじまったよ。' },
+    { id: 'benz', k: 1886, name: 'さいしょの ガソリンじどうしゃ', era: '140ねん くらい まえ', y: '1886ねん',
+      tv: 'ドイツの ベンツさんが つくった。タイヤは 3つで、じてんしゃ くらいの はやさ だったよ。' },
+    { id: 'tford', k: 1908, name: 'Tがた フォード', say: 'ティーがた フォード', era: '100ねん いじょう まえ', y: '1908ねん',
+      tv: 'アメリカで とても たくさん つくられて、ふつうの ひとも くるまを かえるように なったよ。' },
+    { id: 'subaru', k: 1958, name: 'マイカー（スバル360）', say: 'マイカー、スバル さんびゃくろくじゅう', era: 'おじいちゃんが こどもの ころ', y: '1958ねん',
+      tv: 'ちいさくて まるい「てんとうむし」。にほんの いえにも くるまが ひろがりはじめたよ。' },
+    { id: 'hybrid', k: 1997, name: 'ハイブリッドカー', era: 'パパや ママが こどもの ころ', y: '1997ねん',
+      tv: 'ガソリンと でんきの りょうほうで はしる。にほんの プリウスが、せかいで はじめて たくさん つくられたよ。' },
+    { id: 'ev', k: 2015, name: 'いまの でんきじどうしゃ', era: 'いま', y: 'いま',
+      tv: 'でんきだけで はしるから、はいきガスが でない。じつは 100ねん いじょう まえにも でんきの くるまは あったんだよ。' },
+  ] },
+  { id: 'ship', name: 'ふね', emoji: '⛵', cover: 'hokake', items: [
+    { id: 'maruki', k: -5000, name: 'まるきぶね', era: 'なんぜんねんも まえ（じょうもんじだい）', y: 'じょうもんじだい',
+      tv: 'ふとい きを くりぬいて つくった ふね。7000ねん いじょう まえの ものも みつかっているよ。' },
+    { id: 'hokake', k: 1700, name: 'ほかけぶね', era: 'えどじだい（200ねん いじょう まえ）', y: 'えどじだい',
+      tv: 'おおきな ほに かぜを うけて すすむ。おこめや にもつを たくさん はこんだよ。' },
+    { id: 'kurofune', k: 1853, name: 'じょうきせん（くろふね）', era: '170ねん くらい まえ', y: '1853ねん',
+      tv: 'アメリカの ペリーが のってきた。けむりを はく くろい ふねに、みんな びっくり！' },
+    { id: 'hikawa', k: 1930, name: 'きゃくせん ひかわまる', era: '100ねん くらい まえ', y: '1930ねん',
+      tv: 'たいへいようを わたった おおきな きゃくせん。いまも よこはまの やましたこうえんで みられるよ。' },
+    { id: 'container', k: 1968, name: 'コンテナせん', era: 'おじいちゃんが こどもの ころ', y: '1968ねん',
+      tv: 'おなじ おおきさの はこ（コンテナ）を つんで はこぶ。にほんで さいしょの「はこねまる」が できたよ。' },
+  ] },
+  { id: 'plane', name: 'ひこうき', emoji: '✈️', cover: 'jumbo', items: [
+    { id: 'kikyu', k: 1783, name: 'ねつききゅう', era: '240ねん くらい まえ', y: '1783ねん',
+      tv: 'フランスの モンゴルフィエ きょうだいが つくった。ひとが はじめて そらを とんだよ。' },
+    { id: 'wright', k: 1903, name: 'ライトきょうだいの ひこうき', era: '100ねん いじょう まえ', y: '1903ねん',
+      tv: 'エンジンつきの ひこうきで はじめて とんだ。さいしょは 12びょうで 36メートル だけ！' },
+    { id: 'dc3', k: 1935, name: 'プロペラ りょかくき', era: '90ねん くらい まえ', y: '1935ねん',
+      tv: '「DC-3」は おきゃくさんを 20にん いじょう のせて とべた。せかいじゅうで つかわれたよ。',
+      sayTv: 'ディーシースリーは おきゃくさんを 20にん いじょう のせて とべた。せかいじゅうで つかわれたよ。' },
+    { id: 'jet', k: 1952, name: 'ジェット りょかくき', era: '70ねん いじょう まえ', y: '1952ねん',
+      tv: 'イギリスの「コメット」が せかいで はじめて。プロペラが なくて、とても はやい！' },
+    { id: 'jumbo', k: 1970, name: 'ジャンボジェット', era: 'おじいちゃんが こどもの ころ', y: '1970ねん',
+      tv: '2かいだての おおきな ひこうき。いちどに 400にん いじょう のれたよ。' },
+  ] },
+  { id: 'tel', name: 'でんわ', emoji: '☎️', cover: 'kuro', items: [
+    { id: 'tel1890', k: 1890, name: 'さいしょの でんわ', era: '130ねん いじょう まえ', y: '1890ねん',
+      tv: 'とうきょうと よこはまで でんわが はじまった。こうかんしゅさんに「つないで ください」と たのんだよ。' },
+    { id: 'kuro', k: 1950, name: 'くろでんわ', era: 'おじいちゃんが こどもの ころ', y: '1950ねん〜',
+      tv: 'ダイヤルを ゆびで ジーコ ジーコ まわして かける。どの いえも くろい でんわ だったよ。' },
+    { id: 'push', k: 1969, name: 'プッシュホン', era: '50ねん いじょう まえ', y: '1969ねん',
+      tv: 'ボタンを ピ・ポ・パと おして かける。ダイヤルより はやく かけられるよ。' },
+    { id: 'keitai', k: 1987, name: 'けいたいでんわ', era: 'パパや ママが こどもの ころ', y: '1987ねん',
+      tv: 'そとに もって あるける でんわ。さいしょは おもさが 900グラムも あったよ！' },
+    { id: 'sumaho', k: 2007, name: 'スマートフォン', era: '20ねん くらい まえ〜いま', y: '2007ねん〜',
+      tv: 'がめんを ゆびで さわって つかう。でんわも しゃしんも ちずも、これ ひとつ！' },
+  ] },
+  { id: 'light', name: 'あかり', emoji: '💡', cover: 'bulb', items: [
+    { id: 'andon', k: 1700, name: 'あんどん・ろうそく', era: 'えどじだい（200ねん いじょう まえ）', y: 'えどじだい',
+      tv: 'あぶらや ろうそくの ひの あかり。いまの でんきより ずっと くらかったよ。' },
+    { id: 'gas', k: 1872, name: 'ガスとう', era: '150ねん いじょう まえ', y: '1872ねん',
+      tv: 'よこはまの ばしゃみちに にほんで はじめて ついた。ひとが 1ぽんずつ ひを つけて まわったよ。' },
+    { id: 'bulb', k: 1879, name: 'でんきゅう', era: '140ねん いじょう まえ', y: '1879ねん',
+      tv: 'エジソンが ながく ひかる でんきゅうを つくった。なかの しんには にほんの たけが つかわれたよ。' },
+    { id: 'keiko', k: 1938, name: 'けいこうとう', era: '90ねん くらい まえ', y: '1938ねん',
+      tv: 'でんきゅうより すくない でんきで あかるい。ほそながい かたちが おおいよ。' },
+    { id: 'led', k: 1996, name: 'LEDの あかり', say: 'エルイーディーの あかり', era: 'パパや ママが こどもの ころ〜いま', y: '1996ねん〜',
+      tv: 'あおい LEDを にほんの ひとが つくって、しろい あかりが できた。でんきを あまり つかわず ながもち！',
+      sayTv: 'あおい エルイーディーを にほんの ひとが つくって、しろい あかりが できた。でんきを あまり つかわず ながもち！' },
+  ] },
+  { id: 'wash', name: 'せんたく', emoji: '🧺', cover: 'w1960', items: [
+    { id: 'tarai', k: 1880, name: 'たらいと せんたくいた', era: '100ねん いじょう まえ', y: 'むかし',
+      tv: 'てで ゴシゴシ あらう。ふゆは みずが つめたくて たいへん！' },
+    { id: 'w1930', k: 1930, name: 'さいしょの でんき せんたくき', era: '100ねん くらい まえ', y: '1930ねん',
+      tv: 'にほんで つくられはじめた。でも とても たかくて、ほとんどの いえには なかったよ。' },
+    { id: 'w1953', k: 1953, name: 'ローラーつき せんたくき', era: '70ねん いじょう まえ', y: '1953ねん',
+      tv: 'みずを ぐるぐる まわして あらう。ぬれた ふくは ローラーに はさんで、ハンドルで しぼったよ。' },
+    { id: 'w1960', k: 1960, name: 'にそうしき せんたくき', era: 'おじいちゃんが こどもの ころ', y: '1960ねん',
+      tv: 'あらう ところと だっすいする ところが 2つ。はやく まわして みずを とばすよ。' },
+    { id: 'wauto', k: 1990, name: 'ぜんじどう せんたくき', era: 'パパや ママが こどもの ころ', y: '1990ねんごろ ひろまる',
+      tv: 'ボタン ひとつで、あらう・すすぐ・だっすい まで ぜんぶ おまかせ！' },
+    { id: 'drum', k: 2005, name: 'ドラムしき せんたく かんそうき', era: 'いま', y: '2000ねん〜',
+      tv: 'よこむきの ドラムが まわる。かわかす ところまで ぜんぶ やってくれるよ。' },
+  ] },
+];
+const ALL = TOPICS.flatMap(t => t.items);
+const eraClass = k => k < 1868 ? 'edo' : k < 1946 ? 'meiji' : k < 1989 ? 'showa' : k < 2030 ? 'ima' : 'mirai';
+const svg = id => `<svg viewBox="0 0 120 90" aria-hidden="true">${ART[id]}</svg>`;
+const $ = id => document.getElementById(id);
+
+/* ========== ほぞん ========== */
+const KEY = 'norimono-timemachine-v1';
+const S = { got: {}, snd: true, voice: true, level: 3, clears: {} };
+try {
+  const o = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (o && typeof o === 'object') {
+    if (o.got && typeof o.got === 'object') S.got = o.got;
+    if (o.clears && typeof o.clears === 'object') S.clears = o.clears;
+    if (typeof o.snd === 'boolean') S.snd = o.snd;
+    if (typeof o.voice === 'boolean') S.voice = o.voice;
+    if ([3, 4, 5].includes(o.level)) S.level = o.level;
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ========== おと（WebAudio の ごうせいおん） ========== */
+let ac = null;
+const audio = () => {
+  if (!S.snd) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+};
+const tone = (f, t0, d, type = 'sine', v = 0.18, f2 = null) => {
+  const a = audio(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+  } catch (e) {}
+};
+const sfx = {
+  pick: () => tone(520, 0, 0.08, 'triangle'),
+  tick: () => tone(700, 0, 0.05, 'triangle', 0.12),
+  drop: () => tone(330, 0, 0.1, 'triangle'),
+  lever: () => { tone(160, 0, 0.18, 'square', 0.12, 80); tone(90, 0.12, 0.2, 'sawtooth', 0.1); },
+  ng: () => { tone(220, 0, 0.18, 'sawtooth', 0.1, 170); tone(170, 0.2, 0.28, 'sawtooth', 0.1, 130); },
+  ok: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.25, 'triangle')),
+  warp: () => { tone(200, 0, 0.9, 'sawtooth', 0.08, 1400); tone(300, 0.05, 0.9, 'sine', 0.1, 2000); },
+  arrive: () => { tone(880, 0, 0.15, 'sine'); tone(1320, 0.12, 0.3, 'sine'); },
+  fanfare: () => [[523, 0], [523, 0.15], [523, 0.3], [698, 0.45], [659, 0.75], [698, 0.9], [784, 1.05], [1047, 1.3]]
+    .forEach(([f, t]) => tone(f, t, t > 1.2 ? 0.7 : 0.22, 'square', 0.1)),
+};
+const speak = text => {
+  if (!S.snd || !S.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+};
+const hush = () => { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} };
+const sayText = it => `${it.era.replace(/[（）]/g, '、').replace('〜', 'から ')}。${it.say || it.name}。${it.sayTv || it.tv}`;
+
+/* ========== がめんの きりかえ ========== */
+const show = id => {
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  $('doneOver').classList.remove('on'); $('detailOver').classList.remove('on');
+};
+const goHome = () => { hush(); renderHome(); show('home'); };
+document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click', goHome));
+
+function renderToggles() {
+  $('sndBtn').textContent = S.snd ? '🔊 おと' : '🔇 おと';
+  $('sndBtn').classList.toggle('off', !S.snd);
+  $('voiceBtn').textContent = '🗣 こえ';
+  $('voiceBtn').classList.toggle('off', !S.voice || !S.snd);
+}
+$('sndBtn').addEventListener('click', () => { S.snd = !S.snd; if (!S.snd) hush(); save(); renderToggles(); if (S.snd) sfx.pick(); });
+$('voiceBtn').addEventListener('click', () => {
+  S.voice = !S.voice; if (S.voice) S.snd = true; else hush();
+  save(); renderToggles(); if (S.voice) speak('こえで よむよ');
+});
+
+function renderHome() {
+  renderToggles();
+  $('lv').innerHTML = [[3, 'やさしい'], [4, 'ふつう'], [5, 'むずかしい']].map(([n, t]) =>
+    `<button data-lv="${n}" class="${S.level === n ? 'sel' : ''}">カード ${n}まい<small>${t}</small></button>`).join('');
+  $('topics').innerHTML = TOPICS.map(t => {
+    const got = t.items.filter(i => S.got[i.id]).length;
+    return `<button class="topic" data-topic="${t.id}">${svg(t.cover)}<b>${t.emoji} ${t.name}</b>` +
+      `<span>${got === t.items.length ? '👑 ' : ''}カード ${got}／${t.items.length}</span></button>`;
+  }).join('');
+}
+$('lv').addEventListener('click', e => {
+  const b = e.target.closest('[data-lv]'); if (!b) return;
+  S.level = +b.dataset.lv; save(); sfx.pick(); renderHome();
+});
+$('topics').addEventListener('click', e => {
+  const b = e.target.closest('[data-topic]'); if (!b) return;
+  startRound(TOPICS.find(t => t.id === b.dataset.topic));
+});
+
+/* ========== ならべる ========== */
+let topic = null, round = [], arr = [], misses = 0, locked = false, sel = null, drag = null;
+const cardsEl = $('cards');
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+function startRound(t) {
+  topic = t; misses = 0; locked = false; sel = null; drag = null;
+  const n = Math.min(S.level, t.items.length);
+  // まだ もっていない カードを さきに えらぶ
+  const pool = shuffle(t.items.slice()).sort((a, b) => (S.got[a.id] ? 1 : 0) - (S.got[b.id] ? 1 : 0));
+  round = pool.slice(0, n).sort((a, b) => a.k - b.k);
+  const want = round.map(i => i.id).join();
+  do { arr = shuffle(round.map(i => i.id)); } while (arr.join() === want);
+  $('playTitle').textContent = `${t.emoji} ${t.name}の たび`;
+  cardsEl.classList.remove('hints');
+  cardsEl.innerHTML = round.map(it =>
+    `<div class="tcard" data-id="${it.id}">${svg(it.id)}<div class="tx"><div class="nm">${it.name}</div><div class="hint">🕰️ ${it.era}</div></div></div>`).join('');
+  cardsEl.querySelectorAll('.tcard').forEach(bindCard);
+  applyOrder(); setAxis();
+  say('ふるい じゅんに ならべて、レバーを ひいてね！');
+  $('lever').classList.remove('glow');
+  show('play'); sfx.pick();
+  speak(`${t.name}の たび。ふるい じゅんに ならべて、レバーを ひいてね`);
+}
+const landscape = () => window.matchMedia('(orientation: landscape)').matches;
+function setAxis() {
+  const l = landscape();
+  $('axA').textContent = l ? '⬅ むかし（ふるい）' : '⬆ むかし（ふるい）';
+  $('axB').textContent = l ? 'いま（あたらしい） ➡' : '⬇ いま（あたらしい）';
+}
+window.addEventListener('resize', setAxis);
+function say(text, ng) { $('msg').textContent = text; $('msg').classList.toggle('ng', !!ng); }
+const cardOf = id => cardsEl.querySelector(`[data-id="${id}"]`);
+function applyOrder() { arr.forEach((id, i) => { cardOf(id).style.order = i; }); }
+function flip(change, skip) {
+  const els = [...cardsEl.children].filter(e => e !== skip);
+  const before = els.map(e => e.getBoundingClientRect());
+  change();
+  els.forEach((e, i) => {
+    const a = e.getBoundingClientRect(), dx = before[i].left - a.left, dy = before[i].top - a.top;
+    if (!dx && !dy) return;
+    e.style.transition = 'none'; e.style.transform = `translate(${dx}px,${dy}px)`;
+    e.getBoundingClientRect();
+    e.style.transition = 'transform .18s'; e.style.transform = '';
+  });
+}
+function clearMarks() { cardsEl.querySelectorAll('.ok').forEach(e => e.classList.remove('ok')); }
+function setSel(el) { if (sel) sel.classList.remove('sel'); sel = el; if (sel) sel.classList.add('sel'); }
+
+function bindCard(el) {
+  el.addEventListener('pointerdown', e => {
+    if (locked || drag) return;
+    e.preventDefault();
+    try { el.setPointerCapture(e.pointerId); } catch (err) {}
+    const rects = arr.map(id => cardOf(id).getBoundingClientRect());
+    const i = arr.indexOf(el.dataset.id);
+    drag = { el, pid: e.pointerId, sx: e.clientX, sy: e.clientY, rects, from: i, cur: i, moved: false };
+  });
+  el.addEventListener('pointermove', e => {
+    const d = drag; if (!d || d.el !== el || e.pointerId !== d.pid) return;
+    const dx = e.clientX - d.sx, dy = e.clientY - d.sy;
+    if (!d.moved) {
+      if (Math.hypot(dx, dy) < 7) return;
+      d.moved = true; setSel(null); clearMarks(); el.style.transition = 'none'; el.classList.add('drag'); sfx.pick();
+    }
+    const r0 = d.rects[d.from], cx = r0.left + r0.width / 2 + dx, cy = r0.top + r0.height / 2 + dy;
+    let best = d.cur, bd = Infinity;
+    d.rects.forEach((r, i) => { const q = Math.hypot(cx - r.left - r.width / 2, cy - r.top - r.height / 2); if (q < bd) { bd = q; best = i; } });
+    if (best !== d.cur) {
+      flip(() => { arr.splice(best, 0, arr.splice(d.cur, 1)[0]); applyOrder(); }, el);
+      d.cur = best; sfx.tick();
+    }
+    const rc = d.rects[d.cur];
+    el.style.transform = `translate(${r0.left + dx - rc.left}px,${r0.top + dy - rc.top}px) scale(1.04)`;
+  });
+  const end = e => {
+    const d = drag; if (!d || d.el !== el || e.pointerId !== d.pid) return;
+    drag = null;
+    if (d.moved) {
+      el.classList.remove('drag'); el.style.transition = 'transform .15s'; el.style.transform = ''; sfx.drop();
+      $('lever').classList.add('glow');
+    } else if (e.type === 'pointerup') tapCard(el);
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', end);
+}
+// タップでも いれかえ できる（1まいめ → 2まいめ）
+function tapCard(el) {
+  if (locked) return;
+  clearMarks();
+  if (!sel) { setSel(el); sfx.pick(); say('いれかえたい カードを もう 1まい タッチ！'); return; }
+  if (sel === el) { setSel(null); return; }
+  const a = arr.indexOf(sel.dataset.id), b = arr.indexOf(el.dataset.id);
+  flip(() => { [arr[a], arr[b]] = [arr[b], arr[a]]; applyOrder(); });
+  setSel(null); sfx.drop(); $('lever').classList.add('glow');
+  say('ならべたら レバーを ひいてね！');
+}
+$('hintBtn').addEventListener('click', () => {
+  cardsEl.classList.add('hints'); sfx.pick();
+  say('カードの「いつごろ？」を よんで みよう');
+});
+
+/* ---- レバー ---- */
+const lever = $('lever'), knob = $('knob');
+let lv = null;
+const travel = () => lever.clientHeight - knob.offsetHeight - 8;
+lever.addEventListener('pointerdown', e => {
+  if (locked) return; e.preventDefault();
+  try { lever.setPointerCapture(e.pointerId); } catch (err) {}
+  knob.classList.remove('back');
+  lv = { pid: e.pointerId, sy: e.clientY, y: 0, moved: false };
+});
+lever.addEventListener('pointermove', e => {
+  if (!lv || e.pointerId !== lv.pid) return;
+  const y = Math.max(0, Math.min(travel(), e.clientY - lv.sy));
+  if (y > 4) lv.moved = true;
+  lv.y = y; knob.style.transform = `translateY(${y}px)`;
+});
+const leverEnd = e => {
+  if (!lv || e.pointerId !== lv.pid) return;
+  const d = lv; lv = null;
+  const fire = e.type === 'pointerup' && (!d.moved || d.y > travel() * 0.55);
+  knob.classList.add('back');
+  if (fire) { knob.style.transform = `translateY(${travel()}px)`; setTimeout(() => { knob.style.transform = ''; }, 380); pull(); }
+  else knob.style.transform = '';
+};
+lever.addEventListener('pointerup', leverEnd);
+lever.addEventListener('pointercancel', leverEnd);
+
+function pull() {
+  if (locked) return;
+  setSel(null); lever.classList.remove('glow'); sfx.lever();
+  const ok = arr.every((id, i) => id === round[i].id);
+  if (ok) {
+    locked = true;
+    cardsEl.querySelectorAll('.tcard').forEach(c => c.classList.add('ok'));
+    say('せいかい！ タイムマシン はっしん！');
+    setTimeout(sfx.ok, 250);
+    setTimeout(startTrip, 1300);
+    return;
+  }
+  misses++;
+  let hit = 0;
+  arr.forEach((id, i) => { const good = id === round[i].id; cardOf(id).classList.toggle('ok', good); if (good) hit++; });
+  const m = $('machine'); m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake');
+  setTimeout(sfx.ng, 200);
+  if (misses >= 2) cardsEl.classList.add('hints');
+  const t = (hit ? `おしい！ ✓の カードは あってるよ。` : 'ガタガタ… うごかないよ。') +
+    (misses >= 2 ? 'ヒントを よんで もういちど！' : 'もういちど ならべて みよう！');
+  say(t, true); speak(hit ? 'おしい！ もういちど ならべて みよう' : 'うごかないよ。もういちど ならべて みよう');
+}
+
+/* ========== タイムトラベル ========== */
+let stop = -1, warpTimer = 0;
+function startTrip() {
+  stop = -1;
+  $('tline').innerHTML = round.map(it => `<div class="st" data-id="${it.id}"><i></i>${it.y.replace('ねんごろ ひろまる', 'ねんごろ')}</div>`).join('');
+  $('scene').className = 'scene warping';
+  $('tEra').textContent = 'しゅっぱつ！'; $('tName').textContent = 'むかしへ ワープ！'; $('tTrivia').textContent = 'どんな じだいに つくかな？';
+  $('ybadge').textContent = '？？？';
+  $('nextBtn').disabled = true; $('nextBtn').textContent = 'ワープちゅう…';
+  show('trip');
+  nextStop();
+}
+function nextStop() {
+  hush();
+  if (stop >= round.length - 1) return finish();
+  stop++;
+  const it = round[stop], sc = $('scene');
+  $('nextBtn').disabled = true; $('nextBtn').textContent = 'ワープちゅう…';
+  sc.classList.add('warping'); sc.classList.remove('show');
+  sfx.warp();
+  clearTimeout(warpTimer);
+  warpTimer = setTimeout(() => {
+    sc.className = 'scene show ' + eraClass(it.k);
+    $('sceneArt').innerHTML = ART[it.id];
+    $('ybadge').textContent = it.y;
+    $('tEra').textContent = it.era; $('tName').textContent = it.name; $('tTrivia').textContent = it.tv;
+    document.querySelectorAll('#tline .st').forEach((e, i) => { e.classList.toggle('done', i <= stop); e.classList.toggle('now', i === stop); });
+    $('nextBtn').disabled = false;
+    $('nextBtn').textContent = stop === round.length - 1 ? '🏁 ゴール！' : 'つぎの じだいへ ▶';
+    sfx.arrive(); speak(sayText(it));
+  }, 950);
+}
+$('nextBtn').addEventListener('click', () => { if (!$('nextBtn').disabled) nextStop(); });
+$('sayBtn').addEventListener('click', () => {
+  if (stop < 0 || $('nextBtn').disabled) return;
+  const keep = [S.snd, S.voice]; S.snd = S.voice = true; speak(sayText(round[stop])); [S.snd, S.voice] = keep;
+});
+
+function finish() {
+  const fresh = round.filter(it => !S.got[it.id]).map(it => it.id);
+  round.forEach(it => { S.got[it.id] = 1; });
+  S.clears[topic.id] = (S.clears[topic.id] || 0) + 1;
+  save();
+  const full = topic.items.every(i => S.got[i.id]);
+  $('doneMsg').textContent = full
+    ? `${topic.name}の カードが ぜんぶ そろったよ！ すごい！ 👑`
+    : fresh.length ? `あたらしい カードを ${fresh.length}まい ゲット！ ずかんに はいったよ。` : 'じゅんばん かんぺき！ はかせ みたい！';
+  $('gain').innerHTML = round.map(it =>
+    `<div class="mini">${fresh.includes(it.id) ? '<span class="new">NEW</span>' : ''}${svg(it.id)}${it.name}<small>${it.y}</small></div>`).join('');
+  $('againBtn').textContent = full ? '🔁 もういちど' : '🔁 つぎの カードで あそぶ';
+  $('doneOver').classList.add('on');
+  sfx.fanfare(); confetti();
+  speak('タイムトラベル だいせいこう！ ' + $('doneMsg').textContent.replace('👑', ''));
+}
+function confetti() {
+  const cols = ['#ffc93c', '#ff6b6b', '#51cf66', '#4dabf7', '#f783ac', '#845ef7'];
+  for (let i = 0; i < 36; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = cols[i % cols.length];
+    c.style.animationDuration = 1.6 + Math.random() * 1.6 + 's';
+    c.style.animationDelay = Math.random() * 0.6 + 's';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4200);
+  }
+}
+$('againBtn').addEventListener('click', () => { hush(); startRound(topic); });
+$('otherBtn').addEventListener('click', goHome);
+$('doneZukan').addEventListener('click', openZukan);
+
+/* ========== ねんぴょう ずかん ========== */
+function openZukan() {
+  hush();
+  const n = ALL.filter(i => S.got[i.id]).length;
+  $('ztotal').textContent = `あつめた カード ${n}／${ALL.length} まい` + (n === ALL.length ? ' 👑 コンプリート！' : '');
+  $('zbody').innerHTML = TOPICS.map(t => {
+    const got = t.items.filter(i => S.got[i.id]).length;
+    return `<div class="zsec"><h3>${t.emoji} ${t.name}<small>${got}／${t.items.length}</small></h3><div class="zrow">` +
+      t.items.map(it => S.got[it.id]
+        ? `<button class="mini" data-item="${it.id}">${svg(it.id)}${it.name}<small>${it.y}</small></button>`
+        : `<div class="mini lock"><div class="q">？</div>まだ ひみつ</div>`).join('<span class="arrow">▶</span>') +
+      `</div></div>`;
+  }).join('');
+  show('zukan');
+}
+$('toZukan').addEventListener('click', () => { sfx.pick(); openZukan(); });
+let detail = null;
+$('zbody').addEventListener('click', e => {
+  const b = e.target.closest('[data-item]'); if (!b) return;
+  detail = ALL.find(i => i.id === b.dataset.item);
+  $('dArt').innerHTML = ART[detail.id];
+  $('dEra').textContent = detail.era; $('dName').textContent = detail.name;
+  $('dYear').textContent = detail.y; $('dTrivia').textContent = '💡 ' + detail.tv;
+  $('detailOver').classList.add('on'); sfx.pick();
+});
+$('dSay').addEventListener('click', () => {
+  if (!detail) return;
+  const keep = [S.snd, S.voice]; S.snd = S.voice = true; speak(sayText(detail)); [S.snd, S.voice] = keep;
+});
+$('dClose').addEventListener('click', () => { hush(); $('detailOver').classList.remove('on'); });
+
+renderHome();
+})();
+</script>
+</body>
+</html>
