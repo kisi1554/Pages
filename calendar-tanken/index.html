@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>カレンダー たんけん</title>
+<style>
+  :root {
+    --bg: #fff9ee;
+    --ink: #3b3330;
+    --soft: #7a6c66;
+    --line: #eadfce;
+    --card: #ffffff;
+    --accent: #ff7a45;
+    --accent2: #2f9e8f;
+    --shadow: #e8d9c2;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  button {
+    font: inherit; color: inherit; cursor: pointer;
+    border: 0; background: none; padding: 0;
+  }
+  .screen { display: none; min-height: 100dvh; padding: max(12px, env(safe-area-inset-top)) 14px max(14px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; flex-direction: column; }
+  rt { font-size: .5em; }
+
+  /* ---------- 共通の ボタン ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    min-height: 56px; padding: 10px 22px;
+    border-radius: 18px; background: var(--card);
+    border: 3px solid var(--line); box-shadow: 0 5px 0 var(--shadow);
+    font-size: 20px; font-weight: 700;
+    transition: transform .08s;
+  }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--shadow); }
+  .btn.main { background: var(--accent); border-color: #e2602c; color: #fff; box-shadow: 0 5px 0 #c74f1f; }
+  .icon-btn {
+    min-width: 56px; min-height: 52px; border-radius: 16px; background: var(--card);
+    border: 3px solid var(--line); box-shadow: 0 4px 0 var(--shadow);
+    font-size: 24px; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1;
+  }
+  .icon-btn small { font-size: 11px; font-weight: 700; margin-top: 2px; }
+  .icon-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--shadow); }
+
+  /* ---------- タイトル ---------- */
+  #title { align-items: center; gap: 14px; }
+  .top-bar { width: 100%; max-width: 860px; display: flex; justify-content: space-between; align-items: center; }
+  .stamp-count { font-weight: 700; font-size: 18px; background: #fff; border: 3px solid var(--line); border-radius: 999px; padding: 8px 16px; }
+  .logo { text-align: center; margin-top: 4px; }
+  .logo .big { display: inline-flex; flex-direction: column; width: 84px; border-radius: 14px; overflow: hidden; border: 3px solid #e2602c; background: #fff; box-shadow: 0 5px 0 var(--shadow); }
+  .logo .big b { background: #e2602c; color: #fff; font-size: 16px; padding: 3px 0; }
+  .logo .big span { font-size: 40px; font-weight: 900; line-height: 1.25; }
+  .logo h1 { margin: 6px 0 0; font-size: clamp(30px, 8vw, 46px); letter-spacing: .04em; color: #e2602c; }
+  .today-chip {
+    display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+    padding: 10px 18px; border-radius: 999px; background: #fff; border: 3px solid var(--line);
+    font-size: 20px; font-weight: 700;
+  }
+  .wd-pill { display: inline-block; padding: 2px 12px; border-radius: 999px; color: #fff; }
+  .levels { width: 100%; max-width: 860px; display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 640px) { .levels { grid-template-columns: 1fr 1fr; } }
+  .lv {
+    display: flex; align-items: center; gap: 14px; text-align: left;
+    padding: 14px 16px; min-height: 92px; border-radius: 22px; background: #fff;
+    border: 3px solid var(--line); box-shadow: 0 6px 0 var(--shadow);
+  }
+  .lv:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--shadow); }
+  .lv .em { font-size: 40px; width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; flex: none; }
+  .lv .badge { display: inline-block; font-size: 13px; font-weight: 800; color: #fff; background: #b58b6a; border-radius: 999px; padding: 1px 10px; }
+  .lv .nm { font-size: 21px; font-weight: 800; display: block; }
+  .lv .ds { font-size: 15px; color: var(--soft); display: block; margin-top: 2px; }
+  .lv .st { font-size: 18px; display: block; margin-top: 2px; letter-spacing: 2px; }
+  .switch {
+    display: flex; align-items: center; gap: 12px; padding: 10px 18px; min-height: 60px;
+    border-radius: 18px; background: #fff; border: 3px solid var(--line); font-size: 18px; font-weight: 700;
+  }
+  .switch .knob { width: 58px; height: 32px; border-radius: 999px; background: #d9cfc2; position: relative; transition: background .2s; flex: none; }
+  .switch .knob::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff; transition: left .2s; }
+  .switch[aria-pressed="true"] .knob { background: var(--accent2); }
+  .switch[aria-pressed="true"] .knob::after { left: 29px; }
+  .note { font-size: 14px; color: var(--soft); text-align: center; margin: 0; }
+
+  /* ---------- ゲーム ---------- */
+  #game { gap: 10px; }
+  .g-head { display: flex; align-items: center; gap: 10px; }
+  .g-head .lvname { font-weight: 800; font-size: 18px; flex: 1; text-align: center; }
+  .dots { display: flex; gap: 6px; justify-content: center; margin-top: 4px; }
+  .dots i { width: 16px; height: 16px; border-radius: 50%; background: #eadfce; display: block; }
+  .dots i.done { background: #ffb703; }
+  .dots i.now { background: #fff; border: 3px solid var(--accent); }
+  .play { flex: 1; display: grid; grid-template-areas: "q" "board" "panel"; gap: 10px; align-content: start; width: 100%; max-width: 1100px; margin: 0 auto; }
+  .q-card { grid-area: q; }
+  .board { grid-area: board; }
+  #panel { grid-area: panel; }
+  @media (orientation: landscape) and (min-width: 700px) {
+    .play { grid-template-columns: 1.25fr 1fr; grid-template-rows: auto 1fr; grid-template-areas: "board q" "board panel"; align-items: start; gap: 14px; }
+  }
+  .board { background: #fff; border: 3px solid var(--line); border-radius: 24px; padding: 12px; box-shadow: 0 6px 0 var(--shadow); }
+
+  .q-card { background: #fff; border: 3px solid var(--line); border-radius: 24px; padding: 10px 14px; text-align: center; box-shadow: 0 6px 0 var(--shadow); }
+  .q-sub { font-size: 17px; color: var(--soft); font-weight: 700; min-height: 1.2em; }
+  .q-text { font-size: clamp(24px, 6.4vw, 34px); font-weight: 800; margin-top: 4px; line-height: 1.35; }
+  .q-help { font-size: 17px; margin-top: 8px; color: #e2602c; font-weight: 700; }
+  .q-help:empty { display: none; }
+
+  /* カレンダー */
+  .cal-head { display: flex; align-items: baseline; justify-content: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+  .cal-head .mon { font-size: 28px; font-weight: 800; }
+  .cal-head .yr { font-size: 16px; color: var(--soft); font-weight: 700; }
+  .cal-head .sea { font-size: 18px; font-weight: 700; padding: 2px 12px; border-radius: 999px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .wh {
+    text-align: center; font-weight: 800; font-size: clamp(14px, 3.6vw, 18px); color: #fff;
+    border-radius: 10px; padding: 6px 0; transition: transform .2s, box-shadow .2s;
+  }
+  .wh.glow { transform: scale(1.12); box-shadow: 0 0 0 4px #ffd43b; }
+  .cell {
+    position: relative; aspect-ratio: 1 / .92; border-radius: 12px; background: #fbf6ee;
+    border: 2px solid #efe5d6; display: flex; align-items: flex-start; justify-content: flex-start;
+    padding: 3px 5px; font-weight: 800; font-size: clamp(15px, 4vw, 22px); overflow: visible;
+  }
+  .cell.empty { background: transparent; border-color: transparent; }
+  .cell .num { position: relative; z-index: 1; }
+  .cell.today { background: #fff1c2; border-color: #ffc94d; }
+  .cell .tag { position: absolute; left: 0; right: 0; bottom: 2px; text-align: center; font-size: clamp(9px, 2.4vw, 12px); color: #c77c00; font-weight: 800; }
+  .cell.path { background: #e6f7f3; border-color: #8fd3c5; }
+  .cell.target { background: #ffe3d6; border-color: #ff9a6b; }
+  .cell.next { animation: pulse 0.9s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(47,158,143,.0); } 50% { box-shadow: 0 0 0 5px rgba(47,158,143,.55); } }
+  .cell .koma { position: absolute; right: -2px; bottom: -4px; font-size: clamp(22px, 6vw, 34px); z-index: 3; line-height: 1; filter: drop-shadow(0 2px 0 rgba(0,0,0,.15)); }
+  .cell .koma.hop { animation: hop .32s ease-out; }
+  @keyframes hop { 0% { transform: translateY(0) scale(1); } 45% { transform: translateY(-14px) scale(1.1); } 100% { transform: translateY(0) scale(1); } }
+  .cell .stamp { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(20px, 5.4vw, 30px); z-index: 2; opacity: .92; }
+  .cell .stamp.pop { animation: stamp .45s ease-out; }
+  @keyframes stamp { 0% { transform: scale(2.4) rotate(-20deg); opacity: 0; } 70% { transform: scale(.9) rotate(4deg); opacity: 1; } 100% { transform: scale(1) rotate(0); } }
+  .cell .cnt { position: absolute; top: -10px; right: -6px; z-index: 4; background: var(--accent2); color: #fff; font-size: 13px; border-radius: 999px; padding: 1px 7px; }
+  .cell.same { box-shadow: 0 0 0 4px #ffd43b inset; }
+
+  /* ようび の ならび（レベル1） */
+  .strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 6px 0 10px; }
+  .chip {
+    border-radius: 16px; color: #fff; font-weight: 800; font-size: clamp(16px, 4.6vw, 26px);
+    min-height: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: transform .15s, box-shadow .15s; position: relative;
+  }
+  .chip small { font-size: .5em; opacity: .9; }
+  .chip.ref { box-shadow: 0 0 0 4px #3b3330; }
+  .chip.hide { background: #e6ddd0 !important; color: #8a7d74; }
+  .chip.sing { transform: translateY(-10px) scale(1.12); box-shadow: 0 8px 0 rgba(0,0,0,.12); }
+  .loop-note { text-align: center; font-size: 15px; color: var(--soft); font-weight: 700; }
+  .song-btn { display: flex; margin: 10px auto 2px; }
+
+  /* 月の ならび（レベル4） */
+  .months { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .mt {
+    position: relative; min-height: 76px; border-radius: 16px; background: #fbf6ee; border: 3px solid #efe5d6;
+    font-weight: 800; font-size: clamp(18px, 4.6vw, 24px); display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transition: background .3s;
+  }
+  .mt .ev { font-size: 26px; min-height: 30px; line-height: 1.1; }
+  .mt.now { border-color: #ffc94d; background: #fff1c2; }
+  .mt .nowtag { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 12px; background: #ffc94d; border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+  .mt.pick:active { transform: scale(.96); }
+  .mt.glow { box-shadow: 0 0 0 4px #ffd43b; }
+
+  /* こたえ ボタン */
+  .answers { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .answers.three { grid-template-columns: repeat(3, 1fr); }
+  .answers.two { grid-template-columns: repeat(2, 1fr); }
+  .ans {
+    min-height: 68px; border-radius: 18px; color: #fff; font-weight: 800; font-size: clamp(18px, 4.6vw, 24px);
+    box-shadow: 0 5px 0 rgba(0,0,0,.18); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15;
+  }
+  .ans small { font-size: .62em; }
+  .ans:active { transform: translateY(4px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
+  .ans.off { opacity: .35; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 20%,60% { transform: translateX(-8px); } 40%,80% { transform: translateX(8px); } }
+  .steps { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .steps i { width: 34px; height: 34px; border-radius: 50%; border: 3px dashed #8fd3c5; display: grid; place-items: center; font-style: normal; font-weight: 800; font-size: 16px; color: #fff; }
+  .steps i.on { background: var(--accent2); border: 3px solid var(--accent2); }
+  .walk-msg { text-align: center; font-size: 19px; font-weight: 800; color: var(--accent2); }
+
+  /* ほめる */
+  .praise {
+    position: fixed; left: 50%; top: 38%; transform: translate(-50%, -50%) scale(.4); opacity: 0;
+    background: #fff; border: 4px solid #ffb703; border-radius: 28px; padding: 18px 28px;
+    font-size: clamp(30px, 8vw, 46px); font-weight: 900; color: #e2602c; pointer-events: none; z-index: 50;
+    box-shadow: 0 10px 0 rgba(0,0,0,.08); white-space: nowrap; transition: transform .25s cubic-bezier(.3,1.6,.6,1), opacity .2s;
+  }
+  .praise.on { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+  .tip {
+    position: fixed; inset: 0; background: rgba(59,51,48,.35); display: none; align-items: center; justify-content: center; z-index: 40; padding: 16px;
+  }
+  .tip.on { display: flex; }
+  .tip .box { background: #fff; border-radius: 28px; padding: 22px; max-width: 460px; width: 100%; text-align: center; border: 4px solid #ffd43b; }
+  .tip .box .t1 { font-size: 26px; font-weight: 900; color: #e2602c; }
+  .tip .box .t2 { font-size: 19px; font-weight: 700; margin: 10px 0 16px; line-height: 1.6; }
+  .confetti { position: fixed; top: -40px; z-index: 60; pointer-events: none; font-size: 26px; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+
+  /* けっか */
+  #result { align-items: center; justify-content: center; gap: 16px; text-align: center; }
+  #result .r-title { font-size: clamp(34px, 9vw, 52px); font-weight: 900; color: #e2602c; }
+  #result .r-stars { font-size: 56px; letter-spacing: 6px; }
+  #result .r-stamps { font-size: 34px; background: #fff; border: 3px solid var(--line); border-radius: 22px; padding: 10px 18px; min-height: 64px; }
+  #result .r-msg { font-size: 20px; font-weight: 700; }
+  .r-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  @media (orientation: portrait) { .cell { aspect-ratio: 1 / .8; } .mt { min-height: 64px; } }
+  @media (orientation: landscape) and (min-width: 900px) and (min-height: 600px) {
+    .chip { min-height: 130px; font-size: 34px; border-radius: 22px; }
+    .strip { gap: 10px; margin: 20px 0; }
+    .loop-note { font-size: 19px; }
+    .mt { min-height: 120px; font-size: 30px; }
+    .mt .ev { font-size: 40px; min-height: 46px; }
+    .months { gap: 12px; }
+    .cell { font-size: 24px; }
+    .ans { min-height: 92px; font-size: 28px; }
+    .answers { gap: 12px; }
+    .walk-msg { font-size: 22px; }
+    .q-text { font-size: 36px; }
+    .q-card { padding: 18px 16px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section id="title" class="screen on">
+  <div class="top-bar">
+    <span class="stamp-count" id="totalStamps">🌟 0</span>
+    <button class="icon-btn snd" type="button" aria-label="おと"></button>
+  </div>
+  <div class="logo">
+    <div class="big" id="logoCal"></div>
+    <h1>カレンダー たんけん</h1>
+  </div>
+  <div class="today-chip" id="todayChip"></div>
+  <div class="levels" id="levels"></div>
+  <button class="switch" id="realSw" type="button" aria-pressed="false">
+    <span class="knob"></span><span>ほんとうの「きょう」から はじめる</span>
+  </button>
+  <p class="note">レベル2〜4で、こんげつ と きょうの ひづけを つかうよ</p>
+</section>
+
+<!-- ゲーム -->
+<section id="game" class="screen">
+  <div class="g-head">
+    <button class="icon-btn" id="backBtn" type="button" aria-label="もどる">🏠<small>もどる</small></button>
+    <div class="lvname"><span id="lvName"></span><div class="dots" id="dots"></div></div>
+    <button class="icon-btn snd" type="button" aria-label="おと"></button>
+  </div>
+  <div class="play">
+    <div class="board" id="board"></div>
+    <div class="q-card">
+      <div class="q-sub" id="qSub"></div>
+      <div class="q-text" id="qText"></div>
+      <div class="q-help" id="qHelp"></div>
+    </div>
+    <div id="panel"></div>
+  </div>
+</section>
+
+<!-- けっか -->
+<section id="result" class="screen">
+  <div class="r-title" id="rTitle">よくできました！</div>
+  <div class="r-stars" id="rStars"></div>
+  <div class="r-stamps" id="rStamps"></div>
+  <div class="r-msg" id="rMsg"></div>
+  <div class="r-btns">
+    <button class="btn main" id="againBtn" type="button">🔁 もういちど</button>
+    <button class="btn" id="homeBtn" type="button">🏠 レベルを えらぶ</button>
+  </div>
+</section>
+
+<div class="praise" id="praise"></div>
+<div class="tip" id="tip"><div class="box"><div class="t1" id="tipT1"></div><div class="t2" id="tipT2"></div><button class="btn main" id="tipBtn" type="button">つぎへ ▶</button></div></div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const rnd = n => Math.floor(Math.random() * n);
+const pick = a => a[rnd(a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- データ ---------- */
+// げつ から はじまる ならび（0=げつ … 6=にち）
+const WD = [
+  { s: "げつ", f: "げつようび", c: "#e8a800" },
+  { s: "か",   f: "かようび",   c: "#e5484d" },
+  { s: "すい", f: "すいようび", c: "#2f80ed" },
+  { s: "もく", f: "もくようび", c: "#27a35a" },
+  { s: "きん", f: "きんようび", c: "#f08c00" },
+  { s: "ど",   f: "どようび",   c: "#7c5cd6" },
+  { s: "にち", f: "にちようび", c: "#e64980" },
+];
+const wdOf = (y, m, d) => (new Date(y, m, d).getDay() + 6) % 7;
+const daysIn = (y, m) => new Date(y, m + 1, 0).getDate();
+
+const SEASONS = [
+  { n: "はる", e: "🌸", c: "#ff8fb1", t: "#ffe6ee" },
+  { n: "なつ", e: "🌻", c: "#f59f00", t: "#fff3cc" },
+  { n: "あき", e: "🍁", c: "#e8590c", t: "#ffe8d9" },
+  { n: "ふゆ", e: "⛄", c: "#339af0", t: "#e0f0ff" },
+];
+const seasonOf = m => [3, 3, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3][m]; // m: 0〜11
+const EVENTS = [
+  { m: 0,  n: "おしょうがつ", e: "🎍", core: true },
+  { m: 1,  n: "せつぶん",     e: "👹" },
+  { m: 2,  n: "ひなまつり",   e: "🎎", core: true },
+  { m: 3,  n: "おはなみ",     e: "🌸" },
+  { m: 4,  n: "こどものひ",   e: "🎏", core: true },
+  { m: 6,  n: "たなばた",     e: "🎋", core: true },
+  { m: 8,  n: "おつきみ",     e: "🎑" },
+  { m: 9,  n: "ハロウィン",   e: "🎃" },
+  { m: 10, n: "しちごさん",   e: "🍬" },
+  { m: 11, n: "クリスマス",   e: "🎄", core: true },
+];
+const STAMPS = ["⭐", "🌸", "🍎", "🐾", "🎈", "🍓", "🌈", "🚃", "🐣", "🍀"];
+const PRAISE = ["やったね！", "すごい！", "せいかい！", "ばっちり！", "よくできたね！", "てんさい！"];
+const LEVELS = [
+  { e: "🎵", nm: "ようびの じゅんばん", ds: "げつ → にち の ならび", bg: "#fff3cc" },
+  { e: "🐥", nm: "きのう・あした", ds: "あさって・おととい も", bg: "#ddf5e6" },
+  { e: "🚶", nm: "○にち あと・まえ", ds: "マスを すすんで かぞえよう", bg: "#e0edff" },
+  { e: "🎎", nm: "つき と きせつ", ds: "ぎょうじ は なんがつ？", bg: "#ffe3ef" },
+];
+const QN = 5; // 1かい の もんだい の かず
+
+/* ---------- ほぞん ---------- */
+const KEY = "calendar-tanken-v1";
+let SAVE = { sound: true, real: false, stamps: 0, best: {} };
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) SAVE = Object.assign(SAVE, s); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch (e) {} }
+
+/* ---------- おと（WebAudio の ごうせいおん） ---------- */
+let AC = null;
+function ac() {
+  if (!SAVE.sound) return null;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+  } catch (e) { return null; }
+  return AC;
+}
+function tone(f, t = 0, d = .18, type = "triangle", v = .22) {
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), s = a.currentTime + t;
+  o.type = type; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, s);
+  g.gain.exponentialRampToValueAtTime(v, s + .02);
+  g.gain.exponentialRampToValueAtTime(0.0001, s + d);
+  o.connect(g); g.connect(a.destination); o.start(s); o.stop(s + d + .05);
+}
+const SND = {
+  tap() { tone(660, 0, .08, "sine", .15); },
+  step(i) { tone([523, 587, 659, 698, 784, 880, 988, 1047, 1175, 1319, 1397, 1568, 1760, 1976][i % 14], 0, .16, "triangle", .2); },
+  ok() { [784, 988, 1175, 1568].forEach((f, i) => tone(f, i * .08, .22, "triangle", .2)); },
+  ng() { tone(330, 0, .16, "square", .08); tone(262, .14, .22, "square", .08); },
+  stamp() { tone(180, 0, .12, "sine", .3); tone(1320, .05, .1, "triangle", .12); },
+  fan() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, i * .13, .28, "triangle", .2)); },
+};
+// ようびの うた（げつ〜にち を じゅんばんに ひからせる）
+const SONG = [[523, 659], [784], [659, 784], [880, 784], [698, 880], [784], [1047, 1047]];
+let songTimers = [];
+function playSong(onDay) {
+  songTimers.forEach(clearTimeout); songTimers = [];
+  let t = 0;
+  SONG.forEach((notes, i) => {
+    songTimers.push(setTimeout(() => onDay(i), t * 1000));
+    const nd = .34 / notes.length;
+    notes.forEach((f, j) => tone(f, t + j * nd, nd + .12, "triangle", .2));
+    t += .48;
+  });
+  songTimers.push(setTimeout(() => onDay(-1), t * 1000 + 150));
+}
+
+function drawSnd() {
+  document.querySelectorAll(".snd").forEach(b => {
+    b.innerHTML = SAVE.sound ? "🔊<small>オン</small>" : "🔇<small>オフ</small>";
+  });
+}
+document.querySelectorAll(".snd").forEach(b => b.onclick = () => { SAVE.sound = !SAVE.sound; save(); drawSnd(); SND.tap(); });
+
+/* ---------- がめん ---------- */
+function show(id) { document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id)); window.scrollTo(0, 0); }
+
+function drawTitle() {
+  const n = new Date(), w = WD[wdOf(n.getFullYear(), n.getMonth(), n.getDate())];
+  $("#logoCal").innerHTML = `<b>${n.getMonth() + 1}がつ</b><span>${n.getDate()}</span>`;
+  $("#todayChip").innerHTML = `きょうは ${n.getMonth() + 1}がつ ${n.getDate()}にち <span class="wd-pill" style="background:${w.c}">${w.f}</span>`;
+  $("#totalStamps").textContent = `🌟 スタンプ ${SAVE.stamps}こ`;
+  $("#levels").innerHTML = LEVELS.map((L, i) => {
+    const b = SAVE.best[i] || 0;
+    return `<button class="lv" type="button" data-lv="${i}">
+      <span class="em" style="background:${L.bg}">${L.e}</span>
+      <span><span class="badge">レベル${i + 1}</span><span class="nm">${L.nm}</span><span class="ds">${L.ds}</span>
+      <span class="st">${"⭐".repeat(b)}${"☆".repeat(3 - b)}</span></span></button>`;
+  }).join("");
+  document.querySelectorAll(".lv").forEach(b => b.onclick = () => { SND.tap(); start(+b.dataset.lv); });
+  $("#realSw").setAttribute("aria-pressed", SAVE.real ? "true" : "false");
+}
+$("#realSw").onclick = () => { SAVE.real = !SAVE.real; save(); SND.tap(); drawTitle(); };
+
+/* ---------- ゲームの すすみかた ---------- */
+let G = null;
+let busy = false;
+
+function start(lv) {
+  const now = new Date();
+  G = { lv, qi: 0, miss: 0, qs: [], stamps: [], real: SAVE.real && lv > 0 };
+  G.y = now.getFullYear();
+  if (lv === 1 || lv === 2) {
+    G.m = G.real ? now.getMonth() : rnd(12);
+    G.today = G.real ? now.getDate() : 0;
+    G.qs = makeDayQs(lv);
+    G.marks = {}; // ひづけ → スタンプ
+  } else if (lv === 3) {
+    G.qs = makeMonthQs();
+    G.marks = {}; // つき → {e, season}
+  } else {
+    G.qs = makeWeekQs();
+  }
+  $("#lvName").textContent = LEVELS[lv].nm;
+  show("game");
+  if (lv === 0) {
+    // さいしょに ようびの うた
+    drawQuestion(true);
+  } else drawQuestion();
+}
+
+/* レベル1: ようびの じゅんばん */
+function makeWeekQs() {
+  const refs = shuffle([0, 1, 2, 3, 4, 5, 6]).slice(0, QN);
+  // かならず 1もん は「にち の つぎ は げつ」
+  if (!refs.includes(6)) refs[rnd(QN)] = 6;
+  return refs.map((r, i) => {
+    const prev = i % 2 === 1 && r !== 6;
+    const ans = prev ? (r + 6) % 7 : (r + 1) % 7;
+    const others = shuffle([0, 1, 2, 3, 4, 5, 6].filter(x => x !== ans && x !== r)).slice(0, 2);
+    return { kind: "week", ref: r, ans, prev, choices: shuffle([ans, ...others]) };
+  });
+}
+
+/* レベル2・3: カレンダーの うえを すすむ */
+function makeDayQs(lv) {
+  const dim = daysIn(G.y, G.m);
+  const L2 = [1, -1, 2, -2];
+  const L3 = [3, 4, 5, 6, 8, 9, 10, -3, -4, -5, -6];
+  const out = [];
+  let used = new Set();
+  for (let i = 0; i < QN; i++) {
+    let pool = lv === 1 ? L2 : L3;
+    if (lv === 2 && i === 2) pool = [7, -7];   // 1しゅうかん に きづかせる
+    if (lv === 2 && i === 4) pool = [7, -7, 14];
+    let cands = shuffle(pool.filter(n => !used.has(n)));
+    if (!cands.length) cands = shuffle(pool);
+    let n = null, today = G.today;
+    for (const c of cands) {
+      if (G.real) { if (today + c >= 1 && today + c <= dim) { n = c; break; } }
+      else { n = c; break; }
+    }
+    if (n === null) { // ほんとうの きょう で とどかない とき
+      const all = shuffle(pool.concat(lv === 1 ? L2 : L3)).filter(c => today + c >= 1 && today + c <= dim);
+      n = all.length ? all[0] : (today + 1 <= dim ? 1 : -1);
+    }
+    if (!G.real) {
+      const lo = Math.max(1, 1 - n), hi = Math.min(dim, dim - n);
+      today = lo + rnd(hi - lo + 1);
+    }
+    used.add(n);
+    out.push({ kind: "day", n, today, target: today + n });
+  }
+  return out;
+}
+
+/* レベル4: つき と きせつ */
+function makeMonthQs() {
+  const now = new Date();
+  const qs = [];
+  const evPool = shuffle(EVENTS.filter(e => e.core)).concat(shuffle(EVENTS.filter(e => !e.core)));
+  qs.push({ kind: "event", ev: evPool[0] }, { kind: "event", ev: evPool[1] });
+  if (G.real) qs.push({ kind: "season", m: now.getMonth(), nowQ: true });
+  const sm = shuffle([0, 1, 2, 3].map(s => shuffle([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].filter(m => seasonOf(m) === s))[0]));
+  while (qs.length < 4) qs.push({ kind: "season", m: sm.pop() });
+  const nm = rnd(12);
+  qs.push({ kind: "nextm", m: nm });
+  const q = shuffle(qs);
+  return q.slice(0, QN);
+}
+
+/* ---------- がめんを かく ---------- */
+function drawDots() {
+  $("#dots").innerHTML = Array.from({ length: QN }, (_, i) => `<i class="${i < G.qi ? "done" : i === G.qi ? "now" : ""}"></i>`).join("");
+}
+
+function drawQuestion(withSong) {
+  busy = false;
+  const q = G.qs[G.qi];
+  q.wrong = 0;
+  drawDots();
+  $("#qHelp").textContent = "";
+  if (q.kind === "week") drawWeek(q, withSong);
+  else if (q.kind === "day") drawDay(q);
+  else drawMonthQ(q);
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+/* --- レベル1 --- */
+function drawWeek(q, withSong) {
+  const board = $("#board");
+  board.innerHTML = `<div class="strip" id="strip">${WD.map((w, i) => {
+    const hide = i === q.ans;
+    return `<div class="chip${hide ? " hide" : ""}${i === q.ref ? " ref" : ""}" data-i="${i}" style="background:${w.c}">${hide ? "？" : w.s}</div>`;
+  }).join("")}</div>
+  <div class="loop-note">にち の つぎは また げつ に もどるよ 🔁</div>
+  <button class="btn song-btn" id="songBtn" type="button">🎵 ようびの うた</button>`;
+  $("#qSub").textContent = `${WD[q.ref].f} の…`;
+  $("#qText").textContent = q.prev ? "まえは なんようび？" : "つぎは なんようび？";
+  const panel = $("#panel");
+  panel.innerHTML = `<div class="answers three">${q.choices.map(c =>
+    `<button class="ans" type="button" data-a="${c}" style="background:${WD[c].c}">${WD[c].s}<small>ようび</small></button>`).join("")}</div>`;
+  panel.querySelectorAll(".ans").forEach(b => b.onclick = () => answerWeek(q, +b.dataset.a, b));
+  $("#songBtn").onclick = () => sing(false);
+  if (withSong) setTimeout(() => sing(false), 300);
+}
+function sing(reveal) {
+  playSong(i => {
+    document.querySelectorAll("#strip .chip").forEach((c, j) => {
+      c.classList.toggle("sing", j === i);
+      if (reveal && j === i && c.classList.contains("hide")) { c.style.opacity = ".99"; c.textContent = WD[j].s; }
+    });
+    if (reveal && i === -1) { const q = G.qs[G.qi]; const c = document.querySelector(`#strip .chip[data-i="${q.ans}"]`); if (c && c.classList.contains("hide")) c.textContent = "？"; }
+  });
+}
+function answerWeek(q, a, btn) {
+  if (busy) return;
+  if (a === q.ans) {
+    busy = true;
+    const c = document.querySelector(`#strip .chip[data-i="${q.ans}"]`);
+    c.classList.remove("hide"); c.textContent = WD[q.ans].s;
+    c.innerHTML += `<span class="stamp pop" style="position:absolute;top:-14px;right:-6px;font-size:24px">⭐</span>`;
+    G.stamps.push("⭐");
+    good(() => next());
+  } else {
+    bad(q, btn);
+    if (q.wrong >= 2) { $("#qHelp").textContent = "うたで たしかめよう 🎵"; sing(false); }
+  }
+}
+
+/* --- レベル2・3 --- */
+function drawDay(q) {
+  const y = G.y, m = G.m, dim = daysIn(y, m), off = wdOf(y, m, 1);
+  const s = SEASONS[seasonOf(m)];
+  let h = `<div class="cal-head"><span class="yr">${y}ねん</span><span class="mon">${m + 1}がつ</span>
+    <span class="sea" style="background:${s.t};color:${s.c}">${s.e} ${s.n}</span></div><div class="cal" id="cal">`;
+  h += WD.map((w, i) => `<div class="wh" data-w="${i}" style="background:${w.c}">${w.s}</div>`).join("");
+  for (let i = 0; i < off; i++) h += `<div class="cell empty"></div>`;
+  for (let d = 1; d <= dim; d++) {
+    const mk = G.marks[d];
+    h += `<div class="cell${d === q.today ? " today" : ""}" data-d="${d}"><span class="num" style="color:${WD[wdOf(y, m, d)].c}">${d}</span>${d === q.today ? `<span class="tag">きょう</span>` : ""}${mk ? `<span class="stamp">${mk}</span>` : ""}</div>`;
+  }
+  $("#board").innerHTML = h + "</div>";
+  q.cur = q.today; q.steps = 0; q.phase = "walk"; q.idle = null;
+  putKoma(q.today, false);
+  const tw = WD[wdOf(y, m, q.today)];
+  $("#qSub").innerHTML = `きょうは ${q.today}にち <span class="wd-pill" style="background:${tw.c}">${tw.f}</span>`;
+  $("#qText").textContent = `${dayWord(q.n)}は なんようび？`;
+  const back = q.n < 0, abs = Math.abs(q.n);
+  $("#panel").innerHTML = `<div class="walk-msg" id="walkMsg">🐥 マスを タップして ${back ? "もどろう ⬅" : "すすもう ➡"}</div>
+    <div class="steps" id="steps" style="margin-top:8px">${Array.from({ length: abs }, (_, i) => `<i>${i + 1}</i>`).join("")}</div>`;
+  document.querySelectorAll("#cal .cell[data-d]").forEach(c => c.onclick = () => tapCell(q, +c.dataset.d, c));
+  armIdle(q);
+}
+function dayWord(n) {
+  return { 1: "あした", "-1": "きのう", 2: "あさって", "-2": "おととい" }[n] || (n > 0 ? `${n}にち あと` : `${-n}にち まえ`);
+}
+function cellOf(d) { return document.querySelector(`#cal .cell[data-d="${d}"]`); }
+function putKoma(d, hop) {
+  document.querySelectorAll("#cal .koma").forEach(k => k.remove());
+  const c = cellOf(d); if (!c) return;
+  c.insertAdjacentHTML("beforeend", `<span class="koma${hop ? " hop" : ""}">🐥</span>`);
+}
+function armIdle(q) {
+  clearTimeout(q.idle);
+  document.querySelectorAll("#cal .next").forEach(c => c.classList.remove("next"));
+  if (q.phase !== "walk") return;
+  q.idle = setTimeout(() => { const c = cellOf(q.cur + Math.sign(q.n)); if (c) c.classList.add("next"); }, 5000);
+}
+function tapCell(q, d, el) {
+  if (q.phase !== "walk" || busy) return;
+  const want = q.cur + Math.sign(q.n);
+  if (d !== want) {
+    if (d === q.cur) return;
+    SND.ng();
+    el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake");
+    const c = cellOf(want); if (c) c.classList.add("next");
+    $("#qHelp").textContent = `となりの マスに ${q.n < 0 ? "もどろう" : "すすもう"}（ひかってる マス）`;
+    return;
+  }
+  $("#qHelp").textContent = "";
+  q.steps++; q.cur = d;
+  SND.step(q.steps - 1);
+  el.classList.add("path");
+  el.insertAdjacentHTML("beforeend", `<span class="cnt">${q.steps}</span>`);
+  putKoma(d, true);
+  document.querySelectorAll("#steps i")[q.steps - 1].classList.add("on");
+  if (q.steps === Math.abs(q.n)) {
+    q.phase = "answer"; clearTimeout(q.idle);
+    document.querySelectorAll("#cal .next").forEach(c => c.classList.remove("next"));
+    el.classList.remove("path"); el.classList.add("target");
+    setTimeout(() => askWeekday(q), 350);
+  } else armIdle(q);
+}
+function askWeekday(q) {
+  $("#walkMsg").textContent = `🎯 ついた！ ${q.target}にち は なんようび？`;
+  const p = $("#panel");
+  p.insertAdjacentHTML("beforeend", `<div class="answers" style="margin-top:12px">${WD.map((w, i) =>
+    `<button class="ans" type="button" data-a="${i}" style="background:${w.c}">${w.s}<small>ようび</small></button>`).join("")}</div>`);
+  p.querySelectorAll(".ans").forEach(b => b.onclick = () => answerDay(q, +b.dataset.a, b));
+  const box = p.querySelector(".answers").getBoundingClientRect();
+  if (box.bottom > innerHeight) window.scrollBy({ top: box.bottom - innerHeight + 16, behavior: "smooth" });
+}
+function answerDay(q, a, btn) {
+  if (busy) return;
+  const ans = wdOf(G.y, G.m, q.target);
+  if (a === ans) {
+    busy = true;
+    const e = pick(STAMPS);
+    G.marks[q.target] = e; G.stamps.push(e);
+    const c = cellOf(q.target);
+    c.querySelectorAll(".koma").forEach(k => k.remove());
+    c.insertAdjacentHTML("beforeend", `<span class="stamp pop">${e}</span>`);
+    setTimeout(SND.stamp, 120);
+    const week = Math.abs(q.n) % 7 === 0;
+    if (week) {
+      cellOf(q.today).classList.add("same"); c.classList.add("same");
+      document.querySelector(`#cal .wh[data-w="${ans}"]`).classList.add("glow");
+      good(() => tip(q.n === 14 || q.n === -14 ? "2しゅうかん でも おなじ！" : "おなじ ようび！",
+        `${Math.abs(q.n)}にち ${q.n > 0 ? "あと" : "まえ"} は、きょうと おなじ<br><b style="color:${WD[ans].c}">${WD[ans].f}</b>。<br>7にち で 1しゅうかん。<br>カレンダーの おなじ たての れつ だね！`, next), true);
+    } else good(() => next());
+  } else {
+    bad(q, btn);
+    if (q.wrong >= 2) {
+      document.querySelector(`#cal .wh[data-w="${ans}"]`).classList.add("glow");
+      $("#qHelp").textContent = "⬆ マスの うえの ようびを みてみよう";
+    }
+  }
+}
+
+/* --- レベル4 --- */
+function drawMonths(q) {
+  const now = new Date();
+  $("#board").innerHTML = `<div class="cal-head"><span class="mon">1ねん の つき</span></div><div class="months" id="months">${
+    Array.from({ length: 12 }, (_, m) => {
+      const mk = G.marks[m] || {};
+      const sea = mk.season != null ? SEASONS[mk.season] : null;
+      const isNow = G.real && m === now.getMonth();
+      return `<button class="mt${isNow ? " now" : ""}" type="button" data-m="${m}" style="${sea ? `background:${sea.t};border-color:${sea.c}` : ""}">
+        ${isNow ? `<span class="nowtag">いま</span>` : ""}<span class="ev">${mk.e || (sea ? sea.e : "")}</span>${m + 1}がつ</button>`;
+    }).join("")}</div>`;
+}
+function drawMonthQ(q) {
+  drawMonths(q);
+  const panel = $("#panel");
+  const tiles = document.querySelectorAll("#months .mt");
+  if (q.kind === "event") {
+    $("#qSub").textContent = `${q.ev.e} ${q.ev.n}`;
+    $("#qText").textContent = `${q.ev.n} は なんがつ？`;
+    panel.innerHTML = `<div class="walk-msg">👆 カレンダーの つきを タップ</div>`;
+    tiles.forEach(t => { t.classList.add("pick"); t.onclick = () => answerMonth(q, +t.dataset.m, t); });
+  } else if (q.kind === "nextm") {
+    $("#qSub").textContent = `${q.m + 1}がつ の…`;
+    $("#qText").textContent = "つぎは なんがつ？";
+    tiles[q.m].classList.add("glow");
+    panel.innerHTML = `<div class="walk-msg">👆 カレンダーの つきを タップ</div>`;
+    tiles.forEach(t => { t.classList.add("pick"); t.onclick = () => answerMonth(q, +t.dataset.m, t); });
+  } else {
+    $("#qSub").textContent = q.nowQ ? `いまは ${q.m + 1}がつ` : "";
+    $("#qText").textContent = q.nowQ ? "いまの きせつは？" : `${q.m + 1}がつ の きせつは？`;
+    tiles[q.m].classList.add("glow");
+    tiles.forEach(t => t.disabled = true);
+    panel.innerHTML = `<div class="answers two">${SEASONS.map((s, i) =>
+      `<button class="ans" type="button" data-a="${i}" style="background:${s.c}">${s.e}<br>${s.n}</button>`).join("")}</div>`;
+    panel.querySelectorAll(".ans").forEach(b => b.onclick = () => answerSeason(q, +b.dataset.a, b));
+  }
+}
+function answerMonth(q, m, el) {
+  if (busy) return;
+  const ans = q.kind === "event" ? q.ev.m : (q.m + 1) % 12;
+  if (m === ans) {
+    busy = true;
+    const e = q.kind === "event" ? q.ev.e : pick(STAMPS);
+    G.marks[m] = Object.assign(G.marks[m] || {}, { e }); G.stamps.push(e);
+    el.querySelector(".ev").innerHTML = `<span class="stamp pop" style="position:static;display:inline-block">${e}</span>`;
+    setTimeout(SND.stamp, 120);
+    if (q.kind === "nextm" && q.m === 11) good(() => tip("1がつに もどる！", "12がつ の つぎは<br>あたらしい 1ねん の <b>1がつ</b>。<br>🎍 おしょうがつ が くるよ！", next), true);
+    else good(() => next());
+  } else {
+    bad(q, el);
+    if (q.wrong >= 2) {
+      if (q.kind === "event") $("#qHelp").textContent = `ヒント: ${ans + 1}の かずの つき`;
+      else $("#qHelp").textContent = `ヒント: ${q.m + 1} の つぎの かず`;
+    }
+  }
+}
+function answerSeason(q, s, btn) {
+  if (busy) return;
+  const ans = seasonOf(q.m);
+  if (s === ans) {
+    busy = true;
+    // その きせつの つき を ぜんぶ いろづけ
+    for (let m = 0; m < 12; m++) if (seasonOf(m) === ans) G.marks[m] = Object.assign(G.marks[m] || {}, { season: ans });
+    G.stamps.push(SEASONS[ans].e);
+    drawMonths(q);
+    document.querySelectorAll("#months .mt").forEach(t => t.disabled = true);
+    SND.stamp();
+    const ms = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].filter(m => seasonOf(m) === ans).map(m => `${m + 1}`).join("・");
+    good(() => tip(`${SEASONS[ans].e} ${SEASONS[ans].n}！`, `${ms}がつ は <b style="color:${SEASONS[ans].c}">${SEASONS[ans].n}</b>。`, next), true);
+  } else {
+    bad(q, btn);
+    if (q.wrong >= 2) $("#qHelp").textContent = ["はる は 3・4・5がつ", "なつ は 6・7・8がつ", "あき は 9・10・11がつ", "ふゆ は 12・1・2がつ"][ans];
+  }
+}
+
+/* ---------- ほめる・まちがい ---------- */
+function good(after, slow) {
+  SND.ok();
+  const p = $("#praise");
+  p.textContent = pick(PRAISE);
+  p.classList.add("on");
+  confetti(10);
+  setTimeout(() => { p.classList.remove("on"); }, 900);
+  setTimeout(after, slow ? 1000 : 1300);
+}
+function bad(q, btn) {
+  q.wrong++; G.miss++;
+  SND.ng();
+  btn.classList.remove("shake"); void btn.offsetWidth; btn.classList.add("shake");
+  if (btn.classList.contains("ans")) btn.classList.add("off");
+  if (!$("#qHelp").textContent || q.wrong < 2) $("#qHelp").textContent = "おしい！ もういちど やってみよう";
+}
+function tip(t1, t2, after) {
+  $("#tipT1").textContent = t1;
+  $("#tipT2").innerHTML = t2;
+  $("#tip").classList.add("on");
+  $("#tipBtn").onclick = () => { SND.tap(); $("#tip").classList.remove("on"); after(); };
+}
+function confetti(n) {
+  const em = ["🎉", "⭐", "✨", "🌸", "🎈", "🟡", "🔷"];
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement("span");
+    s.className = "confetti"; s.textContent = pick(em);
+    s.style.left = Math.random() * 100 + "vw";
+    s.style.animationDuration = 1.6 + Math.random() * 1.4 + "s";
+    s.style.animationDelay = Math.random() * .3 + "s";
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 3500);
+  }
+}
+function next() {
+  G.qi++;
+  if (G.qi >= QN) finish();
+  else drawQuestion();
+}
+function finish() {
+  const stars = G.miss === 0 ? 3 : G.miss <= 3 ? 2 : 1;
+  SAVE.best[G.lv] = Math.max(SAVE.best[G.lv] || 0, stars);
+  SAVE.stamps += G.stamps.length;
+  save();
+  $("#rTitle").textContent = stars === 3 ? "パーフェクト！" : "よくできました！";
+  $("#rStars").textContent = "⭐".repeat(stars) + "☆".repeat(3 - stars);
+  $("#rStamps").textContent = G.stamps.join(" ");
+  $("#rMsg").textContent = stars === 3 ? "まちがい なし！ カレンダー はかせ だね！" :
+    stars === 2 ? "あと すこしで パーフェクト！" : "さいごまで できたね！ また ちょうせん しよう";
+  show("result");
+  SND.fan(); confetti(30);
+}
+
+$("#backBtn").onclick = () => { SND.tap(); songTimers.forEach(clearTimeout); $("#tip").classList.remove("on"); drawTitle(); show("title"); };
+$("#againBtn").onclick = () => { SND.tap(); start(G.lv); };
+$("#homeBtn").onclick = () => { SND.tap(); drawTitle(); show("title"); };
+
+drawSnd();
+drawTitle();
+</script>
+</body>
+</html>
