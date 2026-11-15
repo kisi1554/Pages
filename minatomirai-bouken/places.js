@@ -136,6 +136,7 @@
     const cups = window.Odekake ? window.Odekake.cups() : [];
     if (cups.length) { root.appendChild(el('div', 'tlabel', `🍜 マイカップヌードル（${cups.length}こ）`)); root.appendChild(window.Odekake.cupGrid()); }
     const row0 = el('div', 'brow'); row0.appendChild(btn('🛏️ へやの かざりつけ', 'sbig', myRoom)); row0.appendChild(btn('🐷 ちょきんばこ', 'sbig', () => piggy())); root.appendChild(row0);
+    root.appendChild(btn('✏️ くもん の しゅくだい（1まい 500えん）', 'sbig', () => api.onClose({ homework: true })));
     root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
     if (api.zukan) root.appendChild(btn('📖 ことば ずかん', 'sbig sub', () => api.zukan(root, home)));
     root.appendChild(btn('🖼️ しゃしんの アルバム（' + api.photos().length + 'まい）', 'sbig sub', () => album(true)));
@@ -218,22 +219,91 @@
     setTimeout(() => { sfx('star'); root.appendChild(el('p', 'desc', 'おはよう！ あさに なったよ ☀️')); root.appendChild(btn('🚪 そとへ でる', 'sbig', () => api.onClose({ rest: true, sleep: true }))); }, 2200);
   }
   // ================= おたんじょうび =================
+  // ================= 🎂 7がつ 29にち の だいパーティー =================
+  const GUESTS = [['👨', 'パパ', 'あおちゃん、おたんじょうび おめでとう！ きょうは パパも ずっと いっしょだよ'], ['👩', 'ママ', 'うまれて きてくれて ありがとう。だいすき だよ'],
+    ['👴', 'じいじ', 'おお、また おおきく なったなあ！'], ['👵', 'ばあば', 'おめでとう。ケーキ たのしみ だね'],
+    ['🧒', 'ゆうとくん', 'あおちゃん、おめでとう！ いっしょに あそぼう！'], ['👧', 'はなちゃん', 'おめでとう！ おてがみ かいて きたよ'], ['👦', 'そうたくん', 'おめでとう〜！ プレゼント もって きた！']];
+  const WISHES = ['🚄 でんしゃの うんてんしさん に なりたい', '🚀 うちゅう に いきたい', '🎹 ピアノ が じょうず に なりたい', '🏗️ ランドマークタワー みたいな たてもの を つくりたい', '😊 みんなが ずっと げんき で いますように'];
+  const vsay = (t, who) => { if (window.Voice) window.Voice.say(t, who); };
   function birthday() {
     const age = api.age || 5;
-    clear(`🎂 ${age}さい の おたんじょうび おめでとう！`, '2021ねん 7がつ 29にち うまれ ・ パパ と ママ と いっしょに おいわい', 'home');
-    const cake = el('div', 'cake', '<div class="candles"></div><i>🎂</i>'); root.appendChild(cake);
-    say('👩', 'ママ「ろうそくを ふーっと けしてね！（ろうそくを タップ）」');
-    let left = age;
-    for (let i = 0; i < age; i++) { const c = el('button', 'candle', '🕯️'); c.addEventListener('click', () => { if (c.classList.contains('off')) return; c.classList.add('off'); c.textContent = '💨'; left--; api.tone && api.tone(300, 0.2, 'sine', 0.04, 150); if (!left) party(); }); cake.firstChild.appendChild(c); }
-    const party = () => {
-      api.confetti && api.confetti(); [523, 523, 587, 523, 698, 659, 523, 523, 587, 523, 784, 698].forEach((f, i) => api.tone && api.tone(f, 0.28, 'triangle', 0.06, null, i * 0.3));
-      say('👨', 'パパ「おめでとう、あおちゃん！ プレゼントを ひとつ えらんでね 🎁」');
+    const step = (title) => { clear(`🎂 ${age}さい の おたんじょうび おめでとう！`, title, 'home party'); root.appendChild(el('div', 'pdeco', '🎈🎉🎊🎈🎁🎈🎊🎉🎈')); };
+    // 1. みんな が くる
+    step('2021ねん 7がつ 29にち うまれ ・ きょうは だいパーティー！');
+    const room = el('div', 'guests'); root.appendChild(room);
+    let gi = 0;
+    const nextGuest = () => {
+      if (gi >= GUESTS.length) { root.appendChild(btn('🎵 みんなで うたを うたう', 'sbig bday', song)); return; }
+      const [e, n, t] = GUESTS[gi++]; room.appendChild(el('span', 'gst', `<i>${e}</i><small>${n}</small>`)); say(e, `${n}「${t}」`); vsay(t, n === 'パパ' ? 'papa' : n === 'ママ' ? 'mama' : n === 'じいじ' ? 'grandpa' : n === 'ばあば' ? 'granny' : 'sister');
+      sfx('pick'); setTimeout(nextGuest, 1100);
+    };
+    say('🔔', 'ピンポーン！ おきゃくさん が きたよ'); setTimeout(nextGuest, 700);
+    // 2. うた（ハッピーバースデー の メロディ）
+    function song() {
+      step('みんなで うたおう 🎵');
+      const lines = ['ハッピー バースデー トゥー ユー', 'ハッピー バースデー トゥー ユー', 'ハッピー バースデー ディア あおちゃん', 'ハッピー バースデー トゥー ユー'];
+      const lyr = el('div', 'lyrics'); lines.forEach((l) => lyr.appendChild(el('p', '', l))); root.appendChild(lyr);
+      const N = [[392, 0.38], [392, 0.12], [440, 0.5], [392, 0.5], [523, 0.5], [494, 1], [392, 0.38], [392, 0.12], [440, 0.5], [392, 0.5], [587, 0.5], [523, 1], [392, 0.38], [392, 0.12], [784, 0.5], [659, 0.5], [523, 0.5], [494, 0.5], [440, 1], [698, 0.38], [698, 0.12], [659, 0.5], [523, 0.5], [587, 0.5], [523, 1.2]];
+      let t = 0; N.forEach(([f, d], i) => { api.tone && api.tone(f, d * 0.95, 'triangle', 0.07, null, t); const li = i < 6 ? 0 : i < 12 ? 1 : i < 19 ? 2 : 3; setTimeout(() => { lyr.querySelectorAll('p').forEach((p, k) => p.classList.toggle('on', k === li)); }, t * 1000); t += d * 0.9; });
+      setTimeout(() => { sfx('big'); root.appendChild(btn(`🕯️ ろうそく ${age}ほん を ふーっ！`, 'sbig bday', candles)); }, t * 1000 + 300);
+    }
+    // 3. ろうそく
+    function candles() {
+      step(`ろうそく ${age}ほん を ぜんぶ けそう`);
+      const cake = el('div', 'cake big', '<div class="candles"></div><i>🎂</i>'); root.appendChild(cake);
+      say('👩', 'ママ「おおきく いき を すって… ふーっ！（ろうそく を タップ）」'); vsay('おおきく いきを すって、ふーっ！', 'mama');
+      let left = age;
+      for (let i = 0; i < age; i++) { const c = el('button', 'candle', '🕯️'); c.addEventListener('click', () => { if (c.classList.contains('off')) return; c.classList.add('off'); c.textContent = '💨'; left--; api.tone && api.tone(300, 0.2, 'sine', 0.04, 150); if (!left) { api.confetti && api.confetti(); sfx('big'); say('🎉', 'みんな「おめでとう〜〜！！ パチパチパチ👏」'); vsay('おめでとう！', 'papa'); setTimeout(wish, 1200); } }); cake.firstChild.appendChild(c); }
+    }
+    // 4. ねがいごと
+    function wish() {
+      step('ねがいごと を ひとつ えらぼう 🌠');
+      const g = el('div', 'kchoice');
+      WISHES.forEach((w) => g.appendChild(btn(w, 'kch2', () => { Y.wish = w; store(); sfx('star'); say('👴', `じいじ「${w.replace(/^\S+\s/, '')}…きっと かなうよ！」`); vsay('きっと かなうよ', 'grandpa'); setTimeout(gifts, 1300); })));
+      root.appendChild(g);
+    }
+    // 5. プレゼント
+    function gifts() {
+      step('🎁 プレゼント の じかん！');
+      say('👨', 'パパ と ママ から：すきな おもちゃ を ひとつ えらんでね');
       const T = (window.Shops && window.Shops.TOYS) || [], own = api.wallet.items(), cand = T.filter((t) => !t.acc && !own.includes(t.id)).sort(() => Math.random() - 0.5).slice(0, 3);
       const g = el('div', 'igrid');
-      cand.forEach((t) => { const b = el('button', 'icard', `${window.Shops.toySvg(t, 100)}<span>${t.name}</span>`); b.addEventListener('click', () => { api.wallet.addItem(t.id); Y.bdays = Y.bdays || {}; Y.bdays[api.year] = 1; store(); sfx('big'); clear('🎁 プレゼント', t.name, 'home'); root.appendChild(el('div', 'prize', `${window.Shops.toySvg(t, 140)}<b>${t.name}</b><span>おもちゃばこ に いれたよ</span>`)); root.appendChild(btn('← へやに もどる', 'sbig', home)); }); g.appendChild(b); });
-      if (!cand.length) { g.appendChild(el('div', 'prize', '<i>🍙</i><b>おにぎり いっぱい！</b><span>おもちゃは もう ぜんぶ もってるね</span>')); Y.bdays = Y.bdays || {}; Y.bdays[api.year] = 1; store(); root.appendChild(btn('← へやに もどる', 'sbig', home)); }
+      const after = (name) => {
+        const w = api.wallet.get(); w[1000] = (w[1000] || 0) + 1; api.wallet.set(w);    // じいじ と ばあば から おいわい
+        Y.stickers = (Y.stickers || 0) + 3; Y.bdays = Y.bdays || {}; Y.bdays[api.year] = 1; store(); sfx('big');
+        step('🎁 もらった プレゼント');
+        root.appendChild(el('div', 'giftlist', `<p>👨👩 パパ と ママ： <b>${name}</b></p><p>👴👵 じいじ と ばあば： <b>おいわい 1000えん 💴</b></p><p>🧒👧👦 ともだち： <b>にがおえ と シール 3まい 🌟</b></p>`));
+        root.appendChild(btn('🍰 ケーキ を たべる', 'sbig bday', cakeEat));
+      };
+      cand.forEach((t) => { const b = el('button', 'icard', `${window.Shops.toySvg(t, 100)}<span>${t.name}</span>`); b.addEventListener('click', () => { api.wallet.addItem(t.id); after(t.name); }); g.appendChild(b); });
+      if (!cand.length) { const b = btn('🍙 おにぎり いっぱい（おもちゃ は ぜんぶ もってる）', 'sbig', () => after('おにぎり いっぱい')); g.appendChild(b); }
       root.appendChild(g);
-    };
+    }
+    // 6. ケーキ
+    function cakeEat() {
+      step('🍰 いちごの ケーキ');
+      const box = el('div', 'bento'); let n = 3; root.appendChild(box);
+      for (let i = 0; i < 3; i++) { const b = el('button', 'food', '🍰'); b.addEventListener('click', () => { if (b.classList.contains('eaten')) return; b.classList.add('eaten'); b.textContent = '😋'; n--; sfx('pick'); if (!n) { say('👩', 'ママ「おいしいね！ さいごに みんな で しゃしん を とろう 📷」'); vsay('さいごに みんなで しゃしんを とろう', 'mama'); root.appendChild(btn('📷 きねん しゃしん を とる', 'sbig bday', photo)); } }); box.appendChild(b); }
+    }
+    // 7. きねん しゃしん（アルバム に はいる）
+    function photo() {
+      step('📷 はい、チーズ！');
+      const c = document.createElement('canvas'); c.width = 480; c.height = 320; c.className = 'bdphoto'; const g = c.getContext('2d');
+      const gr = g.createLinearGradient(0, 0, 0, 320); gr.addColorStop(0, '#ffe3ec'); gr.addColorStop(1, '#fff3bf'); g.fillStyle = gr; g.fillRect(0, 0, 480, 320);
+      g.font = '34px sans-serif'; g.textAlign = 'center';
+      '🎈🎉🎊🎈🎁🎈🎊🎉🎈'.match(/../gu).forEach((e, i) => g.fillText(e, 30 + i * 52, 44));
+      g.font = 'bold 28px sans-serif'; g.fillStyle = '#d6336c'; g.fillText(`あおちゃん ${age}さい おめでとう！`, 240, 92);
+      g.font = '56px sans-serif'; ['👴', '👵', '👨', '🧢', '👩', '🧒', '👧', '👦'].forEach((e, i) => g.fillText(e, 40 + i * 57, i === 3 ? 190 : 205));
+      g.font = '70px sans-serif'; g.fillText('🎂', 240, 280);
+      g.font = 'bold 15px sans-serif'; g.fillStyle = '#5a6b8c'; g.fillText(`${api.dateStr || ''} ・ みなとみらい`, 240, 310);
+      root.appendChild(c);
+      let url = ''; try { url = c.toDataURL('image/jpeg', 0.8); } catch (e) { url = ''; }
+      if (url && api.addPhoto) api.addPhoto(url);
+      api.tone && api.tone(1800, 0.04, 'square', 0.06); api.confetti && api.confetti();
+      root.appendChild(el('p', 'desc', '📷 しゃしん を アルバム に いれたよ'));
+      root.appendChild(el('div', 'prize', `<i>🏅</i><b>さいこう の おたんじょうび！</b><span>${age}さい の あおちゃん、おめでとう！ よるは みなとみらい の うみ で おいわい の はなび 🎆</span>`));
+      root.appendChild(btn('← へやに もどる', 'sbig', home));
+    }
   }
   function nap() {
     if (api.night) { bedtime(0); return; }
@@ -357,6 +427,7 @@
     });
     root.appendChild(g);
     root.appendChild(el('p', 'desc', '✏️ くもん は かようび と きんようび、🎹 ピアノ は もくようび。できたら 🌟 シール！'));
+    root.appendChild(btn('📅 ひづけ を えらぶ（カレンダー）', 'sbig', () => api.onClose({ cal: true })));
     root.appendChild(btn('← へやに もどる', 'sout', home));
   }
   // ================= ピアノ（しまむら がっき）=================

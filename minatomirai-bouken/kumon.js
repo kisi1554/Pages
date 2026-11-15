@@ -127,16 +127,16 @@
     const lv = lvView || K.level;
     root.innerHTML = '';
     const board = el('div', 'kboard');
-    board.appendChild(el('div', 'ktitle', '🏫 くもん みなとみらい きょうしつ'));
-    board.appendChild(el('div', 'kaddr', 'みなとみらいミッドスクエア 3かい'));
+    board.appendChild(el('div', 'ktitle', opts.home ? '🏠 おうちで くもん の しゅくだい' : '🏫 くもん みなとみらい きょうしつ'));
+    board.appendChild(el('div', 'kaddr', opts.home ? 'プリント 1まい 100てん で おこづかい 500えん！' : 'みなとみらいミッドスクエア 3かい'));
     root.appendChild(board);
     const teacher = el('div', 'kteach');
-    teacher.innerHTML = `<span class="kface">👩‍🏫</span><span class="ksay">${msg || ('あおちゃん、いらっしゃい！ ' + pick(TEACH))}</span>`;
+    teacher.innerHTML = opts.home ? `<span class="kface">👩</span><span class="ksay">${msg || 'ママ「しゅくだい えらいね！ 1まい できたら 500えん の おこづかい だよ」'}</span>` : `<span class="kface">👩‍🏫</span><span class="ksay">${msg || ('あおちゃん、いらっしゃい！ ' + pick(TEACH))}</span>`;
     root.appendChild(teacher);
     const mama = el('div', 'kmama', `<span class="kmface">🚪🪑👩</span><span>ママは いりぐちの イスで まってるよ。<br><small>おみずを のんだ かず： 🥤×${K.water || 0}</small></span>`);
     mama.appendChild(el('button', 'kwater', '🥤 おみず ちょうだい'));
     mama.lastChild.addEventListener('click', () => mamaWater(true));
-    root.appendChild(mama);
+    if (!opts.home) root.appendChild(mama);
 
     const tabs = el('div', 'ktabs');
     ORDER.concat(EXTRA).forEach((L) => {
@@ -162,7 +162,7 @@
     root.appendChild(list);
 
     const h = hundreds(lv), canTest = h >= NEED;
-    if (L.test) {
+    if (L.test && !opts.home) {
     const tb = el('button', 'ktest' + (canTest ? '' : ' lock'),
       canTest ? `📝 ${lv} しゅうりょう テストを うける<small>20もん・${PASS}てん いじょうで ごうかく</small>`
         : `🔒 ${lv} しゅうりょう テスト<small>100てんの プリントを あと ${NEED - h}まい</small>`);

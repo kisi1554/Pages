@@ -281,6 +281,7 @@
     // 1. あいさつ
     const g = greetingFor(c.hour, P.en);
     bubble(P.e, P.n, P.hi);
+    if (c.bday) bubble(P.e, P.n, `あれ？ きょうは あおちゃん の おたんじょうび でしょ！ ${c.age || ''}さい おめでとう！ 🎂🎉`);
     choose('🧢 なんて いう？（あいさつ を えらんでね）', g.a, g.c, (first) => {
       if (window.Voice) window.Voice.stop(); aoSays(g.a); if (first) { D.greet++; store(); }
       const ch = CHAT[c.who] || []; bubble(P.e, P.n, (first ? 'まあ、じょうずな あいさつ！ 👏 ' : 'そうそう、それが ぴったり！ ') + (ch.length ? ch[(Math.random() * ch.length) | 0] : ''));

@@ -352,6 +352,7 @@
   // ---------------- アトラクションの チケット ----------------
   function attractionTicket(t) {
     clear(t.title, t.sub, 'tk');
+    if (t.free) { root.appendChild(el('div', 'price', `🎂 きょうは あおちゃん の おたんじょうび！<br><b>${t.icon} むりょう で のれるよ</b>`)); root.appendChild(btn('🎉 のる！', 'sbig tall', () => api.onClose({ go: t.go }))); root.appendChild(btn('← やめる', 'sout', () => api.onClose())); return; }
     root.appendChild(el('div', 'price', `${t.icon} こども 1まい <b>${yen(t.price)}</b><br><small>（ゲームの ねだん）</small>`));
     root.appendChild(btn('🎫 チケットを かう', 'sbig tall', () => pay(t.price, t.what, () => api.onClose({ go: t.go }), () => attractionTicket(t))));
     root.appendChild(btn('← やめる', 'sout', () => api.onClose()));
