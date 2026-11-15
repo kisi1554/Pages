@@ -11,7 +11,7 @@
 
   // ================= セーブ =================
   const SAVE_KEY = 'minatomirai-bouken-v2'; // v2: ほんものの ちず（ふるい いち は つかわない）
-  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1 }, piggy: {} }; }
+  function fresh() { return { stars: [], stamps: [], oni: 2, pos: null, sound: true, seenTitle: false, wallet: { 1000: 5 }, items: [], gacha: {}, clock: { day: 0, min: 450 }, zoo: {}, errand: null, cal: {}, settings: { vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1, voice: 2 }, piggy: {} }; }
   let save = fresh();
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if (s && typeof s === 'object') save = Object.assign(fresh(), s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* つかえない */ } }
@@ -1172,8 +1172,8 @@ void main(){
   }
 
   // ================= せってい =================
-  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1 }, save.settings || {});
-  function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); $('bProp').hidden = !save.settings.prop; if (!save.settings.prop && P.state === 'prop') { P.state = 'air'; P.ground = false; P.fallTop = P.y; } if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
+  save.settings = Object.assign({ vol: 80, cam: 1, big: false, talk: 1, speed: 1, gfx: 2, prop: 0, season: -1, voice: 2 }, save.settings || {});
+  function applySettings() { document.body.classList.toggle('bigtext', !!save.settings.big); if (window.Voice) { window.Voice.on = save.sound && save.settings.voice > 0; window.Voice.volume = save.settings.vol / 100; } $('bProp').hidden = !save.settings.prop; if (!save.settings.prop && P.state === 'prop') { P.state = 'air'; P.ground = false; P.fallTop = P.y; } if (AC && AC._m) AC._m.gain.value = save.settings.vol / 100; }
   function OUT(a) { if (!a._m) { a._m = a.createGain(); a._m.connect(a.destination); } a._m.gain.value = save.settings.vol / 100; return a._m; }
   // ================= だい3だんかい: のりもの =================
   function lineOf(pts) {
@@ -2129,7 +2129,7 @@ void main(){
   const MOM = { x: P.x - 1.6, y: P.y, z: P.z + 1.2, face: P.face, fly: 0, phase: 0, speed: 0, airT: 0, sit: false, cup: 0,
     talkT: 10, waterT: 45, sayT: 0, prev: P.state, stars: save.stars.length, stamps: save.stamps.length, money: 0, wasFart: false, wasGlide: false };
   const MOMCOL = hex('#f783ac');
-  function momSay(t, sec) { MOM.sayT = sec || 3.8; const b = $('momTalk'); b.textContent = t; b.style.display = 'block'; }
+  function momSay(t, sec) { MOM.sayT = sec || 3.8; const b = $('momTalk'); b.textContent = t; b.style.display = 'block'; if (save.settings.voice >= 2 && window.Voice && !$('ovTalk').classList.contains('show')) window.Voice.say(t, 'mama'); }
   const pickL = (a) => a[Math.floor(Math.random() * a.length)];
   const MOM_LINES = {
     ground: ['あおちゃん、てを つないで いこうね 🤝', 'おなか すいてない？ 🍙', 'くるまに きを つけてね 🚗', 'ランドマークタワー、おおきいね〜', 'くもんの プリント、1まい やると 1000えん だよ ✏️',
@@ -3236,13 +3236,13 @@ void main(){
   $('bMenu').addEventListener('click', () => { show('ovMenu', true); setPaused(); });
   function drawSet() {
     $('sVol').value = save.settings.vol; $('sCam').value = save.settings.cam;
-    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx], ['sProp', save.settings.prop], ['sSeason', save.settings.season]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
+    [['sBig', save.settings.big ? 1 : 0], ['sTalk', save.settings.talk], ['sSpeed', save.settings.speed], ['sGfx', save.settings.gfx], ['sProp', save.settings.prop], ['sSeason', save.settings.season], ['sVoice', save.settings.voice]].forEach(([id, v]) => $(id).querySelectorAll('button').forEach((b) => b.classList.toggle('on', +b.dataset.v === +v)));
   }
   $('bSet').addEventListener('click', () => { show('ovMenu', false); drawSet(); show('ovSet', true); setPaused(); });
   $('bSetOk').addEventListener('click', () => { show('ovSet', false); setPaused(); });
   $('sVol').addEventListener('input', (e) => { save.settings.vol = +e.target.value; store(); applySettings(); SFX.tap(); });
   $('sCam').addEventListener('input', (e) => { save.settings.cam = +e.target.value; store(); });
-  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx'], ['sProp', 'prop'], ['sSeason', 'season']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
+  [['sBig', 'big'], ['sTalk', 'talk'], ['sSpeed', 'speed'], ['sGfx', 'gfx'], ['sProp', 'prop'], ['sSeason', 'season'], ['sVoice', 'voice']].forEach(([id, k]) => $(id).addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return; save.settings[k] = k === 'big' ? b.dataset.v === '1' : +b.dataset.v; store(); applySettings(); drawSet(); SFX.tap();
   }));
   applySettings();
@@ -3253,7 +3253,7 @@ void main(){
     const snd = save.sound; save = fresh(); save.sound = snd; save.seenTitle = true; store(); respawn(); refreshHud();
     show('ovMenu', false); setPaused();
   });
-  $('bSound').addEventListener('click', () => { save.sound = !save.sound; store(); refreshHud(); if (save.sound) ac(); else if (AC) AC.suspend(); });
+  $('bSound').addEventListener('click', () => { save.sound = !save.sound; store(); refreshHud(); applySettings(); if (save.sound) ac(); else if (AC) AC.suspend(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && !anyOv()) { show('ovMenu', true); setPaused(); } });
   if (save.seenTitle) $('bStart').textContent = 'つづきから';
 
@@ -3314,7 +3314,7 @@ void main(){
   const PAPA_LINES = ['あおちゃん、パパと きょうそう しよう！ 🏃', 'でんしゃ みにいく？ パパは でんしゃが だいすき 🚃', 'おなか すいたら ちゅうかがいの にくまん たべよう 🥟', 'たかい ところは パパに まかせて… ちょっと こわいな 😅',
     'しゃしんを とろうか？ 📷 ボタンで パシャッ！', 'くもん がんばってて えらいね ✏️', 'みなとみらいは よる きらきら きれいだよ 🌃', 'パパの かたぐるま、たかいだろ〜！'];
   function papaWanted() { const h = CLK.h; return (CLK.wd >= 5 && h >= 8 && h < 20) || (CLK.wd < 5 && h >= 18.5 && h < 21); }
-  function papaSay(t, sec) { PAPA.sayT = sec || 3.5; const b = $('papaTalk'); b.textContent = t; b.style.display = 'block'; }
+  function papaSay(t, sec) { PAPA.sayT = sec || 3.5; const b = $('papaTalk'); b.textContent = t; b.style.display = 'block'; if (save.settings.voice >= 2 && window.Voice) window.Voice.say(t, 'papa'); }
   function papaUpdate(dt) {
     const p = PAPA, want = papaWanted();
     if (want && !p.on) { p.on = true; p.x = P.x - 2; p.z = P.z - 1; p.y = P.y; papaSay(CLK.wd >= 5 ? 'きょうは パパも おやすみ！ いっしょに あそぼう 🙌' : 'ただいま〜！ パパも まぜて 🙌', 3.5); }

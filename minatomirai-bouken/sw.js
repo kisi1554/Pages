@@ -6,7 +6,7 @@
  */
 var CACHE = 'minatomirai-bouken-v1';
 var CORE = [
-  './', 'index.html', 'game.js', 'map-data.js', 'kumon.js', 'shops.js', 'places.js', 'odekake.js', 'kotoba.js',
+  './', 'index.html', 'game.js', 'map-data.js', 'kumon.js', 'shops.js', 'places.js', 'odekake.js', 'voice.js', 'kotoba.js',
   'manifest.webmanifest', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'
 ];
 

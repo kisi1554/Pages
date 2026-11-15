@@ -229,8 +229,14 @@
   const btn = (label, cls, fn) => { const b = el('button', cls || 'sbig', label); b.addEventListener('click', fn); return b; };
   const sfx = (n) => ctx && ctx.sfx && ctx.sfx(n);
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  function bubble(face, name, text) { root.appendChild(el('div', 'ktalk', `<span class="kf">${face}</span><span class="kb"><small>${name}</small>${text}</span>`)); }
-  function aoSays(text) { root.appendChild(el('div', 'ktalk me', `<span class="kb"><small>あおちゃん</small>${text}</span><span class="kf">🧢</span>`)); }
+  // こえ（voice.js）
+  let curWho = 'granny';
+  const speak = (t, who, opt) => { if (window.Voice) window.Voice.say(t, who || curWho, opt); };
+  function bubble(face, name, text) {
+    const d = el('div', 'ktalk', `<span class="kf">${face}</span><span class="kb"><small>${name}</small>${text}</span><button class="kvo" aria-label="もういちど きく">🔊</button>`);
+    const who = curWho; d.querySelector('.kvo').addEventListener('click', () => speak(text, who)); root.appendChild(d); speak(text);
+  }
+  function aoSays(text) { root.appendChild(el('div', 'ktalk me', `<span class="kb"><small>あおちゃん</small>${text}</span><span class="kf">🧢</span>`)); speak(text, 'ao'); }
   function head(P) { root.innerHTML = ''; root.className = 'sroom kotoba'; root.appendChild(el('div', 'shead', `<b>💬 ${P.n} と おはなし</b><small>ことば ずかん ${learnedCount()} / ${W.length}</small>`)); }
   const learnedCount = () => W.filter((v) => D.w[v.id] && D.w[v.id].ok > 0).length;
   const mastered = (v) => D.w[v.id] && D.w[v.id].ok >= 3;
@@ -240,16 +246,17 @@
     if (h < 17.5) return { a: 'こんにちは', c: ['おはよう ございます', 'おやすみなさい'] };
     return { a: 'こんばんは', c: ['おはよう ございます', 'いただきます'] };
   }
-  function choose(question, ans, others, onOk) {
-    root.appendChild(el('div', 'kq2', question));
+  function choose(question, ans, others, onOk, qWho) {
+    root.appendChild(el('div', 'kq2', question)); speak(question, qWho);
     const g = el('div', 'kchoice'); let tried = 0;
     shuffle([ans].concat(others)).forEach((c) => {
+      const row = el('div', 'krow'), sp = btn('🔊', 'kvo big', () => speak(c, 'mama'));
       const b = btn(c, 'kch2', () => {
         if (b.classList.contains('ng') || g.dataset.done) return;
         if (c === ans) { g.dataset.done = 1; b.classList.add('ok'); sfx('star'); onOk(tried === 0); }
         else { tried++; b.classList.add('ng'); sfx('ng'); }
       });
-      g.appendChild(b);
+      row.appendChild(sp); row.appendChild(b); g.appendChild(row);
     });
     root.appendChild(g);
   }
@@ -268,17 +275,17 @@
     return { p: `「${v.w}」って どれ？`, a: `${v.e} ${v.m}`, c: others };
   }
   function talk(c) {
-    ctx = c; root = document.getElementById('talkRoot');
+    ctx = c; root = document.getElementById('talkRoot'); curWho = c.who;
     const P = PEOPLE[c.who] || PEOPLE.granny; D.talks++; store();
     head(P);
     // 1. あいさつ
     const g = greetingFor(c.hour, P.en);
     bubble(P.e, P.n, P.hi);
     choose('🧢 なんて いう？（あいさつ を えらんでね）', g.a, g.c, (first) => {
-      aoSays(g.a); if (first) { D.greet++; store(); }
+      if (window.Voice) window.Voice.stop(); aoSays(g.a); if (first) { D.greet++; store(); }
       const ch = CHAT[c.who] || []; bubble(P.e, P.n, (first ? 'まあ、じょうずな あいさつ！ 👏 ' : 'そうそう、それが ぴったり！ ') + (ch.length ? ch[(Math.random() * ch.length) | 0] : ''));
       setTimeout(() => lesson(P), 1300);
-    });
+    }, 'mama');
   }
   function lesson(P) {
     const { v, review } = pickWord(P), isNew = !D.w[v.id];
@@ -286,12 +293,14 @@
     if (review) bubble(P.e, P.n, `まえに おぼえた ことば、おぼえてる？「<b>${v.w}</b>」`);
     else {
       bubble(P.e, P.n, `「<b>${v.w}</b>」って しってる？`);
-      root.appendChild(el('div', 'kcard', `<i>${v.e}</i><b>${v.w}</b><span>${v.m}</span><em>たとえば：「${v.x}」</em>`));
+      const cd = el('div', 'kcard', `<i>${v.e}</i><b>${v.w}</b><span>${v.m}</span><em>たとえば：「${v.x}」</em><button class="kvo">🔊 もういちど きく</button>`);
+      const read = () => speak(`${v.w}。${v.m}。たとえば、${v.x}`, curWho, { slow: 1 }); cd.querySelector('.kvo').addEventListener('click', read); root.appendChild(cd); read();
     }
     const q = quizOf(v);
     root.appendChild(btn(review ? '🙋 こたえる！' : '💡 わかった！ もんだい を だして', 'sbig', (e) => {
       e.currentTarget.remove();
       const card = root.querySelector('.kcard'); if (card) card.classList.add('hide');   // おぼえて いるか ためす
+      if (window.Voice) window.Voice.stop();
       choose(`❓ ${q.p}`, q.a, q.c, (first) => {
         const r = D.w[v.id] = D.w[v.id] || { ok: 0, ng: 0, at: 0 }; r.at = D.talks;
         if (first) r.ok++; else r.ng++;
@@ -312,10 +321,11 @@
     root.appendChild(el('div', 'kq2', '👋 おわかれ の ことば は？'));
     const g = el('div', 'kchoice');
     const opts = P.en ? [['サンキュー！ グッバイ！', 1], ['いただきます！', 0]] : [['ありがとう ございました！', 1], ['さようなら！', 1], ['いただきます！', 0]];
+    speak('おわかれ の ことば は？', 'mama');
     opts.forEach(([t, ok]) => g.appendChild(btn(t, 'kch2', (e) => {
       if (!ok) { e.currentTarget.classList.add('ng'); sfx('ng'); return; }
-      aoSays(t); bubble(P.e, P.n, P.bye); sfx('pick');
-      g.remove(); root.appendChild(btn('🚶 また あるく', 'sbig', () => ctx.onClose && ctx.onClose()));
+      if (window.Voice) window.Voice.stop(); aoSays(t); bubble(P.e, P.n, P.bye); sfx('pick');
+      g.remove(); root.appendChild(btn('🚶 また あるく', 'sbig', () => { if (window.Voice) window.Voice.stop(); if (ctx.onClose) ctx.onClose(); }));
     })));
     root.appendChild(g);
   }
@@ -331,12 +341,12 @@
       list.forEach((v) => {
         const r = D.w[v.id];
         const cdv = el('button', 'zcard' + (r ? '' : ' none'), r ? `<i>${v.e}</i><b>${v.w}${mastered(v) ? ' ⭐' : ''}</b><small>${v.m}</small>` : '<i>❔</i><b>？？？</b><small>まちの ひとに きいてみよう</small>');
-        if (r) cdv.addEventListener('click', () => { sfx('tap'); alert(`${v.e} ${v.w}\n\n${v.m}\n\nたとえば：「${v.x}」`); });
+        if (r) cdv.addEventListener('click', () => { sfx('tap'); cdv.classList.toggle('open'); if (!cdv.querySelector('em')) cdv.appendChild(el('em', '', `たとえば：「${v.x}」`)); speak(`${v.w}。${v.m}。たとえば、${v.x}`, 'mama', { slow: 1 }); });
         g.appendChild(cdv);
       });
       root.appendChild(g);
     });
-    root.appendChild(btn(done ? '← もどる' : 'とじる', 'sbig', () => (done ? done() : ctx.onClose && ctx.onClose())));
+    root.appendChild(btn(done ? '← もどる' : 'とじる', 'sbig', () => { if (window.Voice) window.Voice.stop(); if (done) done(); else if (ctx.onClose) ctx.onClose(); }));
   }
   // ママが おぼえた ことば を つかって はなす
   function mamaLine() {
