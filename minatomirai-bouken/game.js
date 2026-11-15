@@ -3738,12 +3738,26 @@ void main(){
     student: { shirt: '#f08c00', pants: '#364fc7', hair: '#212529', s: 0.92 }, tourist: { shirt: '#ff8787', pants: '#e9c46a', hair: '#f4c95d', cap: '#f8f9fa' },
     post: { shirt: '#e03131', pants: '#343a40', hair: '#212529', cap: '#e03131' }, cook: { shirt: '#ffffff', pants: '#495057', hair: '#212529', cap: '#ffffff' },
     dog: { shirt: '#4dabf7', pants: '#495057', hair: '#6b3e26' }, mama2: { shirt: '#f783ac', pants: '#868e96', hair: '#4a2f1d', girl: 1 },
+    fire: { shirt: '#c92a2a', pants: '#343a40', hair: '#212529', cap: '#fab005' }, nurse: { shirt: '#ffc9de', pants: '#ffc9de', hair: '#4a2f1d', girl: 1, cap: '#ffffff' },
+    doctor: { shirt: '#f8f9fa', pants: '#495057', hair: '#868e96' }, carpenter: { shirt: '#1864ab', pants: '#495057', hair: '#212529', cap: '#fab005' },
+    baker: { shirt: '#fff3bf', pants: '#868e96', hair: '#4a2f1d', cap: '#ffffff' }, florist: { shirt: '#69db7c', pants: '#e9c46a', hair: '#6b3e26', girl: 1 },
+    painter: { shirt: '#ffa94d', pants: '#5c7cfa', hair: '#212529', cap: '#c92a2a' }, fisher: { shirt: '#5c940d', pants: '#495057', hair: '#868e96', cap: '#495057' },
+    jogger: { shirt: '#ff6b6b', pants: '#212529', hair: '#212529', girl: 1 }, grandpa: { shirt: '#a9743a', pants: '#495057', hair: '#dee2e6', s: 0.95 },
+    busdriver: { shirt: '#4dabf7', pants: '#1c3f8f', hair: '#212529', cap: '#1c3f8f' }, performer: { shirt: '#cc5de8', pants: '#fab005', hair: '#e03131', cap: '#ffd43b' },
+    teacher: { shirt: '#ffd8a8', pants: '#e64980', hair: '#4a2f1d', girl: 1 }, keeper: { shirt: '#2f9e44', pants: '#5c940d', hair: '#4a2f1d', cap: '#5c940d' },
+    guide: { shirt: '#1c7ed6', pants: '#343a40', hair: '#4a2f1d', girl: 1 }, sister: { shirt: '#f06595', pants: '#4dabf7', hair: '#6b3e26', girl: 1, s: 0.85 },
+    staff: { shirt: '#fab005', pants: '#343a40', hair: '#212529', cap: '#fab005' },
   };
+  // まちに たって いる ひと（npc）も はなせる
+  const NPC_WHO = [[/えきいん/, 'station'], [/おねえさん/, 'sister'], [/おもちゃ/, 'shop'], [/かんごし/, 'nurse'], [/かんらんしゃ/, 'staff'], [/おにいさん/, 'student'], [/ふなのり/, 'sailor'], [/ガイド/, 'guide'], [/パンや/, 'baker'], [/しいくいん/, 'keeper']];
+  const NPC_TALK = NPCS.filter((n) => !n.mama).map((n, i) => ({ uid: 'n' + i, who: (NPC_WHO.find(([re]) => re.test(n.who)) || [0, 'student'])[1], x: n.x, z: n.z, y: n.y || 0, talked: -1e9, npc: true }));
   const WALKERS = []; let walkUid = 0, walkSpawnT = 0;
   const SHOPDOORS = ['toys', 'wp', 'okstore', 'maruetsu', 'nikuman', 'cupnoodle', 'piano'];
   function placeTag(x, z) {
     if (DOORS.some((d) => /^eki_/.test(d.id) && Math.hypot(d.x - x, d.z - z) < 35)) return 'station';
     if (DOORS.some((d) => SHOPDOORS.includes(d.id) && Math.hypot(d.x - x, d.z - z) < 30) || (ZONES.find((q) => q.id === 'chukagai') && Math.hypot(ZONES.find((q) => q.id === 'chukagai').x - x, ZONES.find((q) => q.id === 'chukagai').z - z) < 35)) return 'shop';
+    if (ZOO && Math.hypot(ZOO.cx - x, ZOO.cz - z) < 45) return 'zoo';
+    if (ZONES.some((q) => q.id === 'cosmo' && Math.hypot(q.x - x, q.z - z) < 40)) return 'fun';
     if (ZONES.some((q) => ['rinko', 'yamashita', 'zounohana', 'kishamichi'].includes(q.id) && Math.hypot(q.x - x, q.z - z) < q.r + 15) || (ZOO && Math.hypot(ZOO.cx - x, ZOO.cz - z) < 50)) return 'park';
     for (let a = 0; a < 8; a++) if (!isLand(x + Math.cos(a * 0.785) * 14, z + Math.sin(a * 0.785) * 14)) return 'sea';
     return 'town';
@@ -3752,14 +3766,14 @@ void main(){
     const a = Math.random() * Math.PI * 2, r = 18 + Math.random() * 30, f = freeSpot(P.x + Math.cos(a) * r, P.z + Math.sin(a) * r);
     if (!isLand(f.x, f.z) || blockedAt(f.x, 0, f.z) || Math.hypot(f.x - P.x, f.z - P.z) < 10) return;
     const tag = placeTag(f.x, f.z), list = (window.Kotoba && window.Kotoba.BY_PLACE[tag]) || ['granny'];
-    let who = list[(Math.random() * list.length) | 0]; if (CLK.h >= 20 || CLK.h < 7) who = ['police', 'student', 'station'][(Math.random() * 3) | 0];
+    let who = list[(Math.random() * list.length) | 0]; if (CLK.h >= 20 || CLK.h < 7) who = ['police', 'student', 'station', 'jogger', 'busdriver', 'doctor'][(Math.random() * 6) | 0];
     WALKERS.push({ uid: ++walkUid, who, x: f.x, z: f.z, tx: f.x, tz: f.z, wait: Math.random() * 2, face: Math.random() * 6.28, phase: 0, talked: -1e9, tag });
   }
   function walkersTick(dt) {
     const out = !{ ground: 1, air: 1, swim: 1, climb: 1, prop: 1 }[P.state];
     for (let i = WALKERS.length - 1; i >= 0; i--) { const w = WALKERS[i]; if (Math.hypot(w.x - P.x, w.z - P.z) > 90 || out) WALKERS.splice(i, 1); }
     if (out) return;
-    const want = CLK.h >= 22 || CLK.h < 6 ? 3 : 9;
+    const want = CLK.h >= 22 || CLK.h < 6 ? 4 : 13;
     if ((walkSpawnT -= dt) < 0 && WALKERS.length < want) { walkSpawnT = 0.6; spawnWalker(); }
     WALKERS.forEach((w) => {
       const near = Math.hypot(w.x - P.x, w.z - P.z);
@@ -3772,7 +3786,7 @@ void main(){
       w.x = nx; w.z = nz; w.face = Math.atan2(dx, dz); w.moving = true; w.phase += dt * 7;
     });
   }
-  function nearWalker() { let best = null, bd = 2.8; for (const w of WALKERS) { const d = Math.hypot(w.x - P.x, w.z - P.z); if (d < bd && time - w.talked > 45) { bd = d; best = w; } } return best; }
+  function nearWalker() { let best = null, bd = 2.8; for (const w of WALKERS.concat(NPC_TALK)) { const d = Math.hypot(w.x - P.x, w.z - P.z); if (d < bd && Math.abs((w.y || 0) - P.y) < 1.5 && time - w.talked > 45) { bd = d; best = w; } } return best; }
   const TALKDOOR = {
     r: 2.8, color: hex('#20c997'),
     get id() { const w = nearWalker(); return w ? 'talk' + w.uid : 'talk'; },
@@ -3804,6 +3818,12 @@ void main(){
       if (w.who === 'granny') draw(mCube, M(b, T(0.42, 0.55, 0.25), S(0.05, 1.1, 0.05)), hex('#8a5a33'));
       if (w.who === 'tourist') draw(mCube, M(b, T(-0.45, 0.35, -0.1), S(0.3, 0.5, 0.45)), hex('#1c7ed6'));
       if (w.who === 'post') draw(mCube, M(b, T(0.4, 0.9, -0.05), S(0.18, 0.45, 0.38)), hex('#e03131'));
+      if (w.who === 'fisher') draw(mCube, M(b, T(0.4, 1.4, 0.4), RX(-0.6), S(0.04, 1.8, 0.04)), hex('#8a5a33'));
+      if (w.who === 'florist') { part(b, 0, 0.95, 0.32, 0.3, 0.25, 0.2, hex('#ffd43b')); draw(mSphere, M(b, T(0, 1.15, 0.32), S(0.18)), hex('#f783ac')); }
+      if (w.who === 'painter') draw(mCube, M(b, T(0.45, 0.9, 0.25), S(0.05, 0.6, 0.45)), hex('#fff9db'));
+      if (w.who === 'baker') draw(mCube, M(b, T(0, 0.95, 0.35), S(0.4, 0.12, 0.25)), hex('#d9a066'));
+      if (w.who === 'performer') [0, 1, 2].forEach((k) => draw(mSphere, M(b, T(Math.sin(time * 4 + k * 2.1) * 0.35, 1.9 + Math.abs(Math.sin(time * 4 + k * 2.1)) * 0.5, 0.35), S(0.1)), hex(['#ff6b6b', '#4dabf7', '#ffd43b'][k])));
+      if (w.who === 'doctor') part(b, 0, 0.75, 0.19, 0.6, 0.9, 0.02, C.white);
       if (w.who === 'mama2') { draw(mSphere, M(b, T(0, 1.05, 0.3), S(0.2)), C.skin); part(b, 0, 0.9, 0.28, 0.4, 0.3, 0.2, hex('#ffd8a8')); }
       if (w.who === 'dog') { const db = M(b, T(0.7, 0, 0.5)), bob = Math.abs(Math.sin(w.phase)) * 0.05; draw(mCube, M(db, T(0, 0.35 + bob, 0), S(0.3, 0.28, 0.6)), hex('#e9c46a')); draw(mCube, M(db, T(0, 0.55 + bob, 0.32), S(0.26, 0.26, 0.26)), hex('#e9c46a')); [-0.1, 0.1].forEach((sx) => [-0.2, 0.2].forEach((sz) => draw(mCube, M(db, T(sx, 0.12, sz), S(0.08, 0.24, 0.08)), hex('#c99a3a')))); }
       if (time - w.talked < 3) draw(mStar, M(T(w.x, y + 2.3 * sc, w.z), RY(time * 3), S(0.25)), C.yellow, 1);
@@ -3828,5 +3848,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓
-  window.__mm = { WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
