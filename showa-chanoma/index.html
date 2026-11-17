@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>しょうわの おちゃのま</title>
+<style>
+  :root { --main:#d9480f; --deep:#7a2e0b; --paper:#fff8ec; --ink:#2b1d14; --wall:#efe0c0; --line:#f3c9a8; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  [hidden] { display: none !important; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Noto Sans JP", sans-serif;
+    color: var(--ink); background: #f6ead2; overflow: hidden;
+    -webkit-user-select: none; user-select: none;
+  }
+  rt { font-size: .5em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  #app { height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
+
+  /* うえの バー */
+  #bar { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--main); color: #fff; }
+  #barTitle { flex: 1; font-weight: 800; font-size: clamp(15px, 4.2vw, 22px); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ibtn { flex: none; min-width: 52px; height: 48px; border: 0; border-radius: 14px; background: rgba(255,255,255,.25); color: #fff; font-size: 24px; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+  .ibtn:active { transform: scale(.94); }
+  .ibtn.off { opacity: .55; }
+
+  #main { flex: 1; min-height: 0; position: relative; overflow: hidden; }
+  .screen { position: absolute; inset: 0; }
+
+  /* タイトル */
+  #title, #finale { overflow-y: auto; padding: 12px 14px 18px; text-align: center; background: linear-gradient(#ffe3c4, var(--paper) 60%); }
+  #title h1 { margin: 2px 0 4px; font-size: clamp(26px, 7.4vw, 40px); color: var(--deep); letter-spacing: .05em; }
+  #titleArt { width: min(92%, 420px); height: auto; display: block; margin: 0 auto; }
+  .intro { max-width: 600px; margin: 6px auto 10px; background: #fff; border: 3px dashed var(--line); border-radius: 18px; padding: 10px 14px; font-size: clamp(15px, 4vw, 19px); line-height: 1.8; text-align: left; }
+  .intro b { color: var(--deep); }
+  .parent { max-width: 600px; margin: 12px auto 0; font-size: 11px; color: #6c5a4a; line-height: 1.6; text-align: left; }
+  .tiny { font-size: 13px; color: #8a6f55; background: none; border: 0; text-decoration: underline; margin-top: 8px; min-height: 44px; }
+
+  .big { min-height: 60px; padding: 8px 22px; border: 0; border-radius: 18px; background: var(--main); color: #fff; font-size: clamp(17px, 4.8vw, 22px); font-weight: 800; box-shadow: 0 5px 0 var(--deep); margin: 6px 4px; }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--deep); }
+  .big.sub { background: #fff; color: var(--deep); border: 3px solid var(--line); box-shadow: 0 5px 0 var(--line); }
+  .big.dis { background: #ced4da; box-shadow: 0 5px 0 #adb5bd; color: #fff; }
+
+  /* おちゃのま */
+  #room { display: flex; flex-direction: column; background: #f6ead2; }
+  #rtop { flex: none; display: flex; gap: 6px; justify-content: center; align-items: center; padding: 6px 6px 0; flex-wrap: wrap; }
+  .chip { background: #fff; border-radius: 14px; padding: 4px 10px; font-size: clamp(14px, 3.8vw, 18px); font-weight: 800; box-shadow: 0 2px 0 rgba(0,0,0,.15); white-space: nowrap; }
+  .chip small { font-size: 10px; font-weight: 400; color: #8a6f55; }
+  #coinChip.pop { animation: pop .5s; }
+  #stage { flex: 1; min-height: 0; position: relative; overflow: hidden; background: #efe0c0; }
+  #roomSvg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; overflow: visible; }
+  #say { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); width: min(92%, 520px); background: #fff; border: 3px solid var(--main); border-radius: 16px; padding: 6px 12px; font-size: clamp(15px, 4vw, 18px); line-height: 1.6; text-align: center; box-shadow: 0 4px 0 rgba(0,0,0,.15); pointer-events: none; z-index: 2; }
+  #acts { flex: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 6px 8px 8px; }
+  .act { position: relative; min-height: 76px; border: 3px solid var(--line); border-radius: 18px; background: #fff; box-shadow: 0 4px 0 var(--line); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 2px; }
+  .act:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--line); }
+  .act .ae { font-size: 32px; line-height: 1.1; }
+  .act .al { font-size: clamp(12px, 3.4vw, 16px); font-weight: 800; line-height: 1.2; }
+  .act .badge { position: absolute; top: -8px; right: -4px; background: #fab005; color: #5c3b00; font-size: 11px; font-weight: 800; border-radius: 10px; padding: 1px 6px; }
+  .act.shop { background: #fff4e6; border-color: #ff922b; box-shadow: 0 4px 0 #ff922b; }
+  .act.shop.ready { animation: wiggle 1.2s infinite; }
+  @keyframes wiggle { 0%,100% { transform: rotate(0); } 10% { transform: rotate(-4deg); } 20% { transform: rotate(4deg); } 30% { transform: rotate(0); } }
+  @media (orientation: landscape) and (min-width: 600px) {
+    #room { display: grid; grid-template-columns: 1fr 170px; grid-template-rows: auto 1fr; }
+    #rtop { grid-column: 1 / 3; }
+    #acts { grid-template-columns: 1fr; align-content: center; padding: 6px 10px 6px 0; }
+    .act { min-height: 70px; }
+  }
+
+  /* おてつだい */
+  #chore { display: flex; flex-direction: column; background: #fdf3e1; }
+  #ctop { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 10px 4px; }
+  #cTitle { font-weight: 800; font-size: clamp(16px, 4.4vw, 21px); white-space: nowrap; }
+  #cBar { flex: 1; height: 18px; border-radius: 10px; background: #fff; border: 2px solid var(--line); overflow: hidden; }
+  #cBar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffa94d, #f76707); transition: width .2s; }
+  #cHint { flex: none; text-align: center; font-size: clamp(16px, 4.4vw, 21px); font-weight: 800; color: var(--deep); padding: 2px 8px; min-height: 1.6em; }
+  #cStage { flex: 1; min-height: 0; position: relative; touch-action: none; }
+  #cSvg { width: 100%; height: 100%; display: block; touch-action: none; }
+  #cFoot { flex: none; text-align: center; padding: 0 0 6px; }
+  #cFoot .big { min-height: 48px; font-size: 16px; padding: 4px 18px; }
+
+  /* パネル */
+  .over { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(43,29,20,.42); z-index: 8; }
+  .panel { position: relative; background: var(--paper); border-radius: 22px; padding: 14px 16px; max-width: 520px; width: 100%; text-align: center; box-shadow: 0 8px 0 #c79a6b; max-height: 100%; overflow-y: auto; animation: pop .45s; }
+  .panel h2 { margin: 4px 0 6px; color: var(--deep); font-size: clamp(20px, 5.6vw, 28px); }
+  .panel p { margin: 6px 0; line-height: 1.7; font-size: clamp(15px, 4vw, 18px); }
+  .scene { width: 100%; max-width: 360px; height: auto; display: block; margin: 0 auto; }
+  .gag { background: #fff; border-radius: 14px; padding: 6px 10px; font-size: clamp(15px, 4vw, 18px); line-height: 1.7; margin: 6px 0; border: 2px dashed var(--line); }
+  .note { font-size: 11px; color: #6c5a4a; line-height: 1.6; margin-top: 8px; text-align: left; border-top: 1px dashed #c9b28d; padding-top: 6px; }
+  .getcard { display: inline-block; background: #fff3bf; border: 2px solid #fab005; border-radius: 12px; padding: 4px 10px; font-weight: 800; margin: 4px 0; }
+  .coinbig { font-size: 44px; font-weight: 800; color: #b26b00; animation: pop .6s; }
+  .slots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; margin: 10px 0 4px; }
+  .slot { aspect-ratio: 1; border-radius: 10px; background: #f1f3f5; border: 2px solid #dee2e6; display: flex; align-items: center; justify-content: center; font-size: 16px; color: #adb5bd; font-weight: 800; padding: 2px; }
+  .slot svg { width: 100%; height: 100%; }
+  .slot.have { background: #ebfbee; border-color: #69db7c; }
+  .slot.next { background: #fff4e6; border-color: #ff922b; color: #ff922b; animation: glowb 1.2s infinite alternate; }
+  @keyframes glowb { to { box-shadow: 0 0 8px #ff922b; } }
+  .price { font-size: clamp(18px, 5vw, 24px); font-weight: 800; }
+  #confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 9; }
+  .cf { position: absolute; top: -20px; width: 10px; height: 14px; border-radius: 2px; animation: fall 1.8s linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+  @keyframes pop { 0% { transform: scale(.6); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+
+  /* けっか */
+  #fbox { position: relative; }
+  #medal { font-size: 64px; animation: pop .7s; }
+  #praise { font-size: clamp(22px, 6vw, 32px); font-weight: 800; color: var(--deep); }
+  #tally { font-size: clamp(15px, 4vw, 19px); line-height: 1.8; margin: 6px 0; }
+  #finArt { width: min(100%, 520px); height: auto; display: block; margin: 6px auto; border-radius: 14px; }
+  #nextEra { margin: 14px auto 0; max-width: 560px; background: #fff; border-radius: 16px; padding: 10px 12px; font-size: clamp(14px, 3.8vw, 17px); line-height: 1.7; border: 2px dashed #f59f00; }
+
+  /* じだいの ものさし */
+  #ruler { flex: none; background: #4a3728; color: #e9dcc3; padding: 4px 6px 6px; }
+  #ruler .rl { display: block; font-size: 10px; text-align: center; opacity: .8; }
+  #ruler ol { list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+  #ruler li { min-height: 24px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: clamp(8px, 2.4vw, 11px); letter-spacing: -.03em; line-height: 1.1; border-radius: 6px; background: #5f4937; border-left: 3px solid #8a6f55; padding: 2px 0; min-width: 0; overflow: hidden; }
+  #ruler li.now { background: #ffd43b; color: #3b2a1a; font-weight: 800; font-size: 12px; border-left-color: var(--main); animation: glow 1.4s infinite alternate; }
+  @keyframes glow { from { box-shadow: 0 0 0 rgba(255,212,59,0); } to { box-shadow: 0 0 10px rgba(255,212,59,.9); } }
+  @media (min-width: 760px) { #ruler ol { grid-template-columns: repeat(15, 1fr); } #ruler li { font-size: 11px; } #ruler li.now { font-size: 13px; } }
+  @media (orientation: landscape) and (max-height: 520px) { #ruler .rl { display: none; } #ruler ol { grid-template-columns: repeat(15, 1fr); } #ruler li { min-height: 18px; font-size: 9px; } #ruler li.now { font-size: 10px; } }
+
+  /* まなび カード */
+  #modal { position: fixed; inset: 0; background: rgba(43,29,20,.45); display: flex; align-items: center; justify-content: center; padding: 14px; z-index: 20; }
+  #sheet { background: var(--paper); border-radius: 22px; padding: 14px 16px; width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; }
+  #sheet h2 { margin: 2px 0 10px; text-align: center; color: var(--deep); }
+  #cardList { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .card { min-height: 92px; border: 3px solid var(--line); border-radius: 16px; background: #fff; padding: 8px; text-align: center; }
+  .card .e { font-size: 34px; display: block; }
+  .card .n { font-weight: 800; font-size: 15px; display: block; }
+  .card .h { font-size: 11px; color: #7c6650; display: block; }
+  .card.lock { background: #f1f3f5; color: #adb5bd; border-color: #dee2e6; }
+  .cve { font-size: 60px; text-align: center; }
+  .cvt { font-size: clamp(15px, 4vw, 18px); line-height: 1.9; }
+  .mrow { text-align: center; margin-top: 10px; }
+
+  /* SVG アニメ */
+  .spin { transform-box: fill-box; transform-origin: center; animation: spin .5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .bub { animation: bub 1s ease-out forwards; }
+  @keyframes bub { to { transform: translateY(-60px); opacity: 0; } }
+  .fly { animation: flyout .5s ease-in forwards; }
+  @keyframes flyout { to { transform: translate(var(--dx), var(--dy)) scale(.1); opacity: 0; } }
+  .sweep { animation: sweepaway .6s ease-out forwards; }
+  @keyframes sweepaway { to { transform: translateX(-80px); opacity: 0; } }
+  .shin { animation: shin 7s linear infinite; }
+  @keyframes shin { 0% { transform: translateX(160px); } 60%, 100% { transform: translateX(-200px); } }
+  .tvflick { animation: flick 2s infinite; }
+  @keyframes flick { 50% { opacity: .75; } }
+  .steam { animation: steam 1.6s ease-out infinite; }
+  @keyframes steam { 0% { transform: translateY(0); opacity: .9; } 100% { transform: translateY(-26px); opacity: 0; } }
+  .uchiwa { transform-box: fill-box; transform-origin: 50% 100%; }
+  .uchiwa.go { animation: fan .25s; }
+  @keyframes fan { 50% { transform: rotate(-35deg); } }
+  .jump { animation: jump .8s; }
+  @keyframes jump { 40% { transform: translateY(-40px); } }
+  .pend { transform-box: fill-box; transform-origin: 50% 0; animation: pend 1s ease-in-out infinite alternate; }
+  @keyframes pend { from { transform: rotate(-12deg); } to { transform: rotate(12deg); } }
+  .sway { transform-box: fill-box; transform-origin: 50% 100%; animation: sway 2s ease-in-out infinite alternate; }
+  @keyframes sway { from { transform: rotate(-4deg); } to { transform: rotate(4deg); } }
+  .hintarrow { animation: updown 1s ease-in-out infinite; }
+  @keyframes updown { 50% { transform: translateY(-14px); } }
+  @media (prefers-reduced-motion: reduce) { .shin, .sway, .pend, .act.shop.ready, #ruler li.now { animation: none; } }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <button class="ibtn" id="homeBtn" aria-label="あそびメニューへ">🏠</button>
+    <div id="barTitle">📺 しょうわの おちゃのま</div>
+    <button class="ibtn" id="sndBtn" aria-label="おと">🔊</button>
+    <button class="ibtn" id="cardBtn" aria-label="まなび カード">📖</button>
+  </header>
+
+  <main id="main">
+    <section class="screen" id="title">
+      <svg id="titleArt" viewBox="0 0 400 260" aria-hidden="true"></svg>
+      <h1>しょうわの おちゃのま</h1>
+      <div class="intro">
+        むかし、<b>おおきな せんそう</b>が あって、まちも くらしも たいへんだった。<br>
+        そこから みんなで ちからを あわせて、まちと くらしを たてなおしたんだ。<br>
+        ここは <b>しょうわ じだい</b>の おちゃのま。<b>おてつだい</b>を して コインを ためて、<b>でんきの どうぐ</b>を そろえよう！
+      </div>
+      <button class="big" id="startBtn">▶ はじめる</button>
+      <div><button class="big sub" id="cardOpen">📖 まなび カード</button></div>
+      <div><button class="tiny" id="resetBtn" hidden>さいしょから やりなおす</button></div>
+      <p class="parent">保護者の方へ：昭和時代（1926〜1989年）のうち、戦後（1945年〜）の復興と高度経済成長期の暮らしの変化をテーマにした「あつめて育てる」あそびです。1回1〜3分、進み具合は自動で保存されます。家電がそろう順番は、内閣府「消費動向調査」などで各品目が家庭に広まった時期（おおよその順）に合わせています。戦争の場面は描いていません。</p>
+    </section>
+
+    <section class="screen" id="room" hidden>
+      <div id="rtop">
+        <span class="chip" id="coinChip">🪙 <b id="coinN">0</b></span>
+        <span class="chip" id="devChip">🔌 <b id="devN">0</b>/8</span>
+        <span class="chip" id="calChip"></span>
+      </div>
+      <div id="stage">
+        <svg id="roomSvg" viewBox="0 0 400 260" preserveAspectRatio="xMidYMax meet" role="img" aria-label="おちゃのま"></svg>
+        <div id="say" hidden></div>
+      </div>
+      <div id="acts">
+        <button class="act" data-c="wash"><span class="ae">👕</span><span class="al">せんたく</span></button>
+        <button class="act" data-c="rice"><span class="ae">🍚</span><span class="al">ごはん</span></button>
+        <button class="act" data-c="clean"><span class="ae">🧹</span><span class="al">そうじ</span></button>
+        <button class="act shop" id="shopBtn"><span class="ae">🏪</span><span class="al">でんきや</span></button>
+      </div>
+    </section>
+
+    <section class="screen" id="chore" hidden>
+      <div id="ctop"><span id="cTitle"></span><span id="cBar"><i></i></span></div>
+      <div id="cHint"></div>
+      <div id="cStage"><svg id="cSvg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg></div>
+      <div id="cFoot"><button class="big sub" id="cQuit">◀ おちゃのまへ</button></div>
+    </section>
+
+    <section class="screen" id="finale" hidden>
+      <div id="fbox">
+        <div id="medal">🏅</div>
+        <div id="praise">ぜんぶ そろった！</div>
+        <svg id="finArt" viewBox="0 0 400 260" aria-hidden="true"></svg>
+        <div id="tally"></div>
+        <div>
+          <button class="big" id="backRoom">おちゃのまへ もどる</button>
+          <button class="big sub" id="again">🔁 さいしょから</button>
+        </div>
+        <div id="nextEra">🔭 つぎは どんな じだい？<br>ポケットに はいる でんわや パソコンが いえに やってくる「へいせい じだい」へ つづくよ！</div>
+      </div>
+    </section>
+
+    <div class="over" id="ov" hidden><div class="panel" id="panel"></div></div>
+    <div id="confetti"></div>
+  </main>
+
+  <footer id="ruler" aria-label="じだいの ものさし">
+    <span class="rl">📏 じだいの ものさし（むかし → いま）</span>
+    <ol>
+      <li>じょうもん</li><li>やよい</li><li>こふん</li><li>あすか</li><li>なら</li>
+      <li>へいあん</li><li>かまくら</li><li>むろまち</li><li>あづち<br>ももやま</li><li>えど</li>
+      <li>めいじ</li><li>たいしょう</li><li class="now">しょうわ</li><li>へいせい</li><li>れいわ</li>
+    </ol>
+  </footer>
+</div>
+
+<div id="modal" hidden>
+  <div id="sheet">
+    <div id="cardIndex">
+      <h2>📖 まなび カード</h2>
+      <div id="cardList"></div>
+      <div class="mrow"><button class="big sub" id="closeModal">とじる</button></div>
+    </div>
+    <div id="cardView" hidden>
+      <div class="cve" id="cvE"></div>
+      <h2 id="cvN"></h2>
+      <div class="cvt" id="cvT"></div>
+      <div class="note" id="cvP"></div>
+      <div class="mrow"><button class="big sub" id="cardBack">もどる</button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  function $(id) { return document.getElementById(id); }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+
+  /* ---------- ほぞん ---------- */
+  var KEY = 'showa-chanoma-v1';
+  var save = { sound: true, coins: 0, owned: 0, chores: 0, cards: {}, intro: false, done: false };
+  function load() {
+    try {
+      var raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (raw && typeof raw === 'object') for (var k in save) if (raw[k] !== undefined) save[k] = raw[k];
+    } catch (e) {}
+    save.owned = Math.max(0, Math.min(8, save.owned | 0));
+    save.coins = Math.max(0, save.coins | 0);
+    if (!save.cards || typeof save.cards !== 'object') save.cards = {};
+  }
+  function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+  load();
+
+  /* ---------- おと（ごうせいおん だけ） ---------- */
+  var AC = null;
+  function ac() {
+    if (!save.sound) return null;
+    try {
+      if (!AC) { var C = window.AudioContext || window.webkitAudioContext; if (!C) return null; AC = new C(); }
+      if (AC.state === 'suspended') AC.resume();
+      return AC;
+    } catch (e) { return null; }
+  }
+  function tone(type, f0, f1, dur, vol, when) {
+    var a = ac(); if (!a) return;
+    try {
+      var t = a.currentTime + (when || 0);
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type; o.frequency.setValueAtTime(f0, t);
+      if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.2, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+    } catch (e) {}
+  }
+  function noise(dur, vol, when, freq, type) {
+    var a = ac(); if (!a) return;
+    try {
+      var t = a.currentTime + (when || 0);
+      var n = Math.max(1, Math.floor(a.sampleRate * dur)), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+      var s = a.createBufferSource(); s.buffer = b;
+      var f = a.createBiquadFilter(); f.type = type || 'lowpass'; f.frequency.value = freq || 1200;
+      var g = a.createGain(); g.gain.value = vol || 0.2;
+      s.connect(f); f.connect(g); g.connect(a.destination); s.start(t);
+    } catch (e) {}
+  }
+  var SFX = {
+    tap: function () { tone('sine', 700, 900, 0.07, 0.12); },
+    scrub: function () { noise(0.12, 0.18, 0, 2500, 'bandpass'); },
+    fan: function () { noise(0.15, 0.14, 0, 600); },
+    fire: function () { noise(0.3, 0.08, 0, 400); tone('triangle', 200, 260, 0.1, 0.05); },
+    sweep: function () { noise(0.18, 0.15, 0, 3000, 'highpass'); },
+    suck: function () { tone('sawtooth', 300, 900, 0.18, 0.05); },
+    hum: function () { tone('sawtooth', 110, 110, 1.2, 0.04); noise(1.2, 0.05, 0, 500); },
+    click: function () { tone('square', 1800, 1800, 0.03, 0.08); tone('square', 900, 900, 0.03, 0.06, 0.05); },
+    coin: function () { tone('square', 1600, 1600, 0.06, 0.05); tone('square', 2100, 2100, 0.16, 0.05, 0.07); },
+    ok: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone('triangle', f, f, 0.18, 0.16, i * 0.09); }); },
+    ng: function () { tone('sine', 330, 250, 0.25, 0.12); },
+    boing: function () { tone('sine', 200, 900, 0.35, 0.15); },
+    fanfare: function () { [392, 523, 659, 784, 659, 784, 1047].forEach(function (f, i) { tone('triangle', f, f, 0.22, 0.15, i * 0.13); }); },
+    chime: function () { [784, 659, 523, 392].forEach(function (f, i) { tone('sine', f, f, 0.5, 0.12, i * 0.35); }); },
+    tv: function () { tone('sine', 1000, 1000, 0.4, 0.06); },
+    train: function () { noise(1.2, 0.08, 0, 800); tone('triangle', 880, 700, 0.6, 0.06, 0.3); }
+  };
+
+  /* ---------- でんきの どうぐ（ひろまった じゅんばん） ---------- */
+  // mukashi-kurashi/ と どうぐの 説明を そろえる ための データ（README 参照）
+  var DEV = [
+    { id: 'washer', name: 'せんたくき', price: 3,
+      desc: 'スイッチを いれると、みずが ぐるぐる まわって ふくを あらって くれる。うえの ローラーで ぎゅっと しぼるよ。',
+      before: 'まえは たらいと せんたくいたで、てで ごしごし あらって いたよ。',
+      gag: 'ローラーに シャツを とおしたら…… <b>ぺったんこ！</b> おせんべい みたいに なっちゃった。',
+      fam: 'おかあさんの てが あいて、あみものを はじめたよ 🧶',
+      note: '電気洗濯機（噴流式）は1950年代に広まった。上に手回しのローラー式絞り機が付いていた。普及率 1957年 約20%→1960年 約41%→1970年 約91%（内閣府「消費動向調査」非農家世帯、概数）。' },
+    { id: 'tvbw', name: 'しろくろテレビ', price: 4,
+      desc: 'えが うごく ふしぎな はこ。でも いろは しろと くろ だけ。',
+      before: 'まえは ラジオで おはなしや おんがくを きいて いたよ。',
+      gag: 'テレビが きた 日、<b>きんじょの 人が ぜんいん あつまって</b>、へやが ぎゅうぎゅう！ ねこまで テレビの うえ。',
+      fam: 'かぞくみんなで テレビの まえに あつまるように なったよ 📺',
+      note: 'テレビ放送は1953年（昭和28年）に開始。はじめは高価で、街頭テレビやテレビのある家に近所の人が集まって見た。普及率 1957年 約8%→1960年 約45%→1965年 約90%（同調査、概数）。' },
+    { id: 'fridge', name: 'れいぞうこ', price: 4,
+      desc: 'でんきで ずっと つめたい はこ。たべものが くさりにくく なるよ。',
+      before: 'まえは こおりやさんから かった こおりを いれる、きの れいぞうこ だったよ。',
+      gag: 'あつい 日、おとうさんが <b>れいぞうこに かおを つっこんで</b>「あ〜 すずしい〜」。おかあさん「しめて〜！」',
+      fam: 'つめたい むぎちゃが いつでも のめるよ 🧊',
+      note: '電気冷蔵庫は1950年代後半から普及。それ以前は氷屋の氷で冷やす木製の冷蔵庫が使われた。普及率 1960年 約10%→1965年 約51%→1970年 約89%（同調査、概数）。' },
+    { id: 'rice', name: 'すいはんき', price: 5,
+      desc: 'スイッチを いれるだけで、ごはんが たける。たけたら じぶんで「カチッ」と とまるよ。',
+      before: 'まえは かまどで ひを みはりながら、うちわで ぱたぱた して たいて いたよ。',
+      gag: 'スイッチ ぽん！ で ごはんが たけた。おばあちゃん「もう かまどの ばんを しなくて いいの？」と びっくり。',
+      fam: 'おばあちゃんの てが あいて、のんびり おちゃを のんでるよ 🍵',
+      note: '自動式電気釜は1955年（昭和30年）に発売され、早朝から竈（かまど）の火を見る家事の負担を大きく減らした。' },
+    { id: 'vacuum', name: 'そうじき', price: 5,
+      desc: 'ぶおーんと ごみを すいこむ でんきの そうじ どうぐ。',
+      before: 'まえは ほうきと はたき、ぞうきんで そうじ して いたよ。',
+      gag: 'ぶおーん！ おとが おおきくて、ねこが <b>びよーんと とびあがった</b>。',
+      fam: 'わたしの てが あいて、まんがを よむ じかんが できたよ 📚',
+      note: '電気掃除機は1960年代に広まった。普及率 1960年 約8%→1965年 約32%→1970年 約68%（同調査、概数）。' },
+    { id: 'tvcolor', name: 'カラーテレビ', price: 6,
+      desc: 'テレビに いろが ついた！ そらは あおく、りんごは あかく みえるよ。',
+      before: 'まえの テレビは しろと くろ だけ だったよ。',
+      gag: 'いろが ついた！ みんなで「そらが あおい！」「ほっぺが ぴんく！」と おおさわぎ。しろくろテレビは おばあちゃんの へやへ おひっこし。',
+      fam: 'いろの ついた テレビに みんな むちゅう 🌈',
+      note: 'カラー放送は1960年に開始。カラーテレビは1970年代前半に急速に普及（1970年 約26%→1975年 約90%、同調査、概数）。' },
+    { id: 'car', name: 'くるま', price: 6,
+      desc: 'かぞくの くるま（マイカー）。とおくまで みんなで でかけられるよ。',
+      before: 'まえは あるくか、じてんしゃや でんしゃで でかけて いたよ。',
+      gag: 'みんなで ドライブ！……の まえに、おとうさんが ぴかぴかに みがきすぎて、<b>くるまに かおが うつってる</b>。',
+      fam: 'おやすみの 日は かぞくで おでかけ 🚗',
+      note: '1960年代後半から「マイカー」が広まった。乗用車の普及率 1970年 約22%→1980年 約57%（同調査、概数）。' },
+    { id: 'cooler', name: 'クーラー', price: 7,
+      desc: 'へやを すずしく して くれる でんきの どうぐ。いまの エアコン だよ。',
+      before: 'まえは うちわや せんぷうきで すずんで いたよ。',
+      gag: 'なつでも すずしい！ おとうさんは もう <b>れいぞうこに かおを いれなくて いい</b>ね。',
+      fam: 'おとうさんも すずしくて、ごろんと おひるね 💤',
+      note: 'ルームエアコン（クーラー）は最も遅く広まった。普及率 1975年 約17%→1980年 約39%→1985年 約52%（同調査、概数）。' }
+  ];
+  // カレンダー（どうぐの かずに あわせた だいたいの とし）
+  var YEARS = [1955, 1957, 1959, 1962, 1964, 1966, 1970, 1975, 1980];
+
+  /* ---------- まなび カード ---------- */
+  var CARDS = [
+    { id: 'tower', e: '🗼', n: 'とうきょうタワー', h: 'テレビを かうと ひらく',
+      t: 'とうきょうタワーは、テレビや ラジオの <b>でんぱを とばす</b> ための とう。たかさは <b>333メートル</b>。できた ときは、にっぽんで いちばん たかい たてもの だったよ。',
+      p: '1958年（昭和33年）12月完成。完成当時、パリのエッフェル塔より高い自立式鉄塔だった。テレビ放送の開始（1953年）で各局の電波塔をまとめる必要があり建てられた。' },
+    { id: 'sanshu', e: '✨', n: 'さんしゅの じんぎ', h: 'どうぐを 3つ そろえると ひらく',
+      t: '<b>しろくろテレビ・せんたくき・れいぞうこ</b>の 3つは「さんしゅの じんぎ」と よばれて、みんなが ほしがった あこがれの どうぐ だったよ。',
+      p: '1950年代後半の流行語。もとは、天皇の位のしるしとして受けつがれてきた鏡・剣・勾玉（まがたま）の「三種の神器」になぞらえた呼び名。' },
+    { id: 'shinkansen', e: '🚄', n: 'しんかんせんと とうきょう オリンピック', h: 'どうぐを 4つ そろえると ひらく',
+      t: 'とうきょうと おおさかを むすぶ <b>しんかんせん</b>が はしりだした。おなじ としに <b>とうきょう オリンピック</b>が ひらかれて、せかいじゅうから せんしゅが やってきたよ。',
+      p: '1964年（昭和39年）10月1日 東海道新幹線 東京〜新大阪 開業（最高時速210km、「ひかり」で約4時間）。10月10日 東京オリンピック開会。アジアで初めての夏季オリンピック。' },
+    { id: 'tezuka', e: '🖊️', n: 'まんがの かみさま てづか おさむ', h: 'そうじきを かうと ひらく',
+      t: 'てづか おさむは「<b>まんがの かみさま</b>」と よばれる まんがか。こころを もつ ロボットの おはなし「てつわん アトム」を かいたよ。アトムは テレビの アニメにも なって、こどもたちに だいにんき。',
+      p: '手塚治虫（1928〜1989年）。「鉄腕アトム」は1952年から雑誌に連載、1963年に日本初の連続30分テレビアニメとして放送開始。医師の資格も持っていた。' },
+    { id: 'threec', e: '🚗', n: 'あたらしい さんしゅの じんぎ「3C」', h: '8つ ぜんぶ そろえると ひらく',
+      t: '<b>カラーテレビ・クーラー・くるま（カー）</b>は、えいごの あたまの もじを とって「<b>3C（スリーシー）</b>」や「あたらしい さんしゅの じんぎ」と よばれたよ。',
+      p: '1960年代後半の呼び名（Color TV・Cooler・Car）。実際に半数以上の家庭に広まったのは、カラーテレビが1970年代前半、乗用車が1970年代後半、ルームエアコンが1980年代半ば。' }
+  ];
+  function cardById(id) { for (var i = 0; i < CARDS.length; i++) if (CARDS[i].id === id) return CARDS[i]; }
+  function unlock(id) { if (save.cards[id]) return false; save.cards[id] = 1; store(); return true; }
+
+  /* ---------- え（SVG） ---------- */
+  // どうぐの アイコン: (0,0)〜(w,h) の はこに かく
+  var ICON = {
+    washer: { w: 44, h: 56, s: function () {
+      return '<rect x="6" y="54" width="4" height="2" fill="#495057"/><rect x="34" y="54" width="4" height="2" fill="#495057"/>' +
+        '<rect x="3" y="20" width="38" height="34" rx="6" fill="#e7f5ff" stroke="#74c0fc" stroke-width="2"/>' +
+        '<ellipse cx="22" cy="22" rx="17" ry="4" fill="#a5d8ff"/>' +
+        '<rect x="8" y="2" width="3" height="18" fill="#868e96"/><rect x="33" y="2" width="3" height="18" fill="#868e96"/>' +
+        '<rect x="7" y="5" width="30" height="5" rx="2.5" fill="#dee2e6" stroke="#868e96"/><rect x="7" y="11" width="30" height="5" rx="2.5" fill="#dee2e6" stroke="#868e96"/>' +
+        '<circle cx="40" cy="8" r="3" fill="#868e96"/><line x1="40" y1="8" x2="44" y2="1" stroke="#495057" stroke-width="2"/>' +
+        '<circle cx="12" cy="40" r="3" fill="#fa5252"/><rect x="20" y="37" width="14" height="6" rx="2" fill="#fff" stroke="#adb5bd"/>'; } },
+    tvbw: { w: 52, h: 58, s: function (on) {
+      return '<line x1="26" y1="10" x2="14" y2="0" stroke="#495057" stroke-width="1.5"/><line x1="26" y1="10" x2="40" y2="0" stroke="#495057" stroke-width="1.5"/>' +
+        '<rect x="4" y="48" width="3" height="10" fill="#5c3a1e"/><rect x="45" y="48" width="3" height="10" fill="#5c3a1e"/>' +
+        '<rect x="1" y="10" width="50" height="40" rx="4" fill="#8d5524" stroke="#5c3a1e" stroke-width="2"/>' +
+        '<rect x="5" y="14" width="32" height="30" rx="6" fill="' + (on ? '#ced4da' : '#495057') + '"' + (on ? ' class="tvflick"' : '') + '/>' +
+        (on ? '<circle cx="21" cy="26" r="6" fill="#868e96"/><rect x="12" y="34" width="18" height="6" rx="3" fill="#495057"/>' : '<path d="M9 18 q6 -2 10 0" stroke="#868e96" fill="none"/>') +
+        '<circle cx="44" cy="20" r="3" fill="#e9c46a"/><circle cx="44" cy="30" r="3" fill="#e9c46a"/><rect x="40" y="37" width="8" height="8" fill="#5c3a1e"/>'; } },
+    fridge: { w: 38, h: 76, s: function () {
+      return '<rect x="1" y="1" width="36" height="74" rx="7" fill="#f8f9fa" stroke="#adb5bd" stroke-width="2"/>' +
+        '<line x1="2" y1="24" x2="36" y2="24" stroke="#adb5bd" stroke-width="2"/>' +
+        '<rect x="29" y="8" width="4" height="10" rx="2" fill="#adb5bd"/><rect x="29" y="30" width="4" height="16" rx="2" fill="#adb5bd"/>' +
+        '<circle cx="10" cy="66" r="2.5" fill="#4dabf7"/>'; } },
+    rice: { w: 34, h: 30, s: function () {
+      return '<ellipse cx="17" cy="10" rx="14" ry="6" fill="#f1f3f5" stroke="#adb5bd" stroke-width="1.5"/>' +
+        '<rect x="13" y="1" width="8" height="5" rx="2" fill="#868e96"/>' +
+        '<path d="M3 10 v14 q14 8 28 0 v-14" fill="#fff" stroke="#adb5bd" stroke-width="1.5"/>' +
+        '<rect x="12" y="17" width="10" height="5" rx="2" fill="#ff922b"/><circle cx="26" cy="19" r="1.8" fill="#fa5252"/>'; } },
+    vacuum: { w: 50, h: 34, s: function () {
+      return '<path d="M38 18 q12 -14 2 -16 q-10 -2 -18 6" stroke="#495057" stroke-width="3" fill="none"/>' +
+        '<rect x="14" y="2" width="16" height="6" rx="2" fill="#868e96" transform="rotate(-20 22 5)"/>' +
+        '<ellipse cx="34" cy="24" rx="15" ry="9" fill="#4dabf7" stroke="#1971c2" stroke-width="1.5"/>' +
+        '<circle cx="26" cy="31" r="3" fill="#343a40"/><circle cx="42" cy="31" r="3" fill="#343a40"/><circle cx="34" cy="21" r="2" fill="#fff"/>'; } },
+    tvcolor: { w: 56, h: 56, s: function (on) {
+      return '<rect x="6" y="46" width="3" height="10" fill="#7a4a24"/><rect x="47" y="46" width="3" height="10" fill="#7a4a24"/>' +
+        '<rect x="1" y="4" width="54" height="44" rx="5" fill="#c08552" stroke="#7a4a24" stroke-width="2"/>' +
+        '<rect x="5" y="8" width="36" height="36" rx="7" fill="#74c0fc"' + (on ? ' class="tvflick"' : '') + '/>' +
+        '<rect x="5" y="30" width="36" height="14" rx="4" fill="#69db7c"/><circle cx="30" cy="18" r="5" fill="#ffd43b"/>' +
+        '<path d="M10 32 l6 -8 l6 8 z" fill="#f783ac"/>' +
+        '<circle cx="48" cy="16" r="3" fill="#ffd43b"/><circle cx="48" cy="26" r="3" fill="#ffd43b"/><rect x="44" y="33" width="8" height="9" fill="#7a4a24"/>'; } },
+    car: { w: 72, h: 36, s: function () {
+      return '<path d="M4 26 q0 -10 10 -12 q8 -12 22 -12 q16 0 22 12 q10 2 10 12 z" fill="#ffd43b" stroke="#e67700" stroke-width="2"/>' +
+        '<path d="M18 14 q6 -8 18 -8 q12 0 16 8 z" fill="#d0ebff" stroke="#e67700"/><line x1="35" y1="6" x2="35" y2="14" stroke="#e67700"/>' +
+        '<circle cx="18" cy="28" r="7" fill="#343a40"/><circle cx="18" cy="28" r="3" fill="#adb5bd"/><circle cx="54" cy="28" r="7" fill="#343a40"/><circle cx="54" cy="28" r="3" fill="#adb5bd"/>' +
+        '<circle cx="66" cy="20" r="2.5" fill="#fff"/>'; } },
+    cooler: { w: 72, h: 26, s: function () {
+      return '<rect x="1" y="1" width="70" height="22" rx="5" fill="#f8f9fa" stroke="#adb5bd" stroke-width="2"/>' +
+        '<line x1="8" y1="16" x2="64" y2="16" stroke="#ced4da" stroke-width="2"/><line x1="8" y1="19" x2="64" y2="19" stroke="#ced4da" stroke-width="2"/>' +
+        '<circle cx="62" cy="7" r="2" fill="#51cf66"/>'; } }
+  };
+  function iconSVG(id, extra) {
+    var ic = ICON[id];
+    return '<svg viewBox="-4 -4 ' + (ic.w + 8) + ' ' + (ic.h + 8) + '" aria-hidden="true" ' + (extra || '') + '>' + ic.s(true) + '</svg>';
+  }
+  function place(id, x, y, sc, on, attr) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + (sc || 1) + ')" ' + (attr || '') + '>' + ICON[id].s(on) + '</g>';
+  }
+
+  // すわった ひと
+  var KIND = {
+    dad: { body: '#f8f9fa', belt: '#e8590c', hair: '#212529', skin: '#f1c27d' },
+    mom: { body: '#e64980', apron: '#fff', hair: '#212529', skin: '#f5cfa0' },
+    gma: { body: '#8d6e63', hair: '#ced4da', skin: '#f1c27d' },
+    me:  { body: '#fa5252', hair: '#212529', skin: '#f8d5a8' }
+  };
+  function person(x, y, k, mood, s, opt) {
+    opt = opt || {};
+    var K = KIND[k] || { body: opt.body || '#74c0fc', hair: opt.hair || '#343a40', skin: opt.skin || '#f1c27d' };
+    s = s || 1;
+    var g = '<g transform="translate(' + x + ' ' + y + ') scale(' + s + ')"' + (opt.attr ? ' ' + opt.attr : '') + '>';
+    if (!opt.headOnly) {
+      g += '<path d="M-17 0 q0 -24 9 -27 h16 q9 3 9 27 z" fill="' + K.body + '" stroke="rgba(0,0,0,.25)"/>';
+      if (k === 'dad') g += '<rect x="-15" y="-10" width="30" height="7" fill="' + K.belt + '"/>';
+      if (k === 'mom') g += '<path d="M-9 0 v-20 h18 v20 z" fill="#fff" stroke="#f3d9fa"/>';
+      if (k === 'gma') g += '<path d="M-7 -27 l7 10 l7 -10" fill="none" stroke="#5d4037" stroke-width="2"/>';
+    }
+    var hy = -38;
+    g += '<circle cx="0" cy="' + hy + '" r="12" fill="' + K.skin + '"/>';
+    if (k === 'dad') g += '<path d="M-12 ' + (hy - 2) + ' q0 -12 12 -12 q12 0 12 12 q-4 -6 -12 -6 q-8 0 -12 6z" fill="' + K.hair + '"/><circle cx="-4.5" cy="' + (hy) + '" r="3.6" fill="none" stroke="#343a40" stroke-width="1.3"/><circle cx="4.5" cy="' + hy + '" r="3.6" fill="none" stroke="#343a40" stroke-width="1.3"/>';
+    else if (k === 'mom') g += '<path d="M-13 ' + (hy + 2) + ' q-2 -16 13 -16 q15 0 13 16 q-3 -10 -13 -10 q-10 0 -13 10z" fill="' + K.hair + '"/><circle cx="-11" cy="' + (hy - 6) + '" r="4" fill="' + K.hair + '"/><circle cx="11" cy="' + (hy - 6) + '" r="4" fill="' + K.hair + '"/>';
+    else if (k === 'gma') g += '<path d="M-12 ' + (hy) + ' q0 -13 12 -13 q12 0 12 13 q-4 -8 -12 -8 q-8 0 -12 8z" fill="' + K.hair + '"/><circle cx="0" cy="' + (hy - 14) + '" r="5" fill="' + K.hair + '"/>';
+    else if (k === 'me') g += '<path d="M-13 ' + (hy + 6) + ' v-8 q0 -12 13 -12 q13 0 13 12 v8 h-4 v-9 h-18 v9z" fill="' + K.hair + '"/><path d="M8 ' + (hy - 12) + ' l7 -4 v8 z" fill="#ff8787"/>';
+    else g += '<path d="M-12 ' + (hy - 1) + ' q0 -12 12 -12 q12 0 12 12 q-5 -5 -12 -5 q-7 0 -12 5z" fill="' + K.hair + '"/>';
+    // かお
+    if (k !== 'dad') g += '<circle cx="-4" cy="' + (hy) + '" r="1.5" fill="#343a40"/><circle cx="4" cy="' + hy + '" r="1.5" fill="#343a40"/>';
+    else g += '<circle cx="-4.5" cy="' + hy + '" r="1.3" fill="#343a40"/><circle cx="4.5" cy="' + hy + '" r="1.3" fill="#343a40"/>';
+    if (mood === 'busy') {
+      g += '<path d="M-4 ' + (hy + 6) + ' h8" stroke="#343a40" stroke-width="1.5"/><path d="M12 ' + (hy - 8) + ' q3 5 0 7 q-3 -2 0 -7z" fill="#74c0fc"/>';
+    } else if (mood === 'sleep') {
+      g += '<path d="M-3 ' + (hy + 6) + ' q3 2 6 0" stroke="#343a40" fill="none" stroke-width="1.5"/>';
+    } else if (mood === 'laugh') {
+      g += '<path d="M-5 ' + (hy + 4) + ' q5 7 10 0 z" fill="#c92a2a"/><circle cx="-8" cy="' + (hy + 4) + '" r="2.4" fill="#ffa8a8" opacity=".8"/><circle cx="8" cy="' + (hy + 4) + '" r="2.4" fill="#ffa8a8" opacity=".8"/>';
+    } else {
+      g += '<path d="M-4 ' + (hy + 5) + ' q4 4 8 0" stroke="#343a40" fill="none" stroke-width="1.5"/><circle cx="-8" cy="' + (hy + 4) + '" r="2.4" fill="#ffa8a8" opacity=".8"/><circle cx="8" cy="' + (hy + 4) + '" r="2.4" fill="#ffa8a8" opacity=".8"/>';
+    }
+    if (opt.bubble) g += '<g transform="translate(15 ' + (hy - 22) + ')"><circle r="11" fill="#fff" stroke="#adb5bd"/><text y="5" text-anchor="middle" font-size="13">' + opt.bubble + '</text></g>';
+    return g + '</g>';
+  }
+  // たって れいぞうこに かおを いれる おとうさん
+  function dadInFridge(x, y) {
+    return '<g transform="translate(' + x + ' ' + y + ')">' +
+      '<rect x="-9" y="-2" width="7" height="30" rx="3" fill="#495057"/><rect x="2" y="-2" width="7" height="30" rx="3" fill="#495057"/>' +
+      '<path d="M-14 0 q-1 -30 6 -36 h16 q7 6 6 36 z" fill="#f8f9fa" stroke="rgba(0,0,0,.25)"/><rect x="-13" y="-12" width="26" height="7" fill="#e8590c"/>' +
+      '<rect x="-4" y="-42" width="8" height="8" fill="#f1c27d"/></g>';
+  }
+  function cat(x, y, s, cls) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + (s || 1) + ')"><g' + (cls ? ' class="' + cls + '"' : '') + '>' +
+      '<ellipse cx="0" cy="-6" rx="13" ry="7" fill="#f08c00"/><circle cx="11" cy="-12" r="6" fill="#f08c00"/>' +
+      '<path d="M7 -16 l2 -6 l3 5z M13 -17 l3 -5 l1 6z" fill="#f08c00"/><path d="M-13 -6 q-8 -2 -6 -12" stroke="#f08c00" stroke-width="3" fill="none"/>' +
+      '<path d="M9 -12 h2 M13 -12 h2" stroke="#343a40" stroke-width="1"/></g></g>';
+  }
+
+  // まどの そと
+  function outside(n, big) {
+    var s = '<rect x="0" y="0" width="140" height="110" fill="url(#sky)"/>' +
+      '<circle cx="118" cy="20" r="9" fill="#ffe066"/>' +
+      '<path d="M0 82 q35 -16 70 -6 q35 -12 70 2 v32 h-140z" fill="#a9d18e"/>';
+    // ビルが ふえる
+    var bl = [[6, 56, 14, 28], [96, 50, 16, 34], [30, 62, 12, 22], [118, 58, 14, 26], [76, 60, 12, 24], [48, 54, 12, 30]];
+    for (var i = 0; i < Math.min(n, bl.length); i++) {
+      var b = bl[i];
+      s += '<rect x="' + b[0] + '" y="' + b[1] + '" width="' + b[2] + '" height="' + b[3] + '" fill="' + (i % 2 ? '#ced4da' : '#dee2e6') + '" stroke="#adb5bd" stroke-width=".8"/>';
+      for (var wy = b[1] + 4; wy < b[1] + b[3] - 3; wy += 6) s += '<rect x="' + (b[0] + 3) + '" y="' + wy + '" width="' + (b[2] - 6) + '" height="2" fill="#a5d8ff"/>';
+    }
+    if (n >= 2) { // とうきょうタワー
+      s += '<g transform="translate(62 0)"><path d="M0 92 L10 14 L20 92 Z" fill="none" stroke="#e03131" stroke-width="2.2"/>' +
+        '<path d="M3 70 h14 M6 48 h8 M8 32 h4" stroke="#fff" stroke-width="2.4"/><path d="M3 70 h14 M6 48 h8" stroke="#e03131" stroke-width="1" stroke-dasharray="2 2"/>' +
+        '<rect x="5" y="40" width="10" height="5" fill="#e03131"/><rect x="2" y="64" width="16" height="5" fill="#e03131"/><line x1="10" y1="14" x2="10" y2="2" stroke="#e03131" stroke-width="1.5"/></g>';
+    }
+    // いえ
+    s += '<g fill="#8d5524"><path d="M4 92 l12 -10 l12 10z"/><path d="M90 94 l14 -10 l14 10z"/><path d="M110 96 l12 -9 l12 9z"/></g>' +
+      '<g fill="#d6b388"><rect x="6" y="92" width="20" height="10"/><rect x="92" y="94" width="24" height="10"/><rect x="112" y="96" width="20" height="10"/></g>';
+    if (n >= 4) { // しんかんせん
+      s += '<rect x="0" y="84" width="140" height="3" fill="#868e96"/>' +
+        '<g class="shin"><g transform="translate(0 72)"><path d="M0 12 q4 -12 20 -12 h70 v12 z" fill="#fff" stroke="#adb5bd"/><rect x="2" y="7" width="88" height="2.5" fill="#1c7ed6"/>' +
+        '<g fill="#74c0fc"><rect x="12" y="2" width="6" height="3"/><rect x="28" y="2" width="8" height="3"/><rect x="42" y="2" width="8" height="3"/><rect x="56" y="2" width="8" height="3"/><rect x="70" y="2" width="8" height="3"/></g></g></g>';
+    }
+    if (n >= 7) s += '<g transform="translate(14 88) scale(.42)">' + ICON.car.s() + '</g>';
+    return s;
+  }
+
+  var DEFS = '<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#74c0fc"/><stop offset="1" stop-color="#d0ebff"/></linearGradient>' +
+      '<clipPath id="win"><rect x="0" y="0" width="140" height="110"/></clipPath>' +
+      '<pattern id="tatami" width="80" height="40" patternUnits="userSpaceOnUse"><rect width="80" height="40" fill="#d8cf8a"/><rect width="80" height="40" fill="none" stroke="#5c7a29" stroke-width="2"/><path d="M0 10 h80 M0 20 h80 M0 30 h80" stroke="#c7bd73" stroke-width=".7"/></pattern></defs>';
+  document.body.insertAdjacentHTML('afterbegin', '<svg width="0" height="0" style="position:absolute" aria-hidden="true">' + DEFS + '</svg>');
+  function defs() { return ''; }
+
+  function roomSVG(n, opt) {
+    opt = opt || {};
+    var s = defs();
+    if (opt.wide) s += '<rect x="-800" y="-800" width="2000" height="972" fill="#efe0c0"/><rect x="-800" y="172" width="2000" height="300" fill="url(#tatami)"/>' +
+      '<rect x="-800" y="168" width="2000" height="6" fill="#7f5539"/><rect x="-800" y="28" width="2000" height="6" fill="#a47148"/>' +
+      '<rect x="0" y="-800" width="10" height="972" fill="#a47148"/><rect x="390" y="-800" width="10" height="972" fill="#a47148"/>' +
+            // たてながの がめんで 見える かべの かざり（はしら どけい・しゃしん）
+      '<g transform="translate(330 -190)" data-tap="clock"><rect x="-24" y="-12" width="48" height="118" rx="8" fill="#8d5524" stroke="#5c3a1e" stroke-width="2"/>' +
+      '<circle cx="0" cy="14" r="18" fill="#fff" stroke="#e9c46a" stroke-width="3"/><line x1="0" y1="14" x2="0" y2="2" stroke="#343a40" stroke-width="2"/><line x1="0" y1="14" x2="9" y2="18" stroke="#343a40" stroke-width="2"/>' +
+      '<rect x="-14" y="40" width="28" height="58" rx="4" fill="#f1e3c8"/><g class="pend"><line x1="0" y1="42" x2="0" y2="82" stroke="#b08900" stroke-width="2"/><circle cx="0" cy="86" r="8" fill="#fab005"/></g></g>' +
+      '<g transform="translate(60 -150)" data-tap="photo"><rect x="0" y="0" width="76" height="56" fill="#6b3a1e"/><rect x="5" y="5" width="66" height="46" fill="#e8d5b0"/>' +
+      '<g fill="#8d6e63"><circle cx="22" cy="22" r="6"/><circle cx="38" cy="20" r="6"/><circle cx="54" cy="23" r="6"/><path d="M14 51 q0 -18 8 -20 q8 2 8 20z M30 51 q0 -20 8 -22 q8 2 8 22z M46 51 q0 -17 8 -19 q8 2 8 19z"/></g></g>';
+    // かべ・たたみ
+    if (!opt.wide) s += '<rect x="0" y="0" width="400" height="172" fill="#efe0c0"/>';
+    s += '<line x1="200" y1="' + (opt.wide ? -800 : 0) + '" x2="200" y2="40" stroke="#495057" stroke-width="1.5"/><path d="M178 54 l8 -14 h28 l8 14z" fill="#fff3bf" stroke="#e9c46a"/><circle cx="200" cy="56" r="5" fill="#ffe066"/>' +
+      '<line x1="210" y1="54" x2="210" y2="76" stroke="#868e96"/><circle cx="210" cy="77" r="2" fill="#fa5252"/>' +
+      '<rect x="0" y="28" width="400" height="6" fill="#a47148"/><rect x="0" y="0" width="10" height="172" fill="#a47148"/><rect x="390" y="0" width="10" height="172" fill="#a47148"/>' +
+      '<rect x="0" y="168" width="400" height="6" fill="#7f5539"/>' +
+      '<rect x="0" y="172" width="400" height="88" fill="url(#tatami)"/>';
+    // まど
+    s += '<g transform="translate(22 46)" data-tap="win"><g clip-path="url(#win)">' + outside(n) + '</g>' +
+      '<rect x="0" y="0" width="140" height="110" fill="none" stroke="#7f5539" stroke-width="6"/><line x1="70" y1="0" x2="70" y2="110" stroke="#7f5539" stroke-width="4"/>' +
+      '<line x1="0" y1="55" x2="140" y2="55" stroke="#7f5539" stroke-width="2" opacity=".5"/></g>';
+    // カレンダー
+    var yr = YEARS[n];
+    s += '<g transform="translate(360 40)" data-tap="cal"><rect x="-16" y="0" width="32" height="38" fill="#fff" stroke="#adb5bd"/><rect x="-16" y="0" width="32" height="9" fill="#e03131"/>' +
+      '<text x="0" y="7" text-anchor="middle" font-size="6" fill="#fff">しょうわ</text><text x="0" y="24" text-anchor="middle" font-size="13" font-weight="800" fill="#343a40">' + (yr - 1925) + '</text>' +
+      '<text x="0" y="34" text-anchor="middle" font-size="6" fill="#868e96">' + yr + '</text></g>';
+    // ちゃだんす
+    s += '<g data-tap="tansu"><rect x="296" y="122" width="48" height="48" fill="#a0522d" stroke="#6b3a1e" stroke-width="2"/><line x1="296" y1="146" x2="344" y2="146" stroke="#6b3a1e" stroke-width="2"/>' +
+      '<rect x="300" y="126" width="18" height="17" fill="#e7f5ff" opacity=".7"/><rect x="322" y="126" width="18" height="17" fill="#e7f5ff" opacity=".7"/>' +
+      '<circle cx="320" cy="158" r="2" fill="#ffd43b"/></g>';
+    if (n < 4) s += '<g transform="translate(308 104)"><rect x="0" y="6" width="22" height="12" rx="3" fill="#495057"/><rect x="-2" y="2" width="26" height="5" rx="2" fill="#8d5524"/></g>'; // おひつ
+    // どうぐ
+    if (n >= 8) s += place('cooler', 268, 42, 1, false, 'data-tap="d7"');
+    if (n >= 8) s += '<g fill="none" stroke="#74c0fc" stroke-width="1.5" opacity=".8"><path d="M280 72 q4 6 0 12"/><path d="M300 72 q4 6 0 12"/><path d="M320 72 q4 6 0 12"/></g>';
+    if (n >= 1) s += place('washer', 350, 116, 1, false, 'data-tap="d0"');
+    if (n >= 3) {
+      if (opt.fridgeGag || (n >= 3 && n < 8)) {
+        s += '<g data-tap="dadfridge">' + place('fridge', 246, 94, 1) +
+          '<rect x="249" y="120" width="32" height="46" fill="#d0ebff"/>' + dadInFridge(265, 160) +
+          '<path d="M284 120 l22 6 v44 l-22 -2z" fill="#f1f3f5" stroke="#adb5bd" stroke-width="2"/>' +
+          '<g stroke="#74c0fc" stroke-width="1.6" fill="none"><path d="M250 116 q-6 -6 0 -12"/><path d="M286 112 q6 -6 0 -12"/></g>' +
+          '<text x="268" y="88" text-anchor="middle" font-size="9" fill="#1971c2">すず〜</text></g>';
+      } else s += place('fridge', 246, 94, 1, false, 'data-tap="d2"');
+    }
+    if (n >= 4) s += place('rice', 305, 92, 0.95, false, 'data-tap="d3"') + '<g transform="translate(316 88)"><path class="steam" d="M0 0 q-3 -4 0 -8 q3 -4 0 -8" stroke="#fff" stroke-width="2" fill="none"/></g>';
+    if (n >= 5) s += place('vacuum', 14, 176, 0.8, false, 'data-tap="d4"');
+    if (n >= 6) s += place('tvcolor', 186, 112, 1, true, 'data-tap="d5"');
+    else if (n >= 2) s += place('tvbw', 186, 112, 1, true, 'data-tap="d1"');
+    // ちゃぶだい
+    s += '<g data-tap="table"><rect x="166" y="214" width="5" height="18" fill="#6b3a1e"/><rect x="229" y="214" width="5" height="18" fill="#6b3a1e"/>' +
+      '<ellipse cx="200" cy="212" rx="56" ry="13" fill="#a0522d" stroke="#6b3a1e" stroke-width="2"/>' +
+      '<ellipse cx="186" cy="208" rx="7" ry="3" fill="#fff"/><ellipse cx="214" cy="208" rx="7" ry="3" fill="#fff"/><rect x="198" y="200" width="5" height="9" rx="1" fill="#2f9e44"/></g>';
+    // かぞく
+    var momFree = n >= 1, gmaFree = n >= 4, meFree = n >= 5, tv = n >= 2;
+    if (!(n >= 3 && n < 8)) s += person(118, 246, 'dad', n >= 8 ? 'sleep' : 'busy', 1, { attr: 'data-tap="dad"', bubble: n >= 8 ? '💤' : '💦' });
+    s += person(286, 248, 'mom', momFree ? 'smile' : 'busy', 1, { attr: 'data-tap="mom"', bubble: momFree ? (tv ? '📺' : '🧶') : '👕' });
+    s += person(350, 250, 'gma', gmaFree ? 'smile' : 'busy', 0.92, { attr: 'data-tap="gma"', bubble: gmaFree ? '🍵' : '🔥' });
+    s += person(56, 250, 'me', meFree ? 'laugh' : 'busy', 0.9, { attr: 'data-tap="me"', bubble: meFree ? '📚' : '🧹' });
+    s += cat(92, 256, 0.8);
+    return s;
+  }
+
+  // パネルの え
+  function sceneTV() {
+    var s = defs() + '<rect width="300" height="190" fill="#efe0c0"/><rect y="130" width="300" height="60" fill="url(#tatami)"/>' +
+      place('tvbw', 116, 64, 1.3, true) + cat(150, 66, 0.8);
+    var cols = ['#74c0fc', '#ffa94d', '#b197fc', '#63e6be', '#ff8787', '#ffd43b', '#a9e34b', '#e599f7'];
+    var hairs = ['#343a40', '#495057', '#ced4da', '#212529', '#5c3a1e'];
+    for (var r = 0; r < 3; r++) {
+      for (var i = 0; i < 9; i++) {
+        var x = 12 + i * 34 + (r % 2) * 14, y = 76 + r * 42;
+        if (r === 0 && x > 104 && x < 196) continue;
+        if (r === 1 && x > 118 && x < 182) continue;
+        s += person(x, y, 'x', pick(['smile', 'laugh']), 0.8, { body: pick(cols), hair: pick(hairs), headOnly: r === 0 });
+      }
+    }
+    return s + '<text x="150" y="20" text-anchor="middle" font-size="16" font-weight="800" fill="#d9480f">ぎゅう ぎゅう〜！</text>';
+  }
+  function sceneWasher() {
+    return '<rect width="300" height="190" fill="#e7f5ff"/><rect y="150" width="300" height="40" fill="#ced4da"/>' +
+      place('washer', 40, 40, 2.2) +
+      '<g transform="translate(150 70)"><rect x="0" y="0" width="70" height="6" rx="2" fill="#4dabf7" stroke="#1971c2"/><rect x="62" y="-4" width="20" height="14" rx="2" fill="#4dabf7" stroke="#1971c2"/>' +
+      '<text x="40" y="-12" text-anchor="middle" font-size="16" font-weight="800" fill="#1971c2">ぺらっ</text></g>' +
+      person(190, 182, 'mom', 'laugh', 1) + person(250, 184, 'me', 'laugh', 0.9) +
+      '<text x="150" y="24" text-anchor="middle" font-size="16" font-weight="800" fill="#d9480f">ぺったんこ！</text>';
+  }
+  function sceneFridge() {
+    return defs() + '<rect width="300" height="190" fill="#efe0c0"/><rect y="150" width="300" height="40" fill="url(#tatami)"/>' +
+      '<g transform="translate(-70 -20) scale(1.4)">' + place('fridge', 130, 40, 1) +
+      '<path d="M130 66 l-22 6 v44 l22 -2z" fill="#f1f3f5" stroke="#adb5bd" stroke-width="2"/><rect x="133" y="66" width="32" height="46" fill="#d0ebff"/>' +
+      dadInFridge(146, 96) + '<g stroke="#74c0fc" stroke-width="1.6" fill="none"><path d="M134 62 q-6 -6 0 -12"/><path d="M170 58 q6 -6 0 -12"/></g></g>' +
+      person(230, 180, 'mom', 'busy', 1) +
+      '<g transform="translate(232 100)"><rect x="-40" y="-16" width="80" height="24" rx="10" fill="#fff" stroke="#e64980"/><text y="1" text-anchor="middle" font-size="12" font-weight="800" fill="#e64980">しめて〜！</text></g>' +
+      '<text x="110" y="26" text-anchor="middle" font-size="15" font-weight="800" fill="#1971c2">あ〜 すずしい〜</text>';
+  }
+  function sceneIcon(i) {
+    var d = DEV[i], ic = ICON[d.id], sc = Math.min(150 / ic.w, 120 / ic.h);
+    var s = '<rect width="300" height="190" fill="#fff4e6" rx="16"/>';
+    for (var k = 0; k < 10; k++) {
+      var a = k * Math.PI / 5;
+      s += '<line x1="150" y1="95" x2="' + (150 + Math.cos(a) * 160) + '" y2="' + (95 + Math.sin(a) * 160) + '" stroke="#ffe8cc" stroke-width="14"/>';
+    }
+    s += '<g transform="translate(' + (150 - ic.w * sc / 2) + ' ' + (95 - ic.h * sc / 2) + ') scale(' + sc + ')">' + ic.s(true) + '</g>';
+    if (d.id === 'vacuum') s += cat(250, 120, 1.1, 'jump');
+    if (d.id === 'car') s += person(52, 180, 'dad', 'laugh', 1);
+    if (d.id === 'cooler') s += person(60, 182, 'dad', 'sleep', 1, { bubble: '💤' });
+    if (d.id === 'rice') s += person(60, 182, 'gma', 'laugh', 1);
+    if (d.id === 'tvcolor') s += person(44, 182, 'me', 'laugh', 0.9) + person(256, 182, 'gma', 'laugh', 0.9);
+    return s;
+  }
+
+  /* ---------- がめん ---------- */
+  var cur = 'title';
+  function show(id) {
+    ['title', 'room', 'chore', 'finale'].forEach(function (s) { $(s).hidden = s !== id; });
+    cur = id;
+    $('homeBtn').textContent = id === 'title' ? '🏠' : '◀';
+    $('homeBtn').setAttribute('aria-label', id === 'title' ? 'あそびメニューへ' : 'もどる');
+  }
+  $('homeBtn').onclick = function () {
+    SFX.tap();
+    if (cur === 'title') { location.href = '../'; return; }
+    if (cur === 'chore') { endChore(); renderRoom(); show('room'); return; }
+    closeOv(); renderTitle(); show('title');
+  };
+  function renderSnd() { $('sndBtn').textContent = save.sound ? '🔊' : '🔇'; $('sndBtn').classList.toggle('off', !save.sound); }
+  $('sndBtn').onclick = function () { save.sound = !save.sound; store(); renderSnd(); SFX.tap(); };
+
+  function renderTitle() {
+    $('titleArt').innerHTML = roomSVG(Math.max(save.owned, 0));
+    var started = save.owned > 0 || save.chores > 0;
+    $('startBtn').textContent = started ? '▶ つづきから' : '▶ はじめる';
+    $('resetBtn').hidden = !started;
+  }
+  $('startBtn').onclick = function () { SFX.ok(); renderRoom(); show('room'); if (save.owned >= 8 && !save.done) finale(); };
+  $('resetBtn').onclick = function () {
+    openPanel('<h2>さいしょから やりなおす？</h2><p>あつめた どうぐと コインが なくなるよ。<br>（まなび カードは のこるよ）</p>' +
+      '<button class="big" id="rsYes">やりなおす</button><button class="big sub" id="rsNo">やめる</button>');
+    $('rsYes').onclick = function () { resetGame(); closeOv(); renderTitle(); };
+    $('rsNo').onclick = closeOv;
+  };
+  function resetGame() { save.coins = 0; save.owned = 0; save.chores = 0; save.done = false; store(); }
+
+  /* ---------- おちゃのま ---------- */
+  var sayT = 0;
+  function say(t) {
+    $('say').innerHTML = t; $('say').hidden = false;
+    clearTimeout(sayT); sayT = setTimeout(function () { $('say').hidden = true; }, 3400);
+  }
+  function renderRoom() {
+    var n = save.owned;
+    $('roomSvg').innerHTML = roomSVG(n, { wide: true });
+    $('coinN').textContent = save.coins;
+    $('devN').textContent = n;
+    $('calChip').innerHTML = '📅 しょうわ' + (YEARS[n] - 1925) + 'ねん ころ <small>' + YEARS[n] + '</small>';
+    var easy = { wash: n >= 1, rice: n >= 4, clean: n >= 5 };
+    Array.prototype.forEach.call(document.querySelectorAll('.act[data-c]'), function (b) {
+      var old = b.querySelector('.badge'); if (old) old.remove();
+      if (easy[b.dataset.c]) { var s = document.createElement('span'); s.className = 'badge'; s.textContent = '⚡らくらく'; b.appendChild(s); }
+    });
+    var nx = DEV[n];
+    $('shopBtn').classList.toggle('ready', !!nx && save.coins >= nx.price);
+  }
+  var TAPS = {
+    dad: function (n) { return n >= 8 ? 'おとうさん「すずしくて ねむく なっちゃった…… ぐう」' : 'おとうさん「あつい あつい〜 💦」'; },
+    dadfridge: function () { return 'おとうさん「あ〜 すずしい〜」<br>（れいぞうこに かおを いれちゃ だめ だよ！）'; },
+    mom: function (n) { return n >= 1 ? 'おかあさん「せんたくきの おかげで、あみものが できるわ 🧶」' : 'おかあさん「せんたくものが いっぱい…… ごしごし」'; },
+    gma: function (n) { return n >= 4 ? 'おばあちゃん「のんびり おちゃが のめるねえ 🍵」' : 'おばあちゃん「かまどの ひを みて いなくちゃ」'; },
+    me: function (n) { return n >= 5 ? 'わたし「まんがを よもうっと 📚」' : 'わたし「おそうじ しなくちゃ！」'; },
+    clock: function () { return '<b>はしら どけい</b>：ふりこが ゆれて「ボーン ボーン」と じかんを しらせる とけい だよ。'; },
+    photo: function () { return '<b>かぞくの しゃしん</b>：しろくろ しゃしん。みんな ちょっと きんちょう して いるね。'; },
+    table: function () { return '<b>ちゃぶだい</b>：みんなで ごはんを たべる ひくい まるい テーブル。あしを たたんで かたづけられるよ。'; },
+    tansu: function () { return '<b>ちゃだんす</b>：おちゃわんや おさらを しまう たな だよ。'; },
+    cal: function (n) { return 'カレンダー：いまは <b>しょうわ ' + (YEARS[n] - 1925) + 'ねん</b> ころ。どうぐが ふえると としも すすむよ。'; },
+    win: function (n) {
+      if (n >= 4) return 'まどの そとを <b>しんかんせん</b>が はしって いく！ うしろには <b>とうきょうタワー</b>。';
+      if (n >= 2) return 'まどの そとに <b>とうきょうタワー</b>が 見えるよ。テレビの でんぱを とばす とう。';
+      return 'まどの そと：まちは まだ たてなおし ちゅう。どんどん ビルが できて いくよ。';
+    }
+  };
+  $('roomSvg').addEventListener('click', function (e) {
+    var t = e.target.closest ? e.target.closest('[data-tap]') : null;
+    if (!t) return;
+    var k = t.getAttribute('data-tap'), n = save.owned;
+    if (k.charAt(0) === 'd' && /^d\d$/.test(k)) {
+      var d = DEV[+k.slice(1)];
+      if (d.id === 'tvbw' || d.id === 'tvcolor') SFX.tv(); else if (d.id === 'washer' || d.id === 'vacuum') SFX.hum(); else SFX.tap();
+      say('<b>' + d.name + '</b>：' + d.desc); return;
+    }
+    if (k === 'win' && n >= 4) SFX.train(); else SFX.tap();
+    if (TAPS[k]) say(TAPS[k](n));
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('.act[data-c]'), function (b) {
+    b.onclick = function () { SFX.tap(); startChore(b.dataset.c); };
+  });
+
+  /* ---------- パネル ---------- */
+  function openPanel(html) { $('panel').innerHTML = html; $('ov').hidden = false; $('panel').scrollTop = 0; }
+  function closeOv() { $('ov').hidden = true; }
+  function confetti() {
+    var box = $('confetti'), cols = ['#ff6b6b', '#ffd43b', '#69db7c', '#4dabf7', '#da77f2', '#ff922b'];
+    for (var i = 0; i < 40; i++) {
+      var c = document.createElement('i'); c.className = 'cf';
+      c.style.left = rnd(0, 100) + '%'; c.style.background = pick(cols); c.style.animationDelay = rnd(0, .6) + 's';
+      c.style.animationDuration = rnd(1.4, 2.4) + 's';
+      box.appendChild(c);
+      setTimeout(function (el) { return function () { el.remove(); }; }(c), 3200);
+    }
+  }
+  function runQueue(q, done) {
+    if (!q.length) { closeOv(); if (done) done(); return; }
+    var p = q.shift();
+    openPanel(p.html + '<div><button class="big" id="qNext">' + (p.btn || 'やったね！') + '</button></div>');
+    if (p.fx) p.fx();
+    $('qNext').onclick = function () { SFX.tap(); runQueue(q, done); };
+  }
+
+  /* ---------- でんきやさん ---------- */
+  function slotsHTML() {
+    var h = '<div class="slots">';
+    for (var i = 0; i < 8; i++) {
+      if (i < save.owned) h += '<div class="slot have">' + iconSVG(DEV[i].id) + '</div>';
+      else if (i === save.owned) h += '<div class="slot next">？</div>';
+      else h += '<div class="slot">？</div>';
+    }
+    return h + '</div>';
+  }
+  $('shopBtn').onclick = function () {
+    SFX.tap();
+    var n = save.owned;
+    if (n >= 8) {
+      openPanel('<h2>🏪 でんきやさん</h2><p>ぜんぶ そろったよ！ ありがとう！</p>' + slotsHTML() + '<button class="big sub" id="shClose">とじる</button>');
+      $('shClose').onclick = closeOv; return;
+    }
+    var d = DEV[n], ok = save.coins >= d.price;
+    openPanel('<h2>🏪 でんきやさん</h2>' +
+      '<p>「いらっしゃい！ つぎの おすすめは これ！」</p>' +
+      '<div style="width:120px;height:110px;margin:0 auto">' + iconSVG(d.id, 'style="width:100%;height:100%"') + '</div>' +
+      '<div class="price">' + d.name + '　🪙×' + d.price + '</div>' +
+      '<p style="font-size:15px">' + d.desc + '</p>' +
+      (ok ? '' : '<p><b>あと 🪙×' + (d.price - save.coins) + '！</b> おてつだいを して ためよう</p>') +
+      '<div><button class="big' + (ok ? '' : ' dis') + '" id="buyBtn">' + (ok ? 'かう！' : 'まだ かえない') + '</button><button class="big sub" id="shClose">とじる</button></div>' +
+      slotsHTML() + '<div class="note">でんきの どうぐが いえに ひろまった じゅんばんに ならんで いるよ。</div>');
+    $('shClose').onclick = function () { SFX.tap(); closeOv(); };
+    $('buyBtn').onclick = function () {
+      if (!ok) { SFX.ng(); closeOv(); say('コインが たりないよ。<b>おてつだい</b>を しよう！ 👕🍚🧹'); return; }
+      buy();
+    };
+  };
+  function buy() {
+    var i = save.owned, d = DEV[i];
+    save.coins -= d.price; save.owned = i + 1; store();
+    var n = save.owned;
+    SFX.fanfare(); confetti();
+    var scene = d.id === 'tvbw' ? sceneTV() : d.id === 'washer' ? sceneWasher() : d.id === 'fridge' ? sceneFridge() : sceneIcon(i);
+    var q = [{
+      html: '<h2>🎉 ' + d.name + 'が きた！</h2><svg class="scene" viewBox="0 0 300 190">' + scene + '</svg>' +
+        '<div class="gag">' + d.gag + '</div><p>' + d.fam + '</p>' +
+        '<p style="font-size:14px">🕰️ ' + d.before + '</p><div class="note">' + d.note + '</div>'
+    }];
+    if (n === 2 && unlock('tower')) q.push({ html: '<h2>🗼 まどの そとを 見て！</h2><svg class="scene" viewBox="0 0 140 110">' + defs() + outside(2) + '</svg><p><b>とうきょうタワー</b>が できたよ！ テレビの でんぱを とばす とう なんだ。</p><div class="getcard">📖 まなびカード「とうきょうタワー」を ゲット！</div>', fx: SFX.ok });
+    if (n === 3 && unlock('sanshu')) q.push({ html: '<h2>✨ さんしゅの じんぎ が そろった！</h2><div style="display:flex;justify-content:center;gap:8px;height:80px">' + iconSVG('tvbw') + iconSVG('washer') + iconSVG('fridge') + '</div><p>テレビ・せんたくき・れいぞうこ は、みんなの あこがれ だったんだ。</p><div class="getcard">📖 まなびカード「さんしゅの じんぎ」を ゲット！</div>', fx: SFX.ok });
+    if (n === 4 && unlock('shinkansen')) q.push({ html: '<h2>🚄 しんかんせんが はしった！</h2><svg class="scene" viewBox="0 0 140 110">' + defs() + outside(4) + '</svg><p>おなじ としに <b>とうきょう オリンピック</b>も ひらかれたよ！</p><div class="getcard">📖 まなびカード「しんかんせんと とうきょう オリンピック」を ゲット！</div>', fx: SFX.train });
+    if (n === 5 && unlock('tezuka')) q.push({ html: '<h2>📚 まんがを よむ じかんが できた！</h2><p>このころ、テレビでは まんがから うまれた <b>アニメ</b>も はじまったよ。まんがを たくさん かいた「まんがの かみさま」が いたんだ。</p><div class="getcard">📖 まなびカード「まんがの かみさま てづか おさむ」を ゲット！</div>', fx: SFX.ok });
+    runQueue(q, function () {
+      renderRoom(); show('room');
+      if (n >= 8) setTimeout(finale, 400);
+      else say('<b>' + d.name + '</b>が おちゃのまに きたよ！ さわって みてね');
+    });
+  }
+
+  /* ---------- フィナーレ ---------- */
+  function finale() {
+    var got = unlock('threec');
+    save.done = true; store();
+    show('finale');
+    $('finArt').innerHTML = roomSVG(8);
+    var nc = 0; for (var k in save.cards) if (save.cards[k]) nc++;
+    $('tally').innerHTML = '🔌 でんきの どうぐ <b>8/8</b><br>👕🍚🧹 おてつだい <b>' + save.chores + '</b>かい<br>📖 まなびカード <b>' + nc + '/' + CARDS.length + '</b>' +
+      (got ? '<br><span class="getcard">📖「あたらしい さんしゅの じんぎ 3C」を ゲット！</span>' : '');
+    SFX.fanfare(); setTimeout(SFX.train, 1500); confetti(); setTimeout(confetti, 900);
+  }
+  $('backRoom').onclick = function () { SFX.tap(); renderRoom(); show('room'); };
+  $('again').onclick = function () { SFX.tap(); resetGame(); renderTitle(); show('title'); };
+
+  /* ---------- おてつだい ミニゲーム ---------- */
+  var CH = null; // いまの おてつだい
+  var cs = $('cSvg');
+  function svgPt(e) {
+    var p = cs.createSVGPoint(); p.x = e.clientX; p.y = e.clientY;
+    var m = cs.getScreenCTM(); if (!m) return { x: 0, y: 0 };
+    return p.matrixTransform(m.inverse());
+  }
+  function prog(r) { $('cBar').firstChild.style.width = Math.min(100, r * 100) + '%'; }
+  function hint(t) { $('cHint').innerHTML = t; }
+  function el(id) { return document.getElementById(id); }
+  function addSvg(markup) { cs.insertAdjacentHTML('beforeend', markup); return cs.lastElementChild; }
+  function later(fn, ms) { var c = CH; var t = setTimeout(function () { if (CH === c) fn(); }, ms); if (c) c.timers.push(t); }
+  function endChore() { if (CH) CH.timers.forEach(clearTimeout); CH = null; }
+
+  var dragging = false;
+  $('cStage').addEventListener('pointerdown', function (e) {
+    if (!CH || CH.over) return;
+    dragging = true;
+    try { $('cStage').setPointerCapture(e.pointerId); } catch (x) {}
+    var p = svgPt(e); if (CH.down) CH.down(p); if (CH.move) CH.move(p, true);
+  });
+  $('cStage').addEventListener('pointermove', function (e) {
+    if (!CH || CH.over || !dragging) return;
+    if (CH.move) CH.move(svgPt(e), false);
+  });
+  function up() { dragging = false; if (CH && CH.up) CH.up(); }
+  $('cStage').addEventListener('pointerup', up);
+  $('cStage').addEventListener('pointercancel', up);
+  $('cQuit').onclick = function () { SFX.tap(); endChore(); renderRoom(); show('room'); };
+
+  var CHORE_NAME = { wash: '👕 せんたく', rice: '🍚 ごはん', clean: '🧹 そうじ' };
+  function startChore(kind) {
+    endChore();
+    CH = { kind: kind, timers: [], over: false };
+    show('chore');
+    $('cTitle').textContent = CHORE_NAME[kind];
+    prog(0); cs.innerHTML = defs();
+    var n = save.owned;
+    if (kind === 'wash') (n >= 1 ? washEasy : washHand)();
+    if (kind === 'rice') (n >= 4 ? riceEasy : riceHand)();
+    if (kind === 'clean') (n >= 5 ? cleanEasy : cleanHand)();
+  }
+  var REWARD = 4;
+  var PRAISE = ['ありがとう！ たすかったよ！', 'じょうず じょうず！', 'えらいね！ ぴかぴか！', 'すごい！ おてつだい めいじん！'];
+  function finishChore(extra) {
+    if (!CH || CH.over) return;
+    CH.over = true; prog(1);
+    save.coins += REWARD; save.chores++; store();
+    SFX.ok(); setTimeout(SFX.coin, 350); confetti();
+    var nx = DEV[save.owned], kind = CH.kind;
+    var msg = nx ? (save.coins >= nx.price ? '<p>🏪 でんきやさんで <b>' + nx.name + '</b>が かえるよ！</p>' : '<p>' + nx.name + 'まで あと 🪙×' + (nx.price - save.coins) + '</p>') : '';
+    later(function () {
+      openPanel('<h2>' + pick(PRAISE) + '</h2>' + (extra || '') + '<div class="coinbig">🪙 +' + REWARD + '</div><p>コイン ぜんぶで 🪙×' + save.coins + '</p>' + msg +
+        '<div><button class="big" id="fRoom">おちゃのまへ</button><button class="big sub" id="fAgain">もう いっかい</button></div>');
+      $('fRoom').onclick = function () { SFX.tap(); closeOv(); endChore(); renderRoom(); show('room'); };
+      $('fAgain').onclick = function () { SFX.tap(); closeOv(); startChore(kind); };
+    }, 700);
+  }
+  function bubbles(x, y, k) {
+    for (var i = 0; i < (k || 3); i++) {
+      var b = addSvg('<circle class="bub" cx="' + (x + rnd(-30, 30)) + '" cy="' + (y + rnd(-10, 10)) + '" r="' + rnd(4, 9) + '" fill="#fff" stroke="#74c0fc" opacity=".9"/>');
+      setTimeout(function (n) { return function () { n.remove(); }; }(b), 1000);
+    }
+  }
+
+  // せんたく（てで ごしごし）
+  function washHand() {
+    var need = 12, cnt = 0, dir = 0, acc = 0, counted = false, last = null, ty = 0;
+    hint('シャツを うえ・したに <b>ごしごし</b> こすろう！');
+    var s = '<rect width="400" height="300" fill="#e3fafc"/><rect y="230" width="400" height="70" fill="#ced4da"/>' +
+      '<ellipse cx="200" cy="262" rx="160" ry="34" fill="#868e96"/><ellipse cx="200" cy="256" rx="148" ry="26" fill="#a5d8ff"/>' +
+      '<g transform="rotate(-6 200 150)"><rect x="140" y="30" width="120" height="236" rx="8" fill="#d9a066" stroke="#8d5524" stroke-width="3"/>';
+    for (var y = 50; y < 250; y += 9) s += '<rect x="150" y="' + y + '" width="100" height="4" rx="2" fill="#b07d48"/>';
+    s += '</g><g id="shirt"><path d="M160 110 l20 -16 h40 l20 16 l-10 18 l-8 -6 v66 h-44 v-66 l-8 6z" fill="#fff" stroke="#adb5bd" stroke-width="2"/>';
+    var spots = [[188, 132], [212, 150], [195, 165], [214, 120], [184, 178], [206, 182]];
+    spots.forEach(function (p, i) { s += '<ellipse id="sp' + i + '" cx="' + p[0] + '" cy="' + p[1] + '" rx="7" ry="5" fill="#8d6e63" opacity=".85"/>'; });
+    s += '</g>' + person(340, 290, 'mom', 'busy', 1.1) +
+      '<g class="hintarrow" id="harrow"><path d="M300 120 v-30 l-10 10 m10 -10 l10 10 M300 150 v30 l-10 -10 m10 10 l10 -10" stroke="#f76707" stroke-width="5" fill="none" stroke-linecap="round"/></g>';
+    cs.innerHTML = defs() + s;
+    var shirt = el('shirt');
+    CH.down = function (p) { last = p.y; };
+    CH.move = function (p, first) {
+      if (first || last === null) { last = p.y; return; }
+      var dy = p.y - last; last = p.y;
+      ty = Math.max(-60, Math.min(60, ty + dy * 0.7));
+      shirt.setAttribute('transform', 'translate(0 ' + ty + ')');
+      if (Math.abs(dy) < 0.5) return;
+      var d = dy > 0 ? 1 : -1;
+      if (d !== dir) { dir = d; acc = 0; counted = false; }
+      acc += Math.abs(dy);
+      if (!counted && acc > 26) {
+        counted = true; cnt++; SFX.scrub(); bubbles(200, 150 + ty, 3);
+        var h = el('harrow'); if (h) h.remove();
+        for (var i = 0; i < 6; i++) { var sp = el('sp' + i); if (sp) sp.setAttribute('opacity', Math.max(0, .85 - Math.max(0, cnt - i * 1.6) * 0.3)); }
+        prog(cnt / need);
+        if (cnt === 6) hint('あと すこし！ <b>ごしごし</b>');
+        if (cnt >= need) { hint('まっしろ ぴかぴか！'); finishChore(); }
+      }
+    };
+  }
+  // せんたく（せんたくき）
+  function washEasy() {
+    var step = 0, turn = 0;
+    hint('せんたくきの <b>スイッチ</b>を ポン！');
+    cs.innerHTML = defs() + '<rect width="400" height="300" fill="#e7f5ff"/><rect y="250" width="400" height="50" fill="#ced4da"/>' +
+      '<g transform="translate(120 46) scale(3.6)">' + ICON.washer.s() + '</g>' +
+      '<g id="swirl"><ellipse cx="200" cy="126" rx="56" ry="12" fill="#74c0fc"/></g>' +
+      '<g id="crank" transform="translate(264 75)"><line x1="0" y1="0" x2="16" y2="-26" stroke="#495057" stroke-width="7" stroke-linecap="round"/><circle r="9" fill="#868e96"/></g>' +
+      '<g id="flat" opacity="0"><rect x="150" y="104" width="100" height="5" rx="2" fill="#fff" stroke="#adb5bd"/></g>' +
+      '<g id="sw" class="hintarrow"><circle cx="163" cy="190" r="16" fill="none" stroke="#f76707" stroke-width="4"/></g>' +
+      person(340, 294, 'mom', 'smile', 1.1);
+    CH.down = function () {
+      if (step === 0) {
+        step = 1; SFX.click(); SFX.hum(); var h = el('sw'); if (h) h.remove();
+        hint('ぐるぐる…… あらって いるよ');
+        el('swirl').innerHTML = '<g class="spin"><ellipse cx="200" cy="126" rx="56" ry="12" fill="#74c0fc"/><path d="M160 126 q40 -14 80 0" stroke="#fff" stroke-width="4" fill="none"/></g>';
+        bubbles(200, 118, 6); prog(0.3);
+        later(function () { step = 2; bubbles(200, 118, 4); hint('ローラーの <b>ハンドル</b>を 3かい まわして しぼろう！（タップ）'); }, 1600);
+      } else if (step === 2) {
+        turn++; SFX.tap(); noise(0.2, 0.12, 0, 900);
+        el('crank').setAttribute('transform', 'translate(264 75) rotate(' + (turn * 120) + ')');
+        var f = el('flat'); f.setAttribute('opacity', '1'); f.setAttribute('transform', 'translate(0 ' + (turn * 14) + ')');
+        prog(0.3 + turn * 0.23);
+        if (turn >= 3) { step = 3; SFX.boing(); hint('シャツが <b>ぺったんこ！</b> おせんべい みたい！'); finishChore('<svg class="scene" viewBox="0 0 300 190">' + sceneWasher() + '</svg>'); }
+      }
+    };
+  }
+  // ごはん（かまど と うちわ）
+  function riceHand() {
+    var need = 15, cnt = 0;
+    hint('うちわで <b>ぱたぱた</b>！ ひを つよく しよう（タップ）');
+    cs.innerHTML = defs() + '<rect width="400" height="300" fill="#f1e3c8"/><rect y="250" width="400" height="50" fill="#a47148"/>' +
+      '<rect x="110" y="150" width="180" height="110" rx="10" fill="#c9a27e" stroke="#7f5539" stroke-width="3"/>' +
+      '<path d="M170 260 v-50 q30 -26 60 0 v50z" fill="#343a40"/>' +
+      '<g id="fire" transform="translate(200 258)"><path d="M-20 0 q-6 -24 8 -34 q0 14 12 6 q-2 -18 12 -26 q2 20 10 30 q6 14 -2 24z" fill="#ff922b"/><path d="M-10 0 q-2 -14 6 -20 q2 10 8 4 q6 8 2 16z" fill="#ffd43b"/></g>' +
+      '<path d="M140 150 q0 -40 60 -44 q60 4 60 44 z" fill="#343a40"/><rect x="128" y="146" width="144" height="10" rx="4" fill="#495057"/>' +
+      '<rect x="146" y="98" width="108" height="12" rx="5" fill="#b07d48"/><rect x="190" y="90" width="20" height="8" rx="3" fill="#8d5524"/>' +
+      '<g id="steam" opacity="0"><path class="steam" d="M180 90 q-6 -8 0 -16 q6 -8 0 -16" stroke="#fff" stroke-width="4" fill="none"/><path class="steam" d="M220 88 q-6 -8 0 -16 q6 -8 0 -16" stroke="#fff" stroke-width="4" fill="none"/></g>' +
+      '<g id="uchiwa" class="uchiwa" transform="translate(0 0)"><g transform="translate(110 240)"><line x1="0" y1="0" x2="0" y2="-30" stroke="#8d5524" stroke-width="5"/><ellipse cx="0" cy="-54" rx="28" ry="30" fill="#fff" stroke="#fa5252" stroke-width="3"/><circle cx="0" cy="-54" r="11" fill="#fa5252"/></g></g>' +
+      person(70, 296, 'gma', 'busy', 1.1) +
+      '<text id="chant" x="300" y="60" text-anchor="middle" font-size="18" font-weight="800" fill="#d9480f"></text>';
+    var fire = el('fire'), u = el('uchiwa');
+    CH.down = function () {
+      cnt++; SFX.fan(); if (cnt % 3 === 0) SFX.fire();
+      u.classList.remove('go'); void u.getBBox(); u.classList.add('go');
+      var sc = 1 + cnt / need * 1.4;
+      fire.setAttribute('transform', 'translate(200 258) scale(' + sc + ' ' + sc + ')');
+      prog(cnt / need);
+      el('chant').textContent = cnt < 6 ? 'はじめ ちょろちょろ' : cnt < 12 ? 'なか ぱっぱ' : 'ぶつぶつ…… いい におい！';
+      if (cnt >= 10) el('steam').setAttribute('opacity', '1');
+      if (cnt >= need) { hint('ごはんが たけたよ！ ほかほか 🍚'); finishChore(); }
+    };
+  }
+  // ごはん（すいはんき）
+  function riceEasy() {
+    hint('すいはんきの <b>スイッチ</b>を ポン！');
+    cs.innerHTML = defs() + '<rect width="400" height="300" fill="#f1e3c8"/><rect y="230" width="400" height="70" fill="#a47148"/>' +
+      '<g transform="translate(130 80) scale(4.2)">' + ICON.rice.s() + '</g>' +
+      '<g id="sw" class="hintarrow"><circle cx="200" cy="162" r="28" fill="none" stroke="#f76707" stroke-width="4"/></g>' +
+      '<g id="steam" opacity="0"><path class="steam" d="M190 76 q-6 -8 0 -16 q6 -8 0 -16" stroke="#fff" stroke-width="5" fill="none"/><path class="steam" d="M214 74 q-6 -8 0 -16 q6 -8 0 -16" stroke="#fff" stroke-width="5" fill="none"/></g>' +
+      person(70, 296, 'gma', 'smile', 1.1, { bubble: '🍵' }) + '<text id="chant" x="320" y="70" text-anchor="middle" font-size="18" font-weight="800" fill="#d9480f"></text>';
+    var on = false;
+    CH.down = function () {
+      if (on) return; on = true; SFX.click();
+      var h = el('sw'); if (h) h.remove();
+      el('steam').setAttribute('opacity', '1'); el('chant').textContent = 'ぽこ ぽこ……'; hint('まって いるだけで いいよ');
+      var t = 0; (function tick() { t++; prog(t / 5); if (t < 5) later(tick, 380); })();
+      later(function () { SFX.click(); el('chant').textContent = 'カチッ！'; hint('もう たけた！ かまどの ばんは いらないね'); finishChore(); }, 2000);
+    };
+  }
+  // そうじ（ほうき）
+  function dusts(k) {
+    var s = '', pts = [];
+    for (var i = 0; i < k; i++) {
+      var x, y, ok, tries = 0;
+      do { x = rnd(40, 360); y = rnd(70, 270); ok = pts.every(function (p) { return Math.hypot(p[0] - x, p[1] - y) > 50; }); } while (!ok && ++tries < 50);
+      pts.push([x, y]);
+      s += '<g id="du' + i + '" data-x="' + x + '" data-y="' + y + '"><g><circle cx="' + x + '" cy="' + y + '" r="16" fill="#adb5bd" opacity=".9"/>' +
+        '<circle cx="' + (x - 9) + '" cy="' + (y - 6) + '" r="9" fill="#ced4da"/><circle cx="' + (x + 10) + '" cy="' + (y + 4) + '" r="8" fill="#868e96"/>' +
+        '<circle cx="' + (x - 4) + '" cy="' + (y - 1) + '" r="1.8" fill="#343a40"/><circle cx="' + (x + 4) + '" cy="' + (y - 1) + '" r="1.8" fill="#343a40"/></g></g>';
+    }
+    return { s: s, pts: pts };
+  }
+  function cleanHand() {
+    var k = 7, gone = 0;
+    hint('<b>ほこり</b>を タップして ほうきで はこう！');
+    var d = dusts(k);
+    cs.innerHTML = defs() + '<rect width="400" height="300" fill="url(#tatami)"/>' + d.s + cat(368, 296, 0.9) +
+      '<g id="broom" transform="translate(340 60)"><g transform="rotate(30)"><line x1="0" y1="-50" x2="0" y2="0" stroke="#8d5524" stroke-width="5"/><path d="M-14 0 h28 l6 30 h-40z" fill="#e9c46a" stroke="#b08900"/></g></g>';
+    var broom = el('broom');
+    CH.down = function (p) {
+      broom.setAttribute('transform', 'translate(' + (p.x + 16) + ' ' + (p.y - 30) + ')');
+      for (var i = 0; i < k; i++) {
+        var g = el('du' + i); if (!g || g.dataset.gone) continue;
+        if (Math.hypot(+g.dataset.x - p.x, +g.dataset.y - p.y) < 40) {
+          g.dataset.gone = 1; gone++; SFX.sweep();
+          g.firstChild.classList.add('sweep');
+          prog(gone / k);
+          if (gone >= k) { hint('たたみが ぴかぴか！'); finishChore(); }
+          return;
+        }
+      }
+    };
+  }
+  // そうじ（そうじき）
+  function cleanEasy() {
+    var k = 7, gone = 0, jumped = false;
+    hint('そうじきを うごかして <b>ぶおーん</b>！（なぞろう）');
+    var d = dusts(k);
+    cs.innerHTML = defs() + '<rect width="400" height="300" fill="url(#tatami)"/>' + d.s + '<g id="neko">' + cat(368, 296, 0.9) + '</g>' +
+      '<g id="noz" transform="translate(200 160)"><path d="M0 0 q-40 40 -110 140" stroke="#495057" stroke-width="6" fill="none"/><rect x="-24" y="-6" width="48" height="14" rx="5" fill="#1971c2"/></g>';
+    var noz = el('noz'), hum = 0;
+    CH.move = function (p) {
+      noz.setAttribute('transform', 'translate(' + p.x + ' ' + p.y + ')');
+      var now = Date.now(); if (now - hum > 900) { hum = now; SFX.hum(); }
+      for (var i = 0; i < k; i++) {
+        var g = el('du' + i); if (!g || g.dataset.gone) continue;
+        if (Math.hypot(+g.dataset.x - p.x, +g.dataset.y - p.y) < 56) {
+          g.dataset.gone = 1; gone++; SFX.suck();
+          g.firstChild.style.setProperty('--dx', (p.x - g.dataset.x) + 'px'); g.firstChild.style.setProperty('--dy', (p.y - g.dataset.y) + 'px');
+          g.firstChild.classList.add('fly');
+          prog(gone / k);
+          if (!jumped && gone >= 3) { jumped = true; SFX.boing(); el('neko').innerHTML = cat(368, 296, 0.9, 'jump'); hint('ねこが <b>びよーん</b>！ おとに びっくり'); }
+          if (gone >= k) { hint('あっと いう まに ぴかぴか！'); finishChore(); }
+        }
+      }
+    };
+  }
+
+  /* ---------- まなび カード ---------- */
+  function openCards() {
+    SFX.tap();
+    var h = '';
+    CARDS.forEach(function (c) {
+      var got = !!save.cards[c.id];
+      h += '<button class="card' + (got ? '' : ' lock') + '" data-id="' + c.id + '"><span class="e">' + (got ? c.e : '❓') + '</span><span class="n">' + (got ? c.n : '？？？') + '</span><span class="h">' + (got ? 'タップで よむ' : c.h) + '</span></button>';
+    });
+    $('cardList').innerHTML = h;
+    $('cardIndex').hidden = false; $('cardView').hidden = true; $('modal').hidden = false;
+  }
+  $('cardList').addEventListener('click', function (e) {
+    var b = e.target.closest('.card'); if (!b) return;
+    var c = cardById(b.dataset.id);
+    if (!save.cards[c.id]) { SFX.ng(); return; }
+    SFX.ok();
+    $('cvE').textContent = c.e; $('cvN').textContent = c.n; $('cvT').innerHTML = c.t; $('cvP').textContent = '保護者の方へ：' + c.p;
+    $('cardIndex').hidden = true; $('cardView').hidden = false; $('sheet').scrollTop = 0;
+  });
+  $('cardBtn').onclick = openCards; $('cardOpen').onclick = openCards;
+  $('closeModal').onclick = function () { SFX.tap(); $('modal').hidden = true; };
+  $('cardBack').onclick = function () { SFX.tap(); $('cardIndex').hidden = false; $('cardView').hidden = true; };
+  $('modal').addEventListener('click', function (e) { if (e.target === $('modal')) $('modal').hidden = true; });
+
+  /* ---------- はじめ ---------- */
+  renderSnd(); renderTitle(); show('title');
+  // テスト用
+  window.__showa = { save: save, store: store, startChore: startChore, finale: finale, renderRoom: renderRoom, show: show };
+})();
+</script>
+</body>
+</html>
