@@ -1641,6 +1641,68 @@ void main(){
     return Object.assign(ln, { k: t.k, info, stops, yAt, li });
   }).filter((t) => t.stops.length >= 2);
   const AKAI_OFF = { id: 'akaioff', x: 0, z: 0, label: '🚏<br>おりる', color: hex('#c92a2a'), run: () => endAkai('🚏 おりたよ') };
+  // ================= そらの ぼうけんじま（どうぐ を おもいきり つかう しま。オリジナル）=================
+  // りんこうパーク の うえ たかさ 150 に うかぶ しま。まんなか の ひろば から 5つ の しかけ と ボス。
+  const ISL = (() => {
+    const q = POI['臨港パーク'] || { x: 150, z: -60 }, X = q.x, Z = q.z, Y = 150;
+    const grass = hex('#74c365'), grass2 = hex('#5fae52'), rock = hex('#8d7b68'), rock2 = hex('#6c5d4f'), wood = hex('#b07c45'), stone = hex('#adb5bd');
+    const bx = (x0, z0, x1, z1, y0, y1, col, solid, top) => { G.box(X + x0, Y + y0, Z + z0, X + x1, Y + y1, Z + z1, col, 0, top); return solid ? addSolid({ x0: X + x0, y0: Y + y0, z0: Z + z0, x1: X + x1, y1: Y + y1, z1: Z + z1, climb: true }) : null; };
+    // しま の じめん（ひがし に たに。たに の むこう に ちいさな しま）
+    bx(-75, -75, 30, 75, -3, 0, rock, true, grass);
+    bx(60, -16, 80, 16, -3, 0, rock, true, grass2);
+    // したの いわ（さかさ の やま）と くも
+    [[-75, -75, 30, 75, 3], [-62, -62, 18, 62, 9], [-48, -48, 6, 48, 16], [-30, -30, -8, 30, 24]].forEach(([a, b, c, d, h], i) => G.box(X + a, Y - 3 - h, Z + b, X + c, Y - 3 - (i ? [3, 9, 16][i - 1] : 0), Z + d, i % 2 ? rock2 : rock));
+    for (let k = 0; k < 18; k++) { const a = k / 18 * Math.PI * 2, r = 85 + (k % 3) * 8; G.sphere(X + Math.cos(a) * r, Y - 6 + (k % 4) * 2, Z + Math.sin(a) * r, 6 + (k % 3) * 2, 6, hex('#f8f9fa')); }
+    // ふち の さく（おちにくく。たに の ところ は あける）
+    const fence = (x0, z0, x1, z1) => { G.box(X + x0, Y, Z + z0, X + x1, Y + 1.1, Z + z1, wood); addSolid({ x0: X + x0, y0: Y, z0: Z + z0, x1: X + x1, y1: Y + 1.1, z1: Z + z1, climb: true }); };
+    fence(-75, -75, 30, -74.6); fence(-75, 74.6, 30, 75); fence(-75, -75, -74.6, 75); fence(29.6, -75, 30, -14); fence(29.6, 14, 30, 75);
+    // まんなか の ひろば（いし の たたみ）
+    G.box(X - 14, Y + 0.01, Z - 14, X + 14, Y + 0.03, Z + 14, stone);
+    // き（もり）
+    const trees = [];
+    for (let i = 0; i < 46; i++) { const tx = -70 + ((i * 37) % 95), tz = -70 + ((i * 53) % 140); if (Math.abs(tx) < 18 && Math.abs(tz) < 18) continue; if (tx > -76 && tx < -34 && tz > -24 && tz < 24) continue; if (tx < -34 && tz < -34) continue; trees.push([tx, tz]); G.cyl(X + tx, Y, Z + tz, 0.35, 1.6, 5, C.trunk); G.cone(X + tx, Y + 1.2, Z + tz, 1.9, 3.6, 7, i % 2 ? C.leaf : C.leaf2); addSolid({ x0: X + tx - 0.4, y0: Y, z0: Z + tz - 0.4, x1: X + tx + 0.4, y1: Y + 2, z1: Z + tz + 0.4, climb: true }); }
+    // --- フック の たに（ひがし）: うく はしら と フック の まと ---
+    const hooks = [];
+    [[38, 0], [46, -5], [54, 4]].forEach(([hx, hz]) => { bx(hx - 0.9, hz - 0.9, hx + 0.9, hz + 0.9, -14, 2, stone, true, hex('#ced4da')); hooks.push({ x: X + hx, y: Y + 3.3, z: Z + hz, top: Y + 2 }); G.cyl(X + hx, Y + 2, Z + hz, 0.12, 1.2, 6, C.gray); });
+    hooks.push({ x: X + 64, y: Y + 1.6, z: Z, top: Y }); G.cyl(X + 64, Y, Z, 0.12, 1.3, 6, C.gray);   // むこう の しま の フック
+    // ひろば の たかい とう（てっぺん に フック の まと）
+    bx(-6, -20, -2, -16, 0, 12, stone, true, hex('#ced4da')); hooks.push({ x: X - 4, y: Y + 13.3, z: Z - 18, top: Y + 12 }); G.cyl(X - 4, Y + 12, Z - 18, 0.12, 1.2, 6, C.gray);
+    // --- まと の にわ（きた）---
+    const targets = [[-20, -40, 1.5], [-8, -50, 2.5], [6, -46, 1.8], [18, -58, 3.2], [-14, -62, 4], [10, -66, 2.2]].map(([tx, tz, h], i) => { G.cyl(X + tx, Y, Z + tz, 0.12, h, 5, wood); return { x: X + tx, y: Y + h + 0.7, z: Z + tz, hit: false, move: i === 3 || i === 5 ? (i === 3 ? 6 : -5) : 0, bx: X + tx }; });
+    const balloons = [[-24, -30, 6], [0, -36, 8], [22, -40, 7], [-4, -56, 10]].map(([a, b, h]) => ({ x: X + a, y: Y + h, z: Z + b, pop: false, by: Y + h }));
+    // --- ばくだん の いわば（みなみ）---
+    const rocks = [[4, 40], [14, 52], [24, 44], [8, 64]].map(([a, b]) => ({ x: X + a, z: Z + b, r: 2.4, alive: true, s: addSolid({ x0: X + a - 2, y0: Y, z0: Z + b - 2, x1: X + a + 2, y1: Y + 3.6, z1: Z + b + 2, climb: true }) }));
+    // ほらあな（ひび の かべ で ふさがって いる）
+    bx(14, 66, 30, 74, 0, 6, rock2, true); bx(14, 58, 15, 66, 0, 6, rock2, true); bx(29, 58, 30, 66, 0, 6, rock2, true); bx(14, 58, 30, 66, 6, 7, rock2, true);
+    const crackWall = { x: X + 22, z: Z + 58, alive: true, s: addSolid({ x0: X + 15, y0: Y, z0: Z + 57.6, x1: X + 29, y1: Y + 6, z1: Z + 58.4, climb: false }) };
+    // --- ハンマー の ひろば（みなみ にし）---
+    const pegs = [[-52, 40], [-46, 44], [-40, 40], [-52, 52], [-46, 56], [-40, 52]].map(([a, b]) => ({ x: X + a, z: Z + b, down: false, s: addSolid({ x0: X + a - 0.35, y0: Y, z0: Z + b - 0.35, x1: X + a + 0.35, y1: Y + 1.1, z1: Z + b + 0.35, climb: true }) }));
+    bx(-66, 60, -56, 70, 0, 5, stone, true, hex('#ced4da'));   // たかい だい（かいだん が でると のぼれる）
+    const stairs = [0, 1, 2, 3, 4].map((k) => ({ k, s: addSolid({ x0: X - 56 + k * 1.2, y0: -9999, z0: Z + 62, x1: X - 54.8 + k * 1.2, y1: -9999, z1: Z + 68, climb: true }), y1: Y + 5 - k }));
+    const crates = [[-30, 34], [-28, 46], [-24, 60], [10, 22], [-20, 22], [24, -20]].map(([a, b]) => ({ x: X + a, z: Z + b, alive: true, s: addSolid({ x0: X + a - 0.7, y0: Y, z0: Z + b - 0.7, x1: X + a + 0.7, y1: Y + 1.4, z1: Z + b + 0.7, climb: true }) }));
+    // --- たいまつ の どうくつ（にし）: くらい へや ---
+    bx(-75, -24, -36, -22, 0, 7, rock2, true); bx(-75, 22, -36, 24, 0, 7, rock2, true); bx(-75, -24, -73, 24, 0, 7, rock2, true);
+    bx(-38, -24, -36, -4, 0, 7, rock2, true); bx(-38, 4, -36, 24, 0, 7, rock2, true); bx(-75, -24, -36, 24, 7, 8, rock2, false);
+    bx(-56, -22, -54, -6, 0, 7, rock2, true); bx(-56, 6, -54, 22, 0, 7, rock2, true);           // なか の かべ（くも の す の とおりみち）
+    const webs = [{ x: X - 55, z: Z, alive: true, s: addSolid({ x0: X - 56, y0: Y, z0: Z - 6, x1: X - 54, y1: Y + 7, z1: Z + 6, climb: false }) }];
+    const braziers = [[-44, -16], [-44, 16], [-66, -16], [-66, 16]].map(([a, b]) => { G.cyl(X + a, Y, Z + b, 0.5, 1.1, 8, stone); G.cyl(X + a, Y + 1.1, Z + b, 0.7, 0.3, 8, C.gray); addSolid({ x0: X + a - 0.5, y0: Y, z0: Z + b - 0.5, x1: X + a + 0.5, y1: Y + 1.3, z1: Z + b + 0.5, climb: true }); return { x: X + a, y: Y + 1.6, z: Z + b, lit: false }; });
+    const caveGate = { x: X - 64, z: Z, open: false, s: addSolid({ x0: X - 65.4, y0: Y, z0: Z - 1.4, x1: X - 62.6, y1: Y + 2.6, z1: Z + 1.4, climb: false }) };   // たからばこ の おり
+    // --- ボス の アリーナ（きた にし）---
+    G.cyl(X - 55, Y + 0.02, Z - 55, 17, 0.05, 24, hex('#d6c3a5'));
+    for (let k = 0; k < 36; k++) { const a = k / 36 * Math.PI * 2; if (k >= 8 && k <= 10) continue; const px = X - 55 + Math.cos(a) * 18, pz = Z - 55 + Math.sin(a) * 18; G.box(px - 1.6, Y, pz - 1.6, px + 1.6, Y + 3, pz + 1.6, rock2); addSolid({ x0: px - 1.6, y0: Y, z0: pz - 1.6, x1: px + 1.6, y1: Y + 3, z1: pz + 1.6, climb: true }); }
+    const bossGate = { s: addSolid({ x0: X - 61.5, y0: Y, z0: Z - 38.6, x1: X - 48.5, y1: Y + 5, z1: Z - 36.6, climb: false }), open: false, x: X - 55, z: Z - 37.6 };
+    // --- たからばこ（ひろば に 6つ：どうぐ）と ごほうび の はこ ---
+    const ITEMS6 = ['sling', 'bow', 'hook', 'bomb', 'hammer', 'torch'];
+    const chests = ITEMS6.map((id, i) => ({ id, x: X - 10 + i * 4, z: Z + 9, open: false, item: true }));
+    const rewardChests = [{ id: 'target', x: X, z: Z - 70, open: false }, { id: 'hook', x: X + 72, z: Z, open: false }, { id: 'bomb', x: X + 22, z: Z + 70, open: false }, { id: 'hammer', x: X - 61, z: Z + 65, y: Y + 5, open: false }, { id: 'torch', x: X - 64, z: Z, open: false }];
+    // ひろば の かんばん と もどり の ポータル
+    G.box(X + 8, Y, Z - 3, X + 8.3, Y + 2.2, Z - 2.7, wood); G.box(X + 6.5, Y + 2.2, Z - 3.4, X + 9.8, Y + 3.2, Z - 2.3, hex('#fff3bf'));
+    G.cyl(X + 12, Y, Z, 1.6, 0.2, 16, hex('#9775fa'), 5);
+    return { X, Z, Y, hooks, targets, balloons, rocks, crackWall, pegs, stairs, crates, webs, braziers, caveGate, bossGate, chests, rewardChests, trees, start: { x: X, z: Z + 2 }, portal: { x: X + 12, z: Z }, cave: { x0: X - 75, x1: X - 36, z0: Z - 24, z1: Z + 24 }, arena: { x: X - 55, z: Z - 55 } };
+  })();
+  const ISLDOWN = (() => { const q = POI['臨港パーク']; return q ? freeSpot(q.x - 6, q.z + 6) : null; })();
+  if (ISLDOWN) { G.cyl(ISLDOWN.x, 0, ISLDOWN.z, 1.8, 0.15, 16, hex('#9775fa'), 5); DOORS.push({ id: 'island', x: ISLDOWN.x, z: ISLDOWN.z, label: '🏝️<br>ぼうけん', color: hex('#7048e8'), run: () => goIsland(true) }); }
+  DOORS.push({ id: 'islandback', x: ISL.portal.x, z: ISL.portal.z, y: ISL.Y, label: '🌀<br>かえる', color: hex('#7048e8'), run: () => goIsland(false) });
   const staticMesh = G.upload();
   const mSails = SAILG.upload();
 
@@ -2114,7 +2176,7 @@ void main(){
     time += dt;
     updatePlats(time);
     if (P.state === 'ride') { rideUpdate(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
-    const SP = { akai: akaiUpdate, boat: boatUpdate, slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate, train: trainUpdate }[P.state];
+    const SP = { akai: akaiUpdate, boat: boatUpdate, slide: slideUpdate, bus: busUpdate, coaster: coasterUpdate, ghost: ghostUpdate, wheel: wheelUpdate, heli: heliUpdate, hurt: hurtUpdate, train: trainUpdate, hook: hookUpdate }[P.state];
     if (SP) { SP(dt); inp.jump = false; inp.let = false; afterUpdate(dt); return; }
     if (P.plat) { P.x += P.plat.dx; P.y += P.plat.dy; P.z += P.plat.dz; }
     readMove();
@@ -2318,6 +2380,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
+    advTick(dt);
     momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); seasonTick(dt); rainTick(dt); walkersTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
@@ -2363,6 +2426,7 @@ void main(){
       if (save.stamps.includes(z.id)) continue;
       let inside = z.ride ? P.state === 'ride' : Math.hypot(z.x - P.x, z.z - P.z) < z.r;
       if (inside && z.minY !== undefined && P.y < z.minY) inside = false;
+      if (inside && onIsland()) inside = false;
       if (inside) {
         save.stamps.push(z.id); store(); refreshHud(); SFX.stamp();
         if (bannerT < 1) banner(`📍 ${z.name} に ついた！<small>スタンプ ${save.stamps.length}/${ZONES.length}</small>`, 2.4);
@@ -3805,6 +3869,343 @@ void main(){
     draw(mCube, M(b, T(0, -3.3, 1), S(1.4, 0.9, 3)), [1, 0.85, 0.3]); [[0, 2.5], [2.5, 0], [-2.5, 0]].forEach(([dx, dy]) => draw(mCube, M(b, T(dx, dy, -8), S(dx ? 2.2 : 0.2, dy ? 2.2 : 0.2, 1.6)), [1, 0.45, 0.6]));
     for (let k = 0; k < 8; k++) draw(mSphere, M(b, T(Math.cos(k) * 1.5, -4.6 - k * 0.6, 1 + Math.sin(k) * 0.6), S(0.5)), cols[k % 5], 0.4);
   }
+  // ================= ぼうけん の どうぐ と まもの（そらの ぼうけんじま）=================
+  // どうぐ は この ゲーム の オリジナル: パチンコ・ゆみや・ワイヤーフック・ばくだん・ドッカン ハンマー・たいまつ
+  const AITEM = {
+    sling: { e: '🎯', n: 'パチンコ', d: 'たま を とばす。まと・ふうせん・コウモリン に' },
+    bow: { e: '🏹', n: 'ゆみや', d: 'とおく まで とぶ。もえる ひ の そば を とおると ひの や に なる' },
+    hook: { e: '🪝', n: 'ワイヤーフック', d: 'フック の まと に ひっかけて びゅーん と とぶ' },
+    bomb: { e: '💣', n: 'ばくだん', d: 'なげて ドッカーン！ ひび の かべ や いわ を こわす' },
+    hammer: { e: '🔨', n: 'ドッカン ハンマー', d: 'くい を うちこむ・はこ を こわす・よろい の まもの に' },
+    torch: { e: '🔥', n: 'たいまつ', d: 'ひ を つける・くも の す を もやす・くらい ところ が みえる' },
+  };
+  const AORDER = ['sling', 'bow', 'hook', 'bomb', 'hammer', 'torch'];
+  if (!save.adv) save.adv = { items: [], cur: 'sling', clear: {}, got: {}, boss: false, kills: 0 };
+  const ADV = () => save.adv;
+  const PROJ = [], ENE = []; let advCool = 0, swingT = 0, advSpawnT = 0, boss = null, shakeT = 0;
+  P.hp = 5; P.inv = 0;
+  const FIREWEAK = { slime: 2, spider: 2, snowman: 2 };
+  const ETYPE = {
+    slime: { hp: 2, r: 0.7, sp: 2.0, col: [0.45, 0.85, 0.4], n: 'ぷにスライム' },
+    bat: { hp: 1, r: 0.6, sp: 3.0, col: [0.5, 0.35, 0.65], n: 'コウモリン', fly: 1 },
+    knight: { hp: 4, r: 0.8, sp: 1.5, col: [0.7, 0.72, 0.78], n: 'からっぽ よろい', shield: 1 },
+    roller: { hp: 3, r: 1.0, sp: 3.2, col: [0.55, 0.5, 0.45], n: 'ころころ いわ', hard: 1 },
+    spider: { hp: 2, r: 0.7, sp: 2.4, col: [0.25, 0.25, 0.3], n: 'くもくも' },
+    snowman: { hp: 3, r: 0.9, sp: 1.3, col: [0.95, 0.97, 1], n: 'ゆきだるまん' },
+  };
+  function onIsland() { return Math.abs(P.y - ISL.Y) < 40 && Math.abs(P.x - ISL.X) < 95 && Math.abs(P.z - ISL.Z) < 95; }
+  function advHud() {
+    const a = ADV(), has = a.items.length > 0;
+    $('advBtns').hidden = !has;
+    if (has) { if (!a.items.includes(a.cur)) a.cur = a.items[0]; $('bUse').innerHTML = `<i>${AITEM[a.cur].e}</i><b>${AITEM[a.cur].n}</b>`; }
+    const isl = onIsland();
+    $('advHud').hidden = !isl; document.body.classList.toggle('island', isl);
+    if (isl) { const n = ['target', 'hook', 'bomb', 'hammer', 'torch'].filter((k) => a.clear[k]).length; $('advHud').innerHTML = `${'❤️'.repeat(Math.max(0, P.hp))}${'🤍'.repeat(Math.max(0, 5 - P.hp))} ・ しかけ ${n}/5${a.boss ? ' ・ 👑' : ''}${boss && boss.hp > 0 ? ` ・ だいおう ${'▮'.repeat(Math.ceil(boss.hp / 4))}` : ''}`; }
+  }
+  const solidOff = (b) => { if (b) { b.y0 = -9999; b.y1 = -9999; } };
+  function applyClears() {
+    const a = ADV(), Y = ISL.Y;
+    if (a.clear.target) { ISL.targets.forEach((t) => { t.hit = true; }); ISL.balloons.forEach((b) => { b.pop = true; }); }
+    if (a.clear.bomb) { ISL.crackWall.alive = false; solidOff(ISL.crackWall.s); }
+    if (a.clear.hammer) { ISL.pegs.forEach((p) => { p.down = true; p.s.y1 = Y + 0.15; }); ISL.stairs.forEach((st) => { st.s.y0 = Y; st.s.y1 = st.y1; }); }
+    if (a.clear.torch) { ISL.braziers.forEach((b) => { b.lit = true; }); ISL.webs.forEach((w) => { w.alive = false; solidOff(w.s); }); ISL.caveGate.open = true; solidOff(ISL.caveGate.s); }
+    if (['target', 'hook', 'bomb', 'hammer', 'torch'].every((k) => a.clear[k])) { ISL.bossGate.open = true; solidOff(ISL.bossGate.s); }
+    // いわ と はこ は くる たび に もどる
+    ISL.rocks.forEach((r) => { r.alive = true; r.s.y0 = Y; r.s.y1 = Y + 3.6; });
+    ISL.crates.forEach((c) => { c.alive = true; c.s.y0 = Y; c.s.y1 = Y + 1.4; });
+  }
+  function goIsland(up) {
+    if (up) {
+      P.x = ISL.start.x; P.z = ISL.start.z; P.y = ISL.Y + 0.1; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.ground = true; P.fallTop = P.y; P.hp = 5; P.inv = 0;
+      MOM.x = P.x + 1.3; MOM.z = P.z; MOM.y = P.y; applyClears(); ENE.length = 0; boss = null;
+      for (let i = 0; i < 18; i++) { const a = i / 18 * Math.PI * 2; puffs.push({ x: P.x + Math.cos(a), y: P.y + 0.3, z: P.z + Math.sin(a), t: 0, vy: 1.5, w: 1, c: [0.75, 0.6, 1] }); }
+      tone(400, 0.3, 'sine', 0.07, 1200); banner('🏝️ そらの ぼうけんじま に ついた！<small>ひろば の たからばこ を あけて どうぐ を てに いれよう</small>', 4);
+      momSay('たかい！ まものも いるから きを つけてね。ママが ついてるよ 👼', 4);
+    } else {
+      PROJ.length = 0; ENE.length = 0; boss = null;
+      const f = ISLDOWN || START; P.x = f.x; P.z = f.z; P.y = 0; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.ground = true; P.fallTop = 0; MOM.x = P.x + 1.3; MOM.z = P.z; MOM.y = 0;
+      banner('🌀 りんこうパーク に もどった', 2.2);
+    }
+    lastDoorId = '-'; advHud();
+  }
+  // たからばこ（ドア の しくみ を つかう）
+  ISL.chests.forEach((c) => DOORS.push({ get id() { return 'chest_' + c.id; }, get x() { return ADV().items.includes(c.id) ? 1e7 : c.x; }, get z() { return c.z; }, y: ISL.Y, r: 2.2, label: '🎁<br>あける', color: hex('#f59f00'), run: () => openChest(c) }));
+  ISL.rewardChests.forEach((c) => DOORS.push({ get id() { return 'rchest_' + c.id; }, get x() { return ADV().clear[c.id] && !ADV().got[c.id] ? c.x : 1e7; }, get z() { return c.z; }, y: c.y || ISL.Y, r: 2.4, label: '💰<br>あける', color: hex('#f59f00'), run: () => openReward(c) }));
+  function openChest(c) {
+    const a = ADV(); if (a.items.includes(c.id)) return;
+    a.items.push(c.id); a.cur = c.id; store(); advHud(); confetti();
+    [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', 0.08, null, i * 0.12));
+    banner(`${AITEM[c.id].e} ${AITEM[c.id].n} を てに いれた！<small>${AITEM[c.id].d}。みぎしたの ${AITEM[c.id].e} ボタン（キー R）で つかう・🔄（キー T）で もちかえ</small>`, 5);
+  }
+  function openReward(c) {
+    const a = ADV(); if (a.got[c.id]) return; a.got[c.id] = true;
+    save.wallet[500] = (save.wallet[500] || 0) + 1; store(); refreshHud(); confetti(); SFX.coin && SFX.coin();
+    banner('💰 たからばこ に 500えん！<small>しかけ クリア の ごほうび</small>', 3);
+  }
+  function clearZone(id, msg) {
+    const a = ADV(); if (a.clear[id]) return; a.clear[id] = true; store();
+    [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.22, 'triangle', 0.08, null, i * 0.13)); confetti();
+    banner(`✨ ${msg}<small>たからばこ が でた！</small>`, 4);
+    if (['target', 'hook', 'bomb', 'hammer', 'torch'].every((k) => a.clear[k])) { ISL.bossGate.open = true; solidOff(ISL.bossGate.s); setTimeout(() => { banner('👑 きた にし の とびら が ひらいた！<small>どろんこ だいおう が まっているぞ…</small>', 5); momSay('ぜんぶ クリア！ さいご は だいおう だね。がんばれ！', 4); }, 2500); }
+    advHud();
+  }
+  // --- ねらい（ちかくの まと を じどうで ねらう）---
+  function aimAt(kind) {
+    const fx = Math.sin(P.face), fz = Math.cos(P.face), ox = P.x + fx * 0.5, oy = P.y + 1.1, oz = P.z + fz * 0.5, range = kind === 'bow' ? 70 : kind === 'hook' ? 32 : 36;
+    const cand = [];
+    if (kind === 'hook') ISL.hooks.forEach((h) => { if (Math.hypot(h.x - P.x, h.z - P.z) > 2) cand.push(h); });
+    else {
+      ENE.forEach((e) => cand.push({ x: e.x, y: e.y + 0.7, z: e.z }));
+      if (boss && boss.hp > 0) cand.push({ x: boss.x, y: boss.y + 2.5, z: boss.z });
+      ISL.targets.forEach((t) => { if (!t.hit) cand.push(t); }); ISL.balloons.forEach((b) => { if (!b.pop) cand.push(b); });
+      if (kind === 'bow') ISL.braziers.forEach((b) => { if (!b.lit) cand.push(b); });
+    }
+    let best = null, bs = 1e9;
+    cand.forEach((c) => { const dx = c.x - ox, dy = c.y - oy, dz = c.z - oz, d = Math.hypot(dx, dz); if (d > range || d < 0.5) return; const cos = (dx * fx + dz * fz) / d; if (cos < 0.6) return; const sc = d * (2 - cos); if (sc < bs) { bs = sc; best = c; } });
+    return { ox, oy, oz, t: best };
+  }
+  function shoot(kind) {
+    const { ox, oy, oz, t } = aimAt(kind), sp = kind === 'bow' ? 46 : kind === 'hook' ? 42 : 32;
+    let dx, dy, dz;
+    if (t) { dx = t.x - ox; dy = t.y - oy; dz = t.z - oz; } else { dx = Math.sin(P.face); dy = 0.06; dz = Math.cos(P.face); }
+    const l = Math.hypot(dx, dy, dz) || 1, g = kind === 'sling' ? 5 : kind === 'bow' ? 2.5 : 0, flight = t ? l / sp : 0;
+    PROJ.push({ k: kind === 'sling' ? 'pel' : kind === 'bow' ? 'arr' : 'hook', x: ox, y: oy, z: oz, vx: dx / l * sp, vy: dy / l * sp + g * flight / 2, vz: dz / l * sp, g, t: 0, sx: ox, sz: oz });
+  }
+  function advUse() {
+    const a = ADV(); if (paused || !a.items.length || advCool > 0) return;
+    if (!{ ground: 1, air: 1, swim: 1, prop: 1 }[P.state]) return;
+    const k = a.cur;
+    if (k === 'sling') { shoot('sling'); advCool = 0.25; tone(700, 0.06, 'square', 0.05, 300); }
+    else if (k === 'bow') { shoot('bow'); advCool = 0.45; tone(500, 0.12, 'triangle', 0.06, 1200); }
+    else if (k === 'hook') { if (PROJ.some((p) => p.k === 'hook')) return; shoot('hook'); advCool = 0.3; tone(300, 0.2, 'sawtooth', 0.04, 900); }
+    else if (k === 'bomb') { const fx = Math.sin(P.face), fz = Math.cos(P.face); PROJ.push({ k: 'bomb', x: P.x + fx * 0.6, y: P.y + 1.2, z: P.z + fz * 0.6, vx: fx * 9 + P.vx * 0.5, vy: 6.5, vz: fz * 9 + P.vz * 0.5, g: 18, t: 0 }); advCool = 0.9; tone(260, 0.1, 'sine', 0.06); }
+    else if (k === 'hammer') { swingT = 0.4; advCool = 0.55; }
+    else if (k === 'torch') { swingT = 0.3; advCool = 0.35; torchHit(); }
+  }
+  function nextItem() { const a = ADV(); if (!a.items.length) return; const L = AORDER.filter((x) => a.items.includes(x)); a.cur = L[(L.indexOf(a.cur) + 1) % L.length]; store(); advHud(); SFX.tap(); }
+  // --- あたり ---
+  function hurtEnemy(e, dmg, how, fx, fz) {
+    const T2 = ETYPE[e.k];
+    if (T2.hard && how !== 'bomb' && how !== 'hammer') { tone(1500, 0.05, 'square', 0.04); puffs.push({ x: e.x, y: e.y + 0.8, z: e.z, t: 0.6, vy: 1, w: 1 }); return; }   // かたい！
+    if (T2.shield && (how === 'pel' || how === 'arr')) { const ex = Math.sin(e.face), ez = Math.cos(e.face); if (fx * ex + fz * ez < -0.3) { tone(1800, 0.06, 'square', 0.05); return; } }   // まえ から は たて で ガード
+    if ((how === 'fire' || how === 'farr') && FIREWEAK[e.k]) dmg *= 2;
+    e.hp -= dmg; e.flash = 0.2; e.kx = (fx || 0) * 6; e.kz = (fz || 0) * 6; e.stun = Math.max(e.stun || 0, how === 'hook' ? 2 : 0.3);
+    tone(420, 0.08, 'square', 0.05, 200);
+    if (e.hp <= 0) killEnemy(e);
+  }
+  function killEnemy(e) {
+    const i = ENE.indexOf(e); if (i >= 0) ENE.splice(i, 1);
+    for (let k = 0; k < 12; k++) { const a = k / 12 * Math.PI * 2; puffs.push({ x: e.x + Math.cos(a) * 0.4, y: e.y + 0.6, z: e.z + Math.sin(a) * 0.4, t: 0, vy: 2, w: 1, c: [1, 0.95, 0.6] }); }
+    tone(880, 0.1, 'sine', 0.06); tone(1320, 0.12, 'sine', 0.05, null, 0.08);
+    ADV().kills = (ADV().kills || 0) + 1; if (Math.random() < 0.3) { save.wallet[100] = (save.wallet[100] || 0) + 1; refreshHud(); banner(`⭐ ${ETYPE[e.k].n} を やっつけた！<small>🪙 100えん ひろった（やっつけた かず ${ADV().kills}）</small>`, 1.6); }
+    store();
+  }
+  function hurtBoss(dmg, how) {
+    if (!boss || boss.hp <= 0) return; const mult = { bomb: 6, hammer: 5, farr: 3, fire: 2, arr: 2, pel: 1, hook: 1 }[how] || dmg;
+    boss.hp -= mult; boss.flash = 0.25; tone(160, 0.2, 'sawtooth', 0.07, 90);
+    if (boss.hp <= 0) {
+      for (let k = 0; k < 40; k++) puffs.push({ x: boss.x + (Math.random() - 0.5) * 5, y: boss.y + Math.random() * 4, z: boss.z + (Math.random() - 0.5) * 5, t: 0, vy: 3, w: 1, c: [0.6, 0.45, 0.3] });
+      const a = ADV(); const first = !a.boss; a.boss = true; if (first) { save.wallet[1000] = (save.wallet[1000] || 0) + 3; } store(); refreshHud(); confetti(); SFX.big && SFX.big();
+      banner(`👑 どろんこ だいおう を やっつけた！${first ? '<small>ごほうび 3000えん と 👑 しょうごう「ぼうけん の ゆうしゃ」</small>' : ''}`, 5); momSay('すごーい！ あおちゃん は ほんとうの ゆうしゃ だね 👑', 4.5);
+    }
+    advHud();
+  }
+  function aoHurt(fromX, fromZ) {
+    if (P.inv > 0 || !onIsland()) return;
+    P.hp--; P.inv = 1.3; const dx = P.x - fromX, dz = P.z - fromZ, l = Math.hypot(dx, dz) || 1; P.vx = dx / l * 9; P.vz = dz / l * 9; P.vy = 5; P.ground = false; if (P.state === 'ground') P.state = 'air';
+    tone(200, 0.25, 'sawtooth', 0.06, 100); $('cv').classList.add('hit'); setTimeout(() => $('cv').classList.remove('hit'), 250);
+    if (P.hp <= 0) { banner('😵 ふらふら… ひろば で ひとやすみ<small>ハート が ぜんぶ もどったよ</small>', 3); P.x = ISL.start.x; P.z = ISL.start.z; P.y = ISL.Y + 0.1; P.vx = P.vz = P.vy = 0; P.hp = 5; P.inv = 2; momSay('だいじょうぶ？ ママの おみず のんで げんき だして 🥤', 3.5); }
+    advHud();
+  }
+  function explode(x, y, z) {
+    for (let k = 0; k < 34; k++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 2.5; puffs.push({ x: x + Math.cos(a) * r, y: y + Math.random() * 1.5, z: z + Math.sin(a) * r, t: Math.random() * 0.3, vy: 2 + Math.random() * 4, w: 0, c: k % 3 ? [1, 0.6, 0.2] : [0.5, 0.5, 0.5] }); }
+    noise(0.9, 0.6, 220, 'lowpass'); tone(80, 0.6, 'sine', 0.16, 40); shakeT = 0.4; $('cv').classList.add('shake'); setTimeout(() => $('cv').classList.remove('shake'), 400);
+    ENE.slice().forEach((e) => { const d = Math.hypot(e.x - x, e.z - z); if (d < 5 && Math.abs(e.y - y) < 4) hurtEnemy(e, 3, 'bomb', (e.x - x) / (d || 1), (e.z - z) / (d || 1)); });
+    if (boss && Math.hypot(boss.x - x, boss.z - z) < 6.5) hurtBoss(6, 'bomb');
+    ISL.rocks.forEach((r) => { if (r.alive && Math.hypot(r.x - x, r.z - z) < 4.6) { r.alive = false; solidOff(r.s); puffs.push({ x: r.x, y: ISL.Y + 1, z: r.z, t: 0, vy: 3, w: 0, c: [0.6, 0.55, 0.5] }); if (Math.random() < 0.5) { save.wallet[100] = (save.wallet[100] || 0) + 1; refreshHud(); } } });
+    ISL.crates.forEach((c) => { if (c.alive && Math.hypot(c.x - x, c.z - z) < 3.5) breakCrate(c); });
+    ISL.webs.forEach((w) => { if (w.alive && Math.hypot(w.x - x, w.z - z) < 4) { w.alive = false; solidOff(w.s); } });
+    if (ISL.crackWall.alive && Math.hypot(ISL.crackWall.x - x, ISL.crackWall.z - z) < 6 && Math.abs(y - ISL.Y) < 5) { ISL.crackWall.alive = false; solidOff(ISL.crackWall.s); clearZone('bomb', 'ひび の かべ を ばくだん で こわした！'); }
+    const pd = Math.hypot(P.x - x, P.z - z); if (pd < 3 && Math.abs(P.y - y) < 3) { P.vy = 7; P.vx += (P.x - x) / (pd || 1) * 6; P.vz += (P.z - z) / (pd || 1) * 6; P.ground = false; if (P.state === 'ground') P.state = 'air'; }
+  }
+  function breakCrate(c) { c.alive = false; solidOff(c.s); tone(300, 0.15, 'square', 0.05, 120); for (let k = 0; k < 8; k++) puffs.push({ x: c.x, y: ISL.Y + 0.7, z: c.z, t: 0.2, vy: 2, w: 0, c: [0.75, 0.55, 0.3] }); if (Math.random() < 0.6) { save.wallet[100] = (save.wallet[100] || 0) + 1; refreshHud(); banner('📦 はこ の なか に 🪙 100えん！', 1.4); } store(); }
+  function hammerHit() {
+    const fx = Math.sin(P.face), fz = Math.cos(P.face), hx = P.x + fx * 1.5, hz = P.z + fz * 1.5;
+    tone(90, 0.3, 'sine', 0.14, 50); noise(0.25, 0.3, 300, 'lowpass'); for (let k = 0; k < 10; k++) { const a = k / 10 * Math.PI * 2; puffs.push({ x: hx + Math.cos(a), y: P.y + 0.1, z: hz + Math.sin(a), t: 0.3, vy: 0.8, w: 1 }); }
+    $('cv').classList.add('shake'); setTimeout(() => $('cv').classList.remove('shake'), 200);
+    ISL.pegs.forEach((p) => { if (!p.down && Math.hypot(p.x - hx, p.z - hz) < 1.6) { p.down = true; p.s.y1 = ISL.Y + 0.15; tone(600, 0.1, 'square', 0.05); if (ISL.pegs.every((q) => q.down)) { ISL.stairs.forEach((st) => { st.s.y0 = ISL.Y; st.s.y1 = st.y1; }); clearZone('hammer', 'くい を ぜんぶ うちこんだ！ かいだん が でたよ'); } } });
+    ISL.crates.forEach((c) => { if (c.alive && Math.hypot(c.x - hx, c.z - hz) < 1.8) breakCrate(c); });
+    ISL.rocks.forEach((r) => { if (r.alive && Math.hypot(r.x - hx, r.z - hz) < 2.6 && !r.said) { r.said = true; banner('🪨 かたい！<small>おおきな いわ は 💣 ばくだん で こわそう</small>', 2); } });
+    ENE.slice().forEach((e) => { const d = Math.hypot(e.x - hx, e.z - hz); if (d < 2) hurtEnemy(e, 3, 'hammer', fx, fz); });
+    if (boss && Math.hypot(boss.x - hx, boss.z - hz) < 4) hurtBoss(5, 'hammer');
+  }
+  function torchHit() {
+    const fx = Math.sin(P.face), fz = Math.cos(P.face), hx = P.x + fx * 1.0, hz = P.z + fz * 1.0;
+    tone(300, 0.15, 'sawtooth', 0.03, 600);
+    ISL.braziers.forEach((b) => { if (!b.lit && Math.hypot(b.x - hx, b.z - hz) < 2.4) lightBrazier(b); });
+    ISL.webs.forEach((w) => { if (w.alive && Math.hypot(w.x - hx, w.z - hz) < 3) { w.alive = false; solidOff(w.s); banner('🔥 くも の す が もえた！', 1.6); noise(0.5, 0.15, 2000, 'highpass'); } });
+    ENE.slice().forEach((e) => { const d = Math.hypot(e.x - hx, e.z - hz); if (d < 2.2) hurtEnemy(e, 1, 'fire', fx, fz); });
+    if (boss && Math.hypot(boss.x - hx, boss.z - hz) < 4) hurtBoss(2, 'fire');
+  }
+  function lightBrazier(b) {
+    b.lit = true; tone(500, 0.3, 'sawtooth', 0.04, 900); noise(0.4, 0.12, 1500, 'highpass');
+    if (ISL.braziers.every((q) => q.lit)) { ISL.caveGate.open = true; solidOff(ISL.caveGate.s); clearZone('torch', 'ひ を ぜんぶ つけた！ おり が ひらいた'); } else banner(`🔥 ひ が ついた（${ISL.braziers.filter((q) => q.lit).length}/4）`, 1.4);
+  }
+  // --- まもの を だす ---
+  function spawnEnemy() {
+    const X = ISL.X, Z = ISL.Z;
+    for (let tries = 0; tries < 8; tries++) {
+      const rx = -70 + Math.random() * 98, rz = -70 + Math.random() * 140; if (Math.abs(rx) < 16 && Math.abs(rz) < 16) continue;
+      const x = X + rx, z = Z + rz; if (Math.hypot(x - P.x, z - P.z) < 12) continue; if (rx < -36 && rz < -36) continue;   // ボス の へや
+      const inCave = rx < -36 && rx > -75 && Math.abs(rz) < 24;
+      const k = inCave ? (Math.random() < 0.5 ? 'bat' : 'spider') : rz > 28 && rx > -10 ? (Math.random() < 0.6 ? 'roller' : 'slime') : rx < -30 && rz > 28 ? (Math.random() < 0.5 ? 'knight' : 'snowman') : ['slime', 'slime', 'bat', 'knight', 'snowman', 'spider'][(Math.random() * 6) | 0];
+      const y = ETYPE[k].fly ? ISL.Y + 2.5 : groundBelow(x, ISL.Y + 2, z); if (!ETYPE[k].fly && (y < ISL.Y - 0.5 || blockedAt(x, y + 0.05, z))) continue;
+      ENE.push({ k, x, y, z, hp: ETYPE[k].hp, face: Math.random() * 6.28, wt: 0, ph: Math.random() * 6, dir: Math.random() * 6.28 }); return;
+    }
+  }
+  function enemyTick(dt) {
+    ENE.forEach((e) => {
+      const T2 = ETYPE[e.k]; e.ph += dt * 6; if (e.flash > 0) e.flash -= dt;
+      if (e.kx || e.kz) { const nx = e.x + e.kx * dt, nz = e.z + e.kz * dt; if (!blockedAt(nx, e.y + 0.05, nz) && (T2.fly || groundBelow(nx, e.y + 1, nz) > ISL.Y - 1)) { e.x = nx; e.z = nz; } e.kx *= 0.85; e.kz *= 0.85; if (Math.abs(e.kx) + Math.abs(e.kz) < 0.2) e.kx = e.kz = 0; }
+      if (e.stun > 0) { e.stun -= dt; return; }
+      const dx = P.x - e.x, dz = P.z - e.z, d = Math.hypot(dx, dz);
+      let tx, tz;
+      if (d < 16 && Math.abs(P.y - e.y) < 6) { tx = dx / d; tz = dz / d; }
+      else { e.wt -= dt; if (e.wt < 0) { e.wt = 2 + Math.random() * 3; e.dir = Math.random() * 6.28; } tx = Math.sin(e.dir); tz = Math.cos(e.dir); }
+      if (e.k === 'roller' && d < 16) { if (!e.rollDir || e.wt < 0) { e.rollDir = [tx, tz]; e.wt = 2.5; } tx = e.rollDir[0]; tz = e.rollDir[1]; e.wt -= dt; }
+      const hop = e.k === 'slime' ? (Math.sin(e.ph) > 0 ? 1 : 0.2) : 1, sp = T2.sp * hop;
+      const nx = e.x + tx * sp * dt, nz = e.z + tz * sp * dt;
+      if (T2.fly) { e.x = nx; e.z = nz; e.y = Math.max(ISL.Y + 1.2, (P.y + 1.8) * 0.02 + e.y * 0.98) + Math.sin(e.ph) * 0.02; }
+      else if (!blockedAt(nx, e.y + 0.05, nz) && groundBelow(nx, e.y + 1, nz) > ISL.Y - 1) { e.x = nx; e.z = nz; e.y = groundBelow(e.x, e.y + 1, e.z); }
+      else { e.dir += 1.6; if (e.k === 'roller') e.rollDir = null; }
+      e.face = Math.atan2(tx, tz);
+      if (d < T2.r + 0.5 && Math.abs(P.y + 0.7 - (e.y + 0.6)) < 1.6) aoHurt(e.x, e.z);
+    });
+    // ボス
+    if (boss && boss.hp > 0) {
+      const b = boss; b.ph += dt; if (b.flash > 0) b.flash -= dt;
+      if (b.jump > 0) { b.jump -= dt; const k = 1 - b.jump / 1.2; b.x = b.fx + (b.tx - b.fx) * k; b.z = b.fz + (b.tz - b.fz) * k; b.y = ISL.Y + Math.sin(k * Math.PI) * 9; if (b.jump <= 0) { b.y = ISL.Y; tone(60, 0.5, 'sine', 0.18, 30); noise(0.5, 0.4, 150, 'lowpass'); $('cv').classList.add('shake'); setTimeout(() => $('cv').classList.remove('shake'), 350); for (let k2 = 0; k2 < 20; k2++) { const a = k2 / 20 * Math.PI * 2; puffs.push({ x: b.x + Math.cos(a) * 4, y: ISL.Y + 0.2, z: b.z + Math.sin(a) * 4, t: 0, vy: 1, w: 1, c: [0.55, 0.42, 0.3] }); } if (Math.hypot(P.x - b.x, P.z - b.z) < 7 && P.y - ISL.Y < 0.6) aoHurt(b.x, b.z); } }
+      else { b.cd -= dt; if (b.cd < 0) { b.cd = 3.2; b.jump = 1.2; b.fx = b.x; b.fz = b.z; const dx = P.x - b.x, dz = P.z - b.z, l = Math.hypot(dx, dz) || 1, go = Math.min(l, 10); b.tx = b.x + dx / l * go; b.tz = b.z + dz / l * go; const ax = ISL.arena.x, az = ISL.arena.z, rr = Math.hypot(b.tx - ax, b.tz - az); if (rr > 13) { b.tx = ax + (b.tx - ax) / rr * 13; b.tz = az + (b.tz - az) / rr * 13; } tone(200, 0.6, 'sawtooth', 0.04, 500); } }
+      if (Math.hypot(P.x - b.x, P.z - b.z) < 3.2 && Math.abs(P.y - b.y) < 3) aoHurt(b.x, b.z);
+    }
+  }
+  function hookUpdate(dt) {
+    const h = P.hk, dx = h.x - P.x, dy = h.top - P.y, dz = h.z - P.z, d = Math.hypot(dx, dy, dz);
+    if (d < 0.7) { P.x = h.x; P.z = h.z; P.y = h.top; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; P.fallTop = P.y; P.hk = null; tone(900, 0.08, 'square', 0.05); if (h.x > ISL.X + 30 && !ADV().clear.hook) {} return; }
+    const sp = Math.min(24, d / dt); P.x += dx / d * sp * dt; P.y += dy / d * sp * dt; P.z += dz / d * sp * dt; P.face = Math.atan2(dx, dz);
+  }
+  function projTick(dt) {
+    for (let i = PROJ.length - 1; i >= 0; i--) {
+      const p = PROJ[i]; p.t += dt;
+      if (p.k === 'bomb' && p.rest) { if (p.t > 2.2) { PROJ.splice(i, 1); explode(p.x, p.y, p.z); } continue; }
+      p.vy -= (p.g || 0) * dt; const nx = p.x + p.vx * dt, ny = p.y + p.vy * dt, nz = p.z + p.vz * dt;
+      // かべ・じめん
+      let hitSolid = false; for (const b of near(nx - 0.1, nz - 0.1, nx + 0.1, nz + 0.1)) if (nx > b.x0 && nx < b.x1 && nz > b.z0 && nz < b.z1 && ny > b.y0 && ny < b.y1) { hitSolid = true; break; }
+      if (p.k === 'bomb') { if (hitSolid || ny < groundBelow(nx, p.y + 0.2, nz) + 0.2 || p.t > 2.2) { p.rest = true; p.y = Math.max(groundBelow(p.x, p.y + 0.3, p.z) + 0.25, p.y); if (p.t > 2.2) { PROJ.splice(i, 1); explode(p.x, p.y, p.z); } } else { p.x = nx; p.y = ny; p.z = nz; } continue; }
+      p.x = nx; p.y = ny; p.z = nz;
+      const fx = Math.sign(p.vx) * Math.min(1, Math.abs(p.vx) / 10), fz = Math.sign(p.vz) * Math.min(1, Math.abs(p.vz) / 10);
+      if (p.k === 'hook') {
+        const h = ISL.hooks.find((q) => Math.hypot(q.x - p.x, q.y - p.y, q.z - p.z) < 1.6 && Math.hypot(q.x - P.x, q.z - P.z) > 2);
+        if (h) { PROJ.splice(i, 1); P.state = 'hook'; P.hk = h; P.vx = P.vy = P.vz = 0; P.glide = false; tone(1200, 0.06, 'square', 0.06); continue; }
+        const e = ENE.find((q) => Math.hypot(q.x - p.x, q.y + 0.6 - p.y, q.z - p.z) < ETYPE[q.k].r + 0.4); if (e) { hurtEnemy(e, 1, 'hook', fx, fz); PROJ.splice(i, 1); continue; }
+        if (hitSolid || Math.hypot(p.x - p.sx, p.z - p.sz) > 32) { PROJ.splice(i, 1); tone(250, 0.1, 'square', 0.03); } continue;
+      }
+      // ひ の そば を とおった や は ひの や に
+      if (p.k === 'arr') { if (ISL.braziers.some((b) => b.lit && Math.hypot(b.x - p.x, b.y + 0.4 - p.y, b.z - p.z) < 1.4) || (ADV().cur === 'torch' && Math.hypot(P.x - p.x, P.y + 1 - p.y, P.z - p.z) < 1.5)) p.k = 'farr'; }
+      let done = false;
+      ISL.targets.forEach((t) => { if (!done && !t.hit && Math.hypot(t.x - p.x, t.y - p.y, t.z - p.z) < 1.0) { t.hit = true; done = true; tone(1046, 0.12, 'sine', 0.07); tone(1568, 0.15, 'sine', 0.06, null, 0.1); checkTargets(); } });
+      ISL.balloons.forEach((b) => { if (!done && !b.pop && Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 1.2) { b.pop = true; done = true; noise(0.15, 0.3, 3000, 'highpass'); for (let k = 0; k < 6; k++) puffs.push({ x: b.x, y: b.y, z: b.z, t: 0.3, vy: 1, w: 1, c: [1, 0.5, 0.6] }); checkTargets(); } });
+      if (p.k === 'farr') { ISL.braziers.forEach((b) => { if (!b.lit && Math.hypot(b.x - p.x, b.y - p.y, b.z - p.z) < 1.3) { lightBrazier(b); done = true; } }); ISL.webs.forEach((w) => { if (w.alive && Math.abs(w.x - p.x) < 1.2 && Math.abs(w.z - p.z) < 6.5) { w.alive = false; solidOff(w.s); done = true; banner('🔥 ひの や で くも の す が もえた！', 1.6); } }); }
+      if (!done) for (const e of ENE) if (Math.hypot(e.x - p.x, e.y + 0.6 - p.y, e.z - p.z) < ETYPE[e.k].r + 0.35) { hurtEnemy(e, p.k === 'pel' ? 1 : 2, p.k, fx, fz); done = true; break; }
+      if (!done && boss && boss.hp > 0 && Math.hypot(boss.x - p.x, boss.y + 2.5 - p.y, boss.z - p.z) < 3.4) { hurtBoss(0, p.k); done = true; }
+      if (done || hitSolid || p.t > 2.5 || p.y < -50) { PROJ.splice(i, 1); if (hitSolid) puffs.push({ x: p.x, y: p.y, z: p.z, t: 0.6, vy: 0.5, w: 1 }); }
+    }
+  }
+  function checkTargets() { if (ISL.targets.every((t) => t.hit) && ISL.balloons.every((b) => b.pop)) clearZone('target', 'まと と ふうせん を ぜんぶ あてた！'); else banner(`🎯 あたり！（まと ${ISL.targets.filter((t) => t.hit).length}/6・ふうせん ${ISL.balloons.filter((b) => b.pop).length}/4）`, 1.2); }
+  function advTick(dt) {
+    advCool = Math.max(0, advCool - dt); P.inv = Math.max(0, (P.inv || 0) - dt);
+    if (swingT > 0) { const before = swingT; swingT -= dt; if (ADV().cur === 'hammer' && before > 0.2 && swingT <= 0.2) hammerHit(); }
+    projTick(dt);
+    const isl = onIsland();
+    if (isl) {
+      // うごく まと と ふうせん
+      ISL.targets.forEach((t, i) => { if (t.move && !t.hit) t.x = t.bx + Math.sin(time * 0.8 + i) * t.move; });
+      ISL.balloons.forEach((b, i) => { b.y = b.by + Math.sin(time * 1.2 + i) * 0.6; });
+      if ((advSpawnT -= dt) < 0 && ENE.length < 14 && P.state !== 'hook') { advSpawnT = 1.8; spawnEnemy(); }
+      enemyTick(dt);
+      // たに を わたった
+      if (!ADV().clear.hook && P.x > ISL.X + 60 && P.y > ISL.Y - 1 && P.state === 'ground') clearZone('hook', 'ワイヤーフック で たに を わたった！');
+      // ボス の へや
+      const a = ADV(), ad = Math.hypot(P.x - ISL.arena.x, P.z - ISL.arena.z);
+      if (ISL.bossGate.open && !boss && ad < 15 && Math.abs(P.y - ISL.Y) < 4) { boss = { x: ISL.arena.x, y: ISL.Y, z: ISL.arena.z, hp: 40, cd: 2, jump: 0, ph: 0, flash: 0 }; banner('👑 どろんこ だいおう が あらわれた！<small>ジャンプ の あと の ドーン に きを つけて！ ばくだん と ハンマー が よく きく</small>', 4.5); tone(110, 1.2, 'sawtooth', 0.06, 70); }
+      if (boss && boss.hp <= 0 && ad > 20) boss = null;
+      // おちた とき
+      if (P.y < ISL.Y - 25 && P.state !== 'hook') { P.x = ISL.start.x; P.z = ISL.start.z; P.y = ISL.Y + 0.1; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.fallTop = P.y; banner('🌀 しま から おちそうに なった！ ひろば に もどったよ', 2.2); }
+    } else if (ENE.length) { ENE.length = 0; boss = null; }
+    // くらい どうくつ
+    const inCave = isl && P.x > ISL.cave.x0 && P.x < ISL.cave.x1 && P.z > ISL.cave.z0 && P.z < ISL.cave.z1 && P.y < ISL.Y + 7;
+    const dk = $('dark'), want = inCave ? (ADV().cur === 'torch' && ADV().items.includes('torch') ? 'torch' : 'dark') : '';
+    if (dk.dataset.m !== want) { dk.dataset.m = want; dk.className = want; }
+    if (isl || !$('advHud').hidden) advHud();
+  }
+  // --- え ---
+  function drawAdv() {
+    const near2 = Math.abs(P.y - ISL.Y) < 90 && Math.abs(P.x - ISL.X) < 160 && Math.abs(P.z - ISL.Z) < 160, Y = ISL.Y;
+    if (near2) {
+      ISL.targets.forEach((t) => { if (t.hit) return; const b = M(T(t.x, t.y, t.z), RX(Math.PI / 2)); draw(mDisc, M(b, S(0.9)), C.white); draw(mDisc, M(b, T(0, 0.02, 0), S(0.6)), C.red); draw(mDisc, M(b, T(0, 0.04, 0), S(0.25)), C.white); draw(mDisc, M(b, T(0, -0.02, 0), S(0.9)), C.white); });
+      ISL.balloons.forEach((b, i) => { if (b.pop) return; draw(mSphere, M(T(b.x, b.y, b.z), S(0.6, 0.75, 0.6)), [[1, 0.4, 0.5], [0.45, 0.7, 1], [1, 0.85, 0.3], [0.6, 0.9, 0.5]][i % 4], 0.3); draw(mCube, M(T(b.x, b.y - 1.4, b.z), S(0.02, 2, 0.02)), C.white); });
+      ISL.rocks.forEach((r) => { if (!r.alive) return; draw(mSphere, M(T(r.x, Y + 1.6, r.z), S(2.1, 1.8, 2.1)), [0.55, 0.52, 0.48]); });
+      if (ISL.crackWall.alive) { const w = ISL.crackWall; draw(mCube, M(T(w.x, Y + 3, w.z), S(14, 6, 0.8)), [0.6, 0.55, 0.5]); [[-3, 2, 0.6], [1, 3.5, -0.5], [4, 1.5, 0.8]].forEach(([a, y, r]) => draw(mCube, M(T(w.x + a, Y + y, w.z - 0.42), RZ(r), S(2.5, 0.12, 0.05)), [0.25, 0.22, 0.2])); }
+      ISL.pegs.forEach((p) => { draw(mCube, M(T(p.x, Y + (p.down ? 0.08 : 0.55), p.z), S(0.7, p.down ? 0.16 : 1.1, 0.7)), [0.72, 0.5, 0.28]); draw(mCube, M(T(p.x, Y + (p.down ? 0.17 : 1.12), p.z), S(0.75, 0.06, 0.75)), [0.95, 0.8, 0.3]); });
+      if (ADV().clear.hammer) ISL.stairs.forEach((st) => { const s = st.s; draw(mCube, M(T((s.x0 + s.x1) / 2, (Y + st.y1) / 2, (s.z0 + s.z1) / 2), S(s.x1 - s.x0, st.y1 - Y, s.z1 - s.z0)), [0.82, 0.83, 0.85]); });
+      ISL.crates.forEach((c) => { if (!c.alive) return; draw(mCube, M(T(c.x, Y + 0.7, c.z), S(1.4, 1.4, 1.4)), [0.75, 0.55, 0.32]); draw(mCube, M(T(c.x, Y + 0.7, c.z), RY(0.785), S(0.12, 1.42, 1.9)), [0.55, 0.38, 0.2]); });
+      ISL.webs.forEach((w) => { if (!w.alive) return; for (let k = -2; k <= 2; k++) { draw(mCube, M(T(w.x, Y + 3.5, w.z + k * 2.4), S(0.05, 7, 0.06)), C.white, 0.4); draw(mCube, M(T(w.x, Y + 1.2 + (k + 2) * 1.3, w.z), S(0.05, 0.06, 12)), C.white, 0.4); } });
+      ISL.braziers.forEach((b) => { if (!b.lit) return; const f = 0.85 + Math.sin(time * 14 + b.x) * 0.15; draw(mCone, M(T(b.x, Y + 1.35, b.z), S(0.55, 1.3 * f, 0.55)), [1, 0.55, 0.15], 1); draw(mCone, M(T(b.x, Y + 1.4, b.z), S(0.3, 0.8 * f, 0.3)), [1, 0.9, 0.4], 1); });
+      if (!ISL.caveGate.open) { const g = ISL.caveGate; for (let k = -1; k <= 1; k++) { draw(mCube, M(T(g.x + k * 1.1, Y + 1.3, g.z - 1.3), S(0.12, 2.6, 0.12)), C.gray); draw(mCube, M(T(g.x + k * 1.1, Y + 1.3, g.z + 1.3), S(0.12, 2.6, 0.12)), C.gray); draw(mCube, M(T(g.x - 1.3, Y + 1.3, g.z + k * 1.1), S(0.12, 2.6, 0.12)), C.gray); draw(mCube, M(T(g.x + 1.3, Y + 1.3, g.z + k * 1.1), S(0.12, 2.6, 0.12)), C.gray); } draw(mCube, M(T(g.x, Y + 2.7, g.z), S(2.8, 0.15, 2.8)), C.gray); }
+      if (!ISL.bossGate.open) { const g = ISL.bossGate, n = ['target', 'hook', 'bomb', 'hammer', 'torch'].filter((k) => ADV().clear[k]).length; draw(mCube, M(T(g.x, Y + 2.5, g.z), S(13, 5, 2)), [0.45, 0.4, 0.45]); for (let k = 0; k < 5; k++) draw(mSphere, M(T(g.x - 3.2 + k * 1.6, Y + 4, g.z + 1.05), S(0.4)), k < n ? [1, 0.85, 0.3] : [0.3, 0.3, 0.3], k < n ? 1 : 0); }
+      ISL.chests.concat(ISL.rewardChests).forEach((c) => { const item = c.item, show2 = item || ADV().clear[c.id], open = item ? ADV().items.includes(c.id) : ADV().got[c.id]; if (!show2) return; const y = c.y || Y; draw(mCube, M(T(c.x, y + 0.45, c.z), S(1.4, 0.9, 1)), [0.8, 0.45, 0.15]); draw(mCube, M(T(c.x, y + 0.5, c.z), S(1.45, 0.12, 1.05)), [1, 0.8, 0.3]); draw(mCube, M(T(c.x, y + (open ? 1.2 : 1.0), c.z - (open ? 0.45 : 0)), RX(open ? -1.2 : 0), S(1.4, 0.25, 1)), [0.75, 0.4, 0.12]); if (item && !open) draw(mStar, M(T(c.x, y + 2 + Math.sin(time * 3) * 0.15, c.z), RY(time * 2), S(0.3)), C.yellow, 1); });
+      ISL.hooks.forEach((h) => { draw(mSphere, M(T(h.x, h.y, h.z), S(0.45)), [1, 0.85, 0.2], 0.6); draw(mDisc, M(T(h.x, h.y, h.z), RX(Math.PI / 2), S(0.7)), [0.9, 0.3, 0.3], 0.4); });
+      // まもの
+      ENE.forEach((e) => {
+        const T2 = ETYPE[e.k], fl = e.flash > 0 ? [1, 1, 1] : T2.col, b = M(T(e.x, e.y, e.z), RY(e.face));
+        if (e.k === 'slime') { const sq = 1 + Math.sin(e.ph) * 0.15; draw(mSphere, M(b, T(0, 0.45 * sq, 0), S(0.7, 0.5 * sq, 0.7)), fl, 0.2); }
+        else if (e.k === 'bat') { draw(mSphere, M(b, T(0, 0.6, 0), S(0.35)), fl); const w = Math.sin(e.ph * 3) * 0.6; [-1, 1].forEach((sd) => draw(mCube, M(b, T(sd * 0.55, 0.65, 0), RZ(sd * w), S(0.7, 0.05, 0.4)), fl)); }
+        else if (e.k === 'knight') { draw(mCube, M(b, T(0, 0.7, 0), S(0.8, 1.2, 0.6)), fl); draw(mCube, M(b, T(0, 1.55, 0), S(0.6, 0.5, 0.6)), fl); draw(mCube, M(b, T(0, 1.55, 0.31), S(0.4, 0.08, 0.02)), [0.1, 0.1, 0.1]); draw(mCube, M(b, T(0, 0.8, 0.45), S(0.8, 1, 0.08)), [0.3, 0.45, 0.8]); }
+        else if (e.k === 'roller') { draw(mSphere, M(b, T(0, 1, 0), RX(e.ph), S(1)), fl); }
+        else if (e.k === 'spider') { draw(mSphere, M(b, T(0, 0.45, 0), S(0.5, 0.35, 0.6)), fl); for (let k = 0; k < 4; k++) [-1, 1].forEach((sd) => draw(mCube, M(b, T(sd * 0.55, 0.3, -0.3 + k * 0.2), RZ(sd * 0.6), S(0.6, 0.05, 0.05)), fl)); }
+        else { draw(mSphere, M(b, T(0, 0.5, 0), S(0.6)), fl); draw(mSphere, M(b, T(0, 1.2, 0), S(0.42)), fl); draw(mCone, M(b, T(0, 1.15, 0.4), RX(Math.PI / 2), S(0.08, 0.3, 0.08)), C.orange); }
+        if (e.k !== 'roller' && e.k !== 'knight') [-0.15, 0.15].forEach((sx) => draw(mSphere, M(b, T(sx, (e.k === 'snowman' ? 1.28 : e.k === 'bat' ? 0.68 : 0.55), e.k === 'bat' ? 0.3 : 0.5), S(0.08)), C.black));
+      });
+      if (boss && boss.hp > 0) { const b = boss, sq = 1 + Math.sin(b.ph * 4) * 0.06, col = b.flash > 0 ? [1, 1, 1] : [0.55, 0.4, 0.28]; draw(mSphere, M(T(b.x, b.y + 2.4 * sq, b.z), S(3.2, 2.5 * sq, 3.2)), col, 0.1); const f = Math.atan2(P.x - b.x, P.z - b.z), bb = M(T(b.x, b.y, b.z), RY(f)); [-0.9, 0.9].forEach((sx) => { draw(mSphere, M(bb, T(sx, 3.2, 2.8), S(0.5)), C.white); draw(mSphere, M(bb, T(sx, 3.2, 3.15), S(0.22)), C.black); }); draw(mCone, M(bb, T(0, 4.6, 0), S(1.2, 1.2, 1.2)), [1, 0.8, 0.2], 0.5); }
+    }
+    // とんで いる もの
+    PROJ.forEach((p) => {
+      if (p.k === 'bomb') { const bl = p.rest && Math.floor(p.t * (p.t > 1.5 ? 12 : 5)) % 2; draw(mSphere, M(T(p.x, p.y, p.z), S(0.32)), bl ? [1, 0.3, 0.2] : [0.15, 0.15, 0.18]); draw(mCube, M(T(p.x, p.y + 0.35, p.z), S(0.06, 0.2, 0.06)), [1, 0.8, 0.3], 1); return; }
+      const yaw = Math.atan2(p.vx, p.vz), pit = -Math.atan2(p.vy, Math.hypot(p.vx, p.vz)), b = M(T(p.x, p.y, p.z), RY(yaw), RX(pit));
+      if (p.k === 'pel') draw(mSphere, M(b, S(0.13)), [0.6, 0.55, 0.5]);
+      else if (p.k === 'hook') { draw(mCube, M(b, S(0.15, 0.15, 0.5)), C.gray); const ox = P.x + Math.sin(P.face) * 0.4, oz = P.z + Math.cos(P.face) * 0.4, mx = (ox + p.x) / 2, my = (P.y + 1 + p.y) / 2, mz = (oz + p.z) / 2, L = Math.hypot(p.x - ox, p.y - P.y - 1, p.z - oz); draw(mCube, M(T(mx, my, mz), RY(Math.atan2(p.x - ox, p.z - oz)), RX(-Math.atan2(p.y - P.y - 1, Math.hypot(p.x - ox, p.z - oz))), S(0.04, 0.04, L)), [0.3, 0.3, 0.32]); }
+      else { draw(mCube, M(b, S(0.05, 0.05, 1.0)), [0.65, 0.45, 0.25]); draw(mCone, M(b, T(0, 0, 0.5), RX(Math.PI / 2), S(0.08, 0.2, 0.08)), C.gray); if (p.k === 'farr') draw(mSphere, M(b, T(0, 0, 0.55), S(0.22)), [1, 0.55, 0.15], 1); }
+    });
+    if (P.state === 'hook' && P.hk) { const h = P.hk, mx = (P.x + h.x) / 2, my = (P.y + 1 + h.y) / 2, mz = (P.z + h.z) / 2, L = Math.hypot(h.x - P.x, h.y - P.y - 1, h.z - P.z); draw(mCube, M(T(mx, my, mz), RY(Math.atan2(h.x - P.x, h.z - P.z)), RX(-Math.atan2(h.y - P.y - 1, Math.hypot(h.x - P.x, h.z - P.z))), S(0.05, 0.05, L)), [0.3, 0.3, 0.32]); }
+    // てに もって いる どうぐ
+    const a = ADV(); if (!a.items.length || FP[P.state] || !{ ground: 1, air: 1, swim: 1, prop: 1, hook: 1 }[P.state]) return;
+    const sw = swingT > 0 ? Math.sin((1 - swingT / 0.4) * Math.PI) : 0, hb = M(T(P.x, P.y, P.z), RY(P.face), T(0.36, 0.95, 0.15), RX(-sw * 1.6));
+    if (a.cur === 'sling') { draw(mCube, M(hb, T(0, 0.15, 0.1), S(0.06, 0.35, 0.06)), [0.6, 0.4, 0.2]); [-0.08, 0.08].forEach((sx) => draw(mCube, M(hb, T(sx, 0.38, 0.1), S(0.04, 0.16, 0.04)), [0.6, 0.4, 0.2])); }
+    else if (a.cur === 'bow') { draw(mCube, M(hb, T(0, 0.3, 0.15), S(0.06, 0.9, 0.06)), [0.6, 0.35, 0.15]); draw(mCube, M(hb, T(0, 0.3, 0.08), S(0.01, 0.85, 0.01)), C.white); }
+    else if (a.cur === 'hook') { draw(mCube, M(hb, T(0, 0.1, 0.25), S(0.14, 0.14, 0.5)), C.gray); draw(mCube, M(hb, T(0, 0.1, 0.52), S(0.25, 0.06, 0.06)), [0.9, 0.3, 0.3]); }
+    else if (a.cur === 'bomb') draw(mSphere, M(hb, T(0, 0.05, 0.12), S(0.22)), [0.15, 0.15, 0.18]);
+    else if (a.cur === 'hammer') { draw(mCube, M(hb, T(0, 0.45, 0.1), S(0.07, 0.95, 0.07)), [0.6, 0.4, 0.2]); draw(mCube, M(hb, T(0, 0.95, 0.1), S(0.65, 0.4, 0.4)), [0.85, 0.3, 0.25]); }
+    else if (a.cur === 'torch') { draw(mCube, M(hb, T(0, 0.3, 0.1), S(0.07, 0.6, 0.07)), [0.55, 0.35, 0.18]); const f = 0.85 + Math.sin(time * 15) * 0.15; draw(mCone, M(hb, T(0, 0.6, 0.1), S(0.18, 0.45 * f, 0.18)), [1, 0.55, 0.15], 1); draw(mCone, M(hb, T(0, 0.62, 0.1), S(0.1, 0.28 * f, 0.1)), [1, 0.9, 0.4], 1); }
+  }
+  holdBtn($('bUse'), () => advUse());
+  $('bNext').addEventListener('click', (e) => { e.preventDefault(); nextItem(); });
+  addEventListener('keydown', (e) => {
+    if (e.code === 'KeyR' && !e.repeat) advUse();
+    if (e.code === 'KeyT' && !e.repeat) nextItem();
+    const n = { Digit1: 0, Digit2: 1, Digit3: 2, Digit4: 3, Digit5: 4, Digit6: 5 }[e.code];
+    if (n !== undefined) { const id = AORDER[n]; if (ADV().items.includes(id)) { ADV().cur = id; store(); advHud(); SFX.tap(); } }
+  });
+  advHud();
   function drawMonthDeco() {
     if (eventToday() === 'bday') drawBdayDeco();
     if (deco('koinobori')) DECO_SPOTS.forEach((p, i) => {   // こいのぼり
@@ -3831,7 +4232,7 @@ void main(){
     if (deco('lights') && SKn > 0.25) draw(mLights, I(), W, 1);
     if (deco('ajisai')) draw(mAjisai, I(), W);
     if (deco('himawari')) draw(mHimawari, I(), W);
-    drawMonthDeco();
+    drawMonthDeco(); drawAdv();
     if (deco('snow')) { draw(mSnowCap, I(), W); SNOWMEN.forEach((q) => { draw(mSphere, M(T(q.x, 0.7, q.z), S(0.75)), C.white); draw(mSphere, M(T(q.x, 1.7, q.z), S(0.5)), C.white); draw(mCone, M(T(q.x, 1.7, q.z + 0.45), RX(Math.PI / 2), S(0.08, 0.35, 0.08)), C.orange); [-0.17, 0.17].forEach((o) => draw(mSphere, M(T(q.x + o, 1.85, q.z + 0.44), S(0.06)), C.black)); draw(mCube, M(T(q.x, 2.25, q.z), S(0.55, 0.35, 0.55)), hex('#c92a2a')); }); }
     if (deco('xtree') && XTREE) { draw(mXTree, I(), W); draw(mStar, M(T(XTREE.x, 8.8, XTREE.z), RY(time), S(1.1)), C.gold, 1); if (SKn > 0.25 || ev === 'xmas') for (let k = 0; k < 24; k++) { const a = k * 1.9, hh = 1.2 + k * 0.28, rr = 3.3 * (1 - hh / 8.5); draw(mSphere, M(T(XTREE.x + Math.cos(a) * rr, hh, XTREE.z + Math.sin(a) * rr), S(0.16)), [[1, 0.3, 0.3], [1, 0.85, 0.3], [0.4, 0.7, 1]][k % 3], 0.5 + 0.5 * Math.sin(time * 3 + k)); } }
     if (ev === 'xmas' && SANTA) { const b = M(T(SANTA.x, 0, SANTA.z), RY(Math.atan2(P.x - SANTA.x, P.z - SANTA.z))); personAt(b, hex('#e03131'), 'stand', 0, hex('#e03131'), C.white, false); part(b, 0, 1.35, 0.2, 0.5, 0.35, 0.12, C.white); draw(mCone, M(b, T(0, 1.85, 0), S(0.3, 0.55, 0.3)), hex('#e03131')); draw(mSphere, M(b, T(0, 2.4, 0), S(0.09)), C.white); }
@@ -4037,5 +4438,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓（setTime の ひ が ちいさい かず の ときは 2026/9/7（げつ）から かぞえる）
-  window.__mm = { kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { ISL, goIsland, advUse, nextItem, openChest, PROJ, ENE, get boss() { return boss; }, explode, hammerHit, torchHit, spawnEnemy, AITEM, kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
