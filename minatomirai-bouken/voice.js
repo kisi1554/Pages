@@ -30,7 +30,7 @@
     if (!S || !on) return;
     const body = clean(text); if (!body) return;
     if (!ja) pick();
-    const [pitch, rate] = PROF[who] || [1, 1];
+    const [pitch, rate] = (opt && opt.pr) || PROF[who] || [1, 1];
     parts(body).forEach((p) => {
       const u = new SpeechSynthesisUtterance(p.t);
       if (p.en) { u.lang = 'en-US'; if (en) u.voice = en; } else { u.lang = 'ja-JP'; if (ja) u.voice = ja; }

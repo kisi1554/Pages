@@ -2380,7 +2380,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    advTick(dt);
+    advTick(dt); secTick(dt);
     momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); seasonTick(dt); rainTick(dt); walkersTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
@@ -2426,7 +2426,7 @@ void main(){
       if (save.stamps.includes(z.id)) continue;
       let inside = z.ride ? P.state === 'ride' : Math.hypot(z.x - P.x, z.z - P.z) < z.r;
       if (inside && z.minY !== undefined && P.y < z.minY) inside = false;
-      if (inside && onIsland()) inside = false;
+      if (inside && (onIsland() || inSecret())) inside = false;
       if (inside) {
         save.stamps.push(z.id); store(); refreshHud(); SFX.stamp();
         if (bannerT < 1) banner(`📍 ${z.name} に ついた！<small>スタンプ ${save.stamps.length}/${ZONES.length}</small>`, 2.4);
@@ -3115,10 +3115,10 @@ void main(){
     }
     proj = persp(fov, w / h, 0.1, 3600); view = lookAt(eye, tgt);
     // きり: たかい ところほど とおくまで みえる。おばけやしき は まっくら
-    const hy = Math.max(0, eye[1]);
-    gl.uniform1f(U.uFogN, inGhost ? 0.8 : 70 + hy * 8); gl.uniform1f(U.uFogF, inGhost ? (P.gh.flick ? 3.5 : 11) : Math.min(3200, 350 + hy * 28));
+    const hy = Math.max(0, eye[1]), inSec = inSecret();
+    gl.uniform1f(U.uFogN, inGhost ? 0.8 : inSec ? 3 : 70 + hy * 8); gl.uniform1f(U.uFogF, inGhost ? (P.gh.flick ? 3.5 : 11) : inSec ? 30 : Math.min(3200, 350 + hy * 28));
     gl.uniformMatrix4fv(U.uProj, false, proj); gl.uniformMatrix4fv(U.uView, false, view);
-    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, inGhost ? [0, 0, 0] : SK.col); gl.uniform1f(U.uLight, inGhost ? 1 : bagOn('lantern') ? Math.max(SK.light, 0.72) : SK.light); gl.uniform1f(U.uNight, inGhost ? 0 : bagOn('lantern') ? SK.night * 0.45 : SK.night); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
+    gl.uniform3fv(U.uSun, SUN); gl.uniform3fv(U.uFog, inGhost ? [0, 0, 0] : inSec ? [0.04, 0.02, 0.05] : SK.col); gl.uniform1f(U.uLight, inGhost ? 1 : inSec ? 0.8 : bagOn('lantern') ? Math.max(SK.light, 0.72) : SK.light); gl.uniform1f(U.uNight, inGhost || inSec ? 0 : bagOn('lantern') ? SK.night * 0.45 : SK.night); gl.uniform3fv(U.uCam, eye); gl.uniform1f(U.uTime, time);
     bound = null;
     if (inGhost) { drawGhostScene(); return; }
 
@@ -3202,7 +3202,7 @@ void main(){
       draw(mCube, M(T(s.x, s.y + 30, s.z), S(big ? 0.9 : 0.45, 60, big ? 0.9 : 0.45)), big ? C.gold : C.yellow, 1, big ? 0.32 : 0.2);
     });
     if (save.dest) { draw(mCube, M(T(save.dest.x, 40, save.dest.z), S(1.6, 80, 1.6)), [1, 0.8, 0.1], 1, 0.3 + 0.1 * Math.sin(time * 4)); draw(mDisc, M(T(save.dest.x, groundBelow(save.dest.x, 200, save.dest.z) + 0.06, save.dest.z), S(3)), [1, 0.8, 0.1], 1, 0.45); }
-    DOORS.forEach((dd) => { if (dd.id === 'heli' && P.state === 'heli') return; draw(mCube, M(T(dd.x, (dd.y || 0) + 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)); });
+    DOORS.forEach((dd) => { if (dd.secret || (dd.id === 'heli' && P.state === 'heli')) return; draw(mCube, M(T(dd.x, (dd.y || 0) + 20, dd.z), S(0.8, 40, 0.8)), dd.color, 1, 0.14 + 0.06 * Math.sin(time * 3)); });
     { const hb = M(T(HELI.x, HELI.y, HELI.z), RY(HELI.yaw)); draw(mCube, M(hb, T(0, 1.55, 0.9), S(1.85, 0.95, 1.5)), [0.7, 0.88, 1], 0.2, 0.4); }
     { const bq = busPose(), bb = M(T(bq.x, 0, bq.z), RY(bq.yaw)); draw(mCube, M(bb, T(0, 2.05, 0.1), S(2.86, 0.8, 5.6)), [0.75, 0.9, 1], 0.2, 0.35); }
     gl.depthMask(true); gl.disable(gl.BLEND);
@@ -3271,7 +3271,7 @@ void main(){
       x.fillStyle = got ? '#1c2b4a' : '#74819b'; x.fillText(t, px(z.x), pz(z.z) - 8);
     });
     x.font = '18px sans-serif';
-    DOORS.forEach((d) => { const ic = d.label.split('<')[0]; x.fillText(ic, px(d.x), pz(d.z) + 6); });
+    DOORS.forEach((d) => { if (d.secret) return; const ic = d.label.split('<')[0]; x.fillText(ic, px(d.x), pz(d.z) + 6); });
     x.font = 'bold 18px sans-serif';
     STARS.forEach((s) => {
       const got = save.stars.includes(s.id);
@@ -3381,7 +3381,7 @@ void main(){
       },
     });
   }
-  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet', 'ovBag', 'ovTalk', 'ovCal'].some((i) => $(i).classList.contains('show')); }
+  function anyOv() { return ['ovTitle', 'ovHow', 'ovMap', 'ovMenu', 'ovKumon', 'ovShop', 'ovHosp', 'ovPlace', 'ovSet', 'ovBag', 'ovTalk', 'ovCal', 'ovSec'].some((i) => $(i).classList.contains('show')); }
   function setPaused() {
     paused = anyOv() || photoOn;
     if (paused) { joy.id = null; joy.x = joy.y = 0; inp.fart = false; inp.up = inp.down = false; $('joy').style.display = 'none'; if (P.farting) { P.farting = false; fartStop(); } }
@@ -4018,6 +4018,7 @@ void main(){
     advHud();
   }
   function explode(x, y, z) {
+    secretBomb(x, y, z);
     for (let k = 0; k < 34; k++) { const a = Math.random() * Math.PI * 2, r = Math.random() * 2.5; puffs.push({ x: x + Math.cos(a) * r, y: y + Math.random() * 1.5, z: z + Math.sin(a) * r, t: Math.random() * 0.3, vy: 2 + Math.random() * 4, w: 0, c: k % 3 ? [1, 0.6, 0.2] : [0.5, 0.5, 0.5] }); }
     noise(0.9, 0.6, 220, 'lowpass'); tone(80, 0.6, 'sine', 0.16, 40); shakeT = 0.4; $('cv').classList.add('shake'); setTimeout(() => $('cv').classList.remove('shake'), 400);
     ENE.slice().forEach((e) => { const d = Math.hypot(e.x - x, e.z - z); if (d < 5 && Math.abs(e.y - y) < 4) hurtEnemy(e, 3, 'bomb', (e.x - x) / (d || 1), (e.z - z) / (d || 1)); });
@@ -4206,6 +4207,183 @@ void main(){
     if (n !== undefined) { const id = AORDER[n]; if (ADV().items.includes(id)) { ADV().cur = id; store(); advHud(); SFX.tap(); } }
   });
   advHud();
+  // ================= ひみつ の 13かい（プラウド の いりぐち を ばくだん で ドッカーン → ひみつ の エレベーター）=================
+  // じゅうにん は この ゲーム の オリジナル の おばけ たち。こわい けど、おはなし すると ちょっと やさしい。
+  const SEC = (() => {
+    const X = PROWD.x, Z = PROWD.z, Y = 600, W2 = 3, L = 36;   // ろうか: はば 6・ながさ 36
+    const ev = { x: HOMEDOOR.x + HOMEDOOR.ux * 3 + HOMEDOOR.nx * 0.05, z: HOMEDOOR.z + HOMEDOOR.uz * 3 + HOMEDOOR.nz * 0.05, ox: HOMEDOOR.ox + HOMEDOOR.ux * 3, oz: HOMEDOOR.oz + HOMEDOOR.uz * 3 };
+    const sol = (x0, y0, z0, x1, y1, z1) => addSolid({ x0, y0, z0, x1, y1, z1, climb: false });
+    sol(X - W2 - 0.5, Y - 1, Z - 0.5, X + W2 + 0.5, Y, Z + L + 0.5);                    // ゆか
+    sol(X - W2 - 0.5, Y + 3.4, Z - 0.5, X + W2 + 0.5, Y + 4, Z + L + 0.5);              // てんじょう
+    sol(X - W2 - 0.3, Y, Z - 0.3, X - W2, Y + 3.4, Z + L + 0.3); sol(X + W2, Y, Z - 0.3, X + W2 + 0.3, Y + 3.4, Z + L + 0.3);
+    sol(X - W2, Y, Z - 0.3, X + W2, Y + 3.4, Z); sol(X - W2, Y, Z + L, X + W2, Y + 3.4, Z + L + 0.3);
+    const rooms = [];
+    [7, 14, 21, 28].forEach((dz, i) => { rooms.push({ no: 101 + i, side: -1, x: X - W2, z: Z + dz }); rooms.push({ no: 105 + i, side: 1, x: X + W2, z: Z + dz }); });
+    rooms.sort((a, b) => a.no - b.no);
+    const mesh = mk((g) => {
+      const carpet = hex('#5c1a24'), wall = hex('#4a4552'), wain = hex('#2b2630'), door = hex('#3b2416'), gold = hex('#c9a227'), ceil = hex('#2a2730');
+      g.box(X - W2, Y - 0.2, Z, X + W2, Y, Z + L, hex('#3a3238'));
+      g.box(X - W2 + 0.8, Y, Z, X + W2 - 0.8, Y + 0.02, Z + L, carpet);
+      g.box(X - W2 - 0.3, Y, Z, X - W2, Y + 3.4, Z + L, wall); g.box(X + W2, Y, Z, X + W2 + 0.3, Y + 3.4, Z + L, wall);
+      g.box(X - W2, Y, Z - 0.3, X + W2, Y + 3.4, Z, wall); g.box(X - W2, Y, Z + L, X + W2, Y + 3.4, Z + L + 0.3, wall);
+      g.box(X - W2, Y, Z, X - W2 + 0.05, Y + 1, Z + L, wain); g.box(X + W2 - 0.05, Y, Z, X + W2, Y + 1, Z + L, wain);
+      g.box(X - W2, Y + 3.4, Z, X + W2, Y + 3.6, Z + L, ceil);
+      rooms.forEach((r) => {
+        const fx = r.x - r.side * 0.06;
+        g.box(Math.min(fx, r.x), Y, r.z - 0.75, Math.max(fx, r.x), Y + 2.35, r.z + 0.75, door);
+        g.box(Math.min(fx - r.side * 0.02, r.x), Y + 2.35, r.z - 0.85, Math.max(fx, r.x), Y + 2.45, r.z + 0.85, gold);
+        g.box(Math.min(fx - r.side * 0.04, r.x), Y + 2.6, r.z - 0.3, Math.max(fx, r.x), Y + 2.85, r.z + 0.3, gold);   // へや ばんごう の いた
+        g.sphere(fx - r.side * 0.05, Y + 1.1, r.z + 0.5, 0.07, 5, gold);
+      });
+      // エレベーター（みなみ の はし）と おく の こわい え
+      g.box(X - 1.2, Y, Z, X + 1.2, Y + 2.6, Z + 0.08, hex('#868e96')); g.box(X - 0.02, Y, Z + 0.08, X + 0.02, Y + 2.6, Z + 0.1, hex('#343a40'));
+      g.box(X - 1.4, Y + 2.7, Z, X + 1.4, Y + 3.1, Z + 0.1, hex('#212529'));
+      g.box(X - 1.3, Y + 1.2, Z + L - 0.1, X + 1.3, Y + 2.9, Z + L, gold); g.box(X - 1.1, Y + 1.35, Z + L - 0.12, X + 1.1, Y + 2.75, Z + L - 0.1, hex('#1b1a24'));
+    });
+    return { X, Z, Y, L, W2, ev, rooms, mesh, start: { x: X, z: Z + 2.2 } };
+  })();
+  if (!save.secret) save.secret = { open: false, met: {}, medal: false };
+  const SECR = () => save.secret;
+  function inSecret() { return Math.abs(P.y - SEC.Y) < 8 && Math.abs(P.x - SEC.X) < SEC.W2 + 2 && P.z > SEC.Z - 2 && P.z < SEC.Z + SEC.L + 2; }
+  DOORS.push({ id: 'secev', secret: true, get x() { return SECR().open ? SEC.ev.ox : 1e7; }, get z() { return SEC.ev.oz; }, r: 1.8, label: '🛗<br>ひみつ', color: hex('#862e9c'), run: () => goSecret(true) });
+  DOORS.push({ id: 'secback', secret: true, x: SEC.X, z: SEC.Z + 1.2, y: SEC.Y, r: 1.6, label: '🛗<br>もどる', color: hex('#862e9c'), run: () => goSecret(false) });
+  SEC.rooms.forEach((r) => DOORS.push({ id: 'room' + r.no, secret: true, x: r.x - r.side * 1.2, z: r.z, y: SEC.Y, r: 1.3, label: `🚪<br>${r.no}`, color: hex('#5c1a24'), run: () => openRoom(r.no) }));
+  function goSecret(on) {
+    lastDoorId = '-'; PROJ.length = 0;
+    if (on) {
+      tone(220, 1.2, 'sine', 0.06, 110); tone(233, 1.2, 'sine', 0.05, 116);
+      banner('🛗 ひみつ の エレベーター …… ⬆️ 11かい …… 12かい …… <b>13かい</b><small>プラウド は 10かいだて の はず なのに……？</small>', 4);
+      P.x = SEC.start.x; P.z = SEC.start.z; P.y = SEC.Y + 0.05; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.ground = true; P.fallTop = P.y; P.face = 0;
+      cam.yaw = Math.PI; cam.pitch = 0.25; cam.dist = Math.min(cam.dist, 7);
+      MOM.x = P.x + 1.2; MOM.z = P.z - 0.6; MOM.y = P.y;
+      setTimeout(() => momSay('ママ、 ちょっと こわい…… てを つないで いこうね 🤝', 4), 1500);
+    } else {
+      P.x = SEC.ev.ox + HOMEDOOR.nx * 1.5; P.z = SEC.ev.oz + HOMEDOOR.nz * 1.5; P.y = 0; P.vx = P.vy = P.vz = 0; P.state = 'ground'; P.ground = true; P.fallTop = 0;
+      MOM.x = P.x + 1.2; MOM.z = P.z; MOM.y = 0; banner('🛗 1かい に もどった。 ふう……', 2.2); momSay('こわかった〜！ でも あおちゃん、 ゆうき あったね 💪', 3.5);
+    }
+  }
+  // ばくだん が いりぐち の そば で ばくはつ したら
+  function secretBomb(x, y, z) {
+    if (SECR().open || y > 4) return;
+    if (Math.hypot(x - SEC.ev.ox, z - SEC.ev.oz) > 5.5 && Math.hypot(x - HOMEDOOR.ox, z - HOMEDOOR.oz) > 5) return;
+    SECR().open = true; store(); lastDoorId = '-';
+    for (let k = 0; k < 30; k++) puffs.push({ x: SEC.ev.ox + (Math.random() - 0.5) * 3, y: Math.random() * 3, z: SEC.ev.oz + (Math.random() - 0.5) * 3, t: 0, vy: 1 + Math.random() * 2, w: 0, c: [0.6, 0.58, 0.55] });
+    setTimeout(() => { tone(880, 0.25, 'sine', 0.07); tone(660, 0.4, 'sine', 0.07, null, 0.25); banner('💥 かべ が くずれて…… <b>ひみつ の エレベーター</b> が でてきた！<small>🛗 の ボタン で のって みよう</small>', 4.5); momSay('え！？ うち の マンション に こんな もの が あったの！？', 4); }, 900);
+  }
+  // --- じゅうにん（8へや）---
+  const RES = {
+    101: { e: '🫥', n: 'のっぺらぼう の のっぺさん', pr: [0.55, 0.8], boo: 'こんばんは…… ぼく の かお、 みえる……？',
+      steps: [
+        { t: 'かお が ない んだ…… どこかに おとしちゃった。 あおちゃん、 しらない？', c: [['いっしょに さがす 🔍', 'やさしいね…… あ、 かがみ の なか に かお が！ …… あれ？ それ、 あおちゃん の かお だった……'], ['こわいよ〜 😱', 'こわがらないで…… ほんとうは ぼく も、 くらい ところ が にがて なんだ……']] },
+        { t: 'ねえ、 め と はな と くち、 どれ が いちばん ほしい と おもう？', c: [['め 👀', 'め が あったら、 あおちゃん の かお が みられる ね……'], ['くち 👄', 'くち が あったら、 おにぎり が たべられる…… いいなあ'], ['はな 👃', 'はな が あったら、 カレー の におい が わかる……']] },
+      ], gift: '🎭 のっぺさん の おめん' },
+    102: { e: '👵', n: 'ろくろくび の のびこ ばあさん', pr: [0.9, 0.75], boo: 'だれだい〜〜…… くび が のびる よ〜〜〜っ！',
+      steps: [
+        { t: 'あたしゃ くび が ながーく のびるんだ。 13かい から 1かい まで とどくよ。 くび の ながい どうぶつ、 しってるかい？', c: [['キリン 🦒', 'せいかい！ キリン とは おともだち さ。 いっしょに き の は を たべるんだよ'], ['ぞう 🐘', 'ぞう は はな が ながいんだよ。 くび は みじかい ねえ、 ひっひっひ']] },
+        { t: 'くび を のばすと、 まど から みなとみらい が ぜんぶ みえる。 よる に いちばん ひかる の は なんだと おもう？', c: [['かんらんしゃ 🎡', 'そう、 にじいろ に ひかって きれい なんだよ'], ['ランドマークタワー 🏢', 'あたし より せ が たかい の は あれ だけ さ']] },
+      ], gift: '🧣 ながーい ながーい マフラー' },
+    103: { e: '👁️', n: 'ひとつめ こぞう の メメ', pr: [1.9, 1.1], boo: 'みーーーたーーーなーーー！',
+      steps: [
+        { t: 'ぼく、 め が ひとつ しか ないんだ。 あおちゃん は め が いくつ ある？', c: [['ふたつ ✌️', 'いいなあ！ ぼく は ひとつ だから、 ウインク が できないんだ'], ['みっつ 🤔', 'え〜！ ほんとう！？ …… うそ でしょ〜、 わかってるよ〜']] },
+        { t: 'にらめっこ しよう！ わらったら まけ だよ。 あっぷっぷ！', c: [['へんがお する 😜', 'ぷっ…… あははは！ ぼく の まけ〜！'], ['じっと がまん 😐', '…… …… め が かわいて きた〜。 まけた〜']] },
+      ], gift: '🍬 めだま キャンディ' },
+    104: { e: '🧟', n: 'ゾンビ の ノロノロ さん', pr: [0.45, 0.6], boo: 'うぅ〜〜〜…… あぁ〜〜〜……',
+      steps: [
+        { t: 'おなか すいた〜〜…… なにか たべもの ない〜〜？', c: [['おにぎり を あげる 🍙', 'うぅ…… おいしい〜〜！ ゾンビ でも おにぎり は だいすき〜〜'], ['にげる ふり 🏃', 'まって〜〜…… あるく の が おそい から、 おいつけない〜〜']] },
+        { t: 'はやく あるける ように なる には、 どう したら いい〜〜？', c: [['たくさん ねる 😴', 'もう 100ねん くらい ねてた んだけど〜〜……'], ['やさい を たべる 🥦', 'ブロッコリー…… あした から たべて みる〜〜']] },
+      ], gift: '🧦 ゾンビ の くつした（かたほう）' },
+    105: { e: '👻', n: 'ゆうれい の しずか さん', pr: [1.5, 0.75], boo: 'うーーらーーめーーしーーやーー……',
+      steps: [
+        { t: 'あら…… こども が くる なんて めずらしい わ。 あなた、 おばけ は こわい？', c: [['こわい 😱', 'ふふふ…… しょうじき で えらい わ。 わたし も くらい ところ は ちょっと こわい の'], ['こわくない 💪', 'まあ、 ゆうき が ある の ね。 じゃあ…… これ は どう？ ばあっ！！']] },
+        { t: 'わたし、 あし が ない の。 だから ふわふわ うかんで いる のよ。 あし が あったら なに を したい かしら？', c: [['かけっこ 🏃', 'かけっこ…… いい わね。 あなた は はやそう'], ['ジャンプ 🦘', 'ぴょーん…… わたし も いちど して みたかった わ']] },
+      ], gift: '🕯️ ゆうれい の ろうそく' },
+    106: { e: '💀', n: 'がいこつ の カタカタ はかせ', pr: [0.7, 0.9], boo: 'カタカタカタカタ……！ ほね ほね ほねーっ！',
+      steps: [
+        { t: 'ほっほっほ。 わし は ほね だけ じゃ。 ひと の からだ に は、 ほね が いくつ ある と おもう？', c: [['10こ くらい', 'もっと ある！ おとな は なんと 200こ くらい じゃ'], ['200こ くらい', 'だいせいかい！ あかちゃん は もっと おおくて、 300こ くらい あるんじゃ']] },
+        { t: 'ほね を じょうぶ に する には、 なに を のむ と いい かのう？', c: [['ぎゅうにゅう 🥛', 'そのとおり！ カルシウム たっぷり じゃ'], ['ジュース 🧃', 'ジュース も おいしい が、 ほね には ぎゅうにゅう が いちばん じゃよ']] },
+      ], gift: '🦴 ほね の しおり' },
+    107: { e: '🧙', n: 'やまんば の ばばさま', pr: [1.2, 0.7], boo: 'ひぃーっひっひっひ！ だれ じゃ〜〜！',
+      steps: [
+        { t: 'おおきな なべ で スープ を にこんで おる。 なに を いれよう かのう〜？', c: [['にんじん 🥕', 'あまくて きれいな いろ に なるぞ。 ひっひっひ'], ['どろだんご 🟤', 'それ は たべられん！ ひぃーっひっひ']] },
+        { t: 'あたし は よる に なると ほうき で そら を とぶ。 あおちゃん は なに で そら を とぶ？', c: [['おなら 💨', 'おなら で！？ ひぃっひっひ、 それ は あたし より すごい'], ['ヘリコプター 🚁', 'ハイカラ じゃのう〜']] },
+      ], gift: '🧹 ちいさな まほう の ほうき' },
+    108: { e: '👹', n: 'オニ の ゴンゾウ', pr: [0.35, 0.85], boo: 'ガオォォォーーー！！ だれ だぁーーー！！',
+      steps: [
+        { t: 'おれ は オニ だ！ …… でも ほんとう は、 まめ が こわい。 せつぶん は なんがつ か しってるか？', c: [['2がつ', 'そう だ…… 2がつ は ずっと ふとん に かくれてる'], ['8がつ', 'ちがう ぞ！ 8がつ は なつやすみ だ！ せつぶん は 2がつ']] },
+        { t: 'さいご に ひとつ…… おれ と ともだち に なって くれるか？', c: [['なる！ 🤝', '…… うぅ、 うれしくて なける…… ありがとう、 あおちゃん'], ['かんがえとく 🤔', 'そ、 そうか…… まってる ぞ……']] },
+      ], gift: '🫘 ゴンゾウ が こわい まめ（あずかって ほしい って）' },
+  };
+  let secTok = 0;
+  function secVoice(txt, r) { if (window.Voice) window.Voice.say(txt, 'ghost', { pr: r.pr }); }
+  function scareSnd(k) {
+    if (k === 'knock') { noise(0.08, 0.4, 600, 'lowpass'); setTimeout(() => noise(0.08, 0.4, 600, 'lowpass'), 300); tone(110, 0.08, 'square', 0.06, 60); tone(110, 0.08, 'square', 0.06, 60, 0.3); return; }
+    noise(0.7, 0.35, 2500, 'bandpass'); tone(980, 0.6, 'sawtooth', 0.07, 1500); tone(70, 1, 'sine', 0.16, 40); tone(1240, 0.5, 'square', 0.03, 900, 0.05);
+  }
+  function openRoom(no) {
+    const r = RES[no], root = $('secRoot'), tok = ++secTok, alive = () => tok === secTok && $('ovSec').classList.contains('show');
+    if (!r) return;
+    const el = (t, c, h) => { const e = document.createElement(t); if (c) e.className = c; if (h !== undefined) e.innerHTML = h; return e; };
+    const run = el('button', 'srun', 'にげる 🏃'); run.addEventListener('click', closeRoom);
+    root.innerHTML = ''; root.className = 'card secret knock';
+    root.appendChild(el('div', 'sno', `${no}ごうしつ`)); const face = el('div', 'sface', '🚪'); root.appendChild(face);
+    const say = el('div', 'ssay', 'コン…… コン……'); root.appendChild(say); const box = el('div', 'schoices'); root.appendChild(box); root.appendChild(run);
+    show('ovSec', true); setPaused(); scareSnd('knock'); if (window.Voice) window.Voice.stop();
+    setTimeout(() => { if (!alive()) return; say.textContent = '…… ギィィィ……'; noise(1.0, 0.2, 400, 'bandpass'); tone(300, 1, 'sawtooth', 0.02, 180); }, 1100);
+    setTimeout(() => {
+      if (!alive()) return;
+      root.className = 'card secret boo'; face.textContent = r.e; say.innerHTML = `<b>${r.n}</b>「${r.boo}」`; scareSnd('boo'); secVoice(r.boo, r);
+      if (navigator.vibrate) try { navigator.vibrate([80, 40, 120]); } catch (e) { /* なし */ }
+      setTimeout(() => { if (alive()) { root.className = 'card secret'; step(0); } }, 1700);
+    }, 2100);
+    function step(i) {
+      box.innerHTML = '';
+      if (i >= r.steps.length) return finish();
+      const s = r.steps[i]; say.innerHTML = `<b>${r.n}</b>「${s.t}」`; secVoice(s.t, r);
+      s.c.forEach(([lab, rep]) => { const b = el('button', 'schoice', lab); b.addEventListener('click', () => {
+        if (window.Voice) window.Voice.stop(); SFX.tap(); box.innerHTML = ''; say.innerHTML = `<b>${r.n}</b>「${rep}」`; secVoice(rep, r); face.classList.remove('wob'); void face.offsetWidth; face.classList.add('wob');
+        const nx = el('button', 'schoice next', 'つぎ ▶'); nx.addEventListener('click', () => { if (window.Voice) window.Voice.stop(); step(i + 1); }); box.appendChild(nx);
+      }); box.appendChild(b); });
+    }
+    function finish() {
+      const S2 = SECR(), first = !S2.met[no]; S2.met[no] = true; store();
+      say.innerHTML = `<b>${r.n}</b>「また あそびに おいで……」<br>🎁 <b>${r.gift}</b> を もらった！`; secVoice('また あそびに おいで', r);
+      [523, 659, 784].forEach((f, k) => tone(f, 0.2, 'triangle', 0.06, null, k * 0.12));
+      const n = Object.keys(S2.met).length;
+      box.appendChild(el('div', 'scount', `あった おばけ ${n}/8`));
+      if (n >= 8 && !S2.medal) { S2.medal = true; save.wallet[1000] = (save.wallet[1000] || 0) + 1; store(); refreshHud(); box.appendChild(el('div', 'smedal', '🏅 ぜんいん に あえた！ 「ゆうき の メダル」 と 1000えん を もらった！')); confetti(); }
+      const ok = el('button', 'schoice next', 'またね 👋'); ok.addEventListener('click', closeRoom); box.appendChild(ok);
+      if (first && n < 8) setTimeout(() => momSay(`あと ${8 - n}へや。 こわかったら いつでも にげて いいんだよ`, 3.5), 300);
+    }
+  }
+  function closeRoom() { secTok++; if (window.Voice) window.Voice.stop(); show('ovSec', false); setPaused(); }
+  let secCreak = 3;
+  function secTick(dt) {
+    if (!inSecret()) return;
+    if ((secCreak -= dt) < 0) { secCreak = 5 + Math.random() * 7; const k = Math.random(); if (k < 0.4) noise(1.2, 0.05, 300, 'bandpass'); else if (k < 0.7) tone(140, 1.5, 'sine', 0.03, 120); else { tone(1800, 0.05, 'sine', 0.02); tone(1600, 0.05, 'sine', 0.02, null, 0.6); } }
+  }
+  function drawSecret() {
+    // いりぐち の かべ: ひび（まだ） / ひみつ の エレベーター（でた あと）
+    const e = SEC.ev, ux = HOMEDOOR.ux, uz = HOMEDOOR.uz, yaw = Math.atan2(HOMEDOOR.nx, HOMEDOOR.nz);
+    if (Math.hypot(P.x - e.x, P.z - e.z) < 120 && P.y < 60) {
+      const b = M(T(e.x, 0, e.z), RY(yaw));
+      if (!SECR().open) { [[-0.3, 0.6, 0.7], [0.2, 1.1, -0.5], [0.4, 0.4, 1.1], [-0.1, 1.5, 0.3]].forEach(([a, y, r]) => draw(mCube, M(b, T(a, y, 0.04), RZ(r), S(0.8, 0.05, 0.04)), [0.2, 0.18, 0.17])); }
+      else {
+        draw(mCube, M(b, T(0, 1.4, 0.1), S(2.2, 2.8, 0.2)), [0.25, 0.22, 0.28]);
+        const op = Math.hypot(P.x - e.ox, P.z - e.oz) < 2.5 ? 0.45 : 0;
+        [-1, 1].forEach((sd) => draw(mCube, M(b, T(sd * (0.46 + op), 1.25, 0.22), S(0.9, 2.4, 0.06)), [0.62, 0.6, 0.66]));
+        draw(mCube, M(b, T(0, 2.75, 0.22), S(0.5, 0.18, 0.04)), [1, 0.2, 0.25], 1);
+        draw(mCube, M(b, T(1.25, 1.2, 0.22), S(0.14, 0.3, 0.04)), [0.9, 0.85, 0.3], 0.7);
+      }
+    }
+    if (!inSecret()) return;
+    draw(SEC.mesh, I(), W);
+    for (let k = 0; k < 6; k++) { const z = SEC.Z + 3 + k * 6, fl = k === 3 ? (Math.sin(time * 23) > 0.3 || Math.sin(time * 3.1) > 0.8 ? 1 : 0.1) : 0.9 + Math.sin(time * 2 + k) * 0.05; draw(mCube, M(T(SEC.X, SEC.Y + 3.38, z), S(0.9, 0.05, 0.9)), [1, 0.85 * fl + 0.05, 0.6 * fl], fl); }
+    // ろうか を よこぎる ゆうれい
+    const ph = (time % 14) / 14;
+    if (ph < 0.35) { const k = ph / 0.35, gz = SEC.Z + 24, gx = SEC.X - SEC.W2 + k * SEC.W2 * 2, gy = SEC.Y + 1.4 + Math.sin(time * 3) * 0.2; draw(mSphere, M(T(gx, gy, gz), S(0.45, 0.6, 0.45)), C.white, 0.6, 0.55); draw(mCone, M(T(gx, gy - 0.9, gz), S(0.45, 0.6, 0.45)), C.white, 0.6, 0.45); [-0.15, 0.15].forEach((sx) => draw(mSphere, M(T(gx + sx, gy + 0.1, gz - 0.42), S(0.07, 0.1, 0.05)), C.black)); }
+    // へや ばんごう の まえ の あかり
+    SEC.rooms.forEach((r) => { const met = SECR().met[r.no]; draw(mSphere, M(T(r.x - r.side * 0.12, SEC.Y + 2.73, r.z + 0.45), S(0.06)), met ? [0.4, 1, 0.5] : [1, 0.25, 0.25], 1); });
+  }
   function drawMonthDeco() {
     if (eventToday() === 'bday') drawBdayDeco();
     if (deco('koinobori')) DECO_SPOTS.forEach((p, i) => {   // こいのぼり
@@ -4232,7 +4410,7 @@ void main(){
     if (deco('lights') && SKn > 0.25) draw(mLights, I(), W, 1);
     if (deco('ajisai')) draw(mAjisai, I(), W);
     if (deco('himawari')) draw(mHimawari, I(), W);
-    drawMonthDeco(); drawAdv();
+    drawMonthDeco(); drawAdv(); drawSecret();
     if (deco('snow')) { draw(mSnowCap, I(), W); SNOWMEN.forEach((q) => { draw(mSphere, M(T(q.x, 0.7, q.z), S(0.75)), C.white); draw(mSphere, M(T(q.x, 1.7, q.z), S(0.5)), C.white); draw(mCone, M(T(q.x, 1.7, q.z + 0.45), RX(Math.PI / 2), S(0.08, 0.35, 0.08)), C.orange); [-0.17, 0.17].forEach((o) => draw(mSphere, M(T(q.x + o, 1.85, q.z + 0.44), S(0.06)), C.black)); draw(mCube, M(T(q.x, 2.25, q.z), S(0.55, 0.35, 0.55)), hex('#c92a2a')); }); }
     if (deco('xtree') && XTREE) { draw(mXTree, I(), W); draw(mStar, M(T(XTREE.x, 8.8, XTREE.z), RY(time), S(1.1)), C.gold, 1); if (SKn > 0.25 || ev === 'xmas') for (let k = 0; k < 24; k++) { const a = k * 1.9, hh = 1.2 + k * 0.28, rr = 3.3 * (1 - hh / 8.5); draw(mSphere, M(T(XTREE.x + Math.cos(a) * rr, hh, XTREE.z + Math.sin(a) * rr), S(0.16)), [[1, 0.3, 0.3], [1, 0.85, 0.3], [0.4, 0.7, 1]][k % 3], 0.5 + 0.5 * Math.sin(time * 3 + k)); } }
     if (ev === 'xmas' && SANTA) { const b = M(T(SANTA.x, 0, SANTA.z), RY(Math.atan2(P.x - SANTA.x, P.z - SANTA.z))); personAt(b, hex('#e03131'), 'stand', 0, hex('#e03131'), C.white, false); part(b, 0, 1.35, 0.2, 0.5, 0.35, 0.12, C.white); draw(mCone, M(b, T(0, 1.85, 0), S(0.3, 0.55, 0.3)), hex('#e03131')); draw(mSphere, M(b, T(0, 2.4, 0), S(0.09)), C.white); }
@@ -4438,5 +4616,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓（setTime の ひ が ちいさい かず の ときは 2026/9/7（げつ）から かぞえる）
-  window.__mm = { ISL, goIsland, advUse, nextItem, openChest, PROJ, ENE, get boss() { return boss; }, explode, hammerHit, torchHit, spawnEnemy, AITEM, kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { SEC, RES, openRoom, closeRoom, goSecret, secretBomb, inSecret, ISL, goIsland, advUse, nextItem, openChest, PROJ, ENE, get boss() { return boss; }, explode, hammerHit, torchHit, spawnEnemy, AITEM, kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
