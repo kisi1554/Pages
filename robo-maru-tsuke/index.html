@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ポンコツロボの まるつけ</title>
+<style>
+  :root {
+    --bg: #fff8e7;
+    --ink: #2b2b45;
+    --sub: #6a6a8a;
+    --accent: #e03131;
+    --robo: #b9c6d8;
+    --robo-dark: #7d8da6;
+    --ok: #2f9e44;
+    --card: #ffffff;
+    --shadow: 0 4px 0 rgba(43,43,69,.18);
+    --red: #e03131;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: radial-gradient(circle at 20% 10%, #fff3c4 0 18%, transparent 19%), linear-gradient(#fff8e7, #ffe8cc);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  button:disabled { cursor: default; }
+
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+
+  .bar { width: 100%; max-width: 1100px; display: flex; align-items: center; gap: 8px; min-height: 56px; flex: none; }
+  .bar .grow { flex: 1; display: flex; justify-content: center; }
+  .round-btn { width: 54px; height: 54px; border-radius: 50%; background: #fff; box-shadow: var(--shadow);
+    font-size: 26px; display: grid; place-items: center; text-decoration: none; color: inherit; flex: none; }
+  .round-btn:active { transform: translateY(3px); box-shadow: none; }
+  .dots { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; }
+  .dots i { width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #d0c8b8; }
+  .dots i.now { box-shadow: inset 0 0 0 4px var(--red); }
+  .dots i.good { background: #ffd43b; box-shadow: none; }
+  .dots i.done { background: #b2f2bb; box-shadow: none; }
+
+  /* ---- ロボ ---- */
+  .robo svg { width: 100%; height: 100%; display: block; overflow: visible; }
+  .robo .face { fill: var(--robo); transition: fill .4s; }
+  .robo.blush .face { fill: #ffb0a8; }
+  .robo .cheek { opacity: 0; transition: opacity .3s; }
+  .robo.blush .cheek, .robo.happy .cheek { opacity: 1; }
+  .robo .heat { opacity: 0; }
+  .robo.blush .heat { opacity: 1; animation: heat .7s ease-in-out infinite alternate; }
+  .robo .eyes-n, .robo .mouth-smile { display: inline; }
+  .robo .eyes-x, .robo .eyes-happy, .robo .mouth-o, .robo .mouth-wave, .robo .gaan, .robo .sweat { display: none; }
+  .robo.gaan .eyes-n, .robo.gaan .mouth-smile { display: none; }
+  .robo.gaan .eyes-x, .robo.gaan .mouth-o, .robo.gaan .gaan { display: inline; }
+  .robo.blush .eyes-n, .robo.happy .eyes-n { display: none; }
+  .robo.blush .eyes-happy, .robo.happy .eyes-happy { display: inline; }
+  .robo.hmm .mouth-smile { display: none; }
+  .robo.hmm .mouth-wave, .robo.hmm .sweat { display: inline; }
+  .robo .screw { transform-box: fill-box; transform-origin: center; }
+  .robo.screw-off .screw { animation: screwfly 1s cubic-bezier(.2,.7,.4,1) forwards; }
+  .robo.screw-back .screw { animation: screwback .6s ease-out; }
+  .robo .arm-r { transform-box: fill-box; transform-origin: 10% 10%; }
+  .robo.writing .arm-r { animation: scribble .18s ease-in-out infinite alternate; }
+  .robo.happy svg, .robo.bounce svg { animation: hop .5s ease-in-out 2; }
+  .robo.gaan svg { animation: shake .4s ease-in-out; }
+  @keyframes screwfly {
+    0% { transform: translate(0,0) rotate(0); opacity: 1; }
+    60% { transform: translate(40px,-90px) rotate(540deg); opacity: 1; }
+    100% { transform: translate(70px,-40px) rotate(900deg); opacity: 0; }
+  }
+  @keyframes screwback { from { transform: translate(0,-60px) rotate(-360deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  @keyframes scribble { from { transform: rotate(-6deg); } to { transform: rotate(8deg); } }
+  @keyframes hop { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  @keyframes heat { from { transform: translateY(0); } to { transform: translateY(-4px); } }
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+
+  .bubble { position: relative; background: #fff; border-radius: 18px; padding: 8px 14px; box-shadow: var(--shadow);
+    font-weight: 800; font-size: clamp(16px, 4.3vw, 22px); line-height: 1.4; text-align: center; min-height: 2.9em;
+    display: grid; place-items: center; max-width: 520px; width: 100%; }
+  .bubble.left::after { left: -10px; top: 50%; bottom: auto; margin: -10px 0 0; border: 10px solid transparent; border-right-color: #fff; border-left: 0; }
+  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -12px; margin-left: -10px;
+    border: 10px solid transparent; border-top-color: #fff; border-bottom: 0; }
+
+  /* ---- タイトル ---- */
+  #title { overflow-y: auto; }
+  #title .robo { width: clamp(130px, 36vw, 190px); height: clamp(140px, 39vw, 205px); animation: bob 2.4s ease-in-out infinite; }
+  .logo { margin: 6px 0 0; font-size: clamp(30px, 8.4vw, 54px); font-weight: 900; color: var(--red);
+    text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.12); text-align: center; line-height: 1.15; }
+  .logo small { display: block; font-size: .5em; color: var(--ink); }
+  .logo-sub { color: var(--sub); font-weight: 700; font-size: clamp(15px, 3.8vw, 19px); margin: 6px 0 12px; text-align: center; }
+  .levels { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 12px; }
+  .level { background: var(--card); border-radius: 22px; padding: 12px 10px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 108px; text-align: center; }
+  .level:active { transform: translateY(3px); box-shadow: none; }
+  .level b { font-size: clamp(20px, 5.2vw, 28px); color: var(--red); }
+  .level span { font-size: clamp(14px, 3.6vw, 17px); font-weight: 700; color: var(--sub); line-height: 1.35; }
+  .level em { font-style: normal; font-size: 18px; min-height: 1.3em; }
+
+  /* ---- テスト ---- */
+  #play .stage { flex: 1; min-height: 0; width: 100%; max-width: 1100px; display: grid; grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto auto; gap: 10px; padding-top: 4px; }
+  .robo-area { min-height: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .robo-area .bubble { flex: none; }
+  .robo-area .robo { flex: 1; min-height: 70px; width: 100%; max-width: 220px; margin-top: 10px; }
+  .paper { position: relative; background: #fff; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,.15);
+    background-image: repeating-linear-gradient(#fff 0 38px, #e7eefc 38px 40px);
+    padding: 10px 14px 14px; width: 100%; max-width: 620px; justify-self: center; overflow: visible; min-width: 0; }
+  .paper-head { display: flex; justify-content: space-between; font-weight: 800; color: var(--sub); font-size: clamp(14px, 3.6vw, 18px); }
+  .paper-head .name { border-bottom: 2px solid #c8c8d8; padding: 0 6px; }
+  .q-line { display: flex; align-items: center; justify-content: center; gap: .25em; margin-top: 6px;
+    font-size: clamp(40px, 11vw, 70px); font-weight: 900; min-height: 1.4em; white-space: nowrap; }
+  .ra-box { position: relative; display: inline-block; }
+  .ans-wrap { position: relative; display: inline-flex; align-items: center; gap: .2em; }
+  .robo-ans { position: relative; min-width: 1.4em; padding: 0 .12em; text-align: center; color: #555a66;
+    font-family: "Klee", "Yu Kyokasho", "Hiragino Maru Gothic ProN", "Comic Sans MS", cursive; font-weight: 700;
+    border-bottom: 3px dashed #c8c8d8; }
+  .robo-ans.joke { font-size: .8em; }
+  .robo-ans.huge { font-size: 1.6em; letter-spacing: .02em; transform: rotate(-4deg); display: inline-block; }
+  .q-line.over { justify-content: flex-start; }
+  .robo-ans.joke.struck, .robo-ans.huge.struck { font-size: .42em; transform: none; transition: font-size .4s; }
+  .robo-ans.struck::after { content: ""; position: absolute; left: -4%; right: -4%; top: 50%; height: 5px;
+    background: var(--red); border-radius: 3px; transform: rotate(-8deg); }
+  .fix { color: var(--red); font-family: "Klee", "Hiragino Maru Gothic ProN", cursive; min-width: 1.2em;
+    border: 3px solid var(--red); border-radius: 10px; padding: 0 .12em; text-align: center; display: none; line-height: 1.1; }
+  .fix.on { display: inline-block; }
+  .fix.typing { border-style: dashed; animation: blink 1s step-end infinite; }
+  .fix.done { border-color: transparent; }
+  @keyframes blink { 50% { border-color: #ffc9c9; } }
+  .stamp { position: absolute; pointer-events: none; color: var(--red); font-weight: 900; line-height: 1;
+    left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0); opacity: 0; }
+  .stamp.on { animation: stamp .35s cubic-bezier(.3,1.6,.5,1) forwards; }
+  .stamp.maru { width: 1.7em; height: 1.7em; border: .12em solid var(--red); border-radius: 50%; }
+  .stamp.batsu { font-size: 1.7em; }
+  @keyframes stamp { to { transform: translate(-50%, -50%) scale(1) rotate(-6deg); opacity: .9; } }
+
+  .controls { display: grid; gap: 10px; width: 100%; max-width: 620px; justify-self: center; }
+  .mark-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .mark-btn { height: clamp(84px, 22vw, 116px); border-radius: 26px; background: #fff; box-shadow: 0 6px 0 rgba(43,43,69,.2);
+    font-size: clamp(52px, 14vw, 80px); font-weight: 900; color: var(--red); line-height: 1; display: grid; place-items: center; }
+  .mark-btn:active:not(:disabled) { transform: translateY(5px); box-shadow: none; }
+  .mark-btn:disabled { opacity: .45; }
+  .mark-btn .ring { width: .9em; height: .9em; border: .13em solid var(--red); border-radius: 50%; }
+  .sub-row { display: flex; gap: 10px; justify-content: center; }
+  .pill { min-height: 54px; padding: 6px 18px; border-radius: 27px; background: #fff; box-shadow: var(--shadow);
+    font-weight: 800; font-size: clamp(16px, 4.2vw, 20px); }
+  .pill:active { transform: translateY(3px); box-shadow: none; }
+  .pill.go { background: var(--red); color: #fff; }
+  .pad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .pad button { height: clamp(52px, 13vw, 64px); border-radius: 16px; background: #fff; box-shadow: var(--shadow);
+    font-size: clamp(26px, 7vw, 34px); font-weight: 900; }
+  .pad button:active { transform: translateY(3px); box-shadow: none; }
+  .pad .del { font-size: clamp(15px, 3.8vw, 18px); background: #f1f3f5; }
+  .pad .ok { background: var(--red); color: #fff; font-size: clamp(20px, 5vw, 26px); }
+  .hidden { display: none !important; }
+
+  /* 横長（タブレット横・PC） */
+  @media (orientation: landscape) and (min-width: 700px) {
+    #play .stage { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); grid-template-rows: auto auto; align-content: center; column-gap: 24px; row-gap: 16px; }
+    .robo-area { grid-row: 1 / span 2; justify-content: center; }
+    .robo-area .robo { max-width: 300px; flex: 0 1 auto; height: min(50vh, 380px); }
+    .paper { align-self: end; }
+    .controls { align-self: start; }
+    .q-line { font-size: clamp(48px, 6.5vw, 84px); }
+    .mark-btn { height: clamp(100px, 16vh, 140px); }
+  }
+  /* 横持ちスマホ（ひくい） */
+  @media (orientation: landscape) and (max-height: 500px) {
+    #play .stage { grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr); grid-template-rows: auto 1fr; column-gap: 12px; gap: 6px; }
+    .robo-area { grid-row: 1 / span 2; }
+    .robo-area .robo { max-width: 160px; }
+    .q-line { font-size: 40px; }
+    .mark-btn { height: 70px; font-size: 48px; }
+    .pad button { height: 44px; }
+  }
+
+  /* ---- りんご ---- */
+  .modal { position: fixed; inset: 0; background: rgba(43,43,69,.45); display: none; place-items: center; z-index: 20; padding: 12px; }
+  .modal.on { display: grid; }
+  .sheet { background: #fff; border-radius: 24px; padding: 14px; width: 100%; max-width: 720px; max-height: 100%; overflow-y: auto;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 8px 30px rgba(0,0,0,.25); }
+  .sheet h2 { margin: 0; font-size: clamp(20px, 5vw, 26px); }
+  .sheet .expr { font-size: clamp(30px, 8vw, 44px); font-weight: 900; }
+  .sheet .hint { color: var(--sub); font-weight: 700; font-size: clamp(14px, 3.7vw, 17px); text-align: center; }
+  .apples { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; }
+  .grp { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; padding: 8px; border-radius: 16px; background: #fff5f5; max-width: 100%; }
+  .grp.g2 { background: #f4fce3; }
+  .five { display: flex; gap: 2px; }
+  .op { font-size: 40px; font-weight: 900; }
+  .apple { position: relative; width: var(--ap, 50px); height: var(--ap, 50px); font-size: calc(var(--ap, 50px) * .78); line-height: 1;
+    background: none; display: grid; place-items: center; padding: 0; border-radius: 50%; }
+  .apple.counted { background: #ffe066; }
+  .apple b { position: absolute; right: -4px; top: -6px; background: var(--red); color: #fff; border-radius: 11px; min-width: 22px;
+    height: 22px; font-size: 14px; display: grid; place-items: center; padding: 0 4px; }
+  .apple.gone { opacity: .35; }
+  .apple.gone::after { content: "✕"; position: absolute; inset: 0; display: grid; place-items: center; color: #495057;
+    font-size: calc(var(--ap, 50px) * .8); font-weight: 900; }
+  .count-now { font-size: clamp(22px, 6vw, 30px); font-weight: 900; color: var(--red); min-height: 1.3em; }
+
+  /* ---- けっか ---- */
+  #result { overflow-y: auto; }
+  .res-top { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 760px; justify-content: center; margin-top: 4px; }
+  #result .robo { width: clamp(100px, 26vw, 150px); height: clamp(110px, 29vw, 165px); flex: none; }
+  .score { position: relative; background: #fff; border-radius: 18px; box-shadow: var(--shadow); padding: 10px 16px; text-align: center; }
+  .score .who { font-weight: 800; color: var(--sub); }
+  .score .pt { font-size: clamp(48px, 13vw, 76px); font-weight: 900; color: var(--red); line-height: 1.1; font-family: "Klee", "Hiragino Maru Gothic ProN", cursive; }
+  .score .pt small { font-size: .4em; }
+  .res-msg { font-weight: 800; font-size: clamp(17px, 4.6vw, 23px); text-align: center; margin: 10px 0 6px; line-height: 1.45; }
+  .badge { font-size: clamp(16px, 4.3vw, 21px); font-weight: 900; background: #fff3bf; border: 3px solid #fab005; border-radius: 20px;
+    padding: 6px 16px; display: flex; align-items: center; gap: 8px; animation: hop .6s ease-in-out 3; }
+  .badge span { font-size: 1.8em; }
+  .sheet-list { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; background: #fff;
+    border-radius: 10px; padding: 10px 12px; margin: 10px 0; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .row { display: flex; align-items: center; gap: 6px; font-size: clamp(16px, 4.3vw, 22px); font-weight: 800; white-space: nowrap; overflow: hidden; }
+  .row .n { color: var(--sub); font-size: .7em; width: 1.6em; }
+  .row .m { color: var(--red); font-size: 1.1em; width: 1.2em; text-align: center; }
+  .row s { color: #868e96; text-decoration-color: var(--red); text-decoration-thickness: 2px; max-width: 5em; overflow: hidden; text-overflow: ellipsis; }
+  .row .c { color: var(--red); }
+  .res-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; padding-bottom: 12px; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ロボの え（つかいまわす） -->
+<template id="robo-tpl">
+  <svg viewBox="0 0 200 230" aria-hidden="true">
+    <g class="gaan" stroke="#4dabf7" stroke-width="4" stroke-linecap="round">
+      <line x1="62" y1="44" x2="62" y2="78"/><line x1="82" y1="40" x2="82" y2="70"/>
+      <line x1="118" y1="40" x2="118" y2="70"/><line x1="138" y1="44" x2="138" y2="78"/>
+    </g>
+    <g class="heat" stroke="#ff8787" stroke-width="4" fill="none" stroke-linecap="round">
+      <path d="M58 30 q-6 -8 0 -16 q6 -8 0 -16"/><path d="M142 30 q-6 -8 0 -16 q6 -8 0 -16"/>
+    </g>
+    <!-- アンテナ -->
+    <line x1="100" y1="40" x2="100" y2="14" stroke="#7d8da6" stroke-width="5"/>
+    <circle cx="100" cy="11" r="8" fill="#ffd43b" stroke="#7d8da6" stroke-width="3"/>
+    <!-- ねじ -->
+    <g class="screw">
+      <rect x="128" y="22" width="16" height="22" rx="3" fill="#adb5bd" stroke="#495057" stroke-width="3"/>
+      <line x1="136" y1="24" x2="136" y2="30" stroke="#495057" stroke-width="3"/>
+      <line x1="128" y1="34" x2="144" y2="32" stroke="#495057" stroke-width="2"/>
+      <line x1="128" y1="40" x2="144" y2="38" stroke="#495057" stroke-width="2"/>
+    </g>
+    <!-- あたま -->
+    <rect class="face" x="38" y="40" width="124" height="96" rx="22" stroke="#5c6b82" stroke-width="5"/>
+    <rect x="28" y="70" width="12" height="30" rx="5" fill="#7d8da6"/>
+    <rect x="160" y="70" width="12" height="30" rx="5" fill="#7d8da6"/>
+    <ellipse class="cheek" cx="62" cy="108" rx="11" ry="7" fill="#ff6b6b"/>
+    <ellipse class="cheek" cx="138" cy="108" rx="11" ry="7" fill="#ff6b6b"/>
+    <g class="eyes-n">
+      <circle cx="74" cy="82" r="15" fill="#fff" stroke="#5c6b82" stroke-width="3"/>
+      <circle cx="126" cy="82" r="15" fill="#fff" stroke="#5c6b82" stroke-width="3"/>
+      <circle cx="77" cy="84" r="7" fill="#2b2b45"/><circle cx="123" cy="84" r="7" fill="#2b2b45"/>
+    </g>
+    <g class="eyes-happy" stroke="#2b2b45" stroke-width="5" fill="none" stroke-linecap="round">
+      <path d="M62 86 q12 -14 24 0"/><path d="M114 86 q12 -14 24 0"/>
+    </g>
+    <g class="eyes-x" stroke="#2b2b45" stroke-width="5" stroke-linecap="round" fill="none">
+      <path d="M64 76 l20 6 l-20 6"/><path d="M136 76 l-20 6 l20 6"/>
+    </g>
+    <path class="mouth-smile" d="M82 112 q18 14 36 0" stroke="#2b2b45" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse class="mouth-o" cx="100" cy="116" rx="9" ry="11" fill="#2b2b45"/>
+    <path class="mouth-wave" d="M80 116 q5 -6 10 0 t10 0 t10 0 t10 0" stroke="#2b2b45" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path class="sweat" d="M156 52 q8 12 0 16 q-8 -4 0 -16z" fill="#74c0fc"/>
+    <!-- からだ -->
+    <rect x="70" y="136" width="60" height="8" fill="#7d8da6"/>
+    <rect x="52" y="144" width="96" height="66" rx="14" fill="#9fb0c8" stroke="#5c6b82" stroke-width="5"/>
+    <rect x="70" y="156" width="60" height="28" rx="6" fill="#e9f5ff" stroke="#5c6b82" stroke-width="3"/>
+    <circle cx="82" cy="198" r="5" fill="#ff6b6b"/><circle cx="100" cy="198" r="5" fill="#ffd43b"/><circle cx="118" cy="198" r="5" fill="#51cf66"/>
+    <text x="100" y="177" text-anchor="middle" font-size="16" font-weight="900" fill="#5c6b82" font-family="sans-serif">P-0</text>
+    <g stroke="#7d8da6" stroke-width="9" stroke-linecap="round" fill="none">
+      <path d="M54 160 q-22 10 -18 34"/>
+    </g>
+    <g class="arm-r">
+      <path d="M146 160 q24 6 22 30" stroke="#7d8da6" stroke-width="9" stroke-linecap="round" fill="none"/>
+      <g transform="translate(166 186) rotate(25)">
+        <rect x="-4" y="0" width="8" height="30" fill="#ffd43b" stroke="#5c6b82" stroke-width="2"/>
+        <path d="M-4 30 l4 9 l4 -9z" fill="#f4c095" stroke="#5c6b82" stroke-width="2"/>
+      </g>
+    </g>
+    <rect x="62" y="210" width="24" height="16" rx="5" fill="#7d8da6"/><rect x="114" y="210" width="24" height="16" rx="5" fill="#7d8da6"/>
+  </svg>
+</template>
+
+<!-- タイトル -->
+<section class="screen on" id="title">
+  <div class="bar">
+    <a class="round-btn" href="../" aria-label="あそびメニューへ">🏠</a>
+    <div class="grow"></div>
+    <button class="round-btn snd" aria-label="おと オン/オフ">🔊</button>
+  </div>
+  <div class="robo" data-robo></div>
+  <h1 class="logo"><small>ポンコツロボの</small>まるつけ</h1>
+  <p class="logo-sub">ポンコツくんの テストを まるつけ しよう！<br>きみが せんせい だよ</p>
+  <div class="levels" id="levels"></div>
+</section>
+
+<!-- テスト -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="round-btn" id="quit" aria-label="もどる">↩</button>
+    <div class="grow"><div class="dots" id="dots"></div></div>
+    <button class="round-btn snd" aria-label="おと オン/オフ">🔊</button>
+  </div>
+  <div class="stage">
+    <div class="robo-area">
+      <div class="bubble" id="say">まるつけ おねがいします！</div>
+      <div class="robo" data-robo id="robo"></div>
+    </div>
+    <div class="paper">
+      <div class="paper-head"><span id="qno">だい 1もん</span><span>なまえ <span class="name">ポンコツ</span></span></div>
+      <div class="q-line">
+        <span id="expr">3 ＋ 2</span><span>＝</span>
+        <span class="ans-wrap">
+          <span class="ra-box"><span class="robo-ans" id="rans"></span><span class="stamp" id="stamp"></span></span>
+          <span class="fix" id="fix"></span>
+        </span>
+      </div>
+    </div>
+    <div class="controls">
+      <div class="mark-row" id="markRow">
+        <button class="mark-btn" id="btnMaru" aria-label="まる"><span class="ring"></span></button>
+        <button class="mark-btn" id="btnBatsu" aria-label="ばつ">✕</button>
+      </div>
+      <div class="pad hidden" id="pad"></div>
+      <div class="sub-row">
+        <button class="pill" id="btnApple">🍎 りんごで たしかめる</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- けっか -->
+<section class="screen" id="result">
+  <div class="bar">
+    <a class="round-btn" href="../" aria-label="あそびメニューへ">🏠</a>
+    <div class="grow"></div>
+    <button class="round-btn snd" aria-label="おと オン/オフ">🔊</button>
+  </div>
+  <div class="res-top">
+    <div class="robo happy" data-robo id="resRobo"></div>
+    <div>
+      <div class="bubble left" id="resSay">せんせい ありがとう！</div>
+      <div class="score" style="margin-top:14px"><div class="who">ポンコツくんの てんすう</div><div class="pt" id="resPt">6<small>てん</small></div></div>
+    </div>
+  </div>
+  <div class="res-msg" id="resMsg"></div>
+  <div id="resBadge"></div>
+  <div class="sheet-list" id="resList"></div>
+  <div class="res-btns">
+    <button class="pill go" id="again">もういちど まるつけ</button>
+    <button class="pill" id="toTitle">レベルを えらぶ</button>
+  </div>
+</section>
+
+<!-- りんご -->
+<div class="modal" id="appleModal">
+  <div class="sheet">
+    <h2>🍎 りんごで たしかめよう</h2>
+    <div class="expr" id="aExpr"></div>
+    <div class="hint" id="aHint">りんごを タッチして かぞえよう</div>
+    <div class="apples" id="apples"></div>
+    <div class="count-now" id="aCount"></div>
+    <div class="sub-row">
+      <button class="pill" id="aReset">かぞえなおす</button>
+      <button class="pill go" id="aClose">わかった！</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const $ = (id) => document.getElementById(id);
+  const KEY = 'robo-maru-tsuke-v1';
+  let store = { sound: true, lv: {} };
+  try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object') store = Object.assign(store, s); } catch (e) {}
+  if (!store.lv || typeof store.lv !== 'object') store.lv = {};
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) {} }
+
+  // ---------- おと（WebAudio の 合成音だけ） ----------
+  let ac = null;
+  function ctx() {
+    if (!store.sound) return null;
+    try {
+      if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+    } catch (e) { return null; }
+    return ac;
+  }
+  function tone(f, dur, type = 'sine', vol = .18, delay = 0, f2 = null) {
+    const c = ctx(); if (!c) return;
+    const t = c.currentTime + delay;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + .05);
+  }
+  const sfx = {
+    tap() { tone(660, .07, 'triangle', .12); },
+    blip() { tone(900 + Math.random() * 500, .05, 'square', .05); },
+    maru() { tone(784, .14, 'triangle', .2); tone(1175, .3, 'triangle', .2, .12); },
+    blush() { tone(500, .5, 'sine', .14, 0, 1300); },
+    batsu() { tone(220, .16, 'sawtooth', .1); tone(180, .2, 'sawtooth', .1, .13); },
+    gaan() { tone(392, .5, 'sawtooth', .12, 0, 98); tone(1500, .35, 'sine', .1, .25, 3200); tone(2000, .12, 'square', .04, .55); },
+    hmm() { tone(330, .15, 'sine', .14); tone(294, .25, 'sine', .14, .16); },
+    fix() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, 'triangle', .17, i * .09)); },
+    back() { tone(1200, .35, 'sine', .1, 0, 300); tone(880, .08, 'square', .05, .35); },
+    count(n) { tone(440 * Math.pow(2, Math.min(n, 24) / 12), .1, 'sine', .15); },
+    fanfare() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i === 5 ? .5 : .16, 'triangle', .18, i * .14)); },
+  };
+  function syncSnd() { document.querySelectorAll('.snd').forEach(b => { b.textContent = store.sound ? '🔊' : '🔇'; }); }
+  document.querySelectorAll('.snd').forEach(b => b.addEventListener('click', () => { store.sound = !store.sound; save(); syncSnd(); sfx.tap(); }));
+  syncSnd();
+
+  // ロボを くばる
+  const tpl = $('robo-tpl');
+  document.querySelectorAll('[data-robo]').forEach(el => el.appendChild(tpl.content.cloneNode(true)));
+
+  function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+  const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+  const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+  function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+
+  // ---------- レベル ----------
+  const LEVELS = {
+    1: { title: 'レベル1', desc: '5までの たしざん' },
+    2: { title: 'レベル2', desc: '10までの たしざん・ひきざん' },
+    3: { title: 'レベル3', desc: '20までの たしざん・ひきざん' },
+    4: { title: 'レベル4', desc: 'ぜんぶ あってる テストも あるかも？' },
+  };
+  function renderLevels() {
+    const box = $('levels'); box.innerHTML = '';
+    for (const k of [1, 2, 3, 4]) {
+      const L = LEVELS[k], st = store.lv[k] || {};
+      const b = document.createElement('button');
+      b.className = 'level';
+      const badges = st.badges || 0;
+      b.innerHTML = `<b>${L.title}</b><span>${L.desc}</span><em>${badges ? '🎖️×' + badges : (st.plays ? '✏️' : '')}</em>`;
+      b.addEventListener('click', () => { sfx.tap(); start(k); });
+      box.appendChild(b);
+    }
+  }
+
+  // ---------- もんだい づくり ----------
+  const ans = (q) => q.op === '+' ? q.a + q.b : q.a - q.b;
+  function genBase(lv) {
+    if (lv === 4) lv = Math.random() < .5 ? 2 : 3;
+    if (lv === 1) { const s = rnd(2, 5); const a = rnd(1, s - 1); return { a, b: s - a, op: '+' }; }
+    const op = Math.random() < .5 ? '+' : '-';
+    if (op === '+') { const s = lv === 2 ? rnd(3, 10) : rnd(9, 20); const a = rnd(1, s - 1); return { a, b: s - a, op }; }
+    const a = lv === 2 ? rnd(3, 10) : rnd(10, 20); const b = rnd(1, a - 1); return { a, b, op };
+  }
+  const JOKES = [
+    { t: 'バナナ', cls: 'joke', o: 'バナナは たべもの だった…！', x: 'あれ？ 「バナナ」って かず かな？' },
+    { t: 'おにぎり', cls: 'joke', o: 'おなか すいてて おにぎりって かいちゃった…', x: 'あれ？ 「おにぎり」って かず かな？' },
+    { t: '9999999', cls: 'huge', o: 'かずが おおきすぎて かみから はみだしちゃった…！', x: 'こんなに おおきい かず に なるかな？' },
+  ];
+  function wrongFor(q, kind) {
+    const c = ans(q);
+    if (kind === 'swap') { const w = q.op === '+' ? Math.abs(q.a - q.b) : q.a + q.b; if (w !== c) return w; }
+    if (kind === '69') { const s = String(c); if (/[69]/.test(s)) return Number(s.replace(/[69]/g, d => d === '6' ? '9' : '6')); }
+    let w = c + (Math.random() < .5 ? 1 : -1); if (w < 0 || w === c) w = c + 1; return w;
+  }
+  function makeTest(lv) {
+    let nWrong, nJoke;
+    if (lv < 4) { nWrong = rnd(4, 6); nJoke = 1; }
+    else if (Math.random() < .5) { nWrong = 0; nJoke = 0; }
+    else { nWrong = rnd(1, 3); nJoke = Math.random() < .4 ? 1 : 0; }
+    const real = lv === 1 ? ['off1', 'swap'] : ['off1', 'swap', '69'];
+    const kinds = [];
+    for (let i = 0; i < 10 - nWrong; i++) kinds.push('ok');
+    for (let i = 0; i < nJoke; i++) kinds.push('joke');
+    const rk = shuffle(real.slice());
+    for (let i = 0; i < nWrong - nJoke; i++) kinds.push(rk[i % rk.length]);
+    shuffle(kinds);
+    if (kinds[0] === 'joke') { const j = kinds.findIndex(k => k !== 'joke'); [kinds[0], kinds[j]] = [kinds[j], kinds[0]]; }
+    const seen = new Set(), test = [];
+    const jokes = shuffle(JOKES.slice());
+    for (const kind of kinds) {
+      let q, tries = 0;
+      do {
+        q = genBase(lv); tries++;
+        const c = ans(q);
+        if (kind === '69' && !/[69]/.test(String(c)) && tries < 80) continue;
+        if (kind === 'swap' && q.op === '+' && Math.abs(q.a - q.b) === c && tries < 80) continue;
+        if (!seen.has(q.a + q.op + q.b) || tries > 80) break;
+      } while (true);
+      seen.add(q.a + q.op + q.b);
+      q.kind = kind; q.correct = ans(q);
+      if (kind === 'ok') { q.robo = String(q.correct); q.right = true; }
+      else if (kind === 'joke') { q.joke = jokes.pop(); q.robo = q.joke.t; q.right = false; }
+      else { q.robo = String(wrongFor(q, kind)); q.right = false; }
+      q.markMiss = 0; q.fixMiss = 0;
+      test.push(q);
+    }
+    return test;
+  }
+
+  // ---------- テスト ----------
+  let S = null; // { lv, test, i, phase, input, timers }
+  const roboEl = $('robo');
+  function roboState(...cls) {
+    const keep = roboEl.classList.contains('screw-off') && !cls.includes('screw-back') ? ['screw-off'] : [];
+    roboEl.className = 'robo ' + keep.concat(cls).join(' ');
+  }
+  function say(t) { $('say').innerHTML = t; }
+  function later(fn, ms) { const t = setTimeout(fn, ms); S.timers.push(t); }
+  function clearTimers() { if (S) { S.timers.forEach(clearTimeout); S.timers = []; } }
+  const opTxt = (q) => `${q.a} ${q.op === '+' ? '＋' : '−'} ${q.b}`;
+
+  function start(lv) {
+    clearTimers();
+    S = { lv, test: makeTest(lv), i: 0, phase: 'idle', input: '', timers: [] };
+    show('play');
+    roboState();
+    say(lv === 4 ? 'テスト、がんばったよ！<br>ぜんぶ あってる かも？' : 'テスト、がんばって といたよ！<br>まるつけ おねがいします！');
+    renderDots();
+    later(() => nextQ(), 1500);
+    setMarkEnabled(false);
+    $('expr').textContent = ''; $('rans').textContent = '';
+  }
+  function renderDots() {
+    const d = $('dots'); d.innerHTML = '';
+    S.test.forEach((q, k) => {
+      const i = document.createElement('i');
+      if (k === S.i && S.phase !== 'idle') i.className = 'now';
+      else if (k < S.i) i.className = (q.markMiss || q.fixMiss) ? 'done' : 'good';
+      d.appendChild(i);
+    });
+  }
+  function setMarkEnabled(on) { $('btnMaru').disabled = !on; $('btnBatsu').disabled = !on; }
+
+  const WRITE_LINES = ['うーん… できた！', 'かんたん かんたん！', 'これは じしん あるよ！', 'えーっと… これだ！', 'ピピッ… けいさん かんりょう！'];
+  function nextQ() {
+    const q = S.test[S.i];
+    S.phase = 'writing'; S.input = '';
+    renderDots();
+    $('qno').textContent = `だい ${S.i + 1}もん`;
+    $('expr').textContent = opTxt(q);
+    const ra = $('rans');
+    ra.className = 'robo-ans' + (q.joke ? ' ' + q.joke.cls : '');
+    ra.textContent = '';
+    document.querySelector('.q-line').classList.toggle('over', !!(q.joke && q.joke.cls === 'huge'));
+    const st = $('stamp'); st.className = 'stamp'; st.textContent = '';
+    const fx = $('fix'); fx.className = 'fix'; fx.textContent = '';
+    $('markRow').classList.remove('hidden'); $('pad').classList.add('hidden');
+    setMarkEnabled(false);
+    roboState('writing');
+    say('かきかき…');
+    const chars = [...q.robo];
+    const step = Math.max(90, Math.min(220, 700 / chars.length));
+    chars.forEach((ch, k) => later(() => { ra.textContent += ch; sfx.blip(); }, 400 + k * step));
+    later(() => {
+      roboState();
+      say(pick(WRITE_LINES) + '<br>○ か ✕ を つけてね');
+      S.phase = 'mark';
+      setMarkEnabled(true);
+    }, 400 + chars.length * step + 250);
+  }
+
+  function stamp(kind) {
+    const st = $('stamp');
+    st.className = 'stamp ' + kind;
+    st.textContent = kind === 'batsu' ? '✕' : '';
+    void st.offsetWidth; st.classList.add('on');
+  }
+
+  function onMaru() {
+    if (!S || S.phase !== 'mark') return;
+    const q = S.test[S.i];
+    if (q.right) {
+      S.phase = 'wait'; setMarkEnabled(false);
+      stamp('maru'); sfx.maru();
+      later(() => { roboState('blush'); sfx.blush(); say(pick(['えへへ… てれるなぁ', 'やったー！ まるだ！', 'ぼく てんさい かも…ぽっ'])); }, 350);
+      later(advance, 2000);
+    } else {
+      q.markMiss++; sfx.hmm(); roboState('hmm');
+      if (q.joke) { say(q.joke.x + '<br>もういちど よく みて！'); }
+      else { say('ほんとうに あってる？<br>りんごで かぞえて みて！'); later(() => openApples(true), 900); }
+    }
+  }
+  function onBatsu() {
+    if (!S || S.phase !== 'mark') return;
+    const q = S.test[S.i];
+    if (!q.right) {
+      S.phase = 'wait'; setMarkEnabled(false);
+      stamp('batsu'); sfx.batsu();
+      $('rans').classList.add('struck'); document.querySelector('.q-line').classList.remove('over');
+      later(() => {
+        roboState('gaan', 'screw-off'); sfx.gaan();
+        say('ガーン！！' + (q.joke ? '<br>' + q.joke.o : ''));
+      }, 350);
+      later(() => {
+        roboState('gaan', 'screw-off');
+        say('ただしい こたえを<br>おしえて ください…');
+        S.phase = 'fix'; S.input = '';
+        const fx = $('fix'); fx.className = 'fix on typing'; fx.textContent = '　';
+        $('markRow').classList.add('hidden'); $('pad').classList.remove('hidden');
+      }, q.joke ? 2400 : 1500);
+    } else {
+      q.markMiss++; sfx.hmm(); roboState('hmm');
+      say('えっ、ぼく まちがってる？<br>りんごで かぞえて みて！');
+      later(() => openApples(true), 900);
+    }
+  }
+
+  // すうじ パッド
+  function buildPad() {
+    const pad = $('pad');
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'].forEach(k => {
+      const b = document.createElement('button'); b.textContent = k; b.addEventListener('click', () => padKey(k)); pad.appendChild(b);
+    });
+    const row = document.createElement('div'); row.style.cssText = 'grid-column: span 5; display: grid; grid-template-columns: 1fr 2fr; gap: 8px;';
+    const d2 = document.createElement('button'); d2.className = 'del'; d2.textContent = '⌫ けす'; d2.addEventListener('click', () => padKey('del'));
+    const ok = document.createElement('button'); ok.className = 'ok'; ok.textContent = 'かけた！'; ok.addEventListener('click', () => padKey('ok'));
+    row.append(d2, ok); pad.appendChild(row);
+  }
+  function padKey(k) {
+    if (!S || S.phase !== 'fix') return;
+    const fx = $('fix');
+    if (k === 'del') { S.input = S.input.slice(0, -1); sfx.tap(); }
+    else if (k === 'ok') { if (S.input === '') { sfx.hmm(); say('すうじを おしてから<br>「かけた！」を おしてね'); return; } checkFix(); return; }
+    else { if (S.input.length >= 2) S.input = S.input.slice(1); S.input = (S.input + k).replace(/^0(\d)/, '$1'); sfx.tap(); }
+    fx.textContent = S.input || '　';
+  }
+  function checkFix() {
+    const q = S.test[S.i];
+    if (Number(S.input) === q.correct) {
+      S.phase = 'wait';
+      const fx = $('fix'); fx.className = 'fix on done'; fx.textContent = String(q.correct);
+      sfx.fix();
+      $('pad').classList.add('hidden'); $('markRow').classList.remove('hidden'); setMarkEnabled(false);
+      later(() => { roboState('screw-back', 'happy'); sfx.back(); say(`そっか！ ${opTxt(q)} は ${q.correct} だね。<br>おぼえたよ！`); }, 300);
+      later(advance, 2600);
+    } else {
+      q.fixMiss++; sfx.hmm();
+      say('おしい！<br>りんごで かぞえて みよう');
+      S.input = ''; $('fix').textContent = '　';
+      later(() => openApples(true), 800);
+    }
+  }
+
+  function advance() {
+    S.i++;
+    if (S.i >= S.test.length) return finish();
+    roboState();
+    nextQ();
+  }
+
+  // ---------- りんご ----------
+  let aCount = 0;
+  function openApples(auto) {
+    if (!S || !S.test[S.i] || S.phase === 'writing' || S.phase === 'idle') return;
+    const q = S.test[S.i];
+    $('aExpr').textContent = opTxt(q) + ' ＝ ？';
+    $('aHint').textContent = q.op === '+' ? 'あかい りんごと みどりの りんご、ぜんぶで いくつ？ タッチして かぞえよう' : `${q.b}こ たべちゃった（✕）。のこりは いくつ？ タッチして かぞえよう`;
+    const box = $('apples'); box.innerHTML = '';
+    const total = q.op === '+' ? q.a + q.b : q.a;
+    const size = total > 14 ? 38 : total > 8 ? 44 : 54;
+    box.style.setProperty('--ap', size + 'px');
+    function group(n, emoji, cls, goneFrom) {
+      const g = document.createElement('div'); g.className = 'grp ' + cls;
+      let five = null;
+      for (let k = 0; k < n; k++) {
+        if (k % 5 === 0) { five = document.createElement('div'); five.className = 'five'; g.appendChild(five); }
+        const b = document.createElement('button'); b.className = 'apple'; b.textContent = emoji;
+        if (goneFrom != null && k >= goneFrom) b.classList.add('gone');
+        b.addEventListener('click', () => {
+          if (b.classList.contains('gone') || b.classList.contains('counted')) return;
+          aCount++; b.classList.add('counted');
+          const t = document.createElement('b'); t.textContent = aCount; b.appendChild(t);
+          sfx.count(aCount);
+          $('aCount').textContent = aCount + 'こ';
+        });
+        five.appendChild(b);
+      }
+      return g;
+    }
+    if (q.op === '+') {
+      box.appendChild(group(q.a, '🍎', 'g1'));
+      const p = document.createElement('div'); p.className = 'op'; p.textContent = '＋'; box.appendChild(p);
+      box.appendChild(group(q.b, '🍏', 'g2'));
+    } else {
+      box.appendChild(group(q.a, '🍎', 'g1', q.a - q.b));
+    }
+    aCount = 0; $('aCount').textContent = '';
+    $('appleModal').classList.add('on');
+    if (!auto) sfx.tap();
+  }
+  function resetApples() {
+    aCount = 0; $('aCount').textContent = '';
+    document.querySelectorAll('#apples .apple').forEach(a => { a.classList.remove('counted'); const b = a.querySelector('b'); if (b) b.remove(); });
+    sfx.tap();
+  }
+  function closeApples() {
+    $('appleModal').classList.remove('on'); sfx.tap();
+    if (S && S.phase === 'mark') { roboState(); say('○ か ✕ か、<br>もういちど つけてね'); }
+    if (S && S.phase === 'fix') say('ただしい こたえを<br>すうじで かいてね');
+  }
+
+  // ---------- けっか ----------
+  function finish() {
+    S.phase = 'end'; clearTimers();
+    const t = S.test;
+    const pt = t.filter(q => q.right).length;
+    const markMiss = t.reduce((s, q) => s + q.markMiss, 0);
+    const fixMiss = t.reduce((s, q) => s + q.fixMiss, 0);
+    const badge = markMiss === 0;
+    const st = store.lv[S.lv] || (store.lv[S.lv] = { plays: 0, badges: 0 });
+    st.plays = (st.plays || 0) + 1; if (badge) st.badges = (st.badges || 0) + 1;
+    save();
+    $('resPt').innerHTML = `${pt}<small>てん（10もん）</small>`;
+    $('resSay').textContent = pt === 10 ? 'ぜんぶ まるだ！ せんせい ありがとう！' : 'まちがいを なおしてくれて、せんせい ありがとう！';
+    let msg;
+    if (pt === 10 && badge) msg = 'ぜんぶ あってる テスト だったね！<br>うたがいすぎずに ○ が つけられた！ すごい！';
+    else if (badge) msg = 'まるつけ、ぜんぶ ぴったり！<br>りっぱな せんせい だね！';
+    else if (markMiss <= 2) msg = 'さいごまで まるつけ できたね！<br>あと すこしで せんせいバッジ！';
+    else msg = 'さいごまで まるつけ できたね！<br>りんごで たしかめると バッジに ちかづくよ';
+    $('resMsg').innerHTML = msg;
+    $('resBadge').innerHTML = badge ? '<div class="badge"><span>🎖️</span>せんせい バッジ ゲット！</div>' : '';
+    const list = $('resList'); list.innerHTML = '';
+    t.forEach((q, k) => {
+      const r = document.createElement('div'); r.className = 'row';
+      const shown = q.robo.length > 5 ? q.robo.slice(0, 4) + '…' : q.robo;
+      r.innerHTML = `<span class="n">${k + 1}</span><span>${opTxt(q)} ＝</span>` +
+        (q.right ? `<span>${q.robo}</span><span class="m">○</span>` : `<s>${shown}</s><span class="c">${q.correct}</span><span class="m">✕</span>`);
+      list.appendChild(r);
+    });
+    const rr = $('resRobo'); rr.className = 'robo happy';
+    show('result');
+    badge ? sfx.fanfare() : sfx.fix();
+  }
+
+  $('btnMaru').addEventListener('click', onMaru);
+  $('btnBatsu').addEventListener('click', onBatsu);
+  $('btnApple').addEventListener('click', () => openApples(false));
+  $('aReset').addEventListener('click', resetApples);
+  $('aClose').addEventListener('click', closeApples);
+  $('quit').addEventListener('click', () => { clearTimers(); S = null; sfx.tap(); $('appleModal').classList.remove('on'); renderLevels(); show('title'); });
+  $('again').addEventListener('click', () => { sfx.tap(); start(S ? S.lv : 1); });
+  $('toTitle').addEventListener('click', () => { sfx.tap(); renderLevels(); show('title'); });
+
+  buildPad();
+  renderLevels();
+  // テスト用（Playwright から よぶ）
+  window.__robo = { get state() { return S; }, start };
+})();
+</script>
+</body>
+</html>
