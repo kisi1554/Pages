@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ふえふえ マシン</title>
+<style>
+  :root {
+    --bg: #f3f0ff;
+    --ink: #2b2140;
+    --sub: #6f5f8f;
+    --mc: #7048e8;
+    --mc2: #5f3dc4;
+    --ok: #2f9e44;
+    --ng: #e8590c;
+    --card: #ffffff;
+    --shadow: 0 4px 0 rgba(43,33,64,.18);
+    --mh: clamp(150px, 27vh, 250px);
+    --it: 40px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(circle at 1px 1px, rgba(112,72,232,.13) 1.5px, transparent 2px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+
+  .bar { width: 100%; max-width: 1000px; display: flex; align-items: center; gap: 8px; min-height: 54px; }
+  .bar .sp { flex: 1; }
+  .ibtn { min-width: 52px; height: 52px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+  .ibtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
+  .lvname { font-size: 18px; font-weight: bold; color: var(--sub); white-space: nowrap; }
+
+  /* ---- タイトル ---- */
+  #title { justify-content: flex-start; overflow-y: auto; }
+  .logo { font-size: clamp(30px, 8vw, 48px); margin: 4px 0 0; letter-spacing: .06em; color: var(--mc2);
+    text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.08); text-align: center; }
+  .lead { margin: 4px 0 8px; font-size: 18px; color: var(--sub); text-align: center; line-height: 1.6; }
+  .tHk { width: 110px; height: 132px; }
+  .levels { width: 100%; max-width: 720px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 16px; }
+  .level { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 12px 10px;
+    min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: 4px solid var(--lc, #7048e8); }
+  .level:active { transform: translateY(3px); }
+  .level .ln { font-size: 21px; font-weight: bold; color: var(--lc); }
+  .level .le { font-size: 26px; letter-spacing: 2px; }
+  .level .ls { font-size: 15px; color: var(--sub); }
+  .level .lb { font-size: 15px; min-height: 20px; }
+
+  /* ---- あそぶ がめん ---- */
+  .stage { width: 100%; max-width: 1000px; flex: 1; min-height: 0; display: grid; gap: 6px;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto 1fr auto;
+    grid-template-areas: "talk" "in" "machine" "out" "ans"; }
+  .talk { grid-area: talk; display: flex; align-items: center; gap: 8px; min-height: 76px; }
+  .talk .mini { width: 64px; height: 76px; flex: none; transition: transform .5s, opacity .5s; }
+  .talk .mini.gone { transform: translateY(40px) scale(.2); opacity: 0; }
+  .bubble { flex: 1; background: var(--card); border-radius: 20px; padding: 10px 14px; font-size: 19px; line-height: 1.5;
+    box-shadow: var(--shadow); position: relative; min-height: 56px; display: flex; align-items: center; }
+  .bubble::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -9px;
+    border: 9px solid transparent; border-right-color: var(--card); border-left: 0; }
+  .bubble.pop { animation: bpop .3s; }
+  @keyframes bpop { 50% { transform: scale(1.03); } }
+
+  .tray { position: relative; background: rgba(255,255,255,.7); border: 3px dashed #c5b8ee; border-radius: 18px;
+    padding: 18px 6px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .tray .tag { position: absolute; left: 10px; top: -2px; transform: translateY(-50%); background: var(--mc); color: #fff;
+    font-size: 14px; font-weight: bold; padding: 2px 10px; border-radius: 99px; }
+  #inTray { grid-area: in; min-height: 72px; }
+  #outTray { grid-area: out; min-height: 96px; }
+  .row { display: flex; align-items: center; justify-content: center; gap: 2px; flex-wrap: nowrap; position: relative;
+    padding: 2px 6px; border-radius: 12px; }
+  .row.copy { background: rgba(255,224,102,.35); }
+  .row.copy2 { background: rgba(116,192,252,.25); }
+  .it { position: relative; display: inline-flex; align-items: center; justify-content: center;
+    width: var(--it); height: var(--it); font-size: calc(var(--it) * .8); line-height: 1; }
+  .it svg { width: 100%; height: 100%; }
+  .it .num { position: absolute; right: -4px; bottom: -4px; background: var(--mc2); color: #fff; font-size: 13px;
+    min-width: 20px; height: 20px; border-radius: 10px; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; padding: 0 3px; animation: popin .25s; }
+  .it.in { animation: popin .3s backwards; }
+  @keyframes popin { 0% { transform: scale(0); } 70% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .ghost .it { opacity: .35; filter: grayscale(1); }
+  .ghost .it.drop { opacity: .1; }
+  .split { width: 0; align-self: stretch; border-left: 4px dashed #e8590c; margin: 0 6px; position: relative; }
+  .split::after { content: "✂️"; position: absolute; top: -14px; left: -13px; font-size: 18px; }
+  .hsplit { width: 90%; border-top: 4px dashed #e8590c; position: relative; margin: 2px 0; }
+  .hsplit::after { content: "✂️"; position: absolute; left: -22px; top: -14px; font-size: 18px; }
+  .drop.away { transition: transform .8s ease-in, opacity .8s; transform: translateY(30px) scale(.4); opacity: 0; }
+  .half { overflow: hidden; }
+  .half.l > span { clip-path: inset(0 50% 0 0); }
+  .half.r > span { clip-path: inset(0 0 0 50%); }
+  .fight { animation: fight .18s infinite; }
+  @keyframes fight { 0% { transform: rotate(-12deg) translateX(-3px); } 50% { transform: rotate(12deg) translateX(3px); } 100% { transform: rotate(-12deg) translateX(-3px); } }
+  .anger { position: absolute; top: -12px; right: -6px; font-size: 20px; animation: popin .3s; }
+  .qbox { font-size: 44px; color: #fff; background: #495057; border-radius: 14px; width: 74px; height: 64px;
+    display: flex; align-items: center; justify-content: center; font-weight: bold; animation: wob 1s infinite; }
+  @keyframes wob { 50% { transform: rotate(5deg) scale(1.06); } }
+
+  /* ---- マシン ---- */
+  .mwrap { grid-area: machine; display: flex; justify-content: center; }
+  .machine { position: relative; width: min(100%, 360px); height: var(--mh); --mc: #7048e8; --mc2: #5f3dc4; }
+  .machine.h2 { --mc: #0ca678; --mc2: #087f5b; }
+  .machine.x3 { --mc: #f76707; --mc2: #d9480f; }
+  .hopper { position: absolute; left: 12%; top: 0; width: 30%; height: 26%; background: linear-gradient(#ced4da, #868e96);
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 30% 100%); }
+  .chim { position: absolute; left: 58%; top: 6%; width: 9%; height: 20%; background: #495057; border-radius: 4px 4px 0 0; }
+  .mbody { position: absolute; left: 3%; right: 25%; top: 24%; bottom: 14%; background: var(--mc); border-radius: 22px;
+    border: 4px solid var(--mc2); box-shadow: inset 0 -10px 0 rgba(0,0,0,.15); overflow: hidden; }
+  .plate { position: absolute; left: 50%; top: 8%; transform: translateX(-50%); background: #fff; color: var(--mc2);
+    font-weight: bold; font-size: clamp(18px, 4.5vh, 28px); padding: 2px 14px; border-radius: 12px; white-space: nowrap;
+    border: 3px solid var(--mc2); }
+  .gear { position: absolute; bottom: 8%; font-size: clamp(30px, 8vh, 52px); line-height: 1; }
+  .gear.g1 { left: 6%; bottom: 4%; } .gear.g2 { left: 30%; font-size: clamp(22px, 5.5vh, 38px); bottom: 6%; }
+  .lights { position: absolute; right: 8%; bottom: 14%; display: flex; gap: 6px; }
+  .lights i { width: 14px; height: 14px; border-radius: 50%; background: #ffe066; opacity: .5; }
+  .machine.run .lights i { animation: blink .3s infinite alternate; }
+  .machine.run .lights i:nth-child(2) { animation-delay: .15s; background: #ff8787; }
+  .machine.run .lights i:nth-child(3) { animation-delay: .3s; background: #8ce99a; }
+  @keyframes blink { to { opacity: 1; transform: scale(1.3); } }
+  .machine.run .gear { animation: spin .7s linear infinite; }
+  .machine.run .gear.g2 { animation-direction: reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .machine.run .mbody, .machine.run .hopper, .machine.run .chim { animation: shake .12s infinite; }
+  .machine.panic .mbody { animation: shake .06s infinite; filter: saturate(.5) brightness(.9); }
+  @keyframes shake { 0% { transform: translate(-2px, 1px) rotate(-.6deg); } 50% { transform: translate(2px, -1px) rotate(.6deg); } 100% { transform: translate(-2px, 1px); } }
+  .chute { position: absolute; right: 27%; bottom: 0; width: 26%; height: 18%; background: #495057; border-radius: 0 0 14px 14px; }
+  .lever { position: absolute; right: 0; top: 18%; width: 24%; height: 70%; background: transparent; padding: 0; }
+  .lever .base { position: absolute; left: 0; bottom: 18%; width: 46%; height: 22%; background: #495057; border-radius: 6px; }
+  .lever .stick { position: absolute; left: 14%; bottom: 30%; width: 14%; height: 62%; background: #adb5bd; border-radius: 6px;
+    transform-origin: 50% 100%; transform: rotate(18deg); transition: transform .25s; }
+  .lever .stick::after { content: ""; position: absolute; left: 50%; top: -18px; width: 36px; height: 36px; margin-left: -18px;
+    border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8787, #e03131); box-shadow: 0 3px 0 #a61e1e; }
+  .lever.down .stick { transform: rotate(125deg); }
+  .lever.wait .stick { animation: tug 1s infinite; }
+  @keyframes tug { 50% { transform: rotate(40deg); } }
+  .lever .hand { position: absolute; left: 30%; top: -6%; font-size: 30px; animation: point .8s infinite; pointer-events: none; display: none; }
+  .lever.wait .hand { display: block; }
+  @keyframes point { 50% { transform: translateY(8px); } }
+  .puff { position: absolute; width: 30px; height: 30px; border-radius: 50%; background: rgba(255,255,255,.95);
+    pointer-events: none; animation: puff 1.2s ease-out forwards; }
+  .puff.dark { background: rgba(110,110,120,.85); }
+  @keyframes puff { from { transform: translate(0,0) scale(.4); opacity: 1; } to { transform: translate(var(--dx, 10px), -70px) scale(1.8); opacity: 0; } }
+  .sfxw { position: absolute; font-weight: bold; color: var(--mc2); font-size: 22px; pointer-events: none; white-space: nowrap;
+    text-shadow: 0 2px 0 #fff, 0 -2px 0 #fff, 2px 0 0 #fff, -2px 0 0 #fff; animation: sfxw 1s forwards; z-index: 5; }
+  @keyframes sfxw { 0% { transform: scale(.4); opacity: 0; } 20% { transform: scale(1.2); opacity: 1; } 100% { transform: translateY(-14px); opacity: 0; } }
+
+  /* ---- こたえ ---- */
+  .ans { grid-area: ans; min-height: 82px; display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .num-btn { width: 76px; height: 76px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 40px; font-weight: bold; color: var(--mc2); border: 4px solid #d0bfff; }
+  .num-btn:active { transform: translateY(3px); }
+  .num-btn.no { opacity: .3; pointer-events: none; }
+  .num-btn.yes { background: #d3f9d8; border-color: var(--ok); color: var(--ok); }
+  .big-btn { min-height: 70px; padding: 0 28px; border-radius: 22px; background: var(--mc); color: #fff; font-size: 24px;
+    font-weight: bold; box-shadow: 0 5px 0 var(--mc2); }
+  .big-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--mc2); }
+  .big-btn.sub { background: #fff; color: var(--mc2); box-shadow: var(--shadow); border: 3px solid #d0bfff; }
+  .formula { font-size: 22px; font-weight: bold; color: var(--sub); background: #fff; border-radius: 14px; padding: 6px 14px; box-shadow: var(--shadow); }
+  .who { width: 120px; height: 140px; border-radius: 20px; background: #fff; box-shadow: var(--shadow); border: 4px solid #d0bfff; padding: 4px; }
+  .who svg { width: 100%; height: 100%; }
+  .who.right { border-color: var(--ok); background: #d3f9d8; }
+
+  /* ---- めがね ---- */
+  .gl { display: flex; gap: 3px; }
+  .gl span { width: 34px; height: 20px; display: inline-block; }
+  .gl svg, .stack svg { width: 100%; height: 100%; }
+  .lens { fill: #e7f5ff; transition: fill .3s; }
+  .lit .lens { fill: #ffe066; }
+  .lit svg { filter: drop-shadow(0 0 5px #fcc419); }
+  .flash { animation: flash .6s; }
+  @keyframes flash { 30% { transform: scale(1.6); } }
+
+  /* ---- けっか ---- */
+  #result { justify-content: center; gap: 10px; text-align: center; }
+  .rbox { position: relative; width: 200px; height: 345px; flex: none; }
+  .rbox .hkbig { position: absolute; left: 0; bottom: 0; width: 200px; height: 240px; }
+  .stack { position: absolute; z-index: 2; left: 50%; bottom: 218px; width: 92px; margin-left: -46px; display: flex; flex-direction: column-reverse; }
+  .stack span { height: 26px; display: block; margin-top: -4px; }
+  .rtitle { font-size: clamp(26px, 6vw, 38px); font-weight: bold; color: var(--mc2); margin: 0; }
+  .rmsg { font-size: 20px; color: var(--sub); margin: 0; line-height: 1.6; }
+  .rbtns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .confetti { position: fixed; top: -20px; font-size: 26px; pointer-events: none; animation: fall 2.4s linear forwards; z-index: 20; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+
+  .fly { position: fixed; z-index: 30; pointer-events: none; }
+
+  @media (orientation: landscape) and (min-width: 740px) {
+    .stage { grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr auto;
+      grid-template-areas: "talk talk" "machine in" "machine out" "machine ans"; column-gap: 14px; }
+    :root { --mh: clamp(220px, 52vh, 400px); }
+    .mwrap { align-items: center; }
+    .machine { width: min(100%, 440px); }
+  }
+  @media (max-width: 520px) {
+    .lvname { display: none; }
+    .gl span { width: 26px; height: 16px; }
+    .ibtn { min-width: 48px; height: 48px; }
+  }
+  @media (max-height: 640px) and (orientation: portrait) {
+    .talk { min-height: 62px; } .talk .mini { width: 50px; height: 60px; }
+    .bubble { font-size: 17px; padding: 6px 12px; }
+    .num-btn { width: 66px; height: 66px; font-size: 34px; }
+    .ans { min-height: 70px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ===== タイトル ===== -->
+<section class="screen on" id="title">
+  <div class="bar"><span class="sp"></span><button class="ibtn" id="sndT" aria-label="おと">🔊</button></div>
+  <h1 class="logo">ふえふえ マシン</h1>
+  <div class="tHk" id="titleHk"></div>
+  <p class="lead">はかせの へんてこ マシン。<br>いれると ふえたり へったり するよ！</p>
+  <div class="levels" id="levels"></div>
+</section>
+
+<!-- ===== あそぶ ===== -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="ibtn" id="home" aria-label="もどる">🏠</button>
+    <span class="lvname" id="lvname"></span>
+    <span class="sp"></span>
+    <div class="gl" id="glbar"></div>
+    <button class="ibtn" id="sndP" aria-label="おと">🔊</button>
+  </div>
+  <div class="stage">
+    <div class="talk"><div class="mini" id="miniHk"></div><div class="bubble" id="say"></div></div>
+    <div class="tray" id="inTray"><span class="tag">いれる</span><div id="inRows"></div></div>
+    <div class="mwrap">
+      <div class="machine" id="machine">
+        <div class="hopper" id="hopper"></div>
+        <div class="chim" id="chim"></div>
+        <div class="mbody">
+          <div class="plate" id="plate">2ばい</div>
+          <div class="gear g1">⚙️</div><div class="gear g2">⚙️</div>
+          <div class="lights"><i></i><i></i><i></i></div>
+        </div>
+        <div class="chute" id="chute"></div>
+        <button class="lever" id="lever" aria-label="レバー"><span class="base"></span><span class="stick"></span><span class="hand">👇</span></button>
+      </div>
+    </div>
+    <div class="tray" id="outTray"><span class="tag">でてくる</span><div id="outRows"></div></div>
+    <div class="ans" id="ans"></div>
+  </div>
+</section>
+
+<!-- ===== けっか ===== -->
+<section class="screen" id="result">
+  <div class="rbox"><div class="stack" id="stack"></div><div class="hkbig" id="resHk"></div></div>
+  <p class="rtitle" id="rtitle"></p>
+  <p class="rmsg" id="rmsg"></p>
+  <div class="rbtns">
+    <button class="big-btn" id="again">🔁 もういちど</button>
+    <button class="big-btn sub" id="toTitle">🏭 ほかの マシン</button>
+  </div>
+</section>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------- ほぞん ---------- */
+  var KEY = "fuefue-machine-v1";
+  var save = { sound: true, best: {}, plays: 0 };
+  try { var s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s && typeof s === "object") { for (var k in s) save[k] = s[k]; } } catch (e) {}
+  if (!save.best || typeof save.best !== "object") save.best = {};
+  function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+  /* ---------- おと（WebAudio の ごうせいおん） ---------- */
+  var AC = null;
+  function ac() {
+    if (!save.sound) return null;
+    if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+    if (AC.state === "suspended") { try { AC.resume(); } catch (e) {} }
+    return AC;
+  }
+  function tone(f, d, type, v, t0, f2) {
+    var a = ac(); if (!a) return;
+    var t = a.currentTime + (t0 || 0);
+    var o = a.createOscillator(), g = a.createGain();
+    o.type = type || "sine"; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v || 0.2, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+  }
+  var nbuf = null;
+  function noise(d, v, t0, ff, ff2, q) {
+    var a = ac(); if (!a) return;
+    if (!nbuf) { nbuf = a.createBuffer(1, a.sampleRate, a.sampleRate); var ch = nbuf.getChannelData(0); for (var i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
+    var t = a.currentTime + (t0 || 0);
+    var s = a.createBufferSource(); s.buffer = nbuf; s.loop = true;
+    var fl = a.createBiquadFilter(); fl.type = "bandpass"; fl.Q.value = q || 1; fl.frequency.setValueAtTime(ff || 1500, t);
+    if (ff2) fl.frequency.exponentialRampToValueAtTime(ff2, t + d);
+    var g = a.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v || 0.2, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    s.connect(fl); fl.connect(g); g.connect(a.destination); s.start(t); s.stop(t + d + 0.05);
+  }
+  var SFX = {
+    tap: function () { tone(660, 0.07, "triangle", 0.15); },
+    lever: function () { tone(180, 0.12, "square", 0.12, 0, 90); noise(0.08, 0.2, 0.05, 900); },
+    gata: function (dur) { for (var t = 0; t < dur; t += 0.18) { tone(t % 0.36 < 0.1 ? 110 : 90, 0.08, "square", 0.09, t); noise(0.05, 0.1, t, 400); } },
+    pshu: function () { noise(0.7, 0.25, 0, 4000, 600, 0.7); },
+    pop: function (i) { tone(500 + i * 60, 0.09, "triangle", 0.16, 0, 800 + i * 60); },
+    swoop: function () { tone(700, 0.35, "sine", 0.13, 0, 1400); },
+    ok: function () { [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.18, "triangle", 0.18, i * 0.09); }); },
+    ng: function () { tone(330, 0.16, "sine", 0.15); tone(262, 0.25, "sine", 0.15, 0.15); },
+    ding: function (i) { tone(1046 + (i || 0) * 110, 0.35, "sine", 0.18); tone(2093, 0.2, "sine", 0.06); },
+    fan: function () { [523, 523, 523, 659, 784, 1047].forEach(function (f, i) { tone(f, i === 5 ? 0.5 : 0.14, "square", 0.08, [0, .12, .24, .4, .56, .72][i]); }); },
+    hiss: function () { noise(0.4, 0.15, 0, 5000, 3000, 2); noise(0.4, 0.15, 0.5, 5000, 3000, 2); },
+    cough: function () { for (var i = 0; i < 3; i++) { noise(0.15, 0.25, i * 0.28, 500, 300, 1); tone(140, 0.12, "sawtooth", 0.05, i * 0.28); } },
+    poof: function () { noise(0.3, 0.25, 0, 2000, 300, 0.8); },
+    sad: function () { tone(392, 0.3, "triangle", 0.12, 0, 330); tone(330, 0.5, "triangle", 0.12, 0.3, 262); }
+  };
+
+  /* ---------- え ---------- */
+  function hakaseSVG(o) {
+    o = o || {};
+    var lens = o.glow ? "#ffe066" : "#e7f5ff";
+    var wig = o.bald ? '<ellipse cx="41" cy="33" rx="8" ry="4" fill="#fff" opacity=".8"/>' :
+      '<g fill="#f8f9fa" stroke="#ced4da" stroke-width="2"><circle cx="22" cy="46" r="10"/><circle cx="78" cy="46" r="10"/><circle cx="27" cy="31" r="11"/><circle cx="73" cy="31" r="11"/><circle cx="39" cy="22" r="11"/><circle cx="61" cy="22" r="11"/><circle cx="50" cy="19" r="10"/></g>';
+    var mouth = o.sad ? "M43 79 Q50 73 57 79" : "M43 75 Q50 81 57 75";
+    var blush = o.blush ? '<ellipse cx="30" cy="64" rx="6" ry="3.5" fill="#ff8787" opacity=".8"/><ellipse cx="70" cy="64" rx="6" ry="3.5" fill="#ff8787" opacity=".8"/>' : "";
+    var tear = o.sad ? '<path d="M33 60 q-3 6 0 8 q3 -2 0 -8z" fill="#74c0fc"/>' : "";
+    var gy = o.tilt ? ' transform="rotate(8 50 52)"' : "";
+    return '<svg viewBox="0 0 100 120" aria-hidden="true">' +
+      '<path d="M16 120 Q18 88 50 86 Q82 88 84 120Z" fill="#fff" stroke="#adb5bd" stroke-width="2"/>' +
+      '<path d="M44 88 L50 104 L56 88Z" fill="#4c6ef5"/>' +
+      '<circle cx="50" cy="53" r="28" fill="#ffd8b5" stroke="#e8b48a" stroke-width="1.5"/>' + wig +
+      '<circle cx="39" cy="53" r="2.6" fill="#2b2140"/><circle cx="61" cy="53" r="2.6" fill="#2b2140"/>' +
+      '<g' + gy + '><circle cx="39" cy="53" r="9.5" fill="' + lens + '" fill-opacity=".55" stroke="#343a40" stroke-width="3"/><circle cx="61" cy="53" r="9.5" fill="' + lens + '" fill-opacity=".55" stroke="#343a40" stroke-width="3"/><path d="M48.5 52 Q50 50 51.5 52" stroke="#343a40" stroke-width="3" fill="none"/></g>' +
+      blush + tear +
+      '<path d="M36 69 Q43 63 50 68 Q57 63 64 69 Q57 73 50 70 Q43 73 36 69Z" fill="#868e96"/>' +
+      '<path d="' + mouth + '" stroke="#2b2140" stroke-width="2.5" fill="none" stroke-linecap="round"/></svg>';
+  }
+  function wigSVG() {
+    return '<svg viewBox="0 0 100 70" aria-hidden="true"><g fill="#f8f9fa" stroke="#adb5bd" stroke-width="3"><circle cx="18" cy="48" r="14"/><circle cx="82" cy="48" r="14"/><circle cx="26" cy="28" r="15"/><circle cx="74" cy="28" r="15"/><circle cx="42" cy="18" r="15"/><circle cx="58" cy="18" r="15"/><circle cx="50" cy="16" r="13"/></g></svg>';
+  }
+  function glassSVG() {
+    return '<svg viewBox="0 0 60 30" aria-hidden="true"><circle class="lens" cx="16" cy="15" r="11" stroke="#343a40" stroke-width="4"/><circle class="lens" cx="44" cy="15" r="11" stroke="#343a40" stroke-width="4"/><path d="M27 14 Q30 10 33 14" stroke="#343a40" stroke-width="4" fill="none"/></svg>';
+  }
+
+  /* ---------- データ ---------- */
+  var ITEMS = [
+    { e: "🍎", name: "りんご", c: "こ" }, { e: "🍪", name: "くっきー", c: "まい" }, { e: "🍓", name: "いちご", c: "こ" },
+    { e: "🍬", name: "あめ", c: "こ" }, { e: "🐟", name: "さかな", c: "ひき" }, { e: "⭐", name: "ほし", c: "こ" },
+    { e: "🚗", name: "くるま", c: "だい" }, { e: "🎈", name: "ふうせん", c: "こ" }, { e: "🍩", name: "ドーナツ", c: "こ" },
+    { e: "⚽", name: "ボール", c: "こ" }, { e: "🌰", name: "どんぐり", c: "こ" }, { e: "🍄", name: "きのこ", c: "こ" },
+    { e: "🐤", name: "ひよこ", c: "ひき" }, { e: "🦆", name: "あひる", c: "わ" }
+  ];
+  var CAT = { e: "🐱", name: "ねこ", c: "ひき", gag: "cat" };
+  var WIG = { svg: "wig", name: "はかせの かつら", c: "こ", gag: "wig" };
+  var HK = { svg: "hk", name: "はかせ", c: "にん", gag: "hakase" };
+  var CAKE = { e: "🍰", name: "ケーキ", c: "こ", gag: "cake" };
+  var BALD = { svg: "bald", name: "はげの はかせ", c: "にん" };
+
+  var LEVELS = [
+    null,
+    { name: "2ばい マシン", e: "🍎 → 🍎🍎", s: "1〜5 を 2ばい", col: "#7048e8" },
+    { name: "はんぶん マシン", e: "🍪🍪 → 🍪", s: "10までを はんぶん", col: "#0ca678" },
+    { name: "れんけつ マシン", e: "2ばい → はんぶん", s: "もとに もどる？", col: "#1c7ed6" },
+    { name: "3ばい マシン", e: "🍓 → 🍓🍓🍓", s: "1〜4 を 3ばい", col: "#f76707" }
+  ];
+  var OPN = { x2: "2ばい", h2: "はんぶん", x3: "3ばい" };
+
+  function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+  function rnd(n) { return Math.floor(Math.random() * n); }
+
+  function makeSession(lv) {
+    var items = shuffle(ITEMS), rounds = [], ns, i;
+    if (lv === 1) ns = shuffle([1, 2, 3, 4, 5]);
+    else if (lv === 2) ns = shuffle([2, 4, 6, 8, 10]);
+    else if (lv === 3) ns = shuffle([1, 2, 3, 4, 5]);
+    else ns = shuffle([1, 2, 3, 4, 2 + rnd(2)]);
+    for (i = 0; i < 5; i++) {
+      var it = items[i], n = ns[i];
+      var steps = lv === 1 ? [{ op: "x2", n: n }] : lv === 2 ? [{ op: "h2", n: n }] :
+        lv === 3 ? [{ op: "x2", n: n }, { op: "h2", n: n * 2, chain: true }] : [{ op: "x3", n: n }];
+      rounds.push({ item: it, steps: steps });
+    }
+    // わらい どころ を 1つ まぜる（1もんめ では ない）
+    var gi = 1 + rnd(4), r = rounds[gi];
+    if (lv === 1) { var g = [CAT, WIG, HK][rnd(3)]; r.item = g; r.steps[0].n = g === CAT ? 1 + rnd(2) : 1; }
+    else if (lv === 2) { r.item = CAKE; r.steps[0].n = [2, 4][rnd(2)]; }
+    else if (lv === 3) { r.item = CAT; r.steps = [{ op: "x2", n: 1 }, { op: "h2", n: 2, chain: true }]; }
+    else { var g4 = [CAT, HK][rnd(2)]; r.item = g4; r.steps[0].n = 1; }
+    return rounds;
+  }
+
+  /* ---------- がめん ---------- */
+  function show(id) { ["title", "play", "result"].forEach(function (s) { $(s).classList.toggle("on", s === id); }); }
+  function sndBtns() { ["sndT", "sndP"].forEach(function (b) { $(b).textContent = save.sound ? "🔊" : "🔇"; }); }
+  ["sndT", "sndP"].forEach(function (b) {
+    $(b).addEventListener("click", function () { save.sound = !save.sound; store(); sndBtns(); SFX.tap(); });
+  });
+
+  function buildTitle() {
+    $("titleHk").innerHTML = hakaseSVG();
+    var box = $("levels"); box.innerHTML = "";
+    for (var lv = 1; lv <= 4; lv++) {
+      var L = LEVELS[lv], b = document.createElement("button"), best = save.best[lv];
+      b.className = "level"; b.style.setProperty("--lc", L.col);
+      b.innerHTML = '<span class="ln">' + lv + ". " + L.name + '</span><span class="le">' + L.e + '</span><span class="ls">' + L.s +
+        '</span><span class="lb">' + (best != null ? "👓 さいこう " + best + " / 5" : "") + "</span>";
+      (function (lv) { b.addEventListener("click", function () { SFX.tap(); startLevel(lv); }); })(lv);
+      box.appendChild(b);
+    }
+  }
+
+  /* ---------- あそぶ ---------- */
+  var token = 0, curLv = 1, rounds = [], hits = 0, ri = 0;
+  function sleep(ms) { var t = token; return new Promise(function (res, rej) { setTimeout(function () { t === token ? res() : rej("stop"); }, ms); }); }
+  function alive(t) { if (t !== token) throw "stop"; }
+
+  var hk = { bald: false, sad: false, blush: false };
+  function drawMini() { $("miniHk").innerHTML = hakaseSVG(hk); }
+  function say(t) { var b = $("say"); b.innerHTML = t; b.classList.remove("pop"); void b.offsetWidth; b.classList.add("pop"); }
+
+  function glbar() {
+    var g = $("glbar"); g.innerHTML = "";
+    for (var i = 0; i < 5; i++) { var s = document.createElement("span"); s.innerHTML = glassSVG(); if (i < hits) s.className = "lit"; g.appendChild(s); }
+  }
+
+  function itemHTML(it) {
+    if (it.svg === "wig") return wigSVG();
+    if (it.svg === "hk") return hakaseSVG();
+    if (it.svg === "bald") return hakaseSVG({ bald: true, blush: true });
+    return it.e;
+  }
+  function mk(it, cls) {
+    var s = document.createElement("span"); s.className = "it" + (cls ? " " + cls : ""); s.innerHTML = itemHTML(it); return s;
+  }
+  function setSize(tray, perRow, rows) {
+    var w = tray.clientWidth - 30, h = tray.clientHeight - 24;
+    var size = Math.floor(Math.min(72, w / (perRow * 1.08 + (perRow > 1 ? 0.6 : 0)), rows ? (h / rows) - 8 : 72));
+    tray.style.setProperty("--it", Math.max(22, size) + "px");
+  }
+
+  function setMachine(op) {
+    var m = $("machine"); m.classList.remove("x2", "h2", "x3"); m.classList.add(op); $("plate").textContent = OPN[op];
+  }
+
+  function waitLever() {
+    var lv = $("lever"); lv.classList.remove("down"); lv.classList.add("wait");
+    return new Promise(function (res) {
+      lv.onclick = function () { lv.onclick = null; lv.classList.remove("wait"); lv.classList.add("down"); SFX.lever(); res(); };
+    });
+  }
+  function waitClick(el) { return new Promise(function (res) { el.addEventListener("click", function h() { el.removeEventListener("click", h); res(); }); }); }
+
+  function puff(dark, n) {
+    var m = $("machine"), c = $("chim");
+    for (var i = 0; i < (n || 3); i++) {
+      (function (i) {
+        setTimeout(function () {
+          var p = document.createElement("div"); p.className = "puff" + (dark ? " dark" : "");
+          p.style.left = (c.offsetLeft - 6) + "px"; p.style.top = (c.offsetTop - 18) + "px";
+          p.style.setProperty("--dx", (rnd(40) - 10) + "px");
+          m.appendChild(p); setTimeout(function () { p.remove(); }, 1300);
+        }, i * 180);
+      })(i);
+    }
+  }
+  function word(t, x, y) {
+    var m = $("machine"), w = document.createElement("div"); w.className = "sfxw"; w.textContent = t;
+    w.style.left = x; w.style.top = y; m.appendChild(w); setTimeout(function () { w.remove(); }, 1000);
+  }
+
+  // いれる ものを ホッパーへ とばす
+  function flyToHopper(els) {
+    var h = $("hopper").getBoundingClientRect(), tx = h.left + h.width / 2, ty = h.top + h.height * 0.6;
+    els.forEach(function (el, i) {
+      var r = el.getBoundingClientRect(), c = el.cloneNode(true);
+      c.classList.add("fly"); c.classList.remove("in");
+      c.style.left = r.left + "px"; c.style.top = r.top + "px"; c.style.width = r.width + "px"; c.style.height = r.height + "px";
+      c.style.fontSize = getComputedStyle(el).fontSize;
+      document.body.appendChild(c); el.style.visibility = "hidden";
+      var dx = tx - (r.left + r.width / 2), dy = ty - (r.top + r.height / 2);
+      if (c.animate) {
+        c.animate([{ transform: "translate(0,0) scale(1)" }, { transform: "translate(" + dx * 0.5 + "px," + (dy * 0.5 - 50) + "px) scale(1.1)", offset: 0.5 },
+          { transform: "translate(" + dx + "px," + dy + "px) scale(.2)", opacity: 0.2 }], { duration: 600, delay: i * 70, easing: "ease-in", fill: "forwards" });
+      }
+      setTimeout(function () { c.remove(); }, 700 + i * 70);
+    });
+    SFX.swoop();
+  }
+
+  // ならべかた（rows: [{n, cls}], split: "v" | "h" | null）
+  function renderRows(box, it, layout, opt) {
+    opt = opt || {};
+    box.innerHTML = "";
+    var els = [], dropEls = [];
+    layout.rows.forEach(function (row, ri2) {
+      if (layout.split === "h" && ri2 === 1) { var hs = document.createElement("div"); hs.className = "hsplit"; box.appendChild(hs); }
+      var r = document.createElement("div"); r.className = "row" + (row.cls ? " " + row.cls : "");
+      for (var i = 0; i < row.n; i++) {
+        if (layout.split === "v" && i === row.n / 2) { var sp = document.createElement("span"); sp.className = "split"; r.appendChild(sp); }
+        var drop = (layout.split === "v" && i >= row.n / 2) || (layout.split === "h" && ri2 === 1);
+        var e = mk(it, (opt.anim ? "in" : "") + (drop ? " drop" : ""));
+        if (opt.anim) e.style.animationDelay = (els.length + dropEls.length) * (opt.step || 0.12) + "s";
+        r.appendChild(e); (drop ? dropEls : els).push(e);
+      }
+      box.appendChild(r);
+    });
+    return { keep: els, drop: dropEls };
+  }
+  function outLayout(op, n, chain) {
+    if (op === "x2") return { rows: [{ n: n }, { n: n, cls: "copy" }] };
+    if (op === "x3") return { rows: [{ n: n }, { n: n, cls: "copy" }, { n: n, cls: "copy2" }] };
+    if (chain) return { rows: [{ n: n / 2 }, { n: n / 2, cls: "copy" }], split: "h" };
+    return { rows: [{ n: n }], split: "v" };
+  }
+  function inLayout(step) {
+    if (step.chain) return { rows: [{ n: step.n / 2 }, { n: step.n / 2, cls: "copy" }] };
+    return { rows: [{ n: step.n }] };
+  }
+  function answerOf(step) { return step.op === "x2" ? step.n * 2 : step.op === "x3" ? step.n * 3 : step.n / 2; }
+  function choicesFor(ans, n) {
+    var set = [ans], cands = shuffle([n, ans + 1, ans - 1, ans + 2, ans - 2, n + 1]);
+    cands.forEach(function (c) { if (set.length < 4 && c > 0 && set.indexOf(c) < 0) set.push(c); });
+    for (var k = 1; set.length < 4; k++) if (set.indexOf(ans + k) < 0) set.push(ans + k);
+    return set.sort(function (a, b) { return a - b; });
+  }
+  function rowsCount(layout) { var m = 0; layout.rows.forEach(function (r) { m = Math.max(m, r.n); }); return m; }
+
+  async function countUp(els) {
+    for (var i = 0; i < els.length; i++) {
+      var b = document.createElement("span"); b.className = "num"; b.textContent = i + 1; els[i].appendChild(b);
+      SFX.pop(i); await sleep(els.length > 8 ? 150 : 220);
+    }
+  }
+
+  async function askNumber(ans, n, hintFn) {
+    var box = $("ans"); box.innerHTML = "";
+    var first = true;
+    var cs = choicesFor(ans, n);
+    return new Promise(function (res) {
+      cs.forEach(function (c) {
+        var b = document.createElement("button"); b.className = "num-btn"; b.textContent = c;
+        b.addEventListener("click", function () {
+          if (c === ans) {
+            b.classList.add("yes"); SFX.ok();
+            Array.prototype.forEach.call(box.children, function (x) { x.disabled = true; });
+            res(first);
+          } else {
+            b.classList.add("no"); SFX.ng();
+            if (first) { first = false; hintFn(); }
+            else say("ヒントの かずを かぞえて みよう。だいじょうぶ！");
+          }
+        });
+        box.appendChild(b);
+      });
+    });
+  }
+
+  async function nextButton(label) {
+    var box = $("ans"); box.innerHTML = "";
+    var b = document.createElement("button"); b.className = "big-btn"; b.textContent = label || "つぎへ ▶";
+    box.appendChild(b); await waitClick(b); SFX.tap(); box.innerHTML = "";
+  }
+
+  async function runMachine(t, panic) {
+    var m = $("machine"); m.classList.add("run"); if (panic) m.classList.add("panic");
+    say(panic ? "ガタ ガタ ガタ…!?" : "ガタゴト ガタゴト…");
+    SFX.gata(panic ? 2.2 : 1.5);
+    word("ガタゴト", "8%", "30%");
+    await sleep(700); alive(t);
+    word("ガタン！", "30%", "55%");
+    await sleep(panic ? 1300 : 700); alive(t);
+    m.classList.remove("run", "panic");
+    if (panic) { SFX.cough(); puff(true, 6); word("ゲホゲホ", "40%", "0%"); }
+    else { SFX.pshu(); puff(false, 4); word("ぷしゅー！", "40%", "0%"); }
+    await sleep(600); alive(t);
+  }
+
+  async function playStep(t, round, si) {
+    var step = round.steps[si], it = round.item;
+    var ans = answerOf(step);
+    setMachine(step.op);
+    var inBox = $("inRows"), outBox = $("outRows");
+    var inL = inLayout(step);
+    setSize($("inTray"), rowsCount(inL), inL.rows.length);
+    // いれる
+    if (si === 0) {
+      outBox.innerHTML = "";
+      var lead = { x2: "2ばい マシン", h2: "はんぶん マシン", x3: "3ばい マシン" }[step.op];
+      if (it.gag === "hakase") {
+        hk.bald = false; drawMini(); $("miniHk").classList.add("gone");
+        renderRows(inBox, it, inL, { anim: true });
+        say("おっと と と… うっかり ぼくが のっちゃった！ レバーを ひいて みて");
+      } else if (it.gag === "wig") {
+        hk.bald = true; hk.blush = true; drawMini();
+        renderRows(inBox, it, inL, { anim: true });
+        say("きょうは とくべつ。ぼくの かつらを いれて みるよ。レバーを ひいてね");
+      } else {
+        var ins = renderRows(inBox, it, inL, { anim: true });
+        say(lead + "に " + it.name + " " + step.n + it.c + " いれるよ。<br>レバーを ひいてね！");
+        await sleep(step.n * 120 + 200); alive(t);
+        await countUp(ins.keep); alive(t);
+      }
+    } else {
+      // れんけつ: でてきた ものを つぎの マシンへ
+      say("こんどは つぎの はんぶん マシン へ！ " + step.n + it.c + " いれるよ。レバーを ひいてね");
+      var ins2 = renderRows(inBox, it, inL, { anim: true, step: 0.05 });
+      outBox.innerHTML = "";
+      await sleep(400); alive(t);
+      await countUp(ins2.keep); alive(t);
+    }
+    await waitLever(); alive(t);
+    if (it.gag === "hakase") say("わあ〜〜っ！ すいこまれる〜！");
+    flyToHopper(Array.prototype.slice.call(inBox.querySelectorAll(".it")));
+    await sleep(750); alive(t);
+    inBox.innerHTML = "";
+    await runMachine(t, false);
+    // よそう
+    outBox.innerHTML = '<div class="row"><span class="qbox">？</span></div>';
+    say(it.gag === "hakase" ? "（マシンの なかから）なんにん でてくると おもう？" : "ぷしゅー！ でぐちから いくつ でてくる？<br>かずを えらんでね");
+    var outIt = it.gag === "wig" ? BALD : it;
+    var lay = outLayout(step.op, step.n, step.chain);
+    var hint = function () {
+      say("うーん、ちがうみたい。ヒントを みて かぞえて みよう！");
+      setSize($("outTray"), rowsCount(lay), lay.rows.length);
+      var g = renderRows(outBox, it.gag === "wig" ? WIG : it, lay, {});
+      outBox.classList.add("ghost");
+      void g;
+    };
+    var good = await askNumber(ans, step.n, hint); alive(t);
+    outBox.classList.remove("ghost");
+    // こたえあわせ
+    say(good ? "あたり！ すごい よそう！" : "そのとおり！ よく かぞえたね！");
+    setSize($("outTray"), rowsCount(lay), lay.rows.length);
+    var res = renderRows(outBox, outIt, lay, { anim: step.op !== "h2", step: 0.1 });
+    if (step.op !== "h2") SFX.pop(0);
+    await sleep(step.op === "h2" ? 600 : ans * 100 + 300); alive(t);
+    if (res.drop.length) {
+      SFX.poof();
+      res.drop.forEach(function (e) { e.classList.add("away"); });
+      await sleep(850); alive(t);
+      res.drop.forEach(function (e) { e.remove(); });
+      Array.prototype.forEach.call(outBox.querySelectorAll(".split, .hsplit"), function (e) { e.remove(); });
+      Array.prototype.forEach.call(outBox.querySelectorAll(".row"), function (r) { if (!r.children.length) r.remove(); });
+    }
+    await countUp(res.keep); alive(t);
+    // せつめい
+    var f;
+    if (step.op === "x2") f = step.n + " の 2ばい は " + ans + "。おなじ かずが 2れつ！";
+    else if (step.op === "x3") f = step.n + " の 3ばい は " + ans + "。おなじ かずが 3れつ！";
+    else f = step.n + " の はんぶん は " + ans + "。まんなかで わけたよ！";
+    say(f);
+    await sleep(900); alive(t);
+    return good;
+  }
+
+  async function gagAfter(t, round) {
+    var it = round.item, out = Array.prototype.slice.call($("outRows").querySelectorAll(".it"));
+    if (it.gag === "cat") {
+      out.forEach(function (e) { e.classList.add("fight"); var a = document.createElement("span"); a.className = "anger"; a.textContent = "💢"; e.appendChild(a); });
+      SFX.hiss();
+      say("あらら、ねこが ふえて けんか しちゃった！ フーッ！ シャーッ！");
+      await sleep(2000); alive(t);
+      out.forEach(function (e) { e.classList.remove("fight"); var a = e.querySelector(".anger"); if (a) a.remove(); e.firstChild.nodeValue = "😺"; });
+      SFX.ok();
+      say(round.steps.length > 1 ? "なかなおり したよ。でも つぎの マシンで…？" : "なかなおり したよ。なかよく してね〜");
+      await sleep(1500); alive(t);
+    } else if (it.gag === "wig") {
+      SFX.sad();
+      say("あれれ？ かつらじゃ なくて… はげの ぼくが ふたり！？ はずかしい〜");
+      await sleep(2300); alive(t);
+      say("かつらは マシンの なかで まいごに なっちゃった。あとで さがそう");
+      await sleep(1800); alive(t);
+    } else if (it.gag === "cake") {
+      hk.sad = true; drawMini(); SFX.sad();
+      say("ぼくの ケーキが はんぶんに… しょんぼり");
+      await sleep(2000); alive(t);
+      hk.sad = false; drawMini();
+      say("でも はんぶんこ すれば みんなで たべられるね！");
+      await sleep(1600); alive(t);
+    } else if (it.gag === "hakase") {
+      await hakaseQuiz(t);
+    }
+  }
+
+  async function hakaseQuiz(t) {
+    var box = $("ans"); box.innerHTML = "";
+    var cnt = $("outRows").querySelectorAll(".it").length || 2;
+    say("はかせが " + (cnt === 3 ? "さんにん" : "ふたり") + "！？ どれが ほんもの？ タップしてね");
+    var real = rnd(cnt), btns = [];
+    await new Promise(function (res) {
+      for (var i = 0; i < cnt; i++) {
+        var b = document.createElement("button"); b.className = "who"; b.innerHTML = hakaseSVG({ tilt: i !== real });
+        (function (i) { b.addEventListener("click", function () { SFX.tap(); btns.forEach(function (x) { x.disabled = true; }); btns[real].classList.add("right"); res(i); }); })(i);
+        btns.push(b); box.appendChild(b);
+      }
+    }).then(function (pick) {
+      if (pick === real) { SFX.ok(); say("あたり！ ほんものは みどりの ぼく。にせものは メガネが ちょっと ななめ だったよ"); }
+      else { SFX.ng(); say("ざんねん！ ほんものは みどりの ぼく。にせものは メガネが ななめ。そっくり だもんね"); }
+    });
+    await sleep(2600); alive(t);
+    SFX.poof();
+    btns.forEach(function (b, i) { if (i !== real) { b.style.transition = "transform .4s, opacity .4s"; b.style.transform = "scale(0)"; b.style.opacity = "0"; } });
+    say("ぽんっ！ にせものは きえちゃった");
+    await sleep(900); alive(t);
+    box.innerHTML = ""; $("outRows").innerHTML = "";
+    $("miniHk").classList.remove("gone"); drawMini();
+    say("ふう、もどって これた。あぶない あぶない");
+    await sleep(1400); alive(t);
+  }
+
+  async function oddBonus(t) {
+    var it = { e: "🍎", name: "りんご", c: "こ" };
+    setMachine("h2");
+    $("outRows").innerHTML = "";
+    setSize($("inTray"), 3, 1);
+    renderRows($("inRows"), it, { rows: [{ n: 3 }] }, { anim: true });
+    say("おまけ！ はんぶん マシンに りんご 3こ を いれたら どうなる？ レバーを ひいてね");
+    await waitLever(); alive(t);
+    flyToHopper(Array.prototype.slice.call($("inRows").querySelectorAll(".it")));
+    await sleep(750); alive(t); $("inRows").innerHTML = "";
+    await runMachine(t, true);
+    say("マシンが こまってる！ 3は ぴったり はんぶんに できない かず！");
+    await sleep(1800); alive(t);
+    var o = $("outRows"); setSize($("outTray"), 4, 1); o.innerHTML = "";
+    var r = document.createElement("div"); r.className = "row";
+    var a = mk(it, "in"), hl = document.createElement("span"), sp = document.createElement("span"), hr = document.createElement("span"), b = mk(it, "in drop");
+    hl.className = "it half l in"; hl.innerHTML = "<span>🍎</span>"; hr.className = "it half r in drop"; hr.innerHTML = "<span>🍎</span>";
+    sp.className = "split";
+    [a, hl, sp, hr, b].forEach(function (x, i) { x.style.animationDelay = i * 0.15 + "s"; r.appendChild(x); });
+    o.appendChild(r); SFX.pop(2);
+    await sleep(900); alive(t);
+    SFX.poof(); hr.classList.add("away"); b.classList.add("away");
+    say("まんなかの 1こを まっぷたつ！ でてきたのは 1こ と はんぶん！");
+    await sleep(2400); alive(t);
+  }
+
+  async function startLevel(lv) {
+    token++; var t = token;
+    curLv = lv; rounds = makeSession(lv); hits = 0; ri = 0;
+    hk = { bald: false, sad: false, blush: false }; drawMini();
+    $("miniHk").classList.remove("gone");
+    $("lvname").textContent = LEVELS[lv].name;
+    glbar(); show("play");
+    $("inRows").innerHTML = ""; $("outRows").innerHTML = ""; $("ans").innerHTML = "";
+    try {
+      for (ri = 0; ri < rounds.length; ri++) {
+        var round = rounds[ri], allGood = true;
+        hk = { bald: false, sad: false, blush: false }; drawMini();
+        for (var si = 0; si < round.steps.length; si++) {
+          var g = await playStep(t, round, si); alive(t);
+          if (!g) allGood = false;
+          if (round.item.gag === "cat" && si === 0) await gagAfter(t, round);
+        }
+        if (round.steps.length > 1) {
+          say("あれれ？ " + round.steps[0].n + round.item.c + " → " + round.steps[0].n * 2 + round.item.c + " → " + round.steps[0].n + round.item.c + "。<br>もとの かずに もどった！");
+          SFX.ding(2);
+          await sleep(2000); alive(t);
+        }
+        if (round.item.gag && round.item.gag !== "cat") await gagAfter(t, round);
+        if (allGood) {
+          hits++; glbar();
+          var lit = $("glbar").children[hits - 1]; lit.classList.add("flash"); SFX.ding(hits);
+          say("よそう あたり！ メガネが 1つ ぴかっ！");
+        } else {
+          say("さいごまで かぞえられたね。つぎも がんばろう！");
+        }
+        await nextButton(ri === rounds.length - 1 ? "おしまい ▶" : "つぎへ ▶"); alive(t);
+      }
+      if (lv === 2) await oddBonus(t);
+      await showResult(t);
+    } catch (e) { if (e !== "stop") throw e; }
+  }
+
+  async function showResult(t) {
+    show("result");
+    save.plays = (save.plays || 0) + 1;
+    if (save.best[curLv] == null || hits > save.best[curLv]) save.best[curLv] = hits;
+    store();
+    $("resHk").innerHTML = hakaseSVG();
+    var st = $("stack"); st.innerHTML = "";
+    for (var i = 0; i < 5; i++) { var s = document.createElement("span"); s.innerHTML = glassSVG(); st.appendChild(s); }
+    $("rtitle").textContent = "けっか はっぴょう！";
+    $("rmsg").textContent = "あたった かずだけ メガネが ひかるよ…";
+    await sleep(900); alive(t);
+    for (i = 0; i < hits; i++) { st.children[i].classList.add("lit", "flash"); SFX.ding(i); await sleep(450); alive(t); }
+    if (hits) $("resHk").innerHTML = hakaseSVG({ glow: true });
+    var msg = hits === 5 ? ["ぜんぶ ぴかぴか！", "てんさい はかせの でし だ！ 2ばい・はんぶんの めいじん！"] :
+      hits >= 3 ? ["すごい！ " + hits + "つ ぴかっ！", "よそうが とっても じょうず。つぎは ぜんぶ ひからせよう！"] :
+      hits >= 1 ? ["やったね！ " + hits + "つ ぴかっ！", "ちゃんと かぞえて こたえが みつかったね。もういちど やってみよう！"] :
+      ["さいごまで できたね！", "ならべて かぞえると わかるよ。もういちど チャレンジ！"];
+    $("rtitle").textContent = msg[0]; $("rmsg").textContent = msg[1];
+    SFX.fan();
+    if (hits >= 3) confetti();
+  }
+  function confetti() {
+    var em = ["⭐", "🎉", "👓", "✨", "🍎", "🍪"];
+    for (var i = 0; i < 24; i++) {
+      var c = document.createElement("div"); c.className = "confetti"; c.textContent = em[i % em.length];
+      c.style.left = Math.random() * 100 + "vw"; c.style.animationDelay = Math.random() * 0.8 + "s";
+      document.body.appendChild(c); (function (c) { setTimeout(function () { c.remove(); }, 3400); })(c);
+    }
+  }
+
+  $("home").addEventListener("click", function () { token++; SFX.tap(); $("lever").onclick = null; buildTitle(); show("title"); });
+  $("again").addEventListener("click", function () { SFX.tap(); startLevel(curLv); });
+  $("toTitle").addEventListener("click", function () { SFX.tap(); buildTitle(); show("title"); });
+
+  sndBtns(); buildTitle();
+  // テスト用
+  window.__fuefue = { makeSession: makeSession, choicesFor: choicesFor, state: function () { return { hits: hits, ri: ri, lv: curLv, rounds: rounds }; } };
+})();
+</script>
+</body>
+</html>
