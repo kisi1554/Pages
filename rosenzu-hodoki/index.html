@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>こんがらがり ろせんず</title>
+<style>
+  :root {
+    --bg: #fff4e6;
+    --ink: #3b2a1a;
+    --sub: #8a6a4a;
+    --mc: #e8590c;
+    --mc2: #c2410c;
+    --ok: #2f9e44;
+    --ng: #e03131;
+    --card: #ffffff;
+    --shadow: 0 4px 0 rgba(59,42,26,.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(circle at 1px 1px, rgba(232,89,12,.12) 1.5px, transparent 2px);
+    background-size: 22px 22px;
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+
+  .bar { width: 100%; display: flex; align-items: center; gap: 8px; min-height: 56px; }
+  .bar .sp { flex: 1; }
+  .ibtn { min-width: 54px; height: 54px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; }
+  .ibtn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.18); }
+  .ibtn[hidden] { display: none; }
+  .lvname { font-size: 18px; font-weight: bold; color: var(--sub); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ---- タイトル ---- */
+  #title { justify-content: flex-start; overflow-y: auto; }
+  #title > * { flex: none; }
+  .lead span { display: inline-block; }
+  .logo { font-size: clamp(30px, 8vw, 50px); margin: 6px 0 0; letter-spacing: .05em; color: var(--mc2);
+    text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.08); text-align: center; }
+  .lead { margin: 6px 0 10px; font-size: 18px; color: var(--sub); text-align: center; line-height: 1.7; max-width: 640px; }
+  .hero { width: min(260px, 62vw); height: auto; }
+  .levels { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 18px; }
+  .level { background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 12px 10px;
+    min-height: 124px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: 4px solid var(--lc, #e8590c); }
+  .level:active { transform: translateY(3px); }
+  .level .ln { font-size: 21px; font-weight: bold; color: var(--lc); }
+  .level .le { font-size: 26px; letter-spacing: 2px; }
+  .level .ls { font-size: 15px; color: var(--sub); text-align: center; }
+  .level .lb { font-size: 15px; min-height: 20px; }
+
+  /* ---- あそぶ がめん ---- */
+  .status { width: 100%; display: flex; align-items: center; gap: 10px; min-height: 60px; }
+  #tface { width: 56px; height: 56px; flex: none; transform-origin: 50% 60%; }
+  #tface.dizzy { animation: dizzy 1.1s ease-in-out infinite; }
+  #tface.happy { animation: hop .6s ease-in-out infinite; }
+  @keyframes dizzy { 0% { transform: rotate(-14deg); } 50% { transform: rotate(14deg) translateY(-2px); } 100% { transform: rotate(-14deg); } }
+  @keyframes hop { 50% { transform: translateY(-5px); } }
+  .pill { background: var(--card); border-radius: 999px; box-shadow: var(--shadow); padding: 8px 16px;
+    font-size: 19px; font-weight: bold; white-space: nowrap; border: 3px solid var(--ng); color: var(--ng); }
+  .pill b { font-size: 26px; margin: 0 2px; }
+  .pill.zero { border-color: var(--ok); color: var(--ok); }
+  .pill.bump { animation: bump .35s; }
+  @keyframes bump { 50% { transform: scale(1.18); } }
+  #say { font-size: 16px; color: var(--sub); line-height: 1.4; min-width: 0; }
+
+  .boardwrap { position: relative; flex: 1; width: 100%; min-height: 0; margin-top: 4px;
+    background: #fffdf8; border-radius: 22px; box-shadow: inset 0 0 0 3px #f1d9bf, var(--shadow); overflow: hidden;
+    background-image: linear-gradient(#f6eadb 1px, transparent 1px), linear-gradient(90deg, #f6eadb 1px, transparent 1px);
+    background-size: 36px 36px; }
+  #board, #board * { touch-action: none; }
+  #board { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .st { cursor: grab; }
+  .st.drag { cursor: grabbing; }
+  .xmark { animation: xblink .7s ease-in-out infinite alternate; }
+  @keyframes xblink { from { opacity: .35; } to { opacity: 1; } }
+  .bad { animation: xblink .55s ease-in-out infinite alternate; }
+  #map.puhaa { animation: puhaa 1s ease-out; }
+  @keyframes puhaa { 0% { transform: scale(1); } 30% { transform: scale(1.07); } 60% { transform: scale(.97); } 100% { transform: scale(1); } }
+  #map.wiggle { animation: wiggle .5s ease-in-out 4; }
+  @keyframes wiggle { 25% { transform: rotate(-3deg); } 75% { transform: rotate(3deg); } }
+
+  .bubble { position: absolute; left: 50%; top: 14px; transform: translateX(-50%); background: #fff; border: 4px solid var(--mc);
+    border-radius: 24px; padding: 8px 20px; font-size: clamp(22px, 5vw, 34px); font-weight: bold; color: var(--mc2);
+    box-shadow: var(--shadow); white-space: nowrap; pointer-events: none; animation: popin .45s ease-out; z-index: 3; }
+  @keyframes popin { 0% { transform: translateX(-50%) scale(0); } 70% { transform: translateX(-50%) scale(1.15); } 100% { transform: translateX(-50%) scale(1); } }
+  .yarn { position: absolute; width: 64px; height: 64px; margin: -32px 0 0 -32px; pointer-events: none; z-index: 2; }
+  .yarn svg { width: 100%; height: 100%; }
+  .help { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); font-size: 16px; color: var(--sub);
+    background: rgba(255,255,255,.88); padding: 6px 14px; border-radius: 999px; pointer-events: none; white-space: nowrap; }
+
+  /* ---- けっか パネル ---- */
+  .ov { position: fixed; inset: 0; background: rgba(59,42,26,.42); display: none; align-items: center; justify-content: center;
+    padding: 16px; z-index: 10; }
+  .ov.on { display: flex; }
+  .panel { background: #fff; border-radius: 28px; padding: 18px 20px 20px; width: min(440px, 100%); text-align: center;
+    box-shadow: 0 8px 0 rgba(0,0,0,.18); animation: panelin .4s ease-out; max-height: 100%; overflow-y: auto; }
+  @keyframes panelin { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .panel .cat { width: 150px; height: 138px; }
+  .panel .cat.purr { animation: purr .12s linear infinite; }
+  @keyframes purr { 0% { transform: translate(0,0); } 50% { transform: translate(1px,-1px) rotate(1deg); } 100% { transform: translate(0,0); } }
+  .big { font-size: clamp(24px, 6vw, 34px); font-weight: bold; color: var(--mc2); margin: 4px 0; }
+  .sub { font-size: 19px; color: var(--sub); line-height: 1.6; margin-bottom: 12px; }
+  .stars { font-size: 40px; letter-spacing: 6px; margin: 2px 0 8px; }
+  .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn { min-height: 60px; padding: 0 24px; border-radius: 20px; font-size: 21px; font-weight: bold; background: var(--mc); color: #fff;
+    box-shadow: 0 5px 0 var(--mc2); }
+  .btn.sec { background: #fff; color: var(--mc2); box-shadow: 0 5px 0 #f1d9bf; border: 3px solid #f1d9bf; }
+  .btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--mc2); }
+
+  @media (max-width: 520px) {
+    .levels { grid-template-columns: 1fr; }
+    .level { min-height: 100px; flex-direction: row; flex-wrap: wrap; gap: 6px 12px; }
+    #say { font-size: 14px; }
+    .pill { font-size: 16px; padding: 6px 12px; }
+    .pill b { font-size: 22px; }
+    .lvname { font-size: 16px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ===== タイトル ===== -->
+<section class="screen on" id="title">
+  <div class="bar"><span class="sp"></span><button class="ibtn snd" aria-label="おと">🔊</button></div>
+  <h1 class="logo">こんがらがり ろせんず</h1>
+  <svg class="hero" viewBox="0 0 260 150" aria-hidden="true">
+    <path d="M20 120 C 60 20, 110 140, 150 40 S 230 120, 200 30" fill="none" stroke="#e8590c" stroke-width="7" stroke-linecap="round"/>
+    <path d="M30 40 C 90 140, 120 10, 170 120 S 240 60, 245 110" fill="none" stroke="#1c7ed6" stroke-width="7" stroke-linecap="round"/>
+    <g fill="#fff" stroke="#3b2a1a" stroke-width="4">
+      <circle cx="20" cy="120" r="9"/><circle cx="200" cy="30" r="9"/><circle cx="30" cy="40" r="9"/><circle cx="245" cy="110" r="9"/>
+    </g>
+    <g id="heroCat" transform="translate(92 70) scale(.55)"></g>
+    <g transform="translate(196 118)"><g id="heroYarn"></g></g>
+  </svg>
+  <p class="lead"><span>ねこの ちずやさんが</span> <span>けいとだまで あそんでいたら、</span><br><span>ろせんずが ぐちゃぐちゃに</span> <span>こんがらがった！</span><br><span>えきを ゆびで うごかして、</span><span>ばってんを なくそう。</span></p>
+  <div class="levels" id="levels"></div>
+</section>
+
+<!-- ===== あそぶ ===== -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="ibtn" id="back" aria-label="もどる">←</button>
+    <span class="lvname" id="lvname"></span>
+    <span class="sp"></span>
+    <button class="ibtn" id="hint" aria-label="ヒント" hidden>💡</button>
+    <button class="ibtn" id="retry" aria-label="さいしょから">↺</button>
+    <button class="ibtn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="status">
+    <svg id="tface" viewBox="0 0 60 60" aria-hidden="true">
+      <rect x="9" y="4" width="42" height="46" rx="13" fill="#1c7ed6"/>
+      <rect x="15" y="10" width="30" height="14" rx="5" fill="#d0ebff"/>
+      <g id="teyes"></g>
+      <rect x="16" y="50" width="28" height="5" rx="2" fill="#495057"/>
+      <circle cx="20" cy="56" r="4" fill="#343a40"/><circle cx="40" cy="56" r="4" fill="#343a40"/>
+    </svg>
+    <div class="pill" id="pill"></div>
+    <div id="say"></div>
+  </div>
+  <div class="boardwrap" id="wrap">
+    <svg id="board" xmlns="http://www.w3.org/2000/svg">
+      <g id="map"><g id="lay"></g><g id="trains"></g></g>
+    </svg>
+  </div>
+</section>
+
+<div class="ov" id="ov"><div class="panel" id="panel"></div></div>
+
+<script>
+(() => {
+'use strict';
+const $ = s => document.querySelector(s);
+const rnd = (a, b) => a + Math.random() * (b - a);
+const ri = n => Math.floor(Math.random() * n);
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = ri(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- ほぞん ---------- */
+const KEY = 'rosenzu-hodoki';
+let SAVE = { snd: true, clear: {} };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object') SAVE = Object.assign(SAVE, s); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(SAVE)); } catch (e) {} }
+
+/* ---------- おと（WebAudio の ごうせいおん） ---------- */
+let AC = null;
+function ac() {
+  if (!SAVE.snd) return null;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) { AC = null; }
+  return AC;
+}
+function tone(f, dur, type = 'sine', vol = .15, when = 0, f2 = null) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + when, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .05);
+}
+function noise(dur, vol, f1, f2, when = 0, lfo = 0) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + when, n = Math.floor(c.sampleRate * dur), b = c.createBuffer(1, n, c.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+  const s = c.createBufferSource(); s.buffer = b;
+  const fl = c.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.setValueAtTime(f1, t); fl.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .08);
+  g.gain.setValueAtTime(vol, t + dur * .7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  s.connect(fl).connect(g);
+  if (lfo) {
+    const am = c.createGain(); am.gain.value = 0;
+    const o = c.createOscillator(); o.frequency.value = lfo; const og = c.createGain(); og.gain.value = 1;
+    o.connect(og).connect(am.gain); g.connect(am).connect(c.destination); o.start(t); o.stop(t + dur + .05);
+  } else g.connect(c.destination);
+  s.start(t); s.stop(t + dur + .05);
+}
+const sfx = {
+  pick() { tone(620, .09, 'triangle', .12); },
+  drop() { tone(420, .07, 'triangle', .1); },
+  better() { tone(700, .12, 'sine', .14, 0, 1150); },
+  worse() { tone(260, .16, 'square', .05, 0, 190); },
+  swap() { tone(520, .08, 'triangle', .1); tone(780, .1, 'triangle', .1, .07); },
+  puhaa() { noise(.8, .28, 3200, 260); },
+  fanfare() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .28, 'triangle', .16, i * .12)); },
+  ding(i) { tone(880 + i * 40, .18, 'sine', .08); },
+  purr() { noise(1.8, .5, 240, 160, 0, 23); },
+  meow() { tone(650, .35, 'triangle', .12, 0, 950); tone(950, .25, 'triangle', .1, .3, 520); },
+  roll() { for (let i = 0; i < 8; i++) tone(300 + (i % 2) * 60, .05, 'square', .04, i * .09); },
+  boing() { tone(220, .25, 'sine', .14, 0, 520); },
+  win() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, .3, 'triangle', .15, i * .14)); },
+};
+function updSnd() { document.querySelectorAll('.snd').forEach(b => { b.textContent = SAVE.snd ? '🔊' : '🔇'; }); }
+document.querySelectorAll('.snd').forEach(b => b.addEventListener('click', () => {
+  SAVE.snd = !SAVE.snd; save(); updSnd(); if (SAVE.snd) sfx.pick();
+}));
+updSnd();
+
+/* ---------- え ---------- */
+function catSVG(mood) {
+  const eyes = mood === 'happy'
+    ? '<path d="M34 56 q8 -10 16 0 M70 56 q8 -10 16 0" fill="none" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round"/>'
+    : mood === 'oops'
+      ? '<path d="M36 50 l12 6 l-12 6 M84 50 l-12 6 l12 6" fill="none" stroke="#3b2a1a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'
+      : '<circle cx="42" cy="56" r="6" fill="#3b2a1a"/><circle cx="78" cy="56" r="6" fill="#3b2a1a"/><circle cx="44" cy="54" r="2" fill="#fff"/><circle cx="80" cy="54" r="2" fill="#fff"/>';
+  return `<path d="M16 46 L24 6 L50 28 Z" fill="#ffa94d" stroke="#e8590c" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M104 46 L96 6 L70 28 Z" fill="#ffa94d" stroke="#e8590c" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 34 L27 16 L40 28 Z M96 34 L93 16 L80 28 Z" fill="#ffc9c9"/>
+    <ellipse cx="60" cy="62" rx="48" ry="40" fill="#ffa94d" stroke="#e8590c" stroke-width="3"/>
+    <path d="M52 24 q8 10 0 18 M60 22 v20 M68 24 q-8 10 0 18" fill="none" stroke="#e8590c" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="32" cy="74" rx="9" ry="6" fill="#ffc9c9" opacity=".8"/><ellipse cx="88" cy="74" rx="9" ry="6" fill="#ffc9c9" opacity=".8"/>
+    ${eyes}
+    <path d="M56 68 h8 l-4 5 z" fill="#e64980"/>
+    <path d="M50 76 q5 6 10 0 q5 6 10 0" fill="none" stroke="#3b2a1a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M12 66 l20 3 M12 78 l20 -3 M108 66 l-20 3 M108 78 l-20 -3" stroke="#3b2a1a" stroke-width="2" stroke-linecap="round"/>`;
+}
+function yarnSVG() {
+  return `<circle cx="0" cy="0" r="24" fill="#f783ac" stroke="#c2255c" stroke-width="3"/>
+    <path d="M-20 -8 q20 -14 40 4 M-22 4 q22 -12 42 10 M-12 -20 q-4 22 14 40 M2 -23 q10 20 4 44" fill="none" stroke="#c2255c" stroke-width="2.5"/>
+    <path d="M20 14 q14 8 6 18 q-6 8 6 14" fill="none" stroke="#c2255c" stroke-width="3" stroke-linecap="round"/>`;
+}
+$('#heroCat').innerHTML = catSVG('happy');
+$('#heroYarn').innerHTML = yarnSVG();
+
+/* ---------- レベル ---------- */
+const COLORS = ['#e8590c', '#1c7ed6', '#2f9e44', '#ae3ec9'];
+const NAMES = ['ねこまち', 'けいとばし', 'またたび', 'ひなた', 'にぼし', 'すずのね', 'こたつ', 'ふわふわ', 'おひるね', 'ひげのはら',
+  'にくきゅう', 'かつおぶし', 'しっぽざか', 'まりやま', 'のびのび', 'ごろごろ', 'ねこじゃらし', 'みけのもり'];
+const LEVELS = [
+  { name: 'いっぽんせん', emo: '🐾', lc: '#e8590c', desc: 'えき 4〜5こ・せん 1ぽん',
+    qs: [{ lines: [4], min: 1, max: 1 }, { lines: [5], min: 2, max: 3 }, { lines: [5], min: 2, max: 3, cat: true }] },
+  { name: '2ほんの せん', emo: '🐾🐾', lc: '#1c7ed6', desc: 'えき 6〜8こ・いろちがいの せん',
+    qs: [{ lines: [3, 3], min: 2, max: 5 }, { lines: [4, 3], min: 3, max: 6, cat: true }, { lines: [4, 4], min: 3, max: 7 }] },
+  { name: 'のりかええき', emo: '🔁', lc: '#2f9e44', desc: 'えき 9〜10こ・のりかえ あり',
+    qs: [{ main: 6, br: [[2, 2]], min: 4, max: 8 }, { main: 5, br: [[1, 3]], min: 4, max: 8, cat: true }, { main: 5, br: [[1, 2], [1, 1]], min: 5, max: 9 }] },
+  { name: 'ならべかえ アート', emo: '🎨', lc: '#ae3ec9', desc: 'つながりは そのまま どうぶつの かたちに',
+    qs: [{ art: 'fish' }, { art: 'cat' }, { art: 'butterfly' }] },
+];
+const ARTS = {
+  fish: { name: 'さかな', emo: '🐟', cheer: 'ぴちぴち！',
+    dots: [[8, 50], [30, 24], [58, 24], [76, 50], [58, 76], [30, 76], [95, 22], [95, 78]],
+    lines: [{ stops: [0, 1, 2, 3, 4, 5], loop: true }, { stops: [3, 6, 7], loop: true }], k: 3 },
+  cat: { name: 'ねこ', emo: '🐱', cheer: 'にゃーん！',
+    dots: [[50, 94], [12, 66], [22, 36], [14, 4], [50, 28], [86, 4], [78, 36], [88, 66]],
+    lines: [{ stops: [0, 1, 2, 3, 4, 5, 6, 7], loop: true }, { stops: [2, 4, 6] }], k: 3 },
+  butterfly: { name: 'ちょうちょ', emo: '🦋', cheer: 'ひらひら〜！',
+    dots: [[50, 24], [50, 54], [50, 92], [8, 12], [16, 88], [92, 12], [84, 88], [34, 2], [66, 2]],
+    lines: [{ stops: [0, 1, 2] }, { stops: [1, 3, 4], loop: true }, { stops: [1, 5, 6], loop: true }, { stops: [7, 0, 8] }], k: 4 },
+};
+
+function edgesOf(lines) {
+  const E = [];
+  lines.forEach((L, li) => {
+    const s = L.stops;
+    for (let k = 0; k + 1 < s.length; k++) E.push([s[k], s[k + 1], li]);
+    if (L.loop && s.length > 2) E.push([s[s.length - 1], s[0], li]);
+  });
+  return E;
+}
+
+/* ---------- きかがく ---------- */
+function orient(a, b, c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
+function segX(p1, p2, p3, p4) {
+  const d1 = orient(p3, p4, p1), d2 = orient(p3, p4, p2), d3 = orient(p1, p2, p3), d4 = orient(p1, p2, p4);
+  if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) && ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+    const t = d1 / (d1 - d2); return { x: p1.x + (p2.x - p1.x) * t, y: p1.y + (p2.y - p1.y) * t };
+  }
+  return null;
+}
+function distSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, L = dx * dx + dy * dy;
+  let t = L ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / L : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
+}
+// こうさ（ばってん）と「えきが ほかの せんに のっている」を かぞえる
+function problems(pos, E, touchR) {
+  const xs = [], touches = [];
+  for (let i = 0; i < E.length; i++) for (let j = i + 1; j < E.length; j++) {
+    const a = E[i], b = E[j];
+    if (a[0] === b[0] || a[0] === b[1] || a[1] === b[0] || a[1] === b[1]) continue;
+    const p = segX(pos[a[0]], pos[a[1]], pos[b[0]], pos[b[1]]);
+    if (p) xs.push({ x: p.x, y: p.y, e: [i, j] });
+  }
+  pos.forEach((p, s) => E.forEach((e, ei) => {
+    if (e[0] === s || e[1] === s) return;
+    if (distSeg(p, pos[e[0]], pos[e[1]]) < touchR) touches.push({ s, e: ei, x: p.x, y: p.y });
+  }));
+  return { xs, touches, count: xs.length + touches.length };
+}
+
+/* ---------- もんだいを つくる ---------- */
+// かくしの こたえ: こうしの うえを あるく 線。こうさ 0 を プログラムで たしかめてから つかう。
+function genSolution(q) {
+  const cols = 4, rows = q.main ? 4 : 3;
+  const used = new Set(), key = (c, r) => c + ',' + r;
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+  function walkFrom(cell, n) {
+    const out = []; let cur = cell;
+    for (let k = 0; k < n; k++) {
+      const opts = shuffle(dirs.slice()).map(d => [cur[0] + d[0], cur[1] + d[1]])
+        .filter(c => c[0] >= 0 && c[0] < cols && c[1] >= 0 && c[1] < rows && !used.has(key(c[0], c[1])));
+      if (!opts.length) return null;
+      const straight = opts.filter(c => c[0] === cur[0] || c[1] === cur[1]);
+      cur = (straight.length && Math.random() < .7) ? straight[0] : opts[0];
+      used.add(key(cur[0], cur[1])); out.push(cur);
+    }
+    return out;
+  }
+  const cells = [], lines = [];
+  const addCell = c => { cells.push(c); return cells.length - 1; };
+  const lens = q.lines || [q.main];
+  for (const len of lens) {
+    const free = [];
+    for (let c = 0; c < cols; c++) for (let r = 0; r < rows; r++) if (!used.has(key(c, r))) free.push([c, r]);
+    if (!free.length) return null;
+    const st = free[ri(free.length)]; used.add(key(st[0], st[1]));
+    const w = walkFrom(st, len - 1); if (!w) return null;
+    lines.push({ stops: [st, ...w].map(addCell) });
+  }
+  for (const [a, b] of (q.br || [])) {
+    // のりかええき: いままでの 線の とちゅうの えき（まだ のりかえで ない もの）
+    const cand = [];
+    lines.forEach(L => L.stops.slice(1, -1).forEach(s => { if (!lines.some(M => M !== L && M.stops.includes(s))) cand.push(s); }));
+    if (!cand.length) return null;
+    const t = cand[ri(cand.length)];
+    const w1 = walkFrom(cells[t], a); if (!w1) return null;
+    const w2 = walkFrom(cells[t], b); if (!w2) return null;
+    lines.push({ stops: [...w1.reverse().map(addCell), t, ...w2.map(addCell)] });
+  }
+  const pos = cells.map(c => ({ x: c[0], y: c[1] }));
+  const E = edgesOf(lines);
+  if (problems(pos, E, .2).count !== 0) return null; // こうさ 0 に できる ことを たしかめる
+  return { n: cells.length, lines, E, sol: pos };
+}
+
+function randomLayout(n, E, W, H, R, q) {
+  const m = R + 10, mb = R + 24;
+  let minD = Math.min(W, H) * .2;
+  for (let tries = 0; tries < 4000; tries++) {
+    if (tries % 400 === 399) minD *= .9;
+    const pos = [];
+    for (let i = 0; i < n; i++) {
+      let p = null;
+      for (let k = 0; k < 80 && !p; k++) {
+        const c = { x: rnd(m, W - m), y: rnd(m, H - mb) };
+        if (pos.every(o => Math.hypot(o.x - c.x, o.y - c.y) >= minD)) p = c;
+      }
+      if (!p) break;
+      pos.push(p);
+    }
+    if (pos.length < n) continue;
+    const pr = problems(pos, E, R * 1.3);
+    if (pr.touches.length === 0 && pr.xs.length >= q.min && pr.xs.length <= q.max) return pos;
+  }
+  return null;
+}
+
+function makePuzzle(lv, qi, W, H, R) {
+  const q = LEVELS[lv].qs[qi];
+  if (q.art) {
+    const A = ARTS[q.art], n = A.dots.length;
+    const E = edgesOf(A.lines);
+    let dot;
+    for (let t = 0; t < 500; t++) {
+      dot = [...Array(n).keys()];
+      const pick = shuffle([...Array(n).keys()]).slice(0, A.k);
+      const vals = pick.map(i => dot[i]);
+      vals.push(vals.shift()); // じゅんぐりに いれかえ
+      pick.forEach((i, k) => { dot[i] = vals[k]; });
+      if (artBad({ E, dot, tset: tset(E) }).length >= 3) break;
+    }
+    const names = shuffle(NAMES.slice());
+    return { mode: 'art', art: A, lines: A.lines.map((L, i) => ({ stops: L.stops, loop: !!L.loop, color: COLORS[i] })), E,
+      st: dot.map((d, i) => ({ dot: d, name: names[i] })), init: dot.slice(), tset: tset(E), dot, cat: false };
+  }
+  let sol = null;
+  for (let t = 0; t < 3000 && !sol; t++) sol = genSolution(q);
+  let pos = null;
+  for (let t = 0; t < 20 && !pos; t++) pos = randomLayout(sol.n, sol.E, W, H, R, q);
+  if (!pos) pos = randomLayout(sol.n, sol.E, W, H, R, { min: 1, max: 99 });
+  const names = shuffle(NAMES.slice());
+  const st = pos.map((p, i) => ({ x: p.x / W, y: p.y / H, name: names[i] }));
+  const lines = sol.lines.map((L, i) => ({ stops: L.stops, loop: false, color: COLORS[i] }));
+  const transfer = new Set();
+  lines.forEach((L, i) => L.stops.forEach(s => { if (lines.some((M, j) => j !== i && M.stops.includes(s))) transfer.add(s); }));
+  st.forEach((s, i) => { s.tr = transfer.has(i); });
+  return { mode: 'untangle', lines, E: sol.E, st, init: st.map(s => ({ x: s.x, y: s.y })), cat: !!q.cat, sol: sol.sol };
+}
+function tset(E) { return new Set(E.map(e => Math.min(e[0], e[1]) + '-' + Math.max(e[0], e[1]) + '-' + e[2])); }
+function artBad(P) {
+  const bad = [];
+  P.E.forEach((e, i) => {
+    const a = P.dot[e[0]], b = P.dot[e[1]];
+    if (!P.tset.has(Math.min(a, b) + '-' + Math.max(a, b) + '-' + e[2])) bad.push(i);
+  });
+  return bad;
+}
+
+/* ---------- じょうたい ---------- */
+let lv = 0, qi = 0, P = null, W = 300, H = 300, R = 24;
+let drag = null, busy = false, lastCount = null, catFired = false;
+const svg = $('#board'), lay = $('#lay');
+
+function measure() {
+  const r = $('#wrap').getBoundingClientRect();
+  W = Math.max(200, r.width); H = Math.max(200, r.height);
+  R = Math.max(20, Math.min(30, Math.min(W, H) * .055));
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  $('#map').style.transformOrigin = `${W / 2}px ${H / 2}px`;
+}
+function dotPx(d) {
+  const A = P.art, S = Math.min(W - 2 * R - 20, H - 2 * R - 44);
+  const ox = (W - S) / 2, oy = (H - S) / 2 - 10;
+  return { x: ox + A.dots[d][0] / 100 * S, y: oy + A.dots[d][1] / 100 * S };
+}
+function px(i) {
+  if (drag && drag.i === i) return { x: drag.x, y: drag.y };
+  if (P.mode === 'art') return dotPx(P.dot[i]);
+  return { x: P.st[i].x * W, y: P.st[i].y * H };
+}
+function allPos() { return P.st.map((_, i) => px(i)); }
+function evalNow() {
+  if (P.mode === 'art') { const bad = artBad(P); return { count: bad.length, bad, xs: [], touches: [] }; }
+  return problems(allPos(), P.E, R * .8);
+}
+
+/* ---------- かく ---------- */
+function render() {
+  const pos = allPos(), ev = evalNow();
+  const worried = new Set();
+  ev.xs.forEach(x => x.e.forEach(ei => { worried.add(P.E[ei][0]); worried.add(P.E[ei][1]); }));
+  ev.touches.forEach(t => worried.add(t.s));
+  (ev.bad || []).forEach(ei => { worried.add(P.E[ei][0]); worried.add(P.E[ei][1]); });
+  let h = '';
+  if (P.mode === 'art') {
+    const A = P.art;
+    h += '<g opacity=".3">' + P.E.map(e => {
+      const a = dotPx(e[0]), b = dotPx(e[1]);
+      return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${COLORS[e[2]]}" stroke-width="${R * .9}" stroke-linecap="round"/>`;
+    }).join('') + '</g>';
+    h += A.dots.map((_, d) => { const p = dotPx(d); return `<circle cx="${p.x}" cy="${p.y}" r="${R + 6}" fill="#fff" stroke="#c9a37a" stroke-width="3" stroke-dasharray="6 5"/>`; }).join('');
+  }
+  const ln = (e, col, w, extra = '') => { const a = pos[e[0]], b = pos[e[1]]; return `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="${col}" stroke-width="${w}" stroke-linecap="round" ${extra}/>`; };
+  h += P.E.map(e => ln(e, '#fff', 14)).join('');
+  h += P.E.map(e => ln(e, COLORS[e[2]], 8)).join('');
+  (ev.bad || []).forEach(ei => { h += ln(P.E[ei], '#e03131', 5, 'stroke-dasharray="10 8" class="bad"'); });
+  ev.xs.forEach(x => {
+    h += `<g class="xmark" transform="translate(${x.x} ${x.y})"><circle r="15" fill="#ffe3e3" stroke="#e03131" stroke-width="4"/>
+      <path d="M-6 -6 L6 6 M6 -6 L-6 6" stroke="#e03131" stroke-width="4" stroke-linecap="round"/></g>`;
+  });
+  ev.touches.forEach(t => { h += `<circle class="xmark" cx="${t.x}" cy="${t.y}" r="${R + 8}" fill="none" stroke="#e03131" stroke-width="5"/>`; });
+  // えき（ひっぱって いる えきは さいごに かいて いちばん うえ）
+  const order = P.st.map((_, i) => i).filter(i => !drag || drag.i !== i);
+  if (drag) order.push(drag.i);
+  order.forEach(i => {
+    const p = pos[i], s = P.st[i];
+    const cols = P.lines.map((L, li) => L.stops.includes(i) ? COLORS[li] : null).filter(Boolean);
+    const tr = cols.length > 1;
+    const sc = drag && drag.i === i ? 1.15 : 1;
+    const eyes = worried.has(i)
+      ? `<path d="M${-R * .45} ${-R * .2} l${R * .25} ${R * .14} l${-R * .25} ${R * .14} M${R * .45} ${-R * .2} l${-R * .25} ${R * .14} l${R * .25} ${R * .14}" fill="none" stroke="#3b2a1a" stroke-width="3" stroke-linecap="round"/>
+         <path d="M${-R * .2} ${R * .45} q${R * .2} ${-R * .2} ${R * .4} 0" fill="none" stroke="#3b2a1a" stroke-width="2.5" stroke-linecap="round"/>`
+      : `<circle cx="${-R * .3}" cy="${-R * .08}" r="${R * .12}" fill="#3b2a1a"/><circle cx="${R * .3}" cy="${-R * .08}" r="${R * .12}" fill="#3b2a1a"/>
+         <path d="M${-R * .22} ${R * .3} q${R * .22} ${R * .22} ${R * .44} 0" fill="none" stroke="#3b2a1a" stroke-width="2.5" stroke-linecap="round"/>`;
+    const ring = tr
+      ? `<circle r="${R}" fill="#fff" stroke="#3b2a1a" stroke-width="6"/>` + cols.map((c, k) => {
+          const ang = (k / cols.length) * Math.PI * 2 - Math.PI / 2;
+          return `<circle cx="${Math.cos(ang) * (R + 2)}" cy="${Math.sin(ang) * (R + 2)}" r="6" fill="${c}" stroke="#fff" stroke-width="2"/>`;
+        }).join('')
+      : `<circle r="${R}" fill="#fff" stroke="${cols[0] || '#888'}" stroke-width="6"/>`;
+    const label = P.mode === 'untangle'
+      ? `<text y="${R + 17}" text-anchor="middle" font-size="13" font-weight="bold" fill="#5c4026" stroke="#fffdf8" stroke-width="4" paint-order="stroke">${s.name}</text>` : '';
+    h += `<g class="st${drag && drag.i === i ? ' drag' : ''}" data-i="${i}" transform="translate(${p.x} ${p.y}) scale(${sc})">
+      ${drag && drag.i === i ? `<circle r="${R + 4}" cy="6" fill="rgba(0,0,0,.15)"/>` : ''}
+      <circle r="${R + 14}" fill="transparent"/>${ring}${eyes}${label}</g>`;
+  });
+  lay.innerHTML = h;
+  showCount(ev.count);
+  return ev;
+}
+
+function showCount(n) {
+  const pill = $('#pill');
+  const word = P.mode === 'art' ? 'ずれてる せん' : 'ばってん';
+  pill.innerHTML = n === 0 ? (P.mode === 'art' ? 'ぴったり！' : 'ばってん 0！') : `${word} <b>${n}</b>`;
+  pill.classList.toggle('zero', n === 0);
+  if (lastCount !== null && n !== lastCount) {
+    pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump');
+    if (!busy) (n < lastCount ? sfx.better : sfx.worse)();
+  }
+  lastCount = n;
+  // でんしゃの かお
+  const tf = $('#tface'), eyes = $('#teyes');
+  const dizzy = n >= 4, happy = n === 0;
+  tf.classList.toggle('dizzy', dizzy); tf.classList.toggle('happy', happy);
+  eyes.innerHTML = dizzy
+    ? '<text x="22" y="42" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">@</text><text x="38" y="42" font-size="14" text-anchor="middle" fill="#fff" font-weight="bold">@</text>'
+    : happy
+      ? '<path d="M17 38 q5 -6 10 0 M33 38 q5 -6 10 0" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M25 43 q5 4 10 0" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>'
+      : '<circle cx="22" cy="36" r="3.5" fill="#fff"/><circle cx="38" cy="36" r="3.5" fill="#fff"/><path d="M26 43 h8" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>';
+  if (!busy) {
+    $('#say').textContent = P.mode === 'art'
+      ? (n === 0 ? '' : `${P.art.emo} ${P.art.name}の うすい せんに あわせよう`)
+      : dizzy ? 'でんしゃ「めが まわる〜」' : n === 0 ? '' : 'あかい ✕ を なくそう';
+  }
+}
+
+/* ---------- ゆびで うごかす ---------- */
+function toLocal(e) {
+  const r = svg.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * W / r.width, y: (e.clientY - r.top) * H / r.height };
+}
+svg.addEventListener('pointerdown', e => {
+  if (busy || drag) return;
+  const g = e.target.closest && e.target.closest('.st');
+  if (!g) return;
+  e.preventDefault();
+  ac();
+  const i = +g.dataset.i, p = toLocal(e), o = px(i);
+  drag = { i, id: e.pointerId, dx: o.x - p.x, dy: o.y - p.y, x: o.x, y: o.y, ox: o.x, oy: o.y };
+  try { svg.setPointerCapture(e.pointerId); } catch (_) {}
+  sfx.pick(); render();
+});
+let raf = 0;
+svg.addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  e.preventDefault();
+  const p = toLocal(e);
+  drag.x = Math.max(R + 6, Math.min(W - R - 6, p.x + drag.dx));
+  drag.y = Math.max(R + 6, Math.min(H - R - 20, p.y + drag.dy));
+  if (!raf) raf = requestAnimationFrame(() => { raf = 0; if (drag) render(); });
+});
+function endDrag(e) {
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null;
+  if (P.mode === 'art') {
+    let best = -1, bd = 1e9;
+    P.art.dots.forEach((_, k) => { const q = dotPx(k), dd = Math.hypot(q.x - d.x, q.y - d.y); if (dd < bd) { bd = dd; best = k; } });
+    if (best >= 0 && bd < R * 2.4 && best !== P.dot[d.i]) {
+      const j = P.dot.indexOf(best);
+      if (j >= 0) P.dot[j] = P.dot[d.i];
+      P.dot[d.i] = best; sfx.swap();
+    } else sfx.drop();
+  } else {
+    let x = d.x, y = d.y;
+    for (let it = 0; it < 12; it++) {
+      let moved = false;
+      P.st.forEach((s, j) => {
+        if (j === d.i) return;
+        const ox = s.x * W, oy = s.y * H, dd = Math.hypot(x - ox, y - oy), need = R * 2.3;
+        if (dd < need) { const ux = dd ? (x - ox) / dd : 1, uy = dd ? (y - oy) / dd : 0; x = ox + ux * need; y = oy + uy * need; moved = true; }
+      });
+      x = Math.max(R + 6, Math.min(W - R - 6, x)); y = Math.max(R + 6, Math.min(H - R - 20, y));
+      if (!moved) break;
+    }
+    P.st[d.i].x = x / W; P.st[d.i].y = y / H;
+    sfx.drop();
+  }
+  const ev = render();
+  afterMove(ev);
+}
+svg.addEventListener('pointerup', endDrag);
+svg.addEventListener('pointercancel', endDrag);
+
+function afterMove(ev) {
+  if (ev.count === 0) { onClear(); return; }
+  if (P.cat && !catFired && P.mode === 'untangle' && ev.count <= 1) catEvent();
+}
+
+/* ---------- ねこの けいとだま（わらい どころ） ---------- */
+function catEvent() {
+  const cur = evalNow().count;
+  const cand = shuffle(P.st.map((_, i) => i).filter(i => !P.st[i].tr));
+  let pick = null;
+  for (const i of cand) {
+    for (let k = 0; k < 150 && !pick; k++) {
+      const np = { x: rnd(R + 10, W - R - 10), y: rnd(R + 10, H - R - 24) };
+      const pos = allPos(); pos[i] = np;
+      if (pos.some((o, j) => j !== i && Math.hypot(o.x - np.x, o.y - np.y) < R * 3)) continue;
+      const pr = problems(pos, P.E, R * 1.2);
+      if (pr.touches.length === 0 && pr.xs.length >= cur + 1 && pr.xs.length <= cur + 2) pick = { i, np };
+    }
+    if (pick) break;
+  }
+  if (!pick) return;
+  catFired = true; busy = true;
+  const wrap = $('#wrap');
+  const ball = document.createElement('div'); ball.className = 'yarn';
+  ball.innerHTML = `<svg viewBox="-34 -34 68 68">${yarnSVG()}</svg>`;
+  wrap.appendChild(ball);
+  const from = px(pick.i), start = { x: from.x < W / 2 ? -40 : W + 40, y: from.y };
+  const t0 = performance.now(), T1 = 600, T2 = 800;
+  sfx.roll();
+  $('#say').textContent = 'あっ！ ねこが けいとだまを ころがした！';
+  function step(now) {
+    const t = now - t0;
+    let bx, by;
+    if (t < T1) { const u = t / T1; bx = start.x + (from.x - start.x) * u; by = start.y + (from.y - start.y) * u; }
+    else {
+      const u = Math.min(1, (t - T1) / T2), e = 1 - Math.pow(1 - u, 2);
+      bx = from.x + (pick.np.x - from.x) * e; by = from.y + (pick.np.y - from.y) * e;
+      P.st[pick.i].x = bx / W; P.st[pick.i].y = by / H;
+      render();
+    }
+    ball.style.left = bx + 'px'; ball.style.top = by + 'px';
+    ball.style.transform = `rotate(${t * .8}deg)`;
+    if (t < T1 + T2) requestAnimationFrame(step);
+    else {
+      ball.remove(); sfx.meow();
+      bubble('にゃっ！ ごめーん', 1800);
+      $('#say').textContent = 'また こんがらがっちゃった。なおして あげてね';
+      setTimeout(() => { busy = false; }, 400);
+    }
+  }
+  requestAnimationFrame(step);
+}
+
+function bubble(text, ms) {
+  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
+  $('#wrap').appendChild(b);
+  setTimeout(() => b.remove(), ms);
+}
+
+/* ---------- クリア ---------- */
+function onClear() {
+  busy = true;
+  const map = $('#map');
+  sfx.puhaa();
+  map.classList.remove('puhaa', 'wiggle'); void map.getBoundingClientRect();
+  if (P.mode === 'art') { map.classList.add('wiggle'); bubble(`${P.art.emo} ${P.art.cheer}`, 2600); }
+  else { map.classList.add('puhaa'); bubble('ぷはーっ！', 2200); }
+  $('#say').textContent = P.mode === 'art' ? `${P.art.name}の かたちに なった！` : 'ほどけた！ でんしゃが はしるよ';
+  setTimeout(() => { sfx.fanfare(); runTrains(showClear); }, 1100);
+}
+
+function trainShape(c) {
+  return `<rect x="-20" y="-11" width="40" height="22" rx="9" fill="${c}" stroke="#fff" stroke-width="3"/>
+    <rect x="-13" y="-6" width="8" height="8" rx="2" fill="#fff"/><rect x="-2" y="-6" width="8" height="8" rx="2" fill="#fff"/>
+    <rect x="9" y="-6" width="7" height="12" rx="2" fill="#fff9db"/>`;
+}
+function runTrains(done) {
+  const tl = P.lines.map((L, k) => {
+    const pts = L.stops.map(i => px(i)); if (L.loop) pts.push(pts[0]);
+    const cum = [0]; for (let j = 1; j < pts.length; j++) cum.push(cum[j - 1] + Math.hypot(pts[j].x - pts[j - 1].x, pts[j].y - pts[j - 1].y));
+    return { pts, cum, tot: cum[cum.length - 1], color: COLORS[k], hit: 0 };
+  });
+  const g = $('#trains');
+  g.innerHTML = tl.map((l, k) => `<g id="tr${k}">${trainShape(l.color)}</g>`).join('');
+  const t0 = performance.now(), D = 2600;
+  function step(now) {
+    const t = Math.min(1, (now - t0) / D), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    tl.forEach((l, k) => {
+      const d = e * l.tot; let j = 1;
+      while (j < l.cum.length - 1 && l.cum[j] < d) j++;
+      const a = l.pts[j - 1], b = l.pts[j], seg = (l.cum[j] - l.cum[j - 1]) || 1, u = (d - l.cum[j - 1]) / seg;
+      const x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u;
+      let ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+      const flip = ang > 90 || ang < -90;
+      if (j - 1 > l.hit) { l.hit = j - 1; sfx.ding(l.hit); }
+      g.querySelector('#tr' + k).setAttribute('transform', `translate(${x} ${y}) rotate(${ang})${flip ? ' scale(1 -1)' : ''}`);
+    });
+    if (t < 1) requestAnimationFrame(step); else setTimeout(done, 350);
+  }
+  requestAnimationFrame(step);
+}
+
+const PRAISE = ['すごい！', 'じょうず！', 'やったね！', 'かんぺき！'];
+function showClear() {
+  const last = qi === LEVELS[lv].qs.length - 1;
+  sfx.purr();
+  const art = P.mode === 'art';
+  $('#panel').innerHTML = `
+    <svg class="cat purr" viewBox="0 0 120 110">${catSVG('happy')}</svg>
+    <div class="big">${art ? `${P.art.emo} ${P.art.name}の できあがり！` : 'みやすーい！'}</div>
+    <div class="sub">ねこの ちずやさん「${PRAISE[ri(PRAISE.length)]} ${art ? 'つながりは そのままで かたちが かわったね' : 'つながりは おなじなのに すっきり！'}」<br>ごろごろ ごろごろ…</div>
+    <div class="btns">${last
+      ? '<button class="btn" id="goNext">つぎへ ▶</button>'
+      : '<button class="btn" id="goNext">つぎの もんだい ▶</button>'}</div>`;
+  openOv();
+  $('#goNext').addEventListener('click', () => {
+    if (last) levelDone(); else { closeOv(); startQ(qi + 1); }
+  });
+}
+function levelDone() {
+  SAVE.clear[lv + 1] = true; save();
+  sfx.win();
+  const all = LEVELS.every((_, i) => SAVE.clear[i + 1]);
+  $('#panel').innerHTML = `
+    <svg class="cat" viewBox="0 0 120 110">${catSVG('happy')}</svg>
+    <div class="big">レベル${lv + 1} ぜんぶ クリア！</div>
+    <div class="stars">⭐⭐⭐</div>
+    <div class="sub">${lv === 3 ? 'えきの つながりを まもって どうぶつが できたね！' : 'こんがらがった ろせんずを ぜんぶ ほどいたね！'}${all ? '<br>🏅 ぜんぶの レベルを クリア！ ちずの めいじん！' : ''}</div>
+    <div class="btns">
+      <button class="btn sec" id="again">もういちど</button>
+      ${lv < 3 ? '<button class="btn" id="nextLv">つぎの レベル ▶</button>' : '<button class="btn" id="toMenu">メニューへ</button>'}
+    </div>`;
+  $('#again').addEventListener('click', () => { closeOv(); startLevel(lv); });
+  const n = $('#nextLv'); if (n) n.addEventListener('click', () => { closeOv(); startLevel(lv + 1); });
+  const m = $('#toMenu'); if (m) m.addEventListener('click', () => { closeOv(); goTitle(); });
+}
+function openOv() { $('#ov').classList.add('on'); }
+function closeOv() { $('#ov').classList.remove('on'); }
+
+/* ---------- がめん きりかえ ---------- */
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+function drawLevels() {
+  $('#levels').innerHTML = LEVELS.map((L, i) => `
+    <button class="level" style="--lc:${L.lc}" data-lv="${i}">
+      <span class="ln">レベル${i + 1}　${L.name}</span>
+      <span class="le">${L.emo}</span>
+      <span class="ls">${L.desc}</span>
+      <span class="lb">${SAVE.clear[i + 1] ? '⭐ クリア' : ''}</span>
+    </button>`).join('');
+  document.querySelectorAll('.level').forEach(b => b.addEventListener('click', () => { ac(); sfx.pick(); startLevel(+b.dataset.lv); }));
+}
+function goTitle() { busy = false; drawLevels(); show('title'); }
+function startLevel(l) { lv = l; show('play'); startQ(0); }
+function startQ(i) {
+  qi = i; busy = false; drag = null; catFired = false; lastCount = null;
+  measure();
+  P = makePuzzle(lv, qi, W, H, R);
+  $('#trains').innerHTML = '';
+  $('#map').classList.remove('puhaa', 'wiggle');
+  $('#lvname').textContent = `レベル${lv + 1} ・ ${qi + 1}/${LEVELS[lv].qs.length}` + '';
+  $('#hint').hidden = P.mode !== 'art';
+  document.querySelectorAll('#wrap .help').forEach(h => h.remove());
+  const help = document.createElement('div'); help.className = 'help';
+  help.textContent = P.mode === 'art' ? `えきを べつの まるに うごかすと いれかわるよ` : 'えきを ゆびで ひっぱって うごかそう';
+  $('#wrap').appendChild(help); setTimeout(() => help.remove(), 4500);
+  render();
+}
+$('#back').addEventListener('click', () => { if (drag) return; goTitle(); });
+$('#retry').addEventListener('click', () => {
+  if (busy) return;
+  if (P.mode === 'art') P.dot.splice(0, P.dot.length, ...P.init);
+  else P.st.forEach((s, i) => { s.x = P.init[i].x; s.y = P.init[i].y; });
+  sfx.boing(); render();
+});
+$('#hint').addEventListener('click', () => {
+  if (busy || P.mode !== 'art') return;
+  const i = P.dot.findIndex((d, k) => d !== k);
+  if (i < 0) return;
+  const j = P.dot.indexOf(i);
+  P.dot[j] = P.dot[i]; P.dot[i] = i;
+  sfx.swap(); afterMove(render());
+});
+let rt = 0;
+window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (P && $('#play').classList.contains('on')) { measure(); render(); } }, 120); });
+
+// テスト用（Playwright から こたえを みる）
+window.__rh = { get P() { return P; }, get W() { return W; }, get H() { return H; }, problems, evalNow, genSolution, LEVELS };
+
+drawLevels();
+})();
+</script>
+</body>
+</html>
