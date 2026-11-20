@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>だいたい いくつ？</title>
+<style>
+  :root {
+    --bg: #eaf7ff;
+    --ink: #2b2b45;
+    --sub: #6a6a8a;
+    --accent: #7b4fd6;
+    --hippo: #9b8ec7;
+    --hippo-dark: #6d5fa3;
+    --ok: #2f9e44;
+    --mid: #f08c00;
+    --ng: #e8590c;
+    --card: #ffffff;
+    --shadow: 0 4px 0 rgba(43,43,69,.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: linear-gradient(#d8f0ff 0 60%, #c9ecc0 60% 100%);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  ruby rt { font-size: .5em; }
+
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+
+  .bar { width: 100%; max-width: 1100px; display: flex; align-items: center; gap: 8px; min-height: 56px; flex: none; }
+  .bar .grow { flex: 1; text-align: center; font-weight: 800; font-size: clamp(16px, 4.4vw, 24px); }
+  .round-btn { width: 54px; height: 54px; border-radius: 50%; background: #fff; box-shadow: var(--shadow);
+    font-size: 26px; display: grid; place-items: center; text-decoration: none; color: inherit; flex: none; }
+  .round-btn:active { transform: translateY(3px); box-shadow: none; }
+  .dots { display: flex; gap: 6px; justify-content: center; }
+  .dots i { width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: inset 0 0 0 2px #c5c5dd; font-style: normal; font-size: 11px; display: grid; place-items: center; }
+  .dots i.now { box-shadow: inset 0 0 0 3px var(--accent); }
+  .dots i.r2 { background: #ffd43b; box-shadow: none; }
+  .dots i.r1 { background: #b2f2bb; box-shadow: none; }
+  .dots i.r0 { background: #dee2e6; box-shadow: none; }
+
+  /* ---- タイトル ---- */
+  #title { overflow-y: auto; }
+  .hero { font-size: clamp(64px, 18vw, 110px); line-height: 1; margin-top: 4px; animation: bob 2.4s ease-in-out infinite; }
+  .logo { margin: 4px 0 2px; font-size: clamp(34px, 9vw, 58px); font-weight: 900; color: var(--accent);
+    text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.12); text-align: center; }
+  .logo-sub { color: var(--sub); font-weight: 700; font-size: clamp(15px, 3.8vw, 19px); margin-bottom: 12px; text-align: center; }
+  .levels { width: 100%; max-width: 760px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .level { background: var(--card); border-radius: 22px; padding: 12px 10px; box-shadow: var(--shadow);
+    display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 120px; }
+  .level:active { transform: translateY(3px); box-shadow: none; }
+  .level .lv-name { font-weight: 900; font-size: clamp(18px, 4.6vw, 22px); color: var(--accent); }
+  .level .lv-big { font-weight: 900; font-size: clamp(20px, 5.4vw, 28px); }
+  .level .lv-desc { font-size: 14px; color: var(--sub); text-align: center; }
+  .level .lv-best { font-size: 16px; min-height: 20px; letter-spacing: 1px; }
+  .howto { max-width: 760px; width: 100%; background: rgba(255,255,255,.75); border-radius: 18px; padding: 10px 16px;
+    margin: 14px 0 10px; font-size: 15px; line-height: 1.7; }
+  .howto b { color: var(--accent); }
+
+  /* ---- あそぶ ---- */
+  #play .main { flex: 1; width: 100%; max-width: 1100px; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  .host { display: flex; align-items: center; gap: 8px; flex: none; }
+  .hakase { font-size: 42px; line-height: 1; flex: none; }
+  .say { flex: 1; background: #fff; border-radius: 18px; padding: 8px 14px; font-weight: 800;
+    font-size: clamp(16px, 4.4vw, 22px); box-shadow: var(--shadow); position: relative; min-height: 48px;
+    display: flex; align-items: center; }
+  .say::before { content: ""; position: absolute; left: -10px; top: 50%; margin-top: -8px;
+    border: 8px solid transparent; border-right: 10px solid #fff; border-left: 0; }
+  .say.shout { color: #d6336c; animation: shake .4s; }
+  .mascot { font-size: 52px; line-height: 1; flex: none; position: relative; transform-origin: 50% 90%; }
+  .mascot .bub { position: absolute; right: 70%; top: -6px; background: #fff; border-radius: 12px; padding: 2px 8px;
+    font-size: 15px; font-weight: 900; white-space: nowrap; box-shadow: var(--shadow); display: none; }
+  .mascot .bub.on { display: block; animation: pop .3s; }
+  .mascot.dance { animation: dance .5s ease-in-out 4; }
+  .mascot.hic { animation: hic .7s ease-out 2; }
+  .mascot.nod { animation: bob .5s ease-in-out 2; }
+  .mascot.flat { animation: flat 1.6s ease-in-out 1; }
+
+  .boardwrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+  .board { position: relative; container-type: size; border-radius: 26px; overflow: hidden;
+    background: #fff; box-shadow: 0 6px 0 rgba(43,43,69,.16); }
+  .it { position: absolute; transform: translate(-50%, -50%); line-height: 1; pointer-events: none; }
+  .cover { position: absolute; inset: 0; display: grid; place-items: center; text-align: center;
+    font-weight: 900; font-size: 7cqw; color: #fff; transform: translateY(-102%);
+    transition: transform .35s cubic-bezier(.5,1.6,.5,1); text-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .cover.on { transform: translateY(0); }
+  .cover .ce { font-size: 22cqw; line-height: 1; display: block; }
+  .stamp { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%); background: rgba(255,255,255,.95);
+    border-radius: 3cqw; padding: 2cqw 4cqw; font-weight: 900; font-size: 5.6cqw; text-align: center; line-height: 1.5;
+    box-shadow: 0 1cqw 0 rgba(0,0,0,.15); display: none; width: 88%; }
+  .stamp.on { display: block; animation: pop .35s; }
+  .stamp .big { color: #d6336c; font-size: 1.25em; }
+  .row { position: absolute; border-radius: 1.6cqw; background: rgba(255,255,255,.55); border: .4cqw dashed rgba(0,0,0,.18); transition: background .3s; }
+  .row.full { background: #fff3bf; border: .5cqw solid #fab005; }
+  .rowlab { position: absolute; font-weight: 900; color: #e67700; transform: translate(0,-50%); display: none; }
+  .rowlab.on { display: block; animation: pop .3s; }
+  .src { position: absolute; transform: translate(-50%,-50%); line-height: 1; transform-origin: 50% 80%; }
+  .src.wob { animation: shake .3s 3; }
+  .srcbub { position: absolute; background: #fff; border-radius: 2cqw; padding: .6cqw 2cqw; font-weight: 900; font-size: 4.2cqw;
+    box-shadow: 0 .6cqw 0 rgba(0,0,0,.15); white-space: nowrap; display: none; transform: translate(0,-50%); }
+  .srcbub.on { display: block; animation: pop .25s; }
+  .cup { display: inline-block; width: .7em; height: .85em; border-radius: 0 0 .18em .18em; border: .06em solid #4dabf7;
+    background: linear-gradient(transparent 0 25%, #74c0fc 25%); }
+
+  /* 盤面のテーマ */
+  .t-candy { background: radial-gradient(ellipse at 50% 45%, #ff8fab 0 55%, #e64980 100%); border: 12px solid var(--hippo); }
+  .t-candy::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5cqw; z-index: 1;
+    background: radial-gradient(circle at 50% 0, #fff 0 2.2cqw, transparent 2.4cqw) 0 0 / 14cqw 5cqw repeat-x; }
+  .t-ants { background: linear-gradient(#b8e994, #8fd16b); }
+  .t-eggs { background: radial-gradient(ellipse at 50% 55%, #fff4d6 0 50%, #d9a45a 51% 62%, #b07a3c 63% 70%, #e9f5db 71%); }
+  .t-stars { background: radial-gradient(circle at 80% 20%, #3b4a8f, #141a3d 70%); }
+  .t-bus { background: repeating-linear-gradient(90deg, #fff9db 0 18cqw, #ffd43b 18cqw 20cqw), #fff9db; border: 10px solid #fab005; }
+  .t-water { background: linear-gradient(#e7f5ff 0 10%, #a5d8ff 10% 100%); border: 10px solid #868e96; }
+  .t-candy .cover { background: var(--hippo); }
+  .t-candy .cover::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4cqw; height: 5cqw;
+    background: radial-gradient(circle at 50% 0, #fff 0 2.2cqw, transparent 2.4cqw) 0 0 / 14cqw 5cqw repeat-x; }
+  .t-ants .cover { background: #5c940d; }
+  .t-eggs .cover { background: #e8a33d; }
+  .t-stars .cover { background: #868e96; }
+  .t-bus .cover { background: #495057; }
+  .t-water .cover { background: #4dabf7; }
+  .reveal { background: #f8f9fa !important; border-color: #dee2e6 !important; }
+  .reveal::before { display: none; }
+
+  .side { display: flex; gap: 10px; flex: none; }
+  .sample { display: none; align-items: center; justify-content: center; gap: 8px; background: #fff; border-radius: 16px; padding: 6px 12px;
+    box-shadow: var(--shadow); font-weight: 800; color: var(--sub); flex: none; align-self: center; }
+  .sample.on { display: flex; }
+  .sample .sbox { position: relative; border-radius: 10px; }
+  .cards { display: flex; gap: 10px; flex: 1; }
+  .ans { flex: 1; background: var(--card); border-radius: 22px; box-shadow: var(--shadow); min-height: 84px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; border: 4px solid transparent;
+    transition: opacity .2s; }
+  .ans .n { font-size: clamp(32px, 9vw, 48px); font-weight: 900; line-height: 1.05; color: var(--accent); }
+  .ans .g { font-size: 16px; font-weight: 800; color: var(--sub); }
+  .ans:disabled { opacity: .45; cursor: default; }
+  .ans:not(:disabled):active { transform: translateY(3px); box-shadow: none; }
+  .ans.pick { border-color: var(--accent); opacity: 1; }
+  .ans.best { border-color: var(--ok); background: #ebfbee; opacity: 1; }
+
+  .sheet { position: fixed; left: 50%; bottom: max(10px, env(safe-area-inset-bottom)); transform: translate(-50%, 140%);
+    width: min(96vw, 620px); background: #fff; border-radius: 24px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    padding: 14px 16px; text-align: center; transition: transform .35s cubic-bezier(.4,1.4,.5,1); z-index: 5; }
+  .sheet.on { transform: translate(-50%, 0); }
+  .sheet .msg { font-weight: 900; font-size: clamp(20px, 5.6vw, 28px); }
+  .sheet .msg2 { color: var(--sub); font-weight: 700; margin: 4px 0 10px; font-size: 16px; }
+  .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn { background: var(--accent); color: #fff; border-radius: 999px; padding: 14px 24px; font-weight: 900;
+    font-size: 20px; box-shadow: 0 4px 0 #4c2f91; min-height: 56px; }
+  .btn.sub { background: #fff; color: var(--accent); box-shadow: 0 4px 0 #c5b5ee, inset 0 0 0 3px #c5b5ee; }
+  .btn:active { transform: translateY(3px); box-shadow: none; }
+
+  /* ---- おわり ---- */
+  #result { justify-content: center; text-align: center; gap: 10px; overflow-y: auto; }
+  #result .rh { font-size: clamp(80px, 22vw, 130px); line-height: 1; }
+  #result .rh.dance { animation: dance .5s ease-in-out infinite; }
+  #result .rt { font-weight: 900; font-size: clamp(26px, 7vw, 40px); color: var(--accent); }
+  #result .rs { font-size: 34px; letter-spacing: 4px; }
+  #result .rm { font-weight: 700; color: var(--sub); font-size: 17px; }
+
+  .conf { position: fixed; top: -40px; font-size: 28px; pointer-events: none; z-index: 9; animation: fall 1.8s linear forwards; }
+
+  @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes pop { 0% { transform: translate(-50%,-50%) scale(.3); } 70% { transform: translate(-50%,-50%) scale(1.1); } 100% { transform: translate(-50%,-50%) scale(1); } }
+  .mascot .bub.on, .srcbub.on, .rowlab.on { animation-name: pop2; }
+  @keyframes pop2 { 0% { scale: .3; } 70% { scale: 1.12; } 100% { scale: 1; } }
+  @keyframes shake { 0%,100% { translate: 0 0; } 25% { translate: -6px 0; } 75% { translate: 6px 0; } }
+  @keyframes dance { 0%,100% { transform: rotate(0) translateY(0); } 25% { transform: rotate(-14deg) translateY(-10px); } 75% { transform: rotate(14deg) translateY(-10px); } }
+  @keyframes hic { 0% { transform: scale(1); } 15% { transform: scale(1.25, .8) translateY(-14px); } 35% { transform: scale(.95,1.05); } 100% { transform: scale(1); } }
+  @keyframes flat { 0% { transform: scale(1); } 40%,70% { transform: scale(1.45, .35); } 100% { transform: scale(1); } }
+  @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+
+  /* 横もち: ばん（左）＋ こたえ（右） */
+  @media (min-aspect-ratio: 5/4) {
+    #play .main { flex-direction: row; }
+    #play .left { flex: 1; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+    .side { flex-direction: column; width: min(32vw, 320px); justify-content: center; }
+    .sample { flex-direction: column; gap: 2px; }
+    .sample br { display: none; }
+    .cards { flex-direction: column; flex: none; }
+    .ans { min-height: 92px; }
+  }
+  @media (max-aspect-ratio: 5/4) {
+    #play .left { flex: 1; display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .hero { animation: none; } }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- タイトル -->
+<section class="screen on" id="title">
+  <div class="bar">
+    <a class="round-btn" href="../" aria-label="あそびメニューへ">🏠</a>
+    <div class="grow"></div>
+    <button class="round-btn snd" aria-label="おと オン/オフ">🔊</button>
+  </div>
+  <div class="hero" aria-hidden="true">🦛</div>
+  <div class="logo">だいたい いくつ？</div>
+  <div class="logo-sub">ぜんぶ かぞえなくても わかるかな？</div>
+  <div class="levels" id="levels"></div>
+  <div class="howto">
+    ① かばくんの くちの なかが <b>2びょう</b> だけ みえるよ。<br>
+    ② <b>「だいたい いくつ？」</b>を 3まいの ふだから えらんでね。<br>
+    ③ かばくんが あめを ぽーんと だして、<b>10こずつ</b> ならべて こたえあわせ！
+  </div>
+</section>
+
+<!-- あそぶ -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="round-btn" id="quit" aria-label="もどる">⬅️</button>
+    <div class="grow"><div class="dots" id="dots"></div></div>
+    <button class="round-btn snd" aria-label="おと オン/オフ">🔊</button>
+  </div>
+  <div class="main">
+    <div class="left">
+      <div class="host">
+        <div class="hakase" aria-hidden="true">🧑‍🔬</div>
+        <div class="say" id="say">よーく みてね！</div>
+        <div class="mascot" id="mascot" aria-hidden="true">🦛<span class="bub" id="mbub"></span></div>
+      </div>
+      <div class="boardwrap" id="boardwrap">
+        <div class="board" id="board"></div>
+      </div>
+    </div>
+    <div class="side">
+      <div class="sample" id="sample"><span>みほん<br>10こ</span><div class="sbox" id="sbox"></div></div>
+      <div class="cards" id="cards"></div>
+    </div>
+  </div>
+  <div class="sheet" id="sheet">
+    <div class="msg" id="smsg"></div>
+    <div class="msg2" id="smsg2"></div>
+    <div class="btns" id="sbtns"></div>
+  </div>
+</section>
+
+<!-- おわり -->
+<section class="screen" id="result">
+  <div class="rh" id="rhead">🦛</div>
+  <div class="rt" id="rtitle"></div>
+  <div class="rs" id="rstars"></div>
+  <div class="rm" id="rmsg"></div>
+  <div class="btns" style="margin-top:10px">
+    <button class="btn" id="again">もういちど</button>
+    <button class="btn sub" id="toTitle">レベルを えらぶ</button>
+  </div>
+</section>
+
+<script>
+'use strict';
+const SPEED = /[?&]fast/.test(location.search) ? 0.12 : 1;
+let epoch = 0; // もどる を おしたら すすんでいる えんしゅつを とめる
+const sleep = ms => { const e = epoch; return new Promise(r => setTimeout(() => { if (e === epoch) r(); }, ms * SPEED)); };
+const $ = id => document.getElementById(id);
+const rnd = n => Math.floor(Math.random() * n);
+const pick = a => a[rnd(a.length)];
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ---------- ほぞん ---------- */
+const KEY = 'daitai-ikutsu-v1';
+let save = { best: {}, sound: true, plays: 0 };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s) save = Object.assign(save, s); } catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+/* ---------- おと（WebAudio の ごうせいおん） ---------- */
+let ac = null;
+function ctx() {
+  if (!save.sound) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  } catch (e) { return null; }
+}
+function tone(f, t0, dur, type = 'sine', vol = .2, f2 = null) {
+  const a = ctx(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01);
+  g.gain.exponentialRampToValueAtTime(.001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + .02);
+}
+function noise(t0, dur, vol = .15, freq = 800) {
+  const a = ctx(); if (!a) return;
+  const n = Math.floor(a.sampleRate * dur), b = a.createBuffer(1, n, a.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+  const s = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  f.type = 'bandpass'; f.frequency.value = freq; g.gain.value = vol;
+  s.buffer = b; s.connect(f).connect(g).connect(a.destination); s.start(a.currentTime + t0);
+}
+let lastPop = 0;
+const SND = {
+  tap() { tone(660, 0, .08, 'triangle', .15); },
+  pop(i) { const now = performance.now(); if (now - lastPop < 35) return; lastPop = now; tone(500 + (i % 10) * 45, 0, .09, 'sine', .16, 900 + (i % 10) * 60); },
+  ten(k) { [0, .07, .14].forEach((t, j) => tone(660 * Math.pow(1.26, j) * (1 + k * .03), t, .14, 'triangle', .14)); },
+  close() { tone(180, 0, .18, 'square', .12, 70); noise(0, .12, .2, 400); },
+  ok() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .1, .25, 'triangle', .18)); },
+  mid() { [523, 659].forEach((f, i) => tone(f, i * .12, .22, 'triangle', .16)); },
+  hic() { tone(300, 0, .12, 'square', .1, 900); tone(320, .55, .12, 'square', .1, 950); },
+  munch() { for (let i = 0; i < 4; i++) noise(i * .14, .08, .25, 600 + i * 80); },
+  spit() { tone(900, 0, .15, 'sine', .18, 300); },
+  shout() { tone(880, 0, .3, 'sawtooth', .08, 1400); tone(660, .3, .3, 'sawtooth', .08, 500); },
+  deflate() { tone(500, 0, .9, 'sawtooth', .07, 80); noise(0, .9, .08, 2000); },
+  fan() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, i * .12, .3, 'triangle', .16)); },
+};
+function refreshSnd() { document.querySelectorAll('.snd').forEach(b => b.textContent = save.sound ? '🔊' : '🔇'); }
+document.querySelectorAll('.snd').forEach(b => b.addEventListener('click', () => {
+  save.sound = !save.sound; persist(); refreshSnd(); if (save.sound) SND.tap();
+}));
+refreshSnd();
+
+/* ---------- おだい（6しゅるい） ---------- */
+const THEMES = {
+  candy: { cls: 't-candy', items: ['🍬', '🍭', '🍬'], src: '🦛', unit: 'こ',
+    q: 'かばくんの くちに あめが いっぱい！', cover: ['🦛', 'ぱくっ！'], open: 'あーん！', what: 'あめ' },
+  ants:  { cls: 't-ants', items: ['🐜'], src: '🕳️', unit: 'ひき', line: true,
+    q: 'ありさんの ぎょうれつ！', cover: ['🍃', 'ありさんは すに かえった'], open: 'でておいで〜', what: 'ありさん' },
+  eggs:  { cls: 't-eggs', items: ['🥚'], src: '🐔', unit: 'こ',
+    q: 'にわとりの たまごが いっぱい！', cover: ['🐔', 'めんどりが すわった'], open: 'コケッ！', what: 'たまご' },
+  stars: { cls: 't-stars', items: ['⭐', '🌟', '⭐'], src: '🌙', unit: 'こ',
+    q: 'よぞらに ほしが いっぱい！', cover: ['☁️', 'くもで かくれた'], open: 'きらーん', what: 'ほし' },
+  bus:   { cls: 't-bus', items: ['🧒', '👧', '👦', '👵', '👴', '👩', '👨'], src: '🚌', unit: 'にん',
+    q: 'バスに おきゃくさんが いっぱい！', cover: ['🚇', 'トンネルに はいった'], open: 'おりまーす', what: 'おきゃくさん' },
+  water: { cls: 't-water', items: ['💧'], src: '🐘', unit: 'はい', cup: true,
+    q: 'ゾウの はなの みず。💧1つで コップ 1ぱい', cover: ['🐘', 'ゾウが すいこんだ'], open: 'ぶしゅー！', what: 'みず' },
+};
+const THEME_KEYS = Object.keys(THEMES);
+
+// かず の いいかた（ひき・はい は さいごの かずで かわる）
+function cnt(n, unit) {
+  const d = n % 10;
+  if (unit === 'ひき') return n + ([1, 6, 8, 0].includes(d) ? 'ぴき' : d === 3 ? 'びき' : 'ひき');
+  if (unit === 'はい') return n + ([1, 6, 8, 0].includes(d) ? 'ぱい' : d === 3 ? 'ばい' : 'はい');
+  return n + unit;
+}
+const tsu = n => n <= 9 ? n + 'つ' : n + 'こ';
+
+/* ---------- レベル ---------- */
+const LEVELS = [
+  { name: 'レベル1', big: '5・10・20', desc: 'この 3つから えらぶ', sets: [[5, 10, 20]], spread: t => t <= 5 ? 1 : 2 },
+  { name: 'レベル2', big: '10〜50', desc: 'すこし おおく なるよ', sets: [[10, 20, 40], [10, 30, 50], [10, 20, 50], [20, 30, 50]], spread: t => Math.max(1, Math.round(t * .1)) },
+  { name: 'レベル3', big: '100まで', desc: 'たくさん！ 100こも ある？', sets: [[10, 30, 100], [20, 50, 100], [10, 50, 100], [30, 60, 100], [5, 20, 60]], spread: t => Math.max(1, Math.round(t * .1)) },
+  { name: 'レベル4', big: 'みほん 10こ', desc: 'みほんと くらべる くふう', sets: [[20, 40, 60], [30, 50, 80], [40, 60, 100], [30, 60, 90], [50, 70, 100], [10, 30, 50]], spread: () => 3, sample: true },
+];
+const STAR = ['🥉', '⭐', '⭐', '⭐', '🌟'];
+
+function renderLevels() {
+  const box = $('levels'); box.innerHTML = '';
+  LEVELS.forEach((lv, i) => {
+    const b = document.createElement('button'); b.className = 'level';
+    const best = save.best[i];
+    b.innerHTML = `<span class="lv-name">${lv.name}</span><span class="lv-big">${lv.big}</span>
+      <span class="lv-desc">${lv.desc}</span><span class="lv-best">${best != null ? 'いちばん ' + '🍬'.repeat(best) + '<span style="opacity:.25">' + '🍬'.repeat(5 - best) + '</span>' : ''}</span>`;
+    b.addEventListener('click', () => { SND.tap(); startRound(i); });
+    box.appendChild(b);
+  });
+}
+
+/* ---------- ばん（4:3） ---------- */
+const board = $('board');
+function fitBoard() {
+  const r = $('boardwrap').getBoundingClientRect();
+  let w = Math.min(r.width, r.height * 4 / 3, 820);
+  w = Math.max(200, Math.floor(w));
+  // わく の ぶん を たして、なかみ が ちょうど 4:3 に なるように する
+  const bw = parseFloat(getComputedStyle(board).borderTopWidth) || 0;
+  board.style.width = w + 'px'; board.style.height = Math.floor((w - 2 * bw) * .75 + 2 * bw) + 'px';
+  fitSample();
+}
+addEventListener('resize', fitBoard);
+
+// ばらまき: すこし あきの ある マスに 1こずつ（ばしょは cqw / はば=100, たかさ=75）
+function scatter(n, line) {
+  const pts = [];
+  if (line) {
+    const lanes = Math.max(1, Math.round(Math.sqrt(n / 5)));
+    const per = Math.ceil(n / lanes);
+    const gap = 84 / Math.max(per, 1);
+    const size = Math.min(gap * .95, 75 / lanes * .55, 9);
+    for (let i = 0; i < n; i++) {
+      const L = Math.floor(i / per), k = i % per, dir = L % 2 ? -1 : 1;
+      const x = dir > 0 ? 8 + k * gap + gap / 2 : 92 - k * gap - gap / 2;
+      const y = (L + .5) * 75 / lanes + Math.sin(k * .7 + L) * Math.min(4, 75 / lanes * .15);
+      pts.push({ x, y, s: size, flip: dir > 0 });
+    }
+    return pts;
+  }
+  const cols = Math.max(2, Math.ceil(Math.sqrt(n * 1.35 * 4 / 3)));
+  const rows = Math.max(2, Math.ceil(n * 1.35 / cols));
+  const cw = 92 / cols, ch = 69 / rows;
+  const size = Math.min(cw, ch) * .78;
+  const cells = shuffle([...Array(cols * rows).keys()]).slice(0, n);
+  for (const c of cells) {
+    const cx = 4 + (c % cols + .5) * cw, cy = 3 + (Math.floor(c / cols) + .5) * ch;
+    pts.push({ x: cx + (Math.random() - .5) * (cw - size) * .9, y: cy + (Math.random() - .5) * (ch - size) * .9, s: size * (.88 + Math.random() * .18) });
+  }
+  return pts;
+}
+
+function itemEl(th, x, y, s, extra = '') {
+  const e = document.createElement('span'); e.className = 'it';
+  e.textContent = pick(th.items);
+  e.style.left = x + 'cqw'; e.style.top = y + 'cqw'; e.style.fontSize = s + 'cqw';
+  if (extra) e.style.transform = 'translate(-50%,-50%) ' + extra;
+  return e;
+}
+
+/* ---------- みほん 10こ ---------- */
+let sampleSize = 0;
+function fitSample() {
+  const box = $('sbox'); box.innerHTML = '';
+  if (!Q || !LEVELS[lvIdx].sample) return;
+  const bw = board.clientWidth; // 1cqw = bw/100 px（わく の うちがわ）
+  const land = matchMedia('(min-aspect-ratio: 5/4)').matches;
+  const maxW = $('sample').parentElement.clientWidth - (land ? 28 : 100);
+  const px = Math.min(Q.size * bw / 100, maxW / 5);
+  const w = px * 5, h = px * 2.3;
+  box.style.width = w + 'px'; box.style.height = h + 'px';
+  box.className = 'sbox ' + Q.th.cls;
+  box.style.border = 'none';
+  Q.sample.forEach(p => {
+    const e = document.createElement('span'); e.className = 'it';
+    e.textContent = Q.th.items[0];
+    e.style.left = p.x * w + 'px'; e.style.top = p.y * h + 'px'; e.style.fontSize = px + 'px';
+    box.appendChild(e);
+  });
+}
+
+/* ---------- いっかい ぶん ---------- */
+let lvIdx = 0, round = null, Q = null, busy = false;
+
+function makeQ(themeKey) {
+  const lv = LEVELS[lvIdx];
+  const set = pick(lv.sets);
+  let target = pick(set);
+  if (themeKey === 'candy' && lvIdx >= 2 && set.includes(100) && Math.random() < .5) target = 100; // ぺしゃんこ を みせたい
+  const sp = lv.spread(target);
+  const n = Math.max(2, target + rnd(sp * 2 + 1) - sp);
+  const th = THEMES[themeKey];
+  const pts = scatter(n, th.line);
+  const size = pts.length ? pts[0].s : 6;
+  // みほん: 2×5 を すこし ずらす（ばしょは 0〜1）
+  const sample = [];
+  for (let i = 0; i < 10; i++) sample.push({ x: (i % 5 + .5) / 5 + (Math.random() - .5) * .06, y: (Math.floor(i / 5) + .5) / 2 + (Math.random() - .5) * .1 });
+  return { key: themeKey, th, n, set, target, pts, size, sample, tries: 0 };
+}
+
+function startRound(i) {
+  epoch++; busy = false;
+  lvIdx = i;
+  const force = (location.search.match(/theme=(\w+)/) || [])[1]; // テストよう
+  const keys = THEMES[force] ? Array(5).fill(force) : shuffle(THEME_KEYS).slice(0, 5);
+  if (!force && !keys.includes('candy')) keys[0] = 'candy';
+  round = { keys: shuffle(keys), idx: 0, res: [] };
+  show('play');
+  requestAnimationFrame(() => { fitBoard(); nextQ(); });
+}
+
+function renderDots() {
+  $('dots').innerHTML = round.keys.map((_, i) =>
+    `<i class="${i === round.idx ? 'now' : ''} ${round.res[i] != null ? 'r' + round.res[i] : ''}"></i>`).join('');
+}
+
+function say(t, shout = false) {
+  const s = $('say'); s.innerHTML = '<span>' + t + '</span>'; s.classList.toggle('shout', shout);
+  if (shout) { s.style.animation = 'none'; void s.offsetWidth; s.style.animation = ''; }
+}
+function mascot(cls, bub, ms = 1800) {
+  const m = $('mascot'), b = $('mbub');
+  m.className = 'mascot'; void m.offsetWidth;
+  if (cls) m.classList.add(cls);
+  if (bub) { b.textContent = bub; b.classList.add('on'); setTimeout(() => b.classList.remove('on'), ms * SPEED + 400); }
+}
+
+async function nextQ(retry) {
+  busy = true;
+  hideSheet();
+  if (!retry) Q = makeQ(round.keys[round.idx]);
+  else { const t = Q.tries + 1; Q = makeQ(Q.key); Q.tries = t; }
+  renderDots();
+  const th = Q.th;
+  // ばんを つくる
+  board.className = 'board ' + th.cls;
+  board.innerHTML = '';
+  fitBoard();
+  Q.pts.forEach(p => board.appendChild(itemEl(th, p.x, p.y, p.s, p.flip ? 'scaleX(-1)' : '')));
+  const cv = document.createElement('div'); cv.className = 'cover'; cv.id = 'cover';
+  cv.innerHTML = `<div><span class="ce">${th.cover[0]}</span>${th.cover[1]}</div>`;
+  board.appendChild(cv);
+  $('sample').classList.toggle('on', !!LEVELS[lvIdx].sample);
+  fitSample();
+  // ふだ
+  const cards = $('cards'); cards.innerHTML = '';
+  Q.set.slice().sort((a, b) => a - b).forEach(v => {
+    const b = document.createElement('button'); b.className = 'ans'; b.disabled = true; b.dataset.v = v;
+    b.innerHTML = `<span class="n">${v}</span><span class="g">ぐらい</span>`;
+    b.addEventListener('click', () => answer(v, b));
+    cards.appendChild(b);
+  });
+  say((retry ? 'もういっかい！ ' : '') + th.q + ' <span style="color:#d6336c">2びょう だけ みせるよ</span>');
+  await sleep(2000);
+  cv.classList.add('on'); SND.close();
+  await sleep(450);
+  say(LEVELS[lvIdx].sample ? 'みほんの 10こと くらべて… だいたい いくつ？' : 'だいたい いくつ？ ふだを えらんでね');
+  cards.querySelectorAll('.ans').forEach(b => b.disabled = false);
+  busy = false;
+}
+
+async function answer(v, btn) {
+  if (busy) return;
+  busy = true; SND.tap();
+  const cards = [...$('cards').querySelectorAll('.ans')];
+  cards.forEach(b => b.disabled = true);
+  btn.classList.add('pick');
+  const n = Q.n;
+  const ranked = Q.set.slice().sort((a, b) => Math.abs(a - n) - Math.abs(b - n));
+  const rank = ranked.indexOf(v); // 0=いちばん ちかい
+  say(`「${v}ぐらい」 だね。 じゃあ こたえあわせ！`);
+  await sleep(700);
+  const gags = await reveal();
+  // こたえあわせの あとに わらい
+  const best = cards.find(b => +b.dataset.v === ranked[0]); best.classList.add('best');
+  if (gags.flat) {
+    mascot('flat', 'ぷしゅ〜'); SND.deflate();
+    say('100こも はいたら かばくん ぺしゃんこ！', true);
+    await sleep(1800);
+  }
+  const th = Q.th;
+  let msg, msg2;
+  if (rank === 0) {
+    SND.ok(); mascot('dance', '♪ ちかい ちかい！', 2200); confetti();
+    msg = Q.tries ? 'こんどは ぴったり ちかい！ 🎉' : 'ちかい！ だいせいかい！ 🎉';
+    msg2 = `ほんとうは ${cnt(n, th.unit)}。 だいたい ${ranked[0]} だね！`;
+  } else if (rank === 1) {
+    SND.mid(); mascot('nod', 'おしい！');
+    msg = 'おしい！ もうすこし！';
+    msg2 = `ほんとうは ${cnt(n, th.unit)}。 だいたい ${ranked[0]} だったね`;
+  } else {
+    SND.hic(); mascot('hic', 'ひっく！ ひっく！');
+    msg = 'あらら、かばくんが しゃっくり！';
+    msg2 = `ほんとうは ${cnt(n, th.unit)}。 だいたい ${ranked[0]}。 つぎは きっと できるよ`;
+  }
+  const r = rank === 0 ? (Q.tries ? 1 : 2) : 0;
+  if (round.res[round.idx] == null || r > round.res[round.idx]) round.res[round.idx] = r;
+  renderDots();
+  await sleep(rank === 0 ? 900 : 1100);
+  const last = round.idx >= round.keys.length - 1;
+  const btns = [];
+  if (rank !== 0) btns.push(['もういっかい', 'sub', () => { SND.tap(); nextQ(true); }]);
+  btns.push([last ? 'おしまい' : 'つぎへ ▶', '', () => { SND.tap(); if (last) finish(); else { round.idx++; nextQ(); } }]);
+  showSheet(msg, msg2, btns);
+  busy = false;
+}
+
+/* 1こずつ だして 10こずつ ならべる */
+async function reveal() {
+  const th = Q.th, n = Q.n, gags = {};
+  board.innerHTML = '';
+  board.className = 'board ' + th.cls + ' reveal';
+  fitBoard();
+  const rows = Math.max(1, Math.ceil(n / 10));
+  const top = 17, avail = 75 - top - 2;
+  const slot = Math.min(7.4, avail / rows / 1.12);
+  const rowH = slot * 1.12;
+  const x0 = 50 - (slot * 10 + 14) / 2;
+  const src = document.createElement('span'); src.className = 'src';
+  src.textContent = th.src; src.style.left = '50%'; src.style.top = '8.5cqw'; src.style.fontSize = '12cqw';
+  board.appendChild(src);
+  const sb = document.createElement('span'); sb.className = 'srcbub';
+  sb.style.left = '58cqw'; sb.style.top = '7cqw';
+  board.appendChild(sb);
+  const bubble = (t, ms) => { sb.textContent = t; sb.classList.remove('on'); void sb.offsetWidth; sb.classList.add('on'); if (ms) setTimeout(() => sb.classList.remove('on'), ms * SPEED); };
+  const rowEls = [], labs = [];
+  const yOf = r => top + r * rowH + rowH / 2;
+  for (let r = 0; r < rows; r++) {
+    const re = document.createElement('div'); re.className = 'row';
+    re.style.left = (x0 - .8) + 'cqw'; re.style.top = (yOf(r) - rowH / 2 + .2) + 'cqw';
+    re.style.width = (slot * 10 + 1.6) + 'cqw'; re.style.height = (rowH - .4) + 'cqw';
+    board.appendChild(re); rowEls.push(re);
+    const lb = document.createElement('span'); lb.className = 'rowlab';
+    lb.style.left = (x0 + slot * 10 + 2) + 'cqw'; lb.style.top = yOf(r) + 'cqw'; lb.style.fontSize = Math.min(5.5, slot * .85) + 'cqw';
+    lb.textContent = ((r + 1) * 10);
+    board.appendChild(lb); labs.push(lb);
+  }
+  bubble(th.open, 1200);
+  src.classList.add('wob');
+  await sleep(600);
+
+  const step = Math.max(28, Math.min(260, 3600 / n));
+  const eatAt = Q.key === 'candy' && n >= 8 && Math.random() < .65 ? 3 + rnd(Math.min(n - 4, 20)) : -1;
+  const teethAt = Q.key === 'candy' && n >= 10 && Math.random() < .5 ? 5 + rnd(n - 6) : -1;
+  const flyFrom = (el, dx, dy) => el.animate([
+    { transform: `translate(calc(-50% + ${dx}cqw), calc(-50% + ${dy}cqw)) scale(.3)`, opacity: .6 },
+    { transform: `translate(calc(-50% + ${dx * .45}cqw), calc(-50% + ${dy * .45 - 10}cqw)) scale(1.2)`, opacity: 1, offset: .5 },
+    { transform: 'translate(-50%, -50%) scale(1)', opacity: 1 }], { duration: 380 * Math.max(SPEED, .3), easing: 'ease-out' });
+
+  for (let i = 0; i < n; i++) {
+    if (i === eatAt) {
+      // とちゅうで 1こ たべちゃう →「いまの なし！」
+      const e = document.createElement('span'); e.className = 'it'; e.textContent = '🍬';
+      e.style.left = '50cqw'; e.style.top = '8.5cqw'; e.style.fontSize = slot + 'cqw'; board.appendChild(e);
+      e.animate([{ transform: 'translate(-50%,-50%) translate(8cqw,-6cqw)' }, { transform: 'translate(-50%,-50%) scale(.2)' }], { duration: 300, fill: 'forwards' });
+      await sleep(300); e.remove();
+      bubble('ぱくっ もぐもぐ…', 0); SND.munch(); src.classList.remove('wob'); void src.offsetWidth; src.classList.add('wob');
+      await sleep(1000);
+      bubble('…いまの なし！ ぺっ', 1100); SND.spit();
+      await sleep(500);
+    }
+    if (i === teethAt) {
+      const e = document.createElement('span'); e.className = 'it'; e.textContent = '🦷';
+      e.style.left = '88cqw'; e.style.top = '8cqw'; e.style.fontSize = '7cqw'; board.appendChild(e);
+      flyFrom(e, -38, 0.5); SND.spit();
+      await sleep(350);
+      say('わっ！ それは わしの はいれば じゃ〜！ （かぞえないよ）', true); SND.shout();
+      await sleep(1500);
+    }
+    const r = Math.floor(i / 10), k = i % 10;
+    const x = x0 + slot * (k + .5), y = yOf(r);
+    let e;
+    if (th.cup) { e = document.createElement('span'); e.className = 'it'; e.innerHTML = '<span class="cup"></span>'; e.style.left = x + 'cqw'; e.style.top = y + 'cqw'; e.style.fontSize = slot * .85 + 'cqw'; }
+    else e = itemEl(th, x, y, slot * .82);
+    board.appendChild(e);
+    flyFrom(e, 50 - x, 8.5 - y);
+    SND.pop(i);
+    if (k === 9) {
+      setTimeout(() => { rowEls[r].classList.add('full'); labs[r].classList.add('on'); SND.ten(r); }, 380 * Math.max(SPEED, .3));
+      await sleep(Math.max(step, 140));
+    } else await sleep(step);
+  }
+  src.classList.remove('wob');
+  await sleep(500);
+  // 10の まとまりで いう
+  const tens = Math.floor(n / 10), ones = n % 10, u = th.unit;
+  let line;
+  if (tens === 0) line = `ぜんぶで <span class="big">${cnt(n, u)}</span>`;
+  else if (ones === 0) line = `10が ${tsu(tens)}で <span class="big">${cnt(n, u)}</span>`;
+  else line = `10が ${tsu(tens)}で ${tens * 10}、ばらが ${cnt(ones, u)}。<br>ぜんぶで <span class="big">${cnt(n, u)}</span>`;
+  const st = document.createElement('div'); st.className = 'stamp on'; st.innerHTML = line;
+  board.appendChild(st);
+  say(line.replace(/<br>/g, ' ').replace(/<[^>]+>/g, ''));
+  await sleep(1600);
+  st.style.transition = 'opacity .5s'; st.style.opacity = '0'; // ならびが みえるように けす
+  if (Q.key === 'candy' && n >= 80) gags.flat = true;
+  return gags;
+}
+
+/* ---------- シート・おわり ---------- */
+function showSheet(msg, msg2, btns) {
+  $('smsg').textContent = msg; $('smsg2').textContent = msg2;
+  const box = $('sbtns'); box.innerHTML = '';
+  btns.forEach(([t, c, f]) => { const b = document.createElement('button'); b.className = 'btn ' + c; b.textContent = t; b.addEventListener('click', f); box.appendChild(b); });
+  $('sheet').classList.add('on');
+}
+function hideSheet() { $('sheet').classList.remove('on'); }
+
+function finish() {
+  hideSheet();
+  const score = round.res.filter(r => r > 0).length;
+  save.plays = (save.plays || 0) + 1;
+  if (save.best[lvIdx] == null || score > save.best[lvIdx]) save.best[lvIdx] = score;
+  persist();
+  show('result');
+  $('rstars').innerHTML = round.res.map(r => r === 2 ? '🍬' : r === 1 ? '🍭' : '<span style="opacity:.25">🍬</span>').join('');
+  const rh = $('rhead'); rh.className = 'rh';
+  if (score >= 5) { $('rtitle').textContent = 'すごい！ みつもり めいじん！'; rh.textContent = '🦛'; rh.classList.add('dance'); SND.fan(); confetti(); setTimeout(confetti, 600); }
+  else if (score >= 3) { $('rtitle').textContent = 'よく できたね！'; rh.textContent = '🦛'; rh.classList.add('dance'); SND.ok(); confetti(); }
+  else { $('rtitle').textContent = 'だんだん わかって きたね！'; rh.textContent = '🦛'; SND.mid(); }
+  $('rmsg').innerHTML = `${LEVELS[lvIdx].name}： 5もん ちゅう ${score}もん ちかかったよ。<br>10の まとまりを おもいだすと、もっと わかるよ！`;
+}
+
+function confetti() {
+  const em = ['🎉', '✨', '🍬', '⭐', '🎈'];
+  for (let i = 0; i < 14; i++) {
+    const c = document.createElement('span'); c.className = 'conf'; c.textContent = pick(em);
+    c.style.left = Math.random() * 100 + 'vw'; c.style.animationDelay = Math.random() * .4 + 's';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 2400);
+  }
+}
+
+function show(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); }
+
+$('quit').addEventListener('click', () => { epoch++; busy = false; SND.tap(); hideSheet(); renderLevels(); show('title'); });
+$('again').addEventListener('click', () => { SND.tap(); startRound(lvIdx); });
+$('toTitle').addEventListener('click', () => { SND.tap(); renderLevels(); show('title'); });
+renderLevels();
+window.DAITAI = { get Q() { return Q; }, get round() { return round; } }; // テストよう
+</script>
+</body>
+</html>
