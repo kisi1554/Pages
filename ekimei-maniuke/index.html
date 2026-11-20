@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>えきめい まにうけ くん</title>
+<meta name="description" content="なんでも ことばどおりに うけとる まにうけくんと いっしょに、えきの なまえの かんじに かくれた むかしの けしきを みつける ゲーム。">
+<meta name="theme-color" content="#f08c00">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤔</text></svg>">
+<style>
+*,*::before,*::after{ box-sizing:border-box; }
+:root{
+  --ink:#2b2118; --soft:#7a6553; --bg1:#fff6e0; --bg2:#e7f5ff;
+  --card:#fff; --line:#f0d9b5; --accent:#f08c00; --accent-dk:#c46d00;
+  --ok:#2f9e44; --ng:#e8590c; --sky:#74c0fc; --shadow:rgba(150,90,0,.22);
+}
+html,body{ margin:0; padding:0; }
+body{
+  min-height:100vh; color:var(--ink);
+  background:linear-gradient(170deg,var(--bg1) 0%,var(--bg2) 100%); background-attachment:fixed;
+  font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN","Yu Gothic","游ゴシック体","Meiryo",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent; overflow-x:hidden;
+}
+.wrap{ max-width:860px; margin:0 auto; padding:8px 14px calc(24px + env(safe-area-inset-bottom)); }
+rt{ font-size:.45em; font-weight:400; color:var(--soft); letter-spacing:0; }
+button{ font:inherit; color:inherit; }
+
+.bar{ display:flex; align-items:center; gap:8px; min-height:56px; }
+.bar .sp{ flex:1; }
+.bar .prog{ font-weight:700; color:var(--accent-dk); font-size:clamp(14px,3.8vw,17px); }
+.iconBtn{
+  min-width:52px; min-height:52px; padding:6px 12px; border:3px solid var(--line); border-radius:16px;
+  background:var(--card); font-size:clamp(14px,3.8vw,17px); font-weight:700; cursor:pointer;
+  box-shadow:0 4px 0 var(--shadow);
+}
+.iconBtn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--shadow); }
+.iconBtn[hidden]{ display:none; }
+
+.screen{ display:none; }
+.screen.on{ display:block; animation:fadeIn .25s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+.big{
+  display:block; width:100%; min-height:72px; margin:12px 0 0; padding:14px 18px;
+  border:none; border-radius:22px; background:var(--accent); color:#fff;
+  font-size:clamp(20px,5.6vw,26px); font-weight:800; letter-spacing:.06em; cursor:pointer;
+  box-shadow:0 6px 0 var(--accent-dk);
+}
+.big:active{ transform:translateY(4px); box-shadow:0 2px 0 var(--accent-dk); }
+.big.sub{ background:#fff; color:var(--accent-dk); border:3px solid var(--line); box-shadow:0 6px 0 var(--shadow); }
+.big.no{ background:#e03131; box-shadow:0 6px 0 #a61e1e; font-size:clamp(24px,7vw,34px); }
+
+/* ---------- タイトル ---------- */
+.hero{ text-align:center; padding:4px 0 8px; }
+.hero h1{ margin:4px 0 0; font-size:clamp(28px,8.4vw,46px); line-height:1.25; letter-spacing:.04em; }
+.hero h1 small{ display:block; font-size:.42em; color:var(--soft); letter-spacing:.1em; }
+.hero p{ margin:10px 0 0; font-size:clamp(15px,4.2vw,18px); line-height:1.8; color:var(--soft); }
+.heroChara{ width:min(46vw,190px); margin:8px auto 0; display:block; }
+.titleBtns{ max-width:480px; margin:6px auto 0; }
+.stat{ text-align:center; margin-top:14px; color:var(--soft); font-size:clamp(14px,3.8vw,16px); }
+
+/* ---------- まにうけくん ---------- */
+.chara{ display:block; width:100%; height:auto; overflow:visible; }
+.chara .body{ transform-box:fill-box; transform-origin:50% 100%; }
+.chara.bounce .body{ animation:bob 1.1s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-6px);} }
+.chara.fall .body{ animation:fall 1.1s cubic-bezier(.3,1.4,.5,1) forwards; }
+@keyframes fall{
+  0%{ transform:rotate(0); } 30%{ transform:rotate(-14deg) translateY(-10px); }
+  100%{ transform:rotate(72deg) translateY(4px); }
+}
+.chara .mouthOpen,.chara .eyesX{ display:none; }
+.chara.surprised .mouthOpen,.chara.surprised .eyesX{ display:inline; }
+.chara.surprised .mouthSmile,.chara.surprised .eyesN{ display:none; }
+
+/* ---------- えき ---------- */
+.stage{
+  position:relative; height:118px; margin:4px 0 8px; border-radius:20px; overflow:hidden;
+  background:linear-gradient(#cfeaff 0 62%,#d9c7a6 62% 66%,#8d7b68 66% 70%,#b8a78f 70%);
+}
+.stage .platform{ position:absolute; left:0; right:0; bottom:0; height:30%; background:#c9b896; border-top:4px solid #fff3; }
+.train{ position:absolute; bottom:22%; left:110%; width:300px; height:auto; }
+.train.arrive{ animation:arrive 1.4s cubic-bezier(.2,.8,.3,1) forwards; }
+@keyframes arrive{ from{ left:110%; } to{ left:calc(50% - 150px); } }
+
+.sign{
+  position:relative; margin:0 auto; max-width:560px; padding:10px 16px 12px; text-align:center;
+  background:#fff; border:4px solid #3b3b3b; border-radius:14px; box-shadow:0 5px 0 #0002;
+}
+.sign .area{ display:inline-block; margin-bottom:6px; padding:1px 10px; border-radius:99px; background:#fff3bf; font-size:clamp(13px,3.6vw,15px); color:var(--soft); font-weight:700; }
+.sign .nm{ font-size:clamp(38px,12vw,64px); font-weight:800; letter-spacing:.08em; line-height:1.5; }
+.sign .nm rt{ font-size:.32em; }
+.sign .nm .hit{ color:#e03131; }
+.sign .bar2{ height:8px; margin:2px -16px -12px; border-radius:0 0 9px 9px; background:var(--accent); }
+
+.talk{ display:flex; align-items:flex-end; gap:10px; margin-top:12px; position:relative; z-index:2; }
+.talk .who{ flex:0 0 auto; width:min(30vw,130px); }
+.bubble{
+  position:relative; flex:1; padding:12px 14px; background:#fff; border:3px solid var(--line);
+  border-radius:20px; font-size:clamp(17px,4.8vw,22px); line-height:1.65; font-weight:700;
+}
+.bubble::before{
+  content:""; position:absolute; left:-14px; bottom:22px; border:8px solid transparent;
+  border-right:14px solid var(--line); border-left:none;
+}
+.dream{
+  margin:10px auto 0; max-width:520px; padding:10px; text-align:center; border-radius:999px;
+  background:#fff; border:3px dashed #d0bfff; font-size:clamp(46px,15vw,84px); line-height:1.15;
+  animation:pop .5s ease;
+}
+.dream small{ display:block; font-size:clamp(13px,3.6vw,15px); color:#7950f2; font-weight:700; }
+@keyframes pop{ 0%{transform:scale(.4); opacity:0;} 70%{transform:scale(1.06);} 100%{transform:scale(1); opacity:1;} }
+
+.q{ margin:14px 0 6px; text-align:center; font-size:clamp(18px,5vw,23px); font-weight:800; }
+.choices{ display:grid; grid-template-columns:1fr; gap:10px; }
+.choice{
+  display:flex; align-items:center; gap:12px; width:100%; min-height:86px; padding:10px 14px;
+  border:4px solid var(--line); border-radius:20px; background:#fff; cursor:pointer; text-align:left;
+  box-shadow:0 5px 0 var(--shadow);
+}
+.choice:active{ transform:translateY(3px); box-shadow:0 2px 0 var(--shadow); }
+.choice .pic{ flex:0 0 auto; font-size:clamp(34px,10vw,46px); line-height:1; min-width:3.2em; text-align:center; }
+.choice .t{ font-size:clamp(16px,4.6vw,20px); font-weight:700; line-height:1.5; }
+.choice.ng{ opacity:.45; border-color:#ddd; animation:shake .45s; pointer-events:none; }
+.choice.ok{ border-color:var(--ok); background:#ebfbee; }
+@keyframes shake{ 0%,100%{transform:none;} 20%{transform:translateX(-9px);} 40%{transform:translateX(9px);} 60%{transform:translateX(-6px);} 80%{transform:translateX(5px);} }
+@media (min-width:700px){ .choices{ grid-template-columns:1fr 1fr 1fr; } .choice{ flex-direction:column; text-align:center; min-height:170px; justify-content:center; } }
+
+/* ---------- むかし → いま ---------- */
+.ff{
+  margin:12px 0 0; padding:14px 12px; border-radius:22px; background:#fff; border:4px solid var(--line);
+  text-align:center;
+}
+.ff .lbl{ display:flex; justify-content:center; align-items:center; gap:10px; font-weight:800; font-size:clamp(16px,4.4vw,20px); }
+.ff .yr{ min-width:6.5em; padding:2px 10px; border-radius:99px; background:#fff3bf; }
+.ff .row{ display:flex; justify-content:center; gap:2px; margin:8px 0 4px; font-size:clamp(38px,11vw,60px); line-height:1.1; }
+.ff .row span{ display:inline-block; }
+.ff .row span.flip{ animation:flip .4s ease; }
+@keyframes flip{ 0%{transform:scale(1);} 50%{transform:scale(0) rotate(90deg);} 100%{transform:scale(1);} }
+.ff .info{ margin:8px 2px 0; text-align:left; font-size:clamp(16px,4.4vw,19px); line-height:1.85; }
+.ff.past{ background:#fff9db; }
+
+.get{
+  margin:12px 0 0; padding:12px; border-radius:22px; background:#fff; border:4px solid #ffd43b; text-align:center;
+  animation:pop .5s ease;
+}
+.get .k{ display:inline-block; font-size:clamp(64px,20vw,110px); font-weight:800; line-height:1.1; color:#e03131; }
+.get .k rt{ font-size:.22em; color:var(--soft); }
+.get .mean{ font-size:clamp(16px,4.4vw,19px); font-weight:700; }
+.lights{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-top:10px; }
+.lamp{
+  padding:6px 10px; border-radius:12px; background:#eee; color:#aaa; font-weight:800;
+  font-size:clamp(17px,4.8vw,21px); transition:all .3s;
+}
+.lamp rt{ color:inherit; }
+.lamp.on{ background:#fff3bf; color:var(--ink); box-shadow:0 0 0 3px #ffd43b, 0 0 16px #ffd43b; }
+.lamp .hit{ color:#e03131; }
+
+/* ---------- けっか ---------- */
+.result{ text-align:center; }
+.result h2{ font-size:clamp(28px,8vw,40px); margin:8px 0; }
+.stars{ font-size:clamp(40px,12vw,60px); letter-spacing:.1em; }
+.stars span{ display:inline-block; animation:pop .5s ease backwards; }
+.gotList{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin:10px 0; }
+.gotList b{ font-size:clamp(34px,10vw,48px); padding:4px 12px; background:#fff; border:3px solid #ffd43b; border-radius:14px; }
+.gotList rt{ font-size:.32em; }
+
+/* ---------- ずかん ---------- */
+.zgrid{ display:grid; grid-template-columns:repeat(5,1fr); gap:8px; margin-top:6px; }
+@media (max-width:420px){ .zgrid{ grid-template-columns:repeat(4,1fr); } }
+.zk{
+  position:relative; aspect-ratio:1; border:4px solid var(--line); border-radius:18px; background:#fff;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:0 4px 0 var(--shadow); padding:2px;
+}
+.zk .kk{ font-size:clamp(34px,10vw,52px); font-weight:800; line-height:1.15; }
+.zk .kk rt{ font-size:.3em; }
+.zk .ic{ font-size:clamp(14px,3.8vw,18px); }
+.zk.lock{ background:#f1f3f5; color:#adb5bd; }
+.zk .cnt{ position:absolute; right:6px; bottom:3px; font-size:12px; font-weight:800; color:var(--accent-dk); }
+.zdetail{ margin-top:12px; padding:14px; border-radius:22px; background:#fff; border:4px solid var(--line); }
+.zdetail h3{ margin:0; display:flex; align-items:center; gap:14px; font-size:clamp(18px,5vw,22px); }
+.zdetail h3 .kk{ font-size:clamp(56px,16vw,80px); color:#e03131; line-height:1.1; }
+.zdetail h3 .kk rt{ font-size:.25em; color:var(--soft); }
+.zdetail p{ margin:8px 0; font-size:clamp(15px,4.2vw,18px); line-height:1.8; }
+.zdetail .lamp.on{ cursor:default; }
+.note{ font-size:clamp(13px,3.6vw,15px); color:var(--soft); line-height:1.7; margin-top:14px; }
+
+.confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:20; }
+.confetti i{ position:absolute; top:-20px; width:10px; height:14px; border-radius:2px; animation:drop linear forwards; }
+@keyframes drop{ to{ transform:translateY(110vh) rotate(720deg); } }
+.hide{ display:none !important; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button class="iconBtn" id="btnHome" hidden aria-label="はじめの がめん">🏠</button>
+    <span class="prog" id="prog"></span>
+    <span class="sp"></span>
+    <button class="iconBtn" id="btnSound" aria-label="おと">🔊</button>
+  </div>
+
+  <!-- タイトル -->
+  <section class="screen on" id="scTitle">
+    <div class="hero">
+      <h1><small>なんでも ことばどおり！</small>えきめい<br>まにうけ くん</h1>
+      <div class="heroChara" id="heroChara"></div>
+      <p>まにうけくんは えきの なまえを<br>かんじ どおりに うけとっちゃう。<br>「ちがうよ！」って ほんとうの すがたを おしえてあげよう。</p>
+    </div>
+    <div class="titleBtns">
+      <button class="big" id="btnStart">🚃 しゅっぱつ！</button>
+      <button class="big sub" id="btnZukan">📖 かんじ ずかん</button>
+    </div>
+    <div class="stat" id="titleStat"></div>
+  </section>
+
+  <!-- えき -->
+  <section class="screen" id="scPlay">
+    <div class="stage" id="stage"><div class="platform"></div></div>
+    <div class="sign" id="sign"></div>
+
+    <div id="phaseMaku">
+      <div class="talk">
+        <div class="who" id="charaPlay"></div>
+        <div class="bubble" id="bubble"></div>
+      </div>
+      <div class="dream hide" id="dream"></div>
+      <button class="big no hide" id="btnNo">✋ ちがうよ！</button>
+    </div>
+
+    <div id="phaseQ" class="hide">
+      <div class="q">ほんとうは どんな ところ だったのかな？</div>
+      <div class="choices" id="choices"></div>
+    </div>
+
+    <div id="phaseA" class="hide">
+      <div class="ff past" id="ff">
+        <div class="lbl"><span>⏩</span><span class="yr" id="ffYr">むかし</span></div>
+        <div class="row" id="ffRow"></div>
+        <div class="info" id="ffInfo"></div>
+      </div>
+      <div class="get hide" id="get"></div>
+      <button class="big hide" id="btnNext">つぎの えきへ ▶</button>
+    </div>
+  </section>
+
+  <!-- けっか -->
+  <section class="screen" id="scResult">
+    <div class="result">
+      <div class="stars" id="stars"></div>
+      <h2>とうちゃく！ よく できました</h2>
+      <div class="talk" style="justify-content:center">
+        <div class="who" id="charaRes"></div>
+        <div class="bubble" id="resSay" style="flex:0 1 420px"></div>
+      </div>
+      <p style="font-weight:700;font-size:clamp(16px,4.4vw,19px);margin:14px 0 0">きょう みつけた かんじ</p>
+      <div class="gotList" id="gotList"></div>
+      <div style="max-width:480px;margin:0 auto">
+        <button class="big" id="btnAgain">🚃 もういちど あそぶ</button>
+        <button class="big sub" id="btnZukan2">📖 かんじ ずかん</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="screen" id="scZukan">
+    <div class="q" style="margin-top:0">📖 かんじ ずかん</div>
+    <div class="zgrid" id="zgrid"></div>
+    <div class="zdetail hide" id="zdetail"></div>
+    <p class="note">
+      えきの なまえの わけ（ゆらい）は、いくつも せつが あることが おおいよ。
+      このアプリでは くや しの せつめい・じてんで たしかめた ものを のせて、はっきり しない ものは
+      「〜と いわれているよ」と かいているよ。
+    </p>
+  </section>
+</div>
+
+<script>
+'use strict';
+/* =========================================================================
+   データ（えき・かんじ）… ここ 1かしょに まとめる
+   n: えきめい。「漢字:よみ」を | で つなぐ（ふりがな用）
+   k: ずかんに はいる かんじ（10この うち 1つ）
+   ========================================================================= */
+const KANJI = {
+  '谷': { yomi:'たに', ic:'🏞️', mean:'やまと やまの あいだの ひくい ところ' },
+  '坂': { yomi:'さか', ic:'⛰️', mean:'のぼったり くだったり する ななめの みち' },
+  '橋': { yomi:'はし', ic:'🌉', mean:'かわや みぞを わたる ための みち' },
+  '川': { yomi:'かわ', ic:'🌊', mean:'みずが ながれて いく ところ' },
+  '池': { yomi:'いけ', ic:'🪷', mean:'みずが たまって いる ところ' },
+  '島': { yomi:'しま', ic:'🏝️', mean:'まわりを みずに かこまれた とち' },
+  '田': { yomi:'た', ic:'🌾', mean:'おこめを そだてる たんぼ' },
+  '山': { yomi:'やま', ic:'🗻', mean:'たかく もりあがった ところ' },
+  '台': { yomi:'だい', ic:'🪜', mean:'まわりより たかくて たいらな ところ' },
+  '浜': { yomi:'はま', ic:'🏖️', mean:'うみべの すなの ところ' }
+};
+const KANJI_ORDER = ['谷','坂','橋','川','池','島','田','山','台','浜'];
+
+const STATIONS = [
+  { id:'shibuya', n:'渋:しぶ|谷:や', k:'谷', area:'とうきょう',
+    joke:{ pic:'🏞️😖', say:'わかった！ たにが「しぶーい」かおを してる えき だね！' },
+    ans:{ pic:'⛰️🏞️⛰️', t:'かわが ながれる ひくい たに' },
+    ng:[{ pic:'🏝️', t:'うみに うかぶ しま' },{ pic:'🏔️', t:'たかい やまの てっぺん' }],
+    old:'⛰️🌳🏞️🌳⛰️', now:'🏢🏬🚉🏬🏢', yr:'むかし',
+    info:'しぶやは まわりより ひくい たにに ある まち。むかしは 「しぶやがわ」と いう かわが ながれて いたよ。なまえの わけは いろいろな せつが あるんだ。' },
+  { id:'yotsuya', n:'四:よ|ツ|谷:や', k:'谷', area:'とうきょう',
+    joke:{ pic:'4️⃣🏞️✌️', say:'わかった！ たにが 4つ ならんで じゃんけん してる えき だね！' },
+    ans:{ pic:'🍵🛖🛖', t:'りょうがわが たにの みちに、やすむ おみせが 4けん あった' },
+    ng:[{ pic:'🌉🌉🌉🌉', t:'はしが 4つ ある かわ' },{ pic:'🪷', t:'おおきな いけ' }],
+    old:'⛰️🛖🍵🛖⛰️', now:'🏢🏫🚉⛪🏢', yr:'えどじだい',
+    info:'みちの りょうがわが ふかい たにで、たびの ひとが やすむ 「ちゃや」が 4けん あったから 「よつや」に なった、と いわれているよ。4つの たにが あったから という せつも あるんだ。' },
+  { id:'hibiya', n:'日:ひ|比:び|谷:や', k:'谷', area:'とうきょう',
+    joke:{ pic:'🏞️💥', say:'わかった！ たにに まいにち 「ひび」が はいる えき だね！ ピキピキ！' },
+    ans:{ pic:'🌊🎋🌊', t:'うみが はいりこんだ いりえ（のりを そだてる 「ひび」が たっていた）' },
+    ng:[{ pic:'🗻', t:'たかい やま' },{ pic:'🌾', t:'ひろい たんぼ' }],
+    old:'🌊🎋🌊🎋🌊', now:'🏢🌳🎭🌳🏢', yr:'ずっと むかし',
+    info:'ずっと むかし、ここは うみ（ひびやいりえ）だったんだ。のりを そだてる ために うみに たてた えだを 「ひび」と いって、それが なまえに なった と いわれているよ。いまは うめたてられて まちに なったよ。' },
+  { id:'sendagaya', n:'千:せん|駄:だ|ケ:が|谷:や', k:'谷', area:'とうきょう',
+    joke:{ pic:'🍬🍭🍬', say:'わかった！ たにに だがしが 1000こ つまってる えき だね！' },
+    ans:{ pic:'🌾🐴🌾', t:'やねに つかう くさ「かや」が たくさん はえた たに' },
+    ng:[{ pic:'🏖️', t:'すなはまの うみべ' },{ pic:'🪷', t:'まるい いけ' }],
+    old:'🌿🌾🐴🌾🌿', now:'🏟️🏢🚉🌳🏢', yr:'むかし',
+    info:'やねを つくる 「かや」という くさが、うまに のせて 1000かいぶん（せんだ）も とれる ほど はえて いたから、と いわれているよ。ほかの せつも あるよ。' },
+  { id:'akasaka', n:'赤:あか|坂:さか', k:'坂', area:'とうきょう',
+    joke:{ pic:'😳⛰️', say:'わかった！ さかが まっかに なって てれてる えき だね！' },
+    ans:{ pic:'🌿⛰️🚶', t:'「あかね」という くさが はえた やまに のぼる さか' },
+    ng:[{ pic:'🌊', t:'まっかな うみ' },{ pic:'🌾', t:'ひろい たんぼ' }],
+    old:'🌿⛰️🚶🌿🛖', now:'🏢🏨🚉🏢🏢', yr:'むかし',
+    info:'あかい いろの もとに なる 「あかね」という くさが はえた やまに のぼる さかを 「あかさか」と よんだ、と いわれているよ。' },
+  { id:'kagurazaka', n:'神楽:かぐら|坂:ざか', k:'坂', area:'とうきょう',
+    joke:{ pic:'⛩️🛝', say:'わかった！ かみさまが さかで すべりだい して あそぶ えき だね！' },
+    ans:{ pic:'⛩️🥁🎶', t:'おまつりの おんがく「かぐら」が きこえて くる さか' },
+    ng:[{ pic:'❄️🗻', t:'ゆきの つもった やま' },{ pic:'🏞️', t:'まっすぐな かわ' }],
+    old:'⛩️🥁🌳🎶🛖', now:'🏮🍡🚉🏮🏢', yr:'えどじだい',
+    info:'ちかくに おてらや じんじゃが たくさん あって、かみさまに ささげる おんがく 「かぐら」が きこえて くる さか だった、と いわれているよ。' },
+  { id:'nogizaka', n:'乃:の|木:ぎ|坂:ざか', k:'坂', area:'とうきょう',
+    joke:{ pic:'🌳🏃⛰️', say:'わかった！ 「き」が えっさ ほいさ さかを のぼってる えき だね！' },
+    ans:{ pic:'🏠👤', t:'「のぎ」さん という ひとの いえが あった さか' },
+    ng:[{ pic:'🏖️', t:'きの ない すなはま' },{ pic:'🪷', t:'しずかな いけ' }],
+    old:'🌳⛰️🏠🌳', now:'🏢🎨🚉🏢', yr:'1912ねん',
+    info:'むかしは べつの なまえの さか だったけど、ちかくに すんで いた 「のぎ」さん という ゆうめいな ひとの なまえを とって、1912ねんに 「のぎざか」に なったんだ。' },
+  { id:'shimbashi', n:'新:しん|橋:ばし', k:'橋', area:'とうきょう',
+    joke:{ pic:'🎁🌉', say:'わかった！ ぴかぴかの はしが まだ はこに はいってる えき だね！' },
+    ans:{ pic:'🏞️🌉✨', t:'かわに かかった あたらしい はし' },
+    ng:[{ pic:'🗻✨', t:'できた ばかりの やま' },{ pic:'🪷', t:'おおきな いけ' }],
+    old:'🏞️🌉🛶🌳', now:'🏢🚂🚉🏢', yr:'えどじだい',
+    info:'ここを ながれる かわに あたらしい はしが かけられて、「しんばし」と よばれる ように なったんだ。かわは いまは うめたてられて ないよ。1872ねんには、にっぽんで さいしょの てつどうが この ちかく から はしったよ。' },
+  { id:'nihombashi', n:'日:に|本:ほん|橋:ばし', k:'橋', area:'とうきょう',
+    joke:{ pic:'🗾🌉', say:'わかった！ にっぽんが まるごと のっかる おおきな はし だね！' },
+    ans:{ pic:'🌉🛶🚶', t:'かわに かかる はし。おおきな みちの スタート ちてん' },
+    ng:[{ pic:'🏝️', t:'うみに うかぶ しま' },{ pic:'⛰️🏞️⛰️', t:'ふかい たに' }],
+    old:'🛶🌉🚶🛶🏯', now:'🏢🌉🛣️🏬🏢', yr:'1603ねん',
+    info:'1603ねんに かわに かけられた はし。にっぽんの おおきな みち（ごかいどう）は ここから はじまったんだ。いまも かわの うえに 「にほんばし」が あるよ。' },
+  { id:'kyobashi', n:'京:きょう|橋:ばし', k:'橋', area:'とうきょう',
+    joke:{ pic:'📅🌉', say:'わかった！ 「きょう」だけ ある はし だね！ あしたは きえちゃう！' },
+    ans:{ pic:'🌉🛶', t:'みやこ（きょうと）へ むかう みちの、かわに かかる はし' },
+    ng:[{ pic:'🌾', t:'ひろい たんぼ' },{ pic:'🗻', t:'たかい やま' }],
+    old:'🛶🌉🚶🌳', now:'🏢🏬🚉🏢', yr:'えどじだい',
+    info:'むかし ここの かわに かかって いた はしの なまえ だよ。にほんばし から みやこ（きょうと）へ むかう みちの、さいしょの はし だったから、と いわれているよ。' },
+  { id:'itabashi', n:'板:いた|橋:ばし', k:'橋', area:'とうきょう',
+    joke:{ pic:'🍫🌉', say:'わかった！ いたチョコで できた はし だね！ たべられる！' },
+    ans:{ pic:'🪵🌉🏞️', t:'かわに かけた いたの はし' },
+    ng:[{ pic:'🪨🗻', t:'いしの やま' },{ pic:'🏖️', t:'うみべ' }],
+    old:'🏞️🪵🌉🐴🌳', now:'🏢🚉🏢🌉🏬', yr:'むかし',
+    info:'「しゃくじいがわ」という かわに、いたで できた はしが かかって いたから、と いわれているよ。いまも おなじ なまえの はしが あるよ。' },
+  { id:'iidabashi', n:'飯:いい|田:だ|橋:ばし', k:'橋', area:'とうきょう',
+    joke:{ pic:'🍚🥢🌉', say:'わかった！ ごはんを たべる「おはし」の えき だね！ いただきます！' },
+    ans:{ pic:'👤🏘️🌉', t:'「いいだ」さんの なまえの まちに かけた はし' },
+    ng:[{ pic:'🌾🍚', t:'ごはんの たんぼ' },{ pic:'🪷', t:'まるい いけ' }],
+    old:'🌳🏘️🌉🛶', now:'🏢🚉🌉🏢', yr:'むかし',
+    info:'むかし、この あたりを あんない した 「いいだ」さんの なまえから 「いいだまち」に なり、そこに かけた はしが 「いいだばし」に なった と いわれているよ。' },
+  { id:'ikejiri', n:'池:いけ|尻:じり|大:おお|橋:はし', k:'橋', area:'とうきょう',
+    joke:{ pic:'🪷🍑🌉', say:'わかった！ いけの おしりに おおきな はしが ついてる えき だね！' },
+    ans:{ pic:'🏞️🌉', t:'かわに かかった おおきな はし（おおはし）' },
+    ng:[{ pic:'🏝️', t:'いけの なかの しま' },{ pic:'⛰️', t:'やまの さか' }],
+    old:'🌾🏞️🌉🌳', now:'🏢🛣️🚉🏢', yr:'むかし',
+    info:'むかしの むらの なまえ 「いけじり」と、めぐろがわに かかって いた 「おおはし」を あわせた なまえ だよ。' },
+  { id:'shinagawa', n:'品:しな|川:がわ', k:'川', area:'とうきょう',
+    joke:{ pic:'🏞️🎁🧸📦', say:'わかった！ かわに 「しなもの」が ぷかぷか ながれてる えき だね！' },
+    ans:{ pic:'🏞️🌊⛵', t:'かわ（めぐろがわ）が うみに ながれこむ ところ' },
+    ng:[{ pic:'🗻', t:'たかい やま' },{ pic:'🌾', t:'ひろい たんぼ' }],
+    old:'⛵🌊🏞️⛵🛖', now:'🏢🚄🚉🏢🏢', yr:'ずっと むかし',
+    info:'むかし、めぐろがわが うみに ながれこむ あたりを 「しながわ」と よんだ のが なまえの もと、と いわれているよ。ふねが たくさん とまる みなとが あったんだ。' },
+  { id:'kawasaki', n:'川:かわ|崎:さき', k:'川', area:'かわさき',
+    joke:{ pic:'🏞️🤸', say:'わかった！ かわの さきっちょが ぴょーんと とびだしてる えき だね！' },
+    ans:{ pic:'🏞️🏘️', t:'おおきな かわ（たまがわ）の そばの まち' },
+    ng:[{ pic:'🏝️', t:'うみの まんなかの しま' },{ pic:'🏔️', t:'やまの てっぺん' }],
+    old:'🏞️🛖🐴🛖🌾', now:'🏭🏢🚉🏬🏢', yr:'えどじだい',
+    info:'おおきな たまがわの そばに ある まち。「かわさき」は 「かわに つきでた ところ」という いみの ことば とも いわれているよ。えどじだいには たびの ひとが とまる 「しゅくば」が あったんだ。' },
+  { id:'futakotamagawa', n:'二:ふた|子:こ|玉:たま|川:がわ', k:'川', area:'とうきょう',
+    joke:{ pic:'👯⚽🏞️', say:'わかった！ ふたごの たまが かわで あそんでる えき だね！' },
+    ans:{ pic:'🏞️🌉🌾', t:'「たまがわ」という おおきな かわの そば' },
+    ng:[{ pic:'🪷', t:'ちいさな いけ' },{ pic:'⛰️', t:'さかの うえ' }],
+    old:'🏞️🛶🌾🏞️', now:'🏢🌳🚉🏬🏞️', yr:'むかし',
+    info:'「たまがわ」という おおきな かわの ほとりに ある えき。「ふたこ」は かわの むこうの むらの なまえ から きて いるよ。' },
+  { id:'ikebukuro', n:'池:いけ|袋:ぶくろ', k:'池', area:'とうきょう',
+    joke:{ pic:'🪷👜💧', say:'わかった！ いけの なかに おおきな ふくろが しずんでる えき だね！' },
+    ans:{ pic:'💧🪷🌾', t:'ふくろの ように へこんだ ところに いけや みずが あった' },
+    ng:[{ pic:'🏖️', t:'うみべの すなはま' },{ pic:'🏔️', t:'たかい やま' }],
+    old:'🌾💧🪷🐸🌾', now:'🏢🏬🚉🏢🏬', yr:'むかし',
+    info:'まわりより へこんだ 「ふくろ」の ような ところに いけや しめった ちが あったから、と いわれているよ。えきの ちかくに あった 「まるいけ」から きた という せつも あるよ。' },
+  { id:'tameikesanno', n:'溜:ため|池:いけ|山:さん|王:のう', k:'池', area:'とうきょう',
+    joke:{ pic:'👑🪣💧', say:'わかった！ おうさまが バケツで いけに みずを ためてる えき だね！' },
+    ans:{ pic:'💧🪷🦆', t:'みずを ためた おおきな いけ（ためいけ）' },
+    ng:[{ pic:'🌉', t:'かわの はし' },{ pic:'🌾', t:'たんぼ' }],
+    old:'💧🪷💧🦆💧', now:'🏢🏢🚉🏢⛩️', yr:'えどじだい',
+    info:'えどじだい、ここには みずを ためて おく おおきな 「ためいけ」が あったんだ。「さんのう」は ちかくの じんじゃ（ひえじんじゃ）の よびかた から きて いるよ。' },
+  { id:'tsukishima', n:'月:つき|島:しま', k:'島', area:'とうきょう',
+    joke:{ pic:'🌙🏝️🚀', say:'わかった！ おつきさまに ある しま だね！ ロケットで いこう！' },
+    ans:{ pic:'🌊🧱🏝️', t:'うみを うめたてて つくった しま' },
+    ng:[{ pic:'🏔️', t:'やまの うえ' },{ pic:'🌉', t:'かわの はし' }],
+    old:'🌊🌊⛵🌊🌊', now:'🏢🍳🚉🏢🏢', yr:'1892ねん',
+    info:'めいじじだい（1892ねん）に、うみを うめたてて つくった あたらしい しま なんだ。「きずいた（つくった）しま」で 「つきしま」に なった と いわれているよ。' },
+  { id:'tamachi', n:'田:た|町:まち', k:'田', area:'とうきょう',
+    joke:{ pic:'🌾🏘️🚚', say:'わかった！ たんぼが まるごと まちに おひっこし してる えき だね！' },
+    ans:{ pic:'🌾🌾🛖', t:'たんぼや はたけが ひろがって いた ところ' },
+    ng:[{ pic:'🏝️', t:'うみの しま' },{ pic:'⛰️🏞️⛰️', t:'ふかい たに' }],
+    old:'🌾🌾🛖🌾🌾', now:'🏢🏢🚉🏢🏢', yr:'えどじだい',
+    info:'たんぼや はたけ だった ところに いえや おみせが ならんで、「たまち」と よばれる ように なったんだ。' },
+  { id:'kanda', n:'神:かん|田:だ', k:'田', area:'とうきょう',
+    joke:{ pic:'⛩️🌾💦', say:'わかった！ かみさまが たんぼで どろんこあそび してる えき だね！' },
+    ans:{ pic:'⛩️🌾🍙', t:'じんじゃに そなえる おこめを つくる たんぼ' },
+    ng:[{ pic:'🗻', t:'かみさまの やま' },{ pic:'🌊', t:'ひろい うみ' }],
+    old:'🌾⛩️🌾🛖🌾', now:'🏢🍛🚉🏢🏢', yr:'ずっと むかし',
+    info:'いせじんぐう という じんじゃに そなえる おこめを つくる たんぼ（かんだ）が あったから、と いわれているよ。' },
+  { id:'waseda', n:'早稲:わせ|田:だ', k:'田', area:'とうきょう',
+    joke:{ pic:'⏰🌾🏃', say:'わかった！ はやおきの たんぼが いちばんのり する えき だね！' },
+    ans:{ pic:'🌾⚡🌾', t:'はやく みのる いね（わせ）を つくる たんぼ' },
+    ng:[{ pic:'🪷', t:'ふかい いけ' },{ pic:'🏔️', t:'たかい やま' }],
+    old:'🌾🌾🛖🌾🌾', now:'🏫🏢🚉🏢🏢', yr:'むかし',
+    info:'「わせ」は はやく みのる いねの こと。そういう いねを つくる たんぼが あったから、と いわれているよ。' },
+  { id:'gotanda', n:'五:ご|反:たん|田:だ', k:'田', area:'とうきょう',
+    joke:{ pic:'5️⃣🔄🌾', say:'わかった！ たんぼが 5かい くるっと はんたいを むく えき だね！' },
+    ans:{ pic:'🌾🌾🌾🌾🌾', t:'「5たん」の ひろさの たんぼ' },
+    ng:[{ pic:'🏝️', t:'しま' },{ pic:'⛰️', t:'さか' }],
+    old:'🌾🌾🌾🌾🌾', now:'🏢🏢🚉🏢🏢', yr:'むかし',
+    info:'「たん」は たんぼの ひろさの たんい。めぐろがわの そばに 5たんの ひろさの たんぼが あったから、と いわれているよ。' },
+  { id:'takadanobaba', n:'高:たか|田:だの|馬:ば|場:ば', k:'田', area:'とうきょう',
+    joke:{ pic:'🐴🌾💃', say:'わかった！ おうまさんが たかい たんぼで おどってる えき だね！' },
+    ans:{ pic:'🐴🏇🌳', t:'うまに のる れんしゅうを する ひろば（ばば）' },
+    ng:[{ pic:'🐴🌊', t:'うまが およぐ うみ' },{ pic:'🗻', t:'たかい やま' }],
+    old:'🌳🏇🐴🏇🌳', now:'🏢🚉🏢🏫🏢', yr:'1636ねん',
+    info:'えどじだい（1636ねん）に、さむらいが うまに のる れんしゅうを する ひろば 「ばば」が つくられたんだ。「たかだ」は この あたりの むかしからの なまえ だよ。' },
+  { id:'mita', n:'三:み|田:た', k:'田', area:'とうきょう',
+    joke:{ pic:'3️⃣🌾🏃', say:'わかった！ たんぼが 3つ ならんで かけっこ してる えき だね！' },
+    ans:{ pic:'⛩️🌾', t:'くにや じんじゃの ための たんぼ（みた）' },
+    ng:[{ pic:'🏝️', t:'うみの しま' },{ pic:'❄️🗻', t:'ゆきやま' }],
+    old:'🌾⛩️🌾🌾', now:'🏢🏫🚉🏢', yr:'ずっと むかし',
+    info:'むかし、くにや じんじゃの ための たんぼ 「みた（おんた）」が あったから、と いわれているよ。' },
+  { id:'aoyama', n:'青:あお|山:やま|一:いっ|丁:ちょう|目:め', k:'山', area:'とうきょう',
+    joke:{ pic:'🖌️🟦🗻', say:'わかった！ やまが ぜんぶ まっさおに ぬられてる えき だね！' },
+    ans:{ pic:'🏯👤🌳', t:'「あおやま」さん という ひとの おやしき' },
+    ng:[{ pic:'🌊', t:'あおい うみ' },{ pic:'🪷', t:'あおい いけ' }],
+    old:'🏯🌳🌳🐎', now:'🏢🏢🚉🏢', yr:'えどじだい',
+    info:'えどじだいの はじめ、「あおやま」さん という さむらいの おおきな おやしきが あったから 「あおやま」に なったんだ。あおい やまが あった わけ じゃ ないんだよ！' },
+  { id:'yamate', n:'山:やま|手:て', k:'山', area:'よこはま',
+    joke:{ pic:'🗻👋', say:'わかった！ やまに てが はえて バイバイ してる えき だね！' },
+    ans:{ pic:'🌊⛰️🏠', t:'うみべ より たかい おかの ほう（やまの て）' },
+    ng:[{ pic:'🪷', t:'ひくい いけ' },{ pic:'🌾', t:'たんぼ' }],
+    old:'🌊⛰️🏠🌳', now:'🏠⛪🚉🏢', yr:'むかし',
+    info:'「やまて」は うみべ より たかい、おかの ほうの こと。ちかくの おかには、むかし がいこくの ひとが たくさん すんで いたんだ。' },
+  { id:'daiba', n:'台:だい|場:ば', k:'台', area:'とうきょう',
+    joke:{ pic:'🪑🍽️🪑', say:'わかった！ テーブル（だい）が ずらーっと ならぶ ひろば だね！ ごちそう！' },
+    ans:{ pic:'🌊🏝️🌊', t:'うみの なかに つくった たかい だい（しま）' },
+    ng:[{ pic:'🗻', t:'たかい やま' },{ pic:'🌾', t:'たんぼ' }],
+    old:'🌊🏝️⛵🏝️🌊', now:'🎡🏢🌉🏢🌊', yr:'1853ねん',
+    info:'えどじだいの おわり（1853ねん ごろ）、うみから くる ふねに そなえて、たいほうを おく 「だいば」を うみの なかに つくったんだ。いまも その ひとつが こうえんに のこって いるよ。' },
+  { id:'shirokanedai', n:'白:しろ|金:かね|台:だい', k:'台', area:'とうきょう',
+    joke:{ pic:'🤍🪙✨', say:'わかった！ まっしろな きんの テーブルが ぴかぴか ひかる えき だね！' },
+    ans:{ pic:'⛰️🏠💰', t:'ぎん（しろかね）を たくさん もった ひとが すんだ たかだい' },
+    ng:[{ pic:'🌊🎋', t:'うみの いりえ' },{ pic:'🪷', t:'いけ' }],
+    old:'🌳🏠💰🌳', now:'🏢🌳🚉🏢', yr:'むかし',
+    info:'むかし、ぎん（しろかね）を たくさん もって いた 「しろかね ちょうじゃ」が すんで いた と いわれているよ。「だい」は まわり より たかい だいち の こと。' },
+  { id:'yokohama', n:'横:よこ|浜:はま', k:'浜', area:'よこはま',
+    joke:{ pic:'🏖️😴😴', say:'わかった！ はまべで みんなが よこに なって おひるね してる えき だね！' },
+    ans:{ pic:'🌊🏖️🌊', t:'うみに よこながく つきでた すなはま' },
+    ng:[{ pic:'⛰️🏞️⛰️', t:'やまの たに' },{ pic:'🌾', t:'たんぼ' }],
+    old:'🌊🏖️🛖🌊', now:'🏢🚢🎡🏢', yr:'むかし',
+    info:'むかし、うみに ほそながく つきでた すなはまが あって、それが 「よこはま」の なまえの もとに なった と いわれているよ。いまは うめたてられて おおきな まち だよ。' }
+];
+
+/* ずかんで いっしょに ひかる ほかの えき（よみは 1えきずつ たしかめた もの） */
+const MORE = [
+  '市:いち|ケ:が|谷:や', '保:ほ|土:ど|ケ:が|谷:や', '世:せ|田:た|谷:や', '雑:ぞう|司:し|が|谷:や',
+  '赤:あか|坂:さか|見:み|附:つけ',
+  '水:すい|道:どう|橋:ばし', '船:ふな|橋:ばし',
+  '北:きた|品:しな|川:がわ', '浜:はま|川:かわ|崎:さき', '川:かわ|口:ぐち',
+  '池:いけ|上:がみ', '池:いけ|ノ:の|上:うえ',
+  '大:おお|島:じま', '鹿:か|島:しま|田:だ', '豊島:としま|園:えん',
+  '蒲:かま|田:た',
+  '代:だい|官:かん|山:やま', '御:おん|嶽:たけ|山:さん',
+  '青:あお|葉:ば|台:だい', '洋:よう|光:こう|台:だい', '港:こう|南:なん|台:だい',
+  '新:しん|横:よこ|浜:はま', '浜:はま|松:まつ|町:ちょう'
+];
+
+/* ---------- ユーティリティ ---------- */
+const $ = id => document.getElementById(id);
+function parts(n){ return n.split('|').map(s => { const [b, r] = s.split(':'); return { b, r }; }); }
+function plain(n){ return parts(n).map(p => p.b).join(''); }
+function ruby(n, hit){
+  return parts(n).map(p => {
+    const cls = hit && p.b.includes(hit) ? ' class="hit"' : '';
+    return p.r ? `<ruby${cls}>${p.b}<rt>${p.r}</rt></ruby>` : `<span${cls}>${p.b}</span>`;
+  }).join('');
+}
+function shuffle(a){ a = a.slice(); for (let i = a.length - 1; i > 0; i--){ const j = Math.random() * (i + 1) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function emo(s){ return Array.from(new Intl.Segmenter ? new Intl.Segmenter('ja', { granularity:'grapheme' }).segment(s) : s).map(x => x.segment || x); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- ほぞん ---------- */
+const KEY = 'ekimei-maniuke-v1';
+let save = { done:{}, sound:true };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch (e) {}
+function store(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+function kanjiCount(k){ return STATIONS.filter(s => s.k === k && save.done[s.id]).length; }
+
+/* ---------- おと（WebAudio の ごうせいおん） ---------- */
+let ac = null;
+function ctx(){
+  if (!save.sound) return null;
+  try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) { return null; }
+  return ac;
+}
+function tone(f, t0, d, type = 'sine', v = .18, f2){
+  const a = ctx(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .02); g.gain.exponentialRampToValueAtTime(.001, t + d);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .05);
+}
+const SE = {
+  tap(){ tone(660, 0, .08, 'triangle', .12); },
+  arrive(){ tone(880, 0, .35, 'sine', .15); tone(660, .35, .5, 'sine', .15); },
+  boing(){ tone(300, 0, .35, 'square', .08, 700); },
+  no(){ tone(520, 0, .1, 'square', .1); tone(390, .1, .18, 'square', .1); },
+  wrong(){ tone(220, 0, .25, 'triangle', .14, 180); },
+  slide(){ tone(900, 0, .7, 'sine', .14, 160); tone(120, .75, .15, 'triangle', .18); },
+  ok(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .1, .25, 'triangle', .14)); },
+  tick(){ tone(1200, 0, .04, 'square', .05); },
+  lamp(i){ tone(784 * Math.pow(1.122, i), 0, .25, 'sine', .12); },
+  fanfare(){ [523, 523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .13, .2, 'triangle', .14)); }
+};
+function setSoundBtn(){ $('btnSound').textContent = save.sound ? '🔊' : '🔇'; $('btnSound').setAttribute('aria-label', save.sound ? 'おと オン' : 'おと オフ'); }
+$('btnSound').onclick = () => { save.sound = !save.sound; store(); setSoundBtn(); SE.tap(); };
+setSoundBtn();
+
+/* ---------- まにうけくん（オリジナルの え） ---------- */
+function charaSVG(){
+  return `<svg class="chara bounce" viewBox="0 0 160 170" aria-label="まにうけくん" role="img">
+  <ellipse cx="80" cy="162" rx="46" ry="7" fill="#0002"/>
+  <g class="body">
+    <path d="M80 8 q10 -6 14 6" stroke="#5c3d1e" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="80" cy="92" rx="62" ry="66" fill="#ffc94d" stroke="#5c3d1e" stroke-width="5"/>
+    <path d="M30 60 q50 -40 100 0" fill="#4dabf7" stroke="#5c3d1e" stroke-width="5"/>
+    <rect x="26" y="56" width="108" height="12" rx="6" fill="#1c7ed6" stroke="#5c3d1e" stroke-width="4"/>
+    <circle cx="80" cy="40" r="7" fill="#ffd43b" stroke="#5c3d1e" stroke-width="3"/>
+    <g class="eyesN">
+      <circle cx="56" cy="92" r="15" fill="#fff" stroke="#5c3d1e" stroke-width="4"/>
+      <circle cx="104" cy="92" r="15" fill="#fff" stroke="#5c3d1e" stroke-width="4"/>
+      <circle cx="60" cy="94" r="7" fill="#2b2118"/><circle cx="108" cy="94" r="7" fill="#2b2118"/>
+      <circle cx="62" cy="91" r="2.5" fill="#fff"/><circle cx="110" cy="91" r="2.5" fill="#fff"/>
+    </g>
+    <g class="eyesX" stroke="#2b2118" stroke-width="5" stroke-linecap="round">
+      <path d="M46 84 l20 16 M66 84 l-20 16"/><path d="M94 84 l20 16 M114 84 l-20 16"/>
+    </g>
+    <ellipse cx="38" cy="116" rx="9" ry="6" fill="#ff8787" opacity=".7"/>
+    <ellipse cx="122" cy="116" rx="9" ry="6" fill="#ff8787" opacity=".7"/>
+    <path class="mouthSmile" d="M62 122 q18 18 36 0" stroke="#5c3d1e" stroke-width="5" fill="#e8590c" stroke-linejoin="round"/>
+    <ellipse class="mouthOpen" cx="80" cy="128" rx="12" ry="15" fill="#c92a2a" stroke="#5c3d1e" stroke-width="4"/>
+    <path d="M22 118 q-16 -4 -14 -22" stroke="#5c3d1e" stroke-width="6" fill="none" stroke-linecap="round"/>
+    <path d="M138 118 q16 -4 14 -22" stroke="#5c3d1e" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g></svg>`;
+}
+function trainSVG(){
+  return `<svg class="train" viewBox="0 0 300 70" aria-hidden="true">
+  <rect x="4" y="6" width="292" height="50" rx="14" fill="#f8f9fa" stroke="#495057" stroke-width="3"/>
+  <path d="M4 20 q0 -14 16 -14 h20 v50 h-20 q-16 0 -16 -14z" fill="#ffe066" stroke="#495057" stroke-width="3"/>
+  <rect x="4" y="38" width="292" height="7" fill="#f08c00"/>
+  ${[52, 100, 148, 196, 244].map(x => `<rect x="${x}" y="14" width="34" height="18" rx="4" fill="#a5d8ff" stroke="#495057" stroke-width="2"/>`).join('')}
+  <rect x="10" y="14" width="20" height="16" rx="3" fill="#a5d8ff" stroke="#495057" stroke-width="2"/>
+  ${[40, 110, 190, 260].map(x => `<circle cx="${x}" cy="60" r="8" fill="#495057"/>`).join('')}
+  </svg>`;
+}
+$('heroChara').innerHTML = charaSVG();
+
+/* ---------- がめん きりかえ ---------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  $('btnHome').hidden = id === 'scTitle';
+  if (id !== 'scPlay') $('prog').textContent = '';
+  window.scrollTo(0, 0);
+}
+function titleStat(){
+  const got = KANJI_ORDER.filter(k => kanjiCount(k) > 0).length;
+  const st = Object.keys(save.done).filter(id => STATIONS.some(s => s.id === id)).length;
+  $('titleStat').textContent = `みつけた かんじ ${got} / 10 ・ たずねた えき ${st} / ${STATIONS.length}`;
+}
+$('btnHome').onclick = () => { SE.tap(); run++; show('scTitle'); titleStat(); };
+
+/* ---------- あそぶ ---------- */
+const PER = 5;
+let trip = [], idx = 0, got = [], run = 0;
+
+function startTrip(){
+  SE.tap();
+  const fresh = shuffle(STATIONS.filter(s => !save.done[s.id]));
+  const old = shuffle(STATIONS.filter(s => save.done[s.id]));
+  trip = fresh.concat(old).slice(0, PER);
+  idx = 0; got = [];
+  show('scPlay');
+  playStation();
+}
+
+async function playStation(){
+  const my = ++run;
+  const s = trip[idx];
+  $('prog').textContent = `${idx + 1} / ${PER} えきめ`;
+  ['phaseQ', 'phaseA', 'dream', 'btnNo', 'get', 'btnNext'].forEach(i => $(i).classList.add('hide'));
+  $('phaseMaku').classList.remove('hide');
+  $('sign').innerHTML = `<div class="area">${s.area}</div><div class="nm">${ruby(s.n)}</div><div class="bar2"></div>`;
+  $('sign').style.visibility = 'hidden';
+  $('stage').innerHTML = '<div class="platform"></div>' + trainSVG();
+  $('charaPlay').innerHTML = charaSVG();
+  $('bubble').textContent = 'ガタン ゴトン… つぎは どこかな？';
+  window.scrollTo(0, 0);
+  const tr = $('stage').querySelector('.train');
+  requestAnimationFrame(() => tr.classList.add('arrive'));
+  await sleep(1400); if (my !== run) return;
+  SE.arrive();
+  $('sign').style.visibility = 'visible';
+  $('sign').animate([{ transform:'scale(.6)', opacity:0 }, { transform:'scale(1)', opacity:1 }], { duration:350, easing:'ease-out' });
+  await sleep(700); if (my !== run) return;
+  // まにうけくんの かんちがい
+  $('sign').innerHTML = `<div class="area">${s.area}</div><div class="nm">${ruby(s.n, s.k)}</div><div class="bar2"></div>`;
+  $('bubble').textContent = s.joke.say;
+  $('dream').innerHTML = `<small>💭 まにうけくんの あたまの なか</small>${s.joke.pic}`;
+  $('dream').classList.remove('hide');
+  SE.boing();
+  await sleep(900); if (my !== run) return;
+  $('btnNo').classList.remove('hide');
+}
+
+$('btnNo').onclick = () => {
+  SE.no();
+  const s = trip[idx];
+  $('btnNo').classList.add('hide');
+  $('bubble').textContent = 'えっ ちがうの？ じゃあ ほんとうは どんな ところ？ おしえて！';
+  const opts = shuffle([{ ...s.ans, ok:true }, ...s.ng.map(x => ({ ...x, ok:false }))]);
+  $('choices').innerHTML = '';
+  opts.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'choice';
+    b.innerHTML = `<span class="pic">${o.pic}</span><span class="t">${o.t}</span>`;
+    b.onclick = () => choose(b, o);
+    $('choices').appendChild(b);
+  });
+  $('phaseQ').classList.remove('hide');
+  $('phaseQ').scrollIntoView({ behavior:'smooth', block:'start' });
+};
+
+async function choose(btn, o){
+  if (!o.ok){
+    SE.wrong();
+    btn.classList.add('ng');
+    $('bubble').textContent = 'うーん、それも ちがう みたい。ほかの えを えらんで みて！';
+    return;
+  }
+  const my = run;
+  const s = trip[idx];
+  document.querySelectorAll('.choice').forEach(c => { c.style.pointerEvents = 'none'; });
+  btn.classList.add('ok');
+  SE.ok();
+  await sleep(500); if (my !== run) return;
+  // ずっこけ（わらいは こたえあわせの あと）
+  const ch = $('charaPlay').querySelector('.chara');
+  ch.classList.remove('bounce'); ch.classList.add('surprised', 'fall');
+  SE.slide();
+  $('bubble').textContent = 'ずこーーっ！ そうだったのかー！ まにうけ しすぎちゃった！';
+  $('phaseMaku').scrollIntoView({ behavior:'smooth', block:'start' });
+  await sleep(1500); if (my !== run) return;
+  $('phaseQ').classList.add('hide');
+  $('dream').classList.add('hide');
+  await fastForward(s, my); if (my !== run) return;
+  await collect(s, my); if (my !== run) return;
+  $('btnNext').textContent = idx + 1 < PER ? 'つぎの えきへ ▶' : 'しゅうてんへ ▶';
+  $('btnNext').classList.remove('hide');
+}
+
+async function fastForward(s, my){
+  const ff = $('ff');
+  ff.classList.add('past');
+  $('ffYr').textContent = s.yr;
+  const old = emo(s.old), now = emo(s.now);
+  const n = Math.max(old.length, now.length);
+  $('ffRow').innerHTML = Array.from({ length:n }, (_, i) => `<span>${old[i] || ''}</span>`).join('');
+  $('ffInfo').textContent = s.info;
+  $('phaseA').classList.remove('hide');
+  $('phaseA').scrollIntoView({ behavior:'smooth', block:'start' });
+  await sleep(1600); if (my !== run) return;
+  const spans = $('ffRow').querySelectorAll('span');
+  for (let i = 0; i < n; i++){
+    $('ffYr').textContent = '⏩ はやおくり…';
+    SE.tick();
+    spans[i].classList.add('flip');
+    await sleep(200); if (my !== run) return;
+    spans[i].textContent = now[i] || '';
+    await sleep(220); if (my !== run) return;
+  }
+  ff.classList.remove('past');
+  $('ffYr').textContent = 'いま';
+  await sleep(500);
+}
+
+async function collect(s, my){
+  const first = !save.done[s.id];
+  save.done[s.id] = true; store();
+  if (!got.includes(s.k)) got.push(s.k);
+  const kj = KANJI[s.k];
+  const list = allWith(s.k);
+  $('get').innerHTML =
+    `<div style="font-weight:800;font-size:clamp(16px,4.4vw,19px)">${first ? '✨ かんじ ずかんに はいったよ！' : '✨ もういちど みつけたよ！'}</div>
+     <span class="k"><ruby>${s.k}<rt>${kj.yomi}</rt></ruby></span>
+     <div class="mean">${kj.ic} 「${kj.yomi}」は ${kj.mean}</div>
+     <div style="margin-top:8px;font-weight:700">おなじ かんじの えき</div>
+     <div class="lights">${list.map(n => `<span class="lamp">${ruby(n, s.k)}</span>`).join('')}</div>`;
+  $('get').classList.remove('hide');
+  $('get').scrollIntoView({ behavior:'smooth', block:'center' });
+  await sleep(500);
+  const lamps = $('get').querySelectorAll('.lamp');
+  for (let i = 0; i < lamps.length; i++){
+    if (my !== run) return;
+    lamps[i].classList.add('on'); SE.lamp(i % 8);
+    await sleep(260);
+  }
+}
+function allWith(k){
+  const names = STATIONS.map(s => s.n).concat(MORE);
+  return names.filter(n => plain(n).includes(k));
+}
+
+$('btnNext').onclick = () => {
+  SE.tap();
+  idx++;
+  if (idx < PER) playStation(); else finish();
+};
+
+function finish(){
+  run++;
+  show('scResult');
+  $('stars').innerHTML = Array.from({ length:PER }, (_, i) => `<span style="animation-delay:${i * .15}s">⭐</span>`).join('');
+  $('charaRes').innerHTML = charaSVG();
+  const says = [
+    'おしえて くれて ありがとう！ えきの なまえって、むかしの けしきが かくれてるんだね！',
+    'すごい！ もう まにうけ しないぞ… たぶん！',
+    'かんじの いみが わかると、まちの むかしが みえて くるね！'
+  ];
+  $('resSay').textContent = says[Math.random() * says.length | 0];
+  $('gotList').innerHTML = got.map(k => `<b><ruby>${k}<rt>${KANJI[k].yomi}</rt></ruby></b>`).join('');
+  SE.fanfare();
+  confetti();
+}
+function confetti(){
+  const c = document.createElement('div'); c.className = 'confetti';
+  const cols = ['#f08c00', '#e03131', '#2f9e44', '#1c7ed6', '#ffd43b', '#ae3ec9'];
+  for (let i = 0; i < 50; i++){
+    const p = document.createElement('i');
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = cols[i % cols.length];
+    p.style.animationDuration = 1.8 + Math.random() * 1.8 + 's';
+    p.style.animationDelay = Math.random() * .8 + 's';
+    c.appendChild(p);
+  }
+  document.body.appendChild(c);
+  setTimeout(() => c.remove(), 4500);
+}
+
+/* ---------- ずかん ---------- */
+function openZukan(){
+  SE.tap(); run++;
+  show('scZukan');
+  $('zgrid').innerHTML = '';
+  KANJI_ORDER.forEach(k => {
+    const c = kanjiCount(k), total = STATIONS.filter(s => s.k === k).length;
+    const b = document.createElement('button');
+    b.className = 'zk' + (c ? '' : ' lock');
+    b.innerHTML = c
+      ? `<span class="cnt">${c}/${total}</span><span class="kk"><ruby>${k}<rt>${KANJI[k].yomi}</rt></ruby></span><span class="ic">${KANJI[k].ic}</span>`
+      : `<span class="kk">？</span><span class="ic">${KANJI[k].ic}</span>`;
+    b.onclick = () => zDetail(k);
+    $('zgrid').appendChild(b);
+  });
+  $('zdetail').classList.add('hide');
+}
+function zDetail(k){
+  SE.tap();
+  const d = $('zdetail');
+  const c = kanjiCount(k);
+  if (!c){
+    d.innerHTML = `<h3><span class="kk">？</span><span>${KANJI[k].ic} まだ みつけて いないよ。<br>えきを たずねて さがそう！</span></h3>`;
+  } else {
+    const mine = STATIONS.filter(s => s.k === k);
+    const others = allWith(k).filter(n => !mine.some(s => s.n === n));
+    d.innerHTML =
+      `<h3><ruby class="kk">${k}<rt>${KANJI[k].yomi}</rt></ruby><span>${KANJI[k].ic} ${KANJI[k].mean}</span></h3>
+       <p><b>たずねた えき</b>（ひかって いる えきは もう わかったよ）</p>
+       <div class="lights" style="justify-content:flex-start">${mine.map(s => `<span class="lamp${save.done[s.id] ? ' on' : ''}">${ruby(s.n, k)}</span>`).join('')}</div>
+       <p><b>ほかにも あるよ</b></p>
+       <div class="lights" style="justify-content:flex-start">${others.map(n => `<span class="lamp on">${ruby(n, k)}</span>`).join('')}</div>`;
+  }
+  d.classList.remove('hide');
+  d.scrollIntoView({ behavior:'smooth', block:'nearest' });
+}
+
+$('btnStart').onclick = startTrip;
+$('btnAgain').onclick = startTrip;
+$('btnZukan').onclick = openZukan;
+$('btnZukan2').onclick = openZukan;
+titleStat();
+</script>
+</body>
+</html>
