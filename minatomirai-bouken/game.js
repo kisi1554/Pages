@@ -1613,13 +1613,37 @@ void main(){
     return bd < 6 ? y : null;
   }
   const YOKOHAMA_EKI = GEO(35.4657, 139.6223);
+  // ブルーライン の えき の いりぐち（ガラス の やね・あおい「B」の かんばん・えきめい の いた）
+  function blueEntrance(f, n) {
+    const blue = hex('#0067c0'), glass = hex('#a5d8ff'), white = hex('#f8f9fa'), steel = hex('#868e96');
+    G.box(f.x - 1.6, 2.6, f.z - 0.9, f.x + 1.6, 2.75, f.z + 1.6, glass);                       // ガラス の やね
+    G.box(f.x - 1.6, 2.75, f.z - 0.9, f.x + 1.6, 2.85, f.z - 0.75, blue, 5);
+    G.box(f.x - 1.45, 0, f.z - 0.55, f.x - 1.32, 2.6, f.z + 1.1, glass); G.box(f.x + 1.32, 0, f.z - 0.55, f.x + 1.45, 2.6, f.z + 1.1, glass);
+    // かいだん（した へ おりる）
+    for (let k = 0; k < 5; k++) G.box(f.x - 1.1, 0.02, f.z - 0.2 + k * 0.25, f.x + 1.1, 0.05 + k * 0.01, f.z + 0.05 + k * 0.25, k % 2 ? hex('#495057') : hex('#6c757d'));
+    // B の はしら（とおく から みえる）
+    const px = f.x - 2.4, pz = f.z - 0.2, H = n === '高島町' ? 5.2 : 4.4;
+    G.box(px - 0.12, 0, pz - 0.12, px + 0.12, H, pz + 0.12, steel);
+    G.box(px - 0.7, H, pz - 0.15, px + 0.7, H + 1.4, pz + 0.15, blue, 5);
+    G.box(px - 0.42, H + 0.25, pz - 0.17, px - 0.22, H + 1.15, pz + 0.17, white, 5);                  // B の たて ぼう
+    [[0.25, 0.42], [0.62, 0.8], [0.98, 1.15]].forEach(([a, b]) => G.box(px - 0.22, H + a, pz - 0.17, px + 0.3, H + b, pz + 0.17, white, 5));
+    G.box(px + 0.22, H + 0.38, pz - 0.17, px + 0.42, H + 0.68, pz + 0.17, white, 5); G.box(px + 0.22, H + 0.74, pz - 0.17, px + 0.42, H + 1.02, pz + 0.17, white, 5);
+    // えきめい の いた（しろ に あお の おび）
+    G.box(f.x - 1.5, 2.85, f.z - 0.95, f.x + 1.5, 3.5, f.z - 0.8, white, 5); G.box(f.x - 1.5, 2.85, f.z - 0.97, f.x + 1.5, 3.0, f.z - 0.8, blue, 5);
+    if (n === '高島町') {   // たかしまちょう は いりぐち が ふたつ と ベンチ・じてんしゃ おきば
+      G.box(f.x + 3.2, 0, f.z - 0.6, f.x + 3.32, 2.4, f.z + 1.3, glass); G.box(f.x + 5.6, 0, f.z - 0.6, f.x + 5.72, 2.4, f.z + 1.3, glass);
+      G.box(f.x + 3.1, 2.4, f.z - 0.8, f.x + 5.8, 2.55, f.z + 1.5, glass); G.box(f.x + 3.1, 2.55, f.z - 0.8, f.x + 5.8, 2.65, f.z - 0.66, blue, 5);
+      G.box(f.x - 4.6, 0, f.z + 2.2, f.x - 2.8, 0.45, f.z + 2.6, hex('#adb5bd'));
+      for (let k = 0; k < 4; k++) { G.box(f.x + 3.4 + k * 0.6, 0, f.z + 2.6, f.x + 3.46 + k * 0.6, 0.7, f.z + 3.8, hex('#343a40')); }
+    }
+  }
   const TRAINS = (MAP.trains || []).map((t, li) => {
     const pts = []; for (let i = 0; i < t.p.length; i += 2) pts.push([t.p[i], t.p[i + 1]]);
     const ln = lineOf(pts);
     const stops = t.stops.map((st) => ({ n: st.n, x: st.x, z: st.z, s: ln.sOf(st.x, st.z) }));
-    // よこはまえき は ちずの はし。せんが ちかくを とおって いれば えきに する
+    // よこはまえき は ちずの はし。せんが ちかくを とおって いれば えきに する（ブルーライン の よこはまえき は すこし にしがわ なので ひろめ）
     const ys = ln.sOf(YOKOHAMA_EKI[0], YOKOHAMA_EKI[1]), yq = ln.at(ys);
-    if (!stops.some((s) => s.n === '横浜') && Math.hypot(yq.x - YOKOHAMA_EKI[0], yq.z - YOKOHAMA_EKI[1]) < 45) stops.push({ n: '横浜', x: yq.x, z: yq.z, s: ys });
+    if (!stops.some((s) => s.n === '横浜') && Math.hypot(yq.x - YOKOHAMA_EKI[0], yq.z - YOKOHAMA_EKI[1]) < (t.k === 'blue' ? 60 : 45)) stops.push({ n: '横浜', x: yq.x, z: yq.z, s: ys });
     stops.sort((a, b) => a.s - b.s);
     const info = LINE_INFO[t.k] || LINE_INFO.jr;
     let hs = null;
@@ -1636,7 +1660,8 @@ void main(){
         G.box(f.x - 1.3, 0, f.z - 0.4, f.x - 1.15, 2.4, f.z + 1.0, hex('#dee2e6')); G.box(f.x + 1.15, 0, f.z - 0.4, f.x + 1.3, 2.4, f.z + 1.0, hex('#dee2e6'));
       }
       G.box(f.x + 1.6, 0, f.z - 0.08, f.x + 1.72, 2.8, f.z + 0.08, C.gray); G.box(f.x + 1.2, 2.8, f.z - 0.1, f.x + 2.2, 3.5, f.z + 0.1, col, 5);
-      DOORS.push({ id: 'eki_' + li + '_' + si, x: f.x, z: f.z, label: info.ic + '<br>えき', color: col, run: () => openShop('train', { li, si }) });
+      if (t.k === 'blue') blueEntrance(f, st.n);
+      DOORS.push({ id: 'eki_' + li + '_' + si, x: f.x, z: f.z, label: info.ic + (t.k === 'blue' ? `<br><small>${EKI_YOMI[st.n] || 'えき'}</small>` : '<br>えき'), color: col, run: () => openShop('train', { li, si }) });
     });
     return Object.assign(ln, { k: t.k, info, stops, yAt, li });
   }).filter((t) => t.stops.length >= 2);
@@ -1781,6 +1806,7 @@ void main(){
   const zp = (id, name, n, extra) => { const q = POI[n]; if (!q) return null; const bb = q.bb || [q.x, q.z, q.x, q.z]; return Object.assign({ id, name, x: q.x, z: q.z, r: Math.max(bb[2] - bb[0], bb[3] - bb[1]) / 2 + 6 }, extra || {}); };
   const ZONES = [
     zp('sakuragicho', 'さくらぎちょう えき', '桜木町駅'),
+    zp('takashimacho', 'たかしまちょう えき（ブルーライン）', '高島町（てん）', { r: 9, say: 'ブルーライン の たかしまちょう えき だよ。 よこはま まで ひとえき！ 🚇' }),
     zp('landmark', 'ランドマークタワー', '横浜ランドマークタワー'),
     { id: 'lmtop', name: 'ランドマークの てっぺん', x: LMC.x, z: LMC.z, r: 12, minY: LMH - 1 },
     zp('nipponmaru', 'にっぽんまる', '日本丸'),
@@ -3427,7 +3453,7 @@ void main(){
   function trainStations() { return TRAINS.map((t) => ({ k: t.k, name: t.info.name, short: t.info.short, col: t.info.col, sub: t.info.sub, stops: t.stops.map((s) => ({ n: ekiN(s.n), s: s.s })) })); }
   function arriveTrain(li, si, how) {
     const t = TRAINS[li], st = t && t.stops[si]; if (!st) return;
-    P.x = st.door.x; P.z = st.door.z; P.y = 0; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; P.tr = null; lastDoorId = 'eki_' + li + '_' + si;
+    P.x = st.door.x; P.z = st.door.z; P.y = 0; P.state = 'ground'; P.ground = true; P.vx = P.vy = P.vz = 0; P.tr = null; lastDoorId = '-';
     MOM.x = P.x + 1.2; MOM.z = P.z; MOM.y = 0; if (PAPA.on) { PAPA.x = P.x - 1.2; PAPA.z = P.z; }
     tone(660, 0.15, 'sine', 0.1); tone(880, 0.25, 'sine', 0.1, null, 0.18);
     banner(`${t.info.ic} ${ekiN(st.n)} に つきました<small>${t.info.short} ・ ${how || 'えきの そとに でたよ'}</small>`, 3); momSay('でんしゃ、たのしかったね 🚃', 3);
