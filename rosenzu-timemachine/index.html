@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ろせんず タイムマシン</title>
+<style>
+  :root {
+    --ink: #2b2a33; --navy: #1d2b53; --gold: #ffc93c; --paper: #fff8e7; --line: #d8c9a3;
+    --ok: #2f9e44; --ng: #e8590c;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--ink); background: var(--navy); overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+  ruby rt { font-size: .55em; font-weight: normal; }
+  .screen { display: none; height: 100vh; height: 100dvh; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  .bar {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+    background: var(--navy); color: #fff;
+  }
+  .bar h2 { flex: 1; margin: 0; font-size: 20px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ibtn { flex: none; min-width: 52px; height: 48px; padding: 0 10px; border-radius: 14px; background: #34457e; color: #fff; font-size: 16px; font-weight: bold; }
+  .ibtn.off { background: #55597a; opacity: .75; }
+
+  /* ---- ホーム ---- */
+  #home { background: linear-gradient(#1d2b53, #2f4b7c 60%, #3d7a8a); }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px 28px; }
+  .hero { text-align: center; color: #fff; margin: 4px auto 12px; max-width: 620px; }
+  .hero .mc { font-size: 56px; line-height: 1; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+  .hero h1 { margin: 6px 0 6px; font-size: 30px; letter-spacing: .04em; }
+  .hero p { margin: 4px 0; font-size: 18px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }
+  @keyframes bob { 50% { transform: translateY(-6px) rotate(-4deg); } }
+  .homemap { display: block; width: 100%; max-width: 360px; margin: 10px auto; background: #fff8e7; border-radius: 20px; border: 5px solid #fff; }
+  .rec { text-align: center; color: #ffe8a3; font-size: 17px; font-weight: bold; margin: 6px 0; }
+  .big {
+    display: block; width: 100%; max-width: 420px; margin: 14px auto 0; min-height: 64px; border-radius: 18px;
+    background: var(--gold); color: var(--ink); font-size: 22px; font-weight: bold; box-shadow: 0 5px 0 #b98a00;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #b98a00; }
+  .big.sub { background: #fff; box-shadow: 0 5px 0 #b9b2a0; }
+  .pnote { color: #cfd8f0; font-size: 13px; line-height: 1.6; max-width: 620px; margin: 18px auto 0; }
+
+  /* ---- あそぶ ---- */
+  #play { background: #2a3a6e; }
+  .pmain { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 6px 10px max(8px, env(safe-area-inset-bottom)); }
+  .mapwrap { position: relative; flex: 1 1 0; min-height: 0; border-radius: 22px; border: 5px solid #c9cfdd; background: #bcd8e8; overflow: hidden; }
+  .mapbox { position: absolute; inset: 0; transform-origin: 50% 50%; }
+  .mapbox.spread { animation: spread .9s ease-out; }
+  @keyframes spread { 25% { transform: scale(.9, .94); } 55% { transform: scale(1.07, 1.04); } 80% { transform: scale(.98); } }
+  #map { width: 100%; height: 100%; display: block; }
+  #land { transition: fill 1.2s; }
+  .seg .base { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+  .seg .core { fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .5s; }
+  .seg.drawn .core { opacity: 1; }
+  .seg.gone { transition: opacity 1s; opacity: 0; }
+  .seg.shine .base { animation: shine 1s ease-in-out infinite; }
+  @keyframes shine { 50% { stroke: #ffd43b; filter: drop-shadow(0 0 5px #fff3bf); } }
+  .st { transition: opacity .5s; }
+  .st text { font-weight: bold; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+  .spark { font-size: 18px; animation: tw 1s ease-in-out infinite; }
+  @keyframes tw { 50% { opacity: .2; transform: scale(.6); } }
+  .spark { transform-box: fill-box; transform-origin: center; }
+  #mole { transform-box: fill-box; transform-origin: 50% 100%; opacity: 0; }
+  #mole.pop { animation: mole 2.6s ease-out forwards; }
+  @keyframes mole { 0% { opacity: 1; transform: translateY(26px) scale(.6); } 18% { transform: translateY(-14px) scale(1.15); } 30% { transform: translateY(0) scale(1); } 85% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(20px); } }
+  .ybadge {
+    position: absolute; left: 10px; top: 10px; background: #10182f; color: var(--gold); border: 3px solid var(--gold);
+    border-radius: 12px; padding: 4px 10px; font-size: 15px; font-weight: bold; line-height: 1.25; pointer-events: none; max-width: 70%;
+  }
+  .ybadge small { display: block; color: #cfd8f0; font-size: 12px; font-weight: normal; font-variant-numeric: tabular-nums; }
+  .warp { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+    background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(255,201,60,.35) 40px 46px, transparent 46px 90px); background-size: 240px 100%; }
+  .mapwrap.warping .warp { opacity: 1; animation: warp .25s linear infinite; }
+  @keyframes warp { to { background-position: -240px 0; } }
+
+  /* こびと */
+  .kobito { position: absolute; right: 6px; bottom: 6px; width: 76px; height: 92px; pointer-events: none; }
+  .kobito svg { width: 100%; height: 100%; overflow: visible; }
+  .kobito .arms { transform-box: fill-box; transform-origin: 50% 0; }
+  .kobito.wave .arms { animation: wave .9s ease-out; }
+  @keyframes wave { 30% { transform: scaleX(1.5); } 60% { transform: scaleX(.9); } }
+  .kobito .tangle { opacity: 0; transform-box: fill-box; transform-origin: center; }
+  .kobito.tangled .tangle { opacity: 1; animation: spin 1.6s linear infinite; }
+  .kobito.tangled .body { animation: wob .5s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes wob { 50% { transform: rotate(8deg); } }
+  .bub {
+    position: absolute; right: 70px; bottom: 58px; background: #fff; border: 3px solid var(--ink); border-radius: 16px;
+    padding: 4px 10px; font-size: 16px; font-weight: bold; max-width: calc(100% - 90px); line-height: 1.35; opacity: 0; transform: scale(.5); transition: .25s; pointer-events: none;
+  }
+  .bub.on { opacity: 1; transform: none; }
+
+  .panel {
+    flex: none; display: flex; flex-direction: column; gap: 6px; background: var(--paper); border-radius: 20px; padding: 8px 12px;
+    max-height: 52%; min-height: 0;
+  }
+  .ptext { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .era { display: inline-block; background: var(--navy); color: #fff; border-radius: 999px; padding: 2px 12px; font-size: 15px; font-weight: bold; }
+  .ttl { font-size: 22px; font-weight: bold; margin: 4px 0 2px; line-height: 1.3; word-break: keep-all; overflow-wrap: anywhere; }
+  .body { font-size: 18px; line-height: 1.75; margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+  .note { font-size: 12px; color: #7a6a48; margin: 4px 0 0; line-height: 1.5; }
+  .ctrl { flex: none; display: flex; align-items: center; gap: 10px; }
+  .msg { flex: 1; min-width: 0; background: #10182f; color: #9ff7c1; border-radius: 12px; padding: 8px 10px; font-size: 17px; font-weight: bold; line-height: 1.4; min-height: 60px; display: flex; align-items: center; }
+  .msg.ng { color: #ffd0a8; }
+  .lever {
+    flex: none; position: relative; width: 96px; height: 76px; border-radius: 18px; background: linear-gradient(#8b93a7, #5d6477);
+    border: 4px solid #c9cfdd; color: #fff; font-size: 13px; font-weight: bold; padding: 0;
+  }
+  .lever .arm { position: absolute; left: 50%; bottom: 22px; width: 8px; height: 40px; margin-left: -4px; background: #22283a; border-radius: 4px; transform-origin: 50% 100%; transform: rotate(-35deg); transition: transform .3s; }
+  .lever .arm::before { content: ""; position: absolute; left: 50%; top: -12px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9a9a, #e03131 60%, #a51111); border: 2px solid #fff; }
+  .lever.pulled .arm { transform: rotate(35deg); }
+  .lever .lb { position: absolute; left: 0; right: 0; bottom: 3px; }
+  .lever.glow { animation: glow 1.2s infinite; }
+  .lever:disabled { opacity: .5; animation: none; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(255,201,60,.65); } }
+  .choices { flex: none; display: none; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .choices.on { display: grid; }
+  .ch {
+    min-height: 92px; border-radius: 16px; background: #fff; border: 4px solid #d8c9a3; box-shadow: 0 4px 0 #b9b2a0;
+    font-size: 16px; font-weight: bold; line-height: 1.25; padding: 4px; word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .ch svg { display: block; width: 64px; height: 40px; margin: 0 auto 2px; }
+  .ch:active { transform: translateY(3px); box-shadow: 0 1px 0 #b9b2a0; }
+  .ch.no { opacity: .4; background: #eee; }
+  .ch.yes { border-color: var(--ok); background: #ebfbee; }
+  .shake { animation: shake .45s; }
+  @keyframes shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+  .tl { flex: none; display: flex; gap: 2px; align-items: flex-end; }
+  .tl span { flex: 1; text-align: center; font-size: 10px; color: #9a8f70; line-height: 1.1; }
+  .tl span i { display: block; height: 8px; margin: 0 2px 2px; border-radius: 4px; background: #e2d6b5; }
+  .tl span.done i { background: var(--gold); }
+  .tl span.now i { background: #e03131; }
+  .tl span.now { color: var(--ink); font-weight: bold; }
+
+  @media (orientation: landscape) {
+    .pmain { flex-direction: row; gap: 10px; }
+    .mapwrap { flex: 1.25 1 0; }
+    .panel { flex: 1 1 0; max-height: none; max-width: 460px; }
+    .ctrl { flex-direction: column; align-items: stretch; }
+    .lever { width: 100%; height: 84px; }
+  }
+  @media (orientation: landscape) and (max-height: 480px) {
+    .bar { padding-top: 4px; padding-bottom: 4px; } .ibtn { height: 40px; }
+    .ttl { font-size: 18px; } .body { font-size: 15px; line-height: 1.6; } .msg { font-size: 14px; min-height: 0; padding: 6px; }
+    .lever { height: 60px; } .lever .arm { height: 26px; bottom: 18px; }
+    .ch { min-height: 64px; font-size: 13px; } .ch svg { height: 26px; }
+    .kobito { width: 56px; height: 68px; } .bub { right: 52px; bottom: 40px; font-size: 14px; }
+  }
+  @media (orientation: portrait) and (max-height: 700px) {
+    .body { font-size: 16px; line-height: 1.6; } .ttl { font-size: 19px; } .ch { min-height: 78px; font-size: 14px; } .ch svg { height: 30px; }
+    .msg { min-height: 50px; font-size: 15px; }
+  }
+
+  /* ---- できた！ ---- */
+  .over { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 14px; background: rgba(16,24,47,.82); }
+  .over.on { display: flex; }
+  .dpanel { width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; background: var(--paper); border-radius: 26px; border: 6px solid var(--gold); padding: 16px; text-align: center; }
+  .dpanel h2 { margin: 0 0 4px; font-size: 28px; }
+  .dpanel p { margin: 6px 0; font-size: 18px; line-height: 1.6; }
+  .stars { font-size: 44px; letter-spacing: 6px; }
+  .stars span { display: inline-block; animation: pop .5s backwards; }
+  .stars span:nth-child(2) { animation-delay: .2s; } .stars span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pop { from { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3); } }
+  .pbtns { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 12px; }
+  .pbtns .big { margin: 0; max-width: none; font-size: 19px; }
+  .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 60; pointer-events: none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ホーム -->
+<section class="screen on" id="home">
+  <div class="bar">
+    <h2>⏳ ろせんず タイムマシン</h2>
+    <button class="ibtn" id="sndBtn" aria-label="おとの オン オフ">🔊 おと</button>
+    <button class="ibtn" id="voiceBtn" aria-label="こえの オン オフ">🗣 こえ</button>
+  </div>
+  <div class="scroll">
+    <div class="hero">
+      <span class="mc">⏳</span>
+      <h1>ろせんず タイムマシン</h1>
+      <p>むかしの ろせんずは、せんが <b>たった 1ぽん</b>。</p>
+      <p>レバーを うごかして、せんが ふえていく ようすを みに いこう！</p>
+    </div>
+    <svg class="homemap" viewBox="0 0 200 110" aria-hidden="true">
+      <path d="M150 0 H200 V110 H128 C120 80 140 40 150 0Z" fill="#bcd8e8"/>
+      <path d="M140 18 L128 60 L100 96" fill="none" stroke="#c92a2a" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="140" cy="18" r="6" fill="#fff" stroke="#333" stroke-width="2.5"/><circle cx="100" cy="96" r="6" fill="#fff" stroke="#333" stroke-width="2.5"/>
+      <text x="128" y="16" font-size="11" text-anchor="end" font-weight="bold">しんばし</text>
+      <text x="90" y="100" font-size="11" text-anchor="end" font-weight="bold">よこはま</text>
+      <text x="40" y="50" font-size="26">🚂</text>
+    </svg>
+    <div class="rec" id="rec"></div>
+    <button class="big" id="startBtn">⏳ しゅっぱつ！</button>
+    <p class="pnote">保護者の方へ：東京・横浜の鉄道が 1872年の新橋〜横浜から どう広がったかを、8つの できごとで たどります。
+      年と区間は 鉄道会社・自治体の公式資料で確認しています。地図は わかりやすくした図で、実際の位置・形とは ちがいます（ほかの多くの路線は省略）。</p>
+  </div>
+</section>
+
+<!-- あそぶ -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="ibtn" id="homeBtn" aria-label="さいしょに もどる">🏠</button>
+    <h2>⏳ ろせんず タイムマシン</h2>
+    <button class="ibtn" id="sndBtn2" aria-label="おとの オン オフ">🔊</button>
+    <button class="ibtn" id="sayBtn" aria-label="もういちど よむ">🗣 よむ</button>
+  </div>
+  <div class="pmain">
+    <div class="mapwrap" id="mapwrap">
+      <div class="mapbox" id="mapbox">
+        <svg id="map" viewBox="0 0 400 470" preserveAspectRatio="xMidYMid meet" aria-label="ろせんず"></svg>
+      </div>
+      <div class="warp"></div>
+      <div class="ybadge" id="ybadge"></div>
+      <div class="bub" id="bub"></div>
+      <div class="kobito" id="kobito">
+        <svg viewBox="0 0 76 92" aria-hidden="true">
+          <g class="body">
+            <rect x="4" y="30" width="68" height="30" rx="3" fill="#fff8e7" stroke="#7a6a48" stroke-width="2"/>
+            <path d="M12 38 L30 52 L46 36 L64 50" fill="none" stroke="#c92a2a" stroke-width="3"/>
+            <circle cx="38" cy="22" r="13" fill="#ffd8a8" stroke="#7a4a1e" stroke-width="2"/>
+            <path d="M24 16 Q38 -4 52 16 Z" fill="#5f3dc4"/>
+            <circle cx="33" cy="22" r="2" fill="#333"/><circle cx="43" cy="22" r="2" fill="#333"/>
+            <path d="M33 28 Q38 32 43 28" fill="none" stroke="#333" stroke-width="2" stroke-linecap="round"/>
+            <g class="arms"><path d="M24 40 L6 36 M52 40 L70 36" stroke="#ffd8a8" stroke-width="6" stroke-linecap="round"/></g>
+            <rect x="28" y="60" width="20" height="18" rx="4" fill="#4dabf7"/>
+            <path d="M32 78 V88 M44 78 V88" stroke="#333" stroke-width="5" stroke-linecap="round"/>
+          </g>
+          <g class="tangle" fill="none" stroke-width="4" stroke-linecap="round">
+            <ellipse cx="38" cy="50" rx="34" ry="12" stroke="#37b24d"/>
+            <ellipse cx="38" cy="50" rx="12" ry="38" stroke="#f59f00"/>
+            <ellipse cx="38" cy="50" rx="28" ry="22" stroke="#d6336c" transform="rotate(35 38 50)"/>
+            <ellipse cx="38" cy="50" rx="30" ry="16" stroke="#1098ad" transform="rotate(-40 38 50)"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+    <div class="panel" id="panel">
+      <div class="ptext" id="ptext">
+        <span class="era" id="era"></span>
+        <div class="ttl" id="ttl"></div>
+        <p class="body" id="body"></p>
+        <p class="note" id="note"></p>
+      </div>
+      <div class="choices" id="choices"></div>
+      <div class="ctrl">
+        <div class="msg" id="msg"></div>
+        <button class="lever" id="lever" aria-label="レバーを うごかす"><span class="arm"></span><span class="lb">レバー</span></button>
+      </div>
+      <div class="tl" id="tl"></div>
+    </div>
+  </div>
+</section>
+
+<div class="over" id="doneOver">
+  <div class="dpanel">
+    <div class="stars" id="stars"></div>
+    <h2>いまに ついた！</h2>
+    <p id="doneMsg"></p>
+    <p>さいしょは <b>しんばし〜よこはまの 1ぽん</b>だけ。<br>それが、こんなに いっぱいに なったんだね。</p>
+    <div class="pbtns">
+      <button class="big" id="againBtn">🔁 もういちど</button>
+      <button class="big sub" id="backBtn">🏠 おしまい</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   データ（駅・線・できごと は ここ 1か所に まとめる）
+   年と区間は 公式資料で 確認:
+   - 1872 新橋〜横浜 開業（当時の 横浜駅は いまの 桜木町駅。1915年に 改称）
+   - 1889.4.11 甲武鉄道 新宿〜立川（いまの 中央線の はじまり）… JR東日本
+   - 1914.12.20 東京駅 開業 … JR東日本
+   - 1925.11.1 神田〜上野 開通、山手線の 環状運転 … JR東日本
+   - 1927.12.30 東京地下鉄道 上野〜浅草（いまの 銀座線）… 東京メトロ
+   - 1932.3.31 東横線 渋谷〜桜木町 全通 … 東急
+   - 1964.10.1 東海道新幹線 東京〜新大阪（新横浜駅 も 同日）… JR東海
+   - 1972.12.16 横浜市営地下鉄 伊勢佐木長者町〜上大岡 … 横浜市交通局
+   いま: 中央線 東京まで(1919) / 銀座線 渋谷まで(1939) / ブルーライン あざみ野〜湘南台(1999)
+        / 新幹線 品川駅(2003) / 東横線 横浜〜桜木町 廃止(2004)
+   地図は 模式図（位置・形は わかりやすく かえてある）
+   ===================================================================== */
+
+// 駅: [漢字, よみ, x, y, ラベルの むき, でてくる ステップ]
+const STATIONS = {
+  tachikawa: ['立川', 'たちかわ', 30, 120, 's', 1],
+  shinjuku:  ['新宿', 'しんじゅく', 195, 120, 'w', 1],
+  ikebukuro: ['池袋', 'いけぶくろ', 215, 62, 'n', 3],
+  ueno:      ['上野', 'うえの', 308, 70, 'n', 3],
+  asakusa:   ['浅草', 'あさくさ', 362, 58, 'n', 4],
+  tokyo:     ['東京', 'とうきょう', 320, 140, 'e', 2],
+  shimbashi: ['新橋', 'しんばし', 305, 177, 'e', 0],
+  shinagawa: ['品川', 'しながわ', 275, 222, 'e', 0],
+  shibuya:   ['渋谷', 'しぶや', 195, 185, 'w', 3],
+  kawasaki:  ['川崎', 'かわさき', 247, 285, 'e', 0],
+  yokohama:  ['横浜', 'よこはま', 182, 358, 'w', 5],
+  skg:       ['桜木町', 'さくらぎちょう', 205, 386, 'e', 0],
+  shinyoko:  ['新横浜', 'しんよこはま', 138, 318, 'w', 6],
+  azamino:   ['あざみ野', 'あざみの', 92, 252, 'n', 8],
+  isezaki:   ['伊勢佐木長者町', 'いせざきちょうじゃまち', 222, 412, 'e', 7],
+  kamiooka:  ['上大岡', 'かみおおおか', 190, 444, 'e', 7],
+  shonandai: ['湘南台', 'しょうなんだい', 45, 440, 'n', 8],
+};
+// 1915年より まえ、いまの 桜木町駅は「横浜駅」だった
+const skgLabel = step => step < 3 ? ['横浜', 'よこはま'] : ['桜木町', 'さくらぎちょう'];
+
+const C = { first: '#c92a2a', chuo: '#e8590c', yama: '#37b24d', ginza: '#f59f00', toyoko: '#d6336c', shin: '#364fc7', blue: '#1098ad' };
+const P = id => STATIONS[id].slice(2, 4);
+// 線の かけら: at = でてくる ステップ、until = きえる ステップ。kind: rail / sub(ちかてつ) / shin(しんかんせん)
+const SEGS = [
+  { line: 'first', at: 0, pts: ['shimbashi', 'shinagawa', 'kawasaki', [190, 340], 'skg'] },
+  { line: 'chuo', at: 1, pts: ['shinjuku', [110, 112], 'tachikawa'] },
+  { line: 'first', at: 2, pts: ['tokyo', 'shimbashi'] },
+  { line: 'yama', at: 3, close: true, pts: [[313, 140], 'ueno', 'ikebukuro', 'shinjuku', 'shibuya', [268, 216], [298, 176]] },
+  { line: 'ginza', at: 4, kind: 'sub', pts: ['ueno', 'asakusa'] },
+  { line: 'toyoko', at: 5, pts: ['shibuya', [200, 262], 'yokohama'] },
+  { line: 'toyoko', at: 5, until: 8, pts: ['yokohama', [198, 380]] },
+  { line: 'shin', at: 6, kind: 'shin', pts: [[328, 140], [313, 180], [284, 226], 'shinyoko', [8, 372]] },
+  { line: 'blue', at: 7, kind: 'sub', pts: ['isezaki', 'kamiooka'] },
+  // いま
+  { line: 'chuo', at: 8, pts: ['tokyo', [262, 128], 'shinjuku'] },
+  { line: 'ginza', at: 8, kind: 'sub', pts: ['ueno', [292, 104], [294, 168], 'shimbashi', [250, 170], 'shibuya'] },
+  { line: 'blue', at: 8, kind: 'sub', pts: ['kamiooka', [110, 450], 'shonandai'] },
+  { line: 'blue', at: 8, kind: 'sub', pts: ['isezaki', 'skg', 'yokohama', 'shinyoko', 'azamino'] },
+];
+
+const R = (k, y) => `<ruby>${k}<rt>${y}</rt></ruby>`;
+// できごと 8つ ＋ いま。q = その まえに でる クイズ
+const STEPS = [
+  { y: 1872, yr: '1872年（明治5年）', era: '150ねん いじょう まえ', ttl: 'さいしょの てつどう',
+    body: `${R('新橋', 'しんばし')}から ${R('横浜', 'よこはま')}まで、にほんで はじめての てつどうが できたよ。じょうき きかんしゃが ぽっぽー！ ろせんずは まだ この 1ぽん だけ。`,
+    sp: 'ひゃくごじゅうねん いじょう まえ。しんばしから よこはままで、にほんで はじめての てつどうが できたよ。ろせんずは まだ この いっぽん だけ。',
+    note: '1872年 新橋〜横浜 開業。当時の新橋駅は のちの汐留駅、横浜駅は いまの桜木町駅です。' },
+  { y: 1889, yr: '1889年（明治22年）', era: '130ねん いじょう まえ', ttl: 'にしへ まっすぐ のびる せん',
+    body: `${R('新宿', 'しんじゅく')}から ${R('立川', 'たちかわ')}まで、まっすぐな せんが できたよ。いまの ${R('中央線', 'ちゅうおうせん')}の はじまり。`,
+    sp: 'しんじゅくから たちかわまで、まっすぐな せんが できたよ。いまの ちゅうおうせんの はじまり。',
+    note: '1889年4月11日 甲武鉄道 新宿〜立川 開業（1906年に国有化）。' },
+  { y: 1914, yr: '1914年（大正3年）', era: '110ねん くらい まえ', ttl: 'とうきょうえきが できた',
+    body: `れんがの おおきな えき、${R('東京', 'とうきょう')}えきが できたよ。せんが ${R('東京', 'とうきょう')}まで のびた。`,
+    sp: 'れんがの おおきな えき、とうきょうえきが できたよ。',
+    note: '1914年12月20日 東京駅 開業。' },
+  { y: 1925, yr: '1925年（大正14年）', era: '100ねん くらい まえ', ttl: 'やまのてせんが わっかに！',
+    body: `せんと せんが つながって、ぐるっと まるい わっかに なったよ。ぐるぐる まわる ${R('山手線', 'やまのてせん')}！`,
+    sp: 'せんと せんが つながって、ぐるっと まるい わっかに なったよ。ぐるぐる まわる やまのてせん！',
+    note: '1925年11月1日 神田〜上野 開通、山手線の環状運転が はじまる。',
+    q: { ask: 'つぎは、せんが まるい かたちに つながるよ。どれかな？', ans: 'wakka', opts: ['wakka', 'chika', 'shin'] } },
+  { y: 1927, yr: '1927年（昭和2年）', era: '100ねん くらい まえ', ttl: 'さいしょの ちかてつ',
+    body: `${R('上野', 'うえの')}から ${R('浅草', 'あさくさ')}まで、じめんの したを はしる でんしゃが できたよ。いまの ${R('銀座線', 'ぎんざせん')}。`,
+    sp: 'うえのから あさくさまで、じめんの したを はしる でんしゃが できたよ。いまの ぎんざせん。',
+    note: '1927年12月30日 東京地下鉄道 上野〜浅草（約2.2km）開業。日本で、東洋でも はじめての地下鉄。',
+    q: { ask: 'つぎは、じめんの したを はしる せんだよ。どれかな？', ans: 'chika', opts: ['chika', 'shin', 'linear'] } },
+  { y: 1932, yr: '1932年（昭和7年）', era: '90ねん いじょう まえ', ttl: 'とうきょうと よこはまを むすぶ',
+    body: `${R('渋谷', 'しぶや')}から ${R('桜木町', 'さくらぎちょう')}まで、${R('東横線', 'とうよこせん')}が ぜんぶ つながったよ。`,
+    sp: 'しぶやから さくらぎちょうまで、とうよこせんが ぜんぶ つながったよ。',
+    note: '1932年3月31日 東横線 渋谷〜桜木町 全通（区間ごとの開業は1926年から）。' },
+  { y: 1964, yr: '1964年（昭和39年）', era: 'おじいちゃんが こどもの ころ', ttl: 'しんかんせん！',
+    body: `${R('東京', 'とうきょう')}から おおさかまで、とっても はやい しんかんせんが できたよ。${R('新横浜', 'しんよこはま')}えきも できた。`,
+    sp: 'とうきょうから おおさかまで、とっても はやい しんかんせんが できたよ。しんよこはまえきも できた。',
+    note: '1964年10月1日 東海道新幹線 東京〜新大阪 開業。新横浜駅も同じ日に開業。',
+    q: { ask: 'つぎは、とっても はやい せん。おじいちゃんが こどもの ころに できたよ。どれかな？', ans: 'shin', opts: ['shin', 'linear', 'sora'] } },
+  { y: 1972, yr: '1972年（昭和47年）', era: '50ねん くらい まえ', ttl: 'よこはまの ちかてつ',
+    body: `よこはまにも ちかてつが できたよ。${R('伊勢佐木長者町', 'いせざきちょうじゃまち')}から ${R('上大岡', 'かみおおおか')}まで。いまの ブルーライン。`,
+    sp: 'よこはまにも ちかてつが できたよ。いせざきちょうじゃまちから かみおおおかまで。いまの ブルーライン。',
+    note: '1972年12月16日 横浜市営地下鉄 伊勢佐木長者町〜上大岡 開業。' },
+  { y: 2026, yr: '', era: 'いま！', ttl: 'いまの ろせんず',
+    body: 'せんが のびて、つながって、いっぱい！ でも、さいしょは きらっと ひかる 1ぽん だけ だったね。',
+    sp: 'いまの ろせんず。せんが のびて、つながって、いっぱい！ でも、さいしょは ひかっている いっぽん だけ だったね。',
+    note: 'いまの姿：中央線は東京まで（1919年）、銀座線は渋谷まで（1939年）、ブルーラインは あざみ野〜湘南台（1999年）、新幹線に品川駅（2003年）。東横線の横浜〜桜木町は2004年に廃止（みなとみらい線へ）。ほかの多くの路線は省略。' },
+];
+const NOW = STEPS.length - 1;
+
+// クイズの こたえ
+const OPTS = {
+  wakka: { name: 'やまのてせんの わっか', ng: '',
+    art: '<circle cx="32" cy="20" r="14" fill="none" stroke="#37b24d" stroke-width="6"/><circle cx="32" cy="6" r="3" fill="#fff" stroke="#333"/>' },
+  chika: { name: 'ちかてつ', ng: 'ちかてつは もうすこし あとだよ。',
+    art: '<rect x="0" y="0" width="64" height="40" fill="#c8a26a"/><rect x="0" y="0" width="64" height="9" fill="#69db7c"/><path d="M14 40 V24 Q14 14 24 14 H40 Q50 14 50 24 V40Z" fill="#343a40"/><rect x="20" y="22" width="24" height="14" rx="3" fill="#f59f00"/><rect x="24" y="25" width="6" height="5" fill="#fff"/><rect x="34" y="25" width="6" height="5" fill="#fff"/>' },
+  shin: { name: 'しんかんせん', ng: 'しんかんせんは、まだまだ ずっと あと！',
+    art: '<path d="M4 30 H44 Q60 30 62 24 Q52 12 30 12 H4Z" fill="#fff" stroke="#555" stroke-width="2"/><path d="M4 24 H58" stroke="#364fc7" stroke-width="4"/><rect x="10" y="15" width="7" height="5" fill="#74c0fc"/><rect x="22" y="15" width="7" height="5" fill="#74c0fc"/><circle cx="14" cy="33" r="3" fill="#333"/><circle cx="44" cy="33" r="3" fill="#333"/>' },
+  linear: { name: 'リニア', ng: 'リニアは いま つくって いる ところ。まだ はしって ないよ。',
+    art: '<path d="M4 26 H42 Q62 26 62 18 Q50 8 30 8 H4Z" fill="#f3f0ff" stroke="#5f3dc4" stroke-width="2"/><path d="M8 32 H58" stroke="#5f3dc4" stroke-width="3"/><path d="M14 29 v-2 M26 29 v-2 M38 29 v-2 M50 29 v-2" stroke="#ffc93c" stroke-width="2"/><rect x="10" y="12" width="7" height="5" fill="#b197fc"/>' },
+  sora: { name: 'そらとぶ でんしゃ', ng: 'そらとぶ でんしゃは… まだ ないよ〜！',
+    art: '<ellipse cx="12" cy="34" rx="12" ry="6" fill="#e7f5ff"/><ellipse cx="54" cy="34" rx="10" ry="5" fill="#e7f5ff"/><path d="M22 10 L8 2 M42 10 L56 2" stroke="#ffc9c9" stroke-width="5" stroke-linecap="round"/><rect x="14" y="10" width="36" height="16" rx="5" fill="#ffa8a8" stroke="#c92a2a" stroke-width="2"/><rect x="19" y="14" width="7" height="5" fill="#fff"/><rect x="30" y="14" width="7" height="5" fill="#fff"/>' },
+};
+const KOBITO = ['また ふえた！', 'また ふえた〜！', 'ちずが せまい〜！', 'また ふえた！ ひろげなきゃ', 'すごい、また ふえた！', 'まだ ふえるの？！'];
+
+/* ========== ほぞん ========== */
+const KEY = 'rosenzu-timemachine-v1';
+const S = { snd: true, voice: true, clears: 0, best: 0 };
+try {
+  const o = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (o && typeof o === 'object') {
+    if (typeof o.snd === 'boolean') S.snd = o.snd;
+    if (typeof o.voice === 'boolean') S.voice = o.voice;
+    if (Number.isInteger(o.clears) && o.clears >= 0) S.clears = o.clears;
+    if (Number.isInteger(o.best) && o.best >= 0 && o.best <= 3) S.best = o.best;
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+/* ========== おと（WebAudio の ごうせいおん） ========== */
+let ac = null;
+const audio = () => {
+  if (!S.snd) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+};
+const tone = (f, t0, d, type = 'sine', v = 0.18, f2 = null) => {
+  const a = audio(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+  } catch (e) {}
+};
+const sfx = {
+  pick: () => tone(520, 0, 0.08, 'triangle'),
+  tick: () => tone(900, 0, 0.03, 'triangle', 0.08),
+  lever: () => { tone(160, 0, 0.18, 'square', 0.12, 80); tone(90, 0.12, 0.2, 'sawtooth', 0.1); },
+  ng: () => { tone(220, 0, 0.18, 'sawtooth', 0.1, 170); tone(170, 0.2, 0.28, 'sawtooth', 0.1, 130); },
+  ok: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.25, 'triangle')),
+  warp: () => { tone(200, 0, 0.9, 'sawtooth', 0.06, 1400); tone(300, 0.05, 0.9, 'sine', 0.08, 2000); },
+  draw: () => [392, 440, 494, 523, 587].forEach((f, i) => tone(f, i * 0.22, 0.18, 'triangle', 0.1)),
+  poppo: () => { tone(620, 0, 0.35, 'square', 0.07, 600); tone(520, 0.45, 0.6, 'square', 0.07, 500); },
+  spread: () => { tone(300, 0, 0.25, 'sawtooth', 0.05, 900); tone(900, 0.25, 0.2, 'sawtooth', 0.04, 300); },
+  mole: () => { tone(400, 0, 0.12, 'square', 0.08, 900); tone(1200, 0.15, 0.12, 'sine', 0.12); tone(1500, 0.3, 0.12, 'sine', 0.12); },
+  guru: () => [0, 1, 2, 3, 4, 5].forEach(i => tone(i % 2 ? 500 : 700, i * 0.12, 0.1, 'triangle', 0.08)),
+  fanfare: () => [[523, 0], [523, 0.15], [523, 0.3], [698, 0.45], [659, 0.75], [698, 0.9], [784, 1.05], [1047, 1.3]]
+    .forEach(([f, t]) => tone(f, t, t > 1.2 ? 0.7 : 0.22, 'square', 0.1)),
+};
+const speak = text => {
+  if (!S.snd || !S.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+};
+const hush = () => { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} };
+
+/* ========== ちず ========== */
+const $ = id => document.getElementById(id);
+const NS = 'http://www.w3.org/2000/svg';
+const map = $('map');
+const LAND = ['#e9d6aa', '#ebd9b0', '#eddcb6', '#efe0bd', '#f1e5c6', '#f3e9cf', '#f3eedb', '#f2f0e2', '#f4f4ea'];
+const pt = p => typeof p === 'string' ? P(p) : p;
+const dOf = s => s.pts.map((p, i) => (i ? 'L' : 'M') + pt(p).join(' ')).join(' ') + (s.close ? ' Z' : '');
+const WIDTH = { rail: 7, sub: 7, shin: 8 };
+
+function buildMap() {
+  let h = '';
+  h += `<rect width="400" height="470" fill="#bcd8e8"/>`;
+  h += `<path id="land" d="M0 0 H400 V182 L344 206 L304 256 L268 318 L242 380 L246 470 H0 Z" fill="${LAND[0]}"/>`;
+  h += `<path d="M0 150 Q70 172 120 198 T280 262" fill="none" stroke="#8ec5e6" stroke-width="5" stroke-linecap="round"/>`;
+  h += `<text x="78" y="196" font-size="11" fill="#4a86b5" transform="rotate(22 78 196)">たまがわ</text>`;
+  h += `<text x="352" y="300" font-size="15" fill="#4a86b5" font-weight="bold">うみ</text>`;
+  h += `<text x="40" y="92" font-size="20" fill="#b8a77a" font-weight="bold" letter-spacing="4">とうきょう</text>`;
+  h += `<text x="40" y="404" font-size="20" fill="#b8a77a" font-weight="bold" letter-spacing="4">よこはま</text>`;
+  h += `<g id="osaka" opacity="0"><text x="8" y="392" font-size="11" fill="#364fc7" font-weight="bold">← おおさか</text></g>`;
+  h += '<g id="segs"></g><g id="stations"></g><g id="sparks"></g>';
+  // もぐら
+  h += `<g id="mole"><ellipse cx="352" cy="118" rx="22" ry="6" fill="#8b5e34"/>
+    <path d="M334 118 Q334 86 352 86 Q370 86 370 118Z" fill="#6b4f3a"/><ellipse cx="352" cy="104" rx="7" ry="5" fill="#ffa8a8"/>
+    <circle cx="346" cy="96" r="2.5" fill="#111"/><circle cx="358" cy="96" r="2.5" fill="#111"/>
+    <path d="M336 110 l-8 4 M368 110 l8 4" stroke="#ffd8a8" stroke-width="4" stroke-linecap="round"/>
+    <text x="372" y="84" font-size="16" font-weight="bold" fill="#e03131">!!</text>
+    <rect x="318" y="124" width="68" height="22" rx="11" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="352" y="139" font-size="12" text-anchor="middle" font-weight="bold">びっくり！</text></g>`;
+  h += '<g id="runner" opacity="0"></g>';
+  map.innerHTML = h;
+
+  const segG = $('segs');
+  SEGS.forEach((s, i) => {
+    const kind = s.kind || 'rail';
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'seg'); g.dataset.i = i; g.style.display = 'none';
+    const base = document.createElementNS(NS, 'path');
+    base.setAttribute('class', 'base'); base.setAttribute('d', dOf(s));
+    base.setAttribute('stroke', C[s.line]); base.setAttribute('stroke-width', WIDTH[kind]);
+    g.appendChild(base);
+    if (kind !== 'rail') {
+      const core = document.createElementNS(NS, 'path');
+      core.setAttribute('class', 'core'); core.setAttribute('d', dOf(s));
+      core.setAttribute('stroke-width', kind === 'shin' ? 2.4 : 2.2);
+      if (kind === 'sub') core.setAttribute('stroke-dasharray', '4 5');
+      g.appendChild(core);
+    }
+    segG.appendChild(g);
+    s.el = g; s.base = base;
+  });
+
+  const stG = $('stations');
+  Object.entries(STATIONS).forEach(([id, [k, y, x, yy, dir]]) => {
+    const g = document.createElementNS(NS, 'g');
+    g.setAttribute('class', 'st'); g.id = 'st-' + id; g.style.opacity = 0;
+    const off = { n: [0, -24, 'middle'], s: [0, 24, 'middle'], e: [10, 0, 'start'], w: [-10, 0, 'end'] }[dir];
+    const tx = x + off[0], ty = yy + off[1];
+    g.innerHTML = `<circle cx="${x}" cy="${yy}" r="5.5" fill="#fff" stroke="#333" stroke-width="2.5"/>
+      <text class="kana" x="${tx}" y="${ty - 3}" font-size="8.5" text-anchor="${off[2]}" fill="#555">${y}</text>
+      <text class="kanji" x="${tx}" y="${ty + 11}" font-size="13.5" text-anchor="${off[2]}" fill="#222">${k}</text>`;
+    stG.appendChild(g);
+  });
+}
+
+function setStations(step) {
+  Object.entries(STATIONS).forEach(([id, s]) => {
+    const g = $('st-' + id); g.style.opacity = step >= s[5] ? 1 : 0;
+    if (id === 'skg') {
+      const [k, y] = skgLabel(step);
+      g.querySelector('.kanji').textContent = k; g.querySelector('.kana').textContent = y;
+    }
+  });
+  $('land').setAttribute('fill', LAND[step]);
+  $('osaka').setAttribute('opacity', step >= 6 ? 1 : 0);
+}
+
+// 線を ひく（あたらしい かけらは アニメーション）
+let runAnim = 0;
+function showSegs(step, animate) {
+  const fresh = [];
+  SEGS.forEach(s => {
+    const on = step >= s.at && !(s.until != null && step >= s.until);
+    const g = s.el;
+    if (s.until != null && step >= s.until && g.style.display !== 'none') {
+      if (animate) { g.classList.add('gone'); setTimeout(() => { g.style.display = 'none'; g.classList.remove('gone'); }, 1000); }
+      else g.style.display = 'none';
+      return;
+    }
+    if (!on) { g.style.display = 'none'; g.classList.remove('drawn', 'shine'); return; }
+    if (g.style.display === 'none') {
+      g.style.display = '';
+      if (animate && s.at === step) fresh.push(s);
+      else { g.classList.add('drawn'); s.base.style.strokeDasharray = ''; s.base.style.strokeDashoffset = ''; s.base.style.transition = ''; }
+    }
+  });
+  const dur = 1600;
+  fresh.forEach(s => {
+    const b = s.base, L = b.getTotalLength();
+    b.style.transition = 'none'; b.style.strokeDasharray = L; b.style.strokeDashoffset = L;
+    b.getBoundingClientRect();
+    b.style.transition = `stroke-dashoffset ${dur}ms linear`; b.style.strokeDashoffset = 0;
+    setTimeout(() => { b.style.transition = ''; b.style.strokeDasharray = ''; b.style.strokeDashoffset = ''; s.el.classList.add('drawn'); }, dur + 40);
+  });
+  if (fresh.length) runTrain(fresh[0], dur, step === 0);
+  return fresh.length;
+}
+
+// でんしゃが 線の さきっぽを はしる
+function runTrain(s, dur, isSL) {
+  const r = $('runner'), b = s.base, L = b.getTotalLength();
+  r.innerHTML = isSL
+    ? `<g><rect x="-11" y="-7" width="18" height="12" rx="2" fill="#222"/><rect x="5" y="-12" width="7" height="17" rx="1" fill="#333"/><rect x="-14" y="-14" width="5" height="8" fill="#222"/>
+       <circle cx="-12" cy="-19" r="4" fill="#ddd" opacity=".9"/><circle cx="-17" cy="-25" r="5" fill="#eee" opacity=".7"/>
+       <circle cx="-6" cy="6" r="3" fill="#c92a2a"/><circle cx="4" cy="6" r="3" fill="#c92a2a"/></g>`
+    : `<g><rect x="-10" y="-7" width="20" height="14" rx="5" fill="${C[s.line]}" stroke="#fff" stroke-width="2.5"/><rect x="-5" y="-3" width="4" height="4" fill="#fff"/><rect x="2" y="-3" width="4" height="4" fill="#fff"/></g>`;
+  r.setAttribute('opacity', 1);
+  cancelAnimationFrame(runAnim);
+  const t0 = performance.now();
+  const f = now => {
+    const k = Math.min(1, (now - t0) / dur), p = b.getPointAtLength(L * k);
+    r.setAttribute('transform', `translate(${p.x} ${p.y})`);
+    if (k < 1) runAnim = requestAnimationFrame(f);
+    else setTimeout(() => r.setAttribute('opacity', 0), isSL ? 1800 : 500);
+  };
+  runAnim = requestAnimationFrame(f);
+}
+
+/* ========== がめん ========== */
+const show = id => { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); $('doneOver').classList.remove('on'); };
+function renderToggles() {
+  $('sndBtn').textContent = S.snd ? '🔊 おと' : '🔇 おと';
+  $('sndBtn').classList.toggle('off', !S.snd);
+  $('voiceBtn').classList.toggle('off', !S.voice || !S.snd);
+  $('sndBtn2').textContent = S.snd ? '🔊' : '🔇';
+  $('sndBtn2').classList.toggle('off', !S.snd);
+}
+$('sndBtn2').addEventListener('click', () => { S.snd = !S.snd; if (!S.snd) hush(); save(); renderToggles(); if (S.snd) sfx.pick(); });
+$('sndBtn').addEventListener('click', () => { S.snd = !S.snd; if (!S.snd) hush(); save(); renderToggles(); if (S.snd) sfx.pick(); });
+$('voiceBtn').addEventListener('click', () => {
+  S.voice = !S.voice; if (S.voice) S.snd = true; else hush();
+  save(); renderToggles(); if (S.voice) speak('こえで よむよ');
+});
+function renderHome() {
+  renderToggles();
+  $('rec').textContent = S.clears ? `いままでに ${S.clears}かい いまに ついたよ　${'⭐'.repeat(S.best)}` : '';
+}
+const goHome = () => { hush(); clearTimers(); renderHome(); show('home'); };
+$('homeBtn').addEventListener('click', goHome);
+$('backBtn').addEventListener('click', goHome);
+$('startBtn').addEventListener('click', () => { sfx.pick(); startGame(); });
+$('againBtn').addEventListener('click', () => { sfx.pick(); startGame(); });
+$('sayBtn').addEventListener('click', () => { if (quiz != null) speak(STEPS[quiz].q.ask); else speak(STEPS[step].sp); });
+
+/* ========== あそびの すすみかた ========== */
+let step = 0, quiz = null, busy = false, misses = [0, 0, 0], timers = [], kobiN = 0;
+const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
+function clearTimers() { timers.forEach(clearTimeout); timers = []; cancelAnimationFrame(runAnim); }
+const lever = $('lever');
+function setMsg(t, ng) { $('msg').textContent = t; $('msg').classList.toggle('ng', !!ng); }
+function setLever(on) { lever.disabled = !on; lever.classList.toggle('glow', on); }
+
+function renderTL() {
+  $('tl').innerHTML = STEPS.map((s, i) => `<span class="${i < step ? 'done' : i === step ? 'now' : ''}"><i></i>${i === NOW ? 'いま' : s.y}</span>`).join('');
+}
+function renderText() {
+  const s = STEPS[step];
+  $('era').textContent = s.era; $('ttl').textContent = s.ttl; $('body').innerHTML = s.body; $('note').textContent = s.note;
+  $('ybadge').innerHTML = `${s.era}<small>${step === NOW ? 'いま' : s.yr}</small>`;
+  $('ptext').scrollTop = 0;
+}
+
+function startGame() {
+  clearTimers(); hush();
+  step = 0; quiz = null; busy = true; misses = [0, 0, 0]; kobiN = 0;
+  show('play');
+  buildMap();
+  $('kobito').className = 'kobito'; $('bub').classList.remove('on'); $('choices').classList.remove('on');
+  $('sparks').innerHTML = '';
+  setStations(0); renderText(); renderTL();
+  setLever(false); setMsg('タイムマシン、しゅっぱつ！');
+  later(() => { showSegs(0, true); sfx.poppo(); speak(STEPS[0].sp); }, 400);
+  later(() => { busy = false; setLever(true); setMsg('レバーを うごかすと、とし が すすむよ！'); }, 2400);
+}
+
+lever.addEventListener('click', () => {
+  if (busy || quiz != null || step >= NOW) return;
+  lever.classList.add('pulled'); sfx.lever();
+  setTimeout(() => lever.classList.remove('pulled'), 450);
+  const t = step + 1;
+  if (STEPS[t].q) askQuiz(t); else travel(t);
+});
+
+function askQuiz(t) {
+  quiz = t; setLever(false);
+  const q = STEPS[t].q;
+  setMsg('ストップ！ ' + q.ask);
+  speak('ストップ！ ' + q.ask);
+  const order = q.opts.slice().sort(() => Math.random() - 0.5);
+  const box = $('choices');
+  box.innerHTML = order.map(id => `<button class="ch" data-id="${id}"><svg viewBox="0 0 64 40" aria-hidden="true">${OPTS[id].art}</svg>${OPTS[id].name}</button>`).join('');
+  box.classList.add('on');
+  box.querySelectorAll('.ch').forEach(b => b.addEventListener('click', () => answer(b)));
+}
+function answer(b) {
+  if (busy || quiz == null || b.classList.contains('no')) return;
+  const q = STEPS[quiz].q, id = b.dataset.id, qi = [3, 4, 6].indexOf(quiz);
+  if (id === q.ans) {
+    b.classList.add('yes'); sfx.ok(); busy = true;
+    setMsg(misses[qi] ? 'せいかい！ よく がんばったね！' : 'せいかい！ すごい！');
+    speak('せいかい！');
+    const t = quiz;
+    later(() => { quiz = null; $('choices').classList.remove('on'); travel(t); }, 1100);
+  } else {
+    misses[qi]++;
+    b.classList.add('no'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); sfx.ng();
+    setMsg('ざんねん！ ' + OPTS[id].ng + ' もういちど えらんでね。', true);
+    speak('ざんねん。' + OPTS[id].ng + ' もういちど えらんでね');
+  }
+}
+
+function travel(t) {
+  busy = true; setLever(false);
+  const from = STEPS[step].y, to = STEPS[t].y;
+  const wrap = $('mapwrap');
+  wrap.classList.add('warping'); sfx.warp();
+  setMsg('びゅーん… じかんが すすむよ！');
+  const t0 = performance.now(), dur = 1100;
+  const tickYear = now => {
+    const k = Math.min(1, (now - t0) / dur), y = Math.round(from + (to - from) * k);
+    $('ybadge').innerHTML = `びゅーん…<small>${t === NOW && k === 1 ? 'いま' : y + '年'}</small>`;
+    if (k < 1) { if (Math.random() < 0.35) sfx.tick(); requestAnimationFrame(tickYear); }
+  };
+  requestAnimationFrame(tickYear);
+  later(() => {
+    wrap.classList.remove('warping');
+    step = t; setStations(t); renderText(); renderTL();
+    const n = showSegs(t, true);
+    if (n) sfx.draw();
+    speak(STEPS[t].sp);
+    setMsg(t === NOW ? 'いまに ついた！' : 'あたらしい せんが できたよ！');
+    if (t === NOW) later(finale, 1900);
+    else later(() => laugh(t), 1800);
+  }, dur + 100);
+}
+
+// わらいどころ（せんが できた あとに だす）
+function bubble(text, ms = 1900) {
+  const b = $('bub'); b.textContent = text; b.classList.add('on');
+  later(() => b.classList.remove('on'), ms);
+}
+function laugh(t) {
+  const box = $('mapbox'), k = $('kobito');
+  if (t === 4) {
+    const m = $('mole'); m.classList.remove('pop'); void m.getBoundingClientRect(); m.classList.add('pop'); sfx.mole();
+    later(() => kobiSpread(), 1500);
+    later(done, 3100);
+    return;
+  }
+  kobiSpread();
+  later(done, 1500);
+  function kobiSpread() {
+    box.classList.remove('spread'); void box.offsetWidth; box.classList.add('spread');
+    k.classList.remove('wave'); void k.offsetWidth; k.classList.add('wave');
+    sfx.spread(); bubble(KOBITO[kobiN++ % KOBITO.length]);
+  }
+  function done() {
+    busy = false; setLever(true);
+    setMsg(STEPS[t + 1] && STEPS[t + 1].q ? 'レバーを うごかそう。つぎは なにが できるかな？' : 'レバーを うごかして つぎへ！');
+  }
+}
+
+function finale() {
+  // さいしょの 1ぽん（しんばし〜よこはま）が きらっ
+  SEGS.filter(s => s.line === 'first' && s.at === 0).forEach(s => s.el.classList.add('shine'));
+  const b = SEGS[0].base, L = b.getTotalLength();
+  $('sparks').innerHTML = [0.1, 0.4, 0.7, 0.95].map((r, i) => {
+    const p = b.getPointAtLength(L * r);
+    return `<text class="spark" x="${p.x + 8}" y="${p.y - 8}" style="animation-delay:${i * 0.25}s">✨</text>`;
+  }).join('');
+  sfx.ok();
+  setMsg('きらっ！ さいしょの 1ぽんは ここ。しんばし〜よこはま！');
+  later(() => {
+    $('kobito').classList.add('tangled'); sfx.guru();
+    bubble('せんに からまっちゃった〜 ぐるぐる〜', 2600);
+  }, 1500);
+  later(finish, 4300);
+}
+
+function finish() {
+  const stars = misses.reduce((a, m) => a + (m === 0 ? 1 : 0), 0);
+  const st = Math.max(1, stars);
+  S.clears++; S.best = Math.max(S.best, st); save();
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
+  $('doneMsg').textContent = stars === 3 ? 'クイズ ぜんぶ いっかいで せいかい！ ろせんず はかせだ！' : 'さいごまで いけたね！ すごい！';
+  $('doneOver').classList.add('on');
+  sfx.fanfare(); confetti();
+  speak('いまに ついた！ さいしょは いっぽん だけ。それが こんなに いっぱいに なったんだね。');
+  busy = false;
+}
+function confetti() {
+  const cols = ['#ffc93c', '#37b24d', '#e03131', '#1c7ed6', '#f59f00', '#d6336c'];
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('div'); c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw'; c.style.background = cols[i % cols.length];
+    c.style.animationDuration = 2 + Math.random() * 2 + 's'; c.style.animationDelay = Math.random() * 0.6 + 's';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 5000);
+  }
+}
+
+renderHome();
+</script>
+</body>
+</html>
