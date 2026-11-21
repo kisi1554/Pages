@@ -512,6 +512,23 @@ function speak(text, rate = 0.95) {
   } catch (e) {}
 }
 function hush() { if (TTS) try { speechSynthesis.cancel(); } catch (e) {} }
+// よみおわるまで まつ（でんしゃを 駅で とめて よむため）。onend が こない ブラウザ向けに じかんぎれでも すすむ
+function speakWait(text, rate = 1.05) {
+  if (!SAVE.voice || !TTS || !text) return Promise.resolve();
+  return new Promise(res => {
+    let done = false;
+    const fin = () => { if (!done) { done = true; clearTimeout(tm); res(); } };
+    const tm = setTimeout(fin, Math.min(4500, 900 + text.length * 260 / rate));
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = 'ja-JP'; u.rate = rate; u.pitch = 1.1;
+      if (jaVoice) u.voice = jaVoice;
+      u.onend = fin; u.onerror = fin;
+      speechSynthesis.speak(u);
+    } catch (e) { fin(); }
+  });
+}
 
 function updSnd() {
   document.querySelectorAll('.snd').forEach(b => { b.textContent = SAVE.snd ? '🔊' : '🔇'; });
@@ -948,21 +965,34 @@ async function loopRun(n) {
   setMsg(n > 1 ? `<span class="big">${n}${word}！</span>` : '<span class="big">しゅっぱつ しんこう！</span>');
   SFX.depart();
   await sleep(1400); if (tok !== S.tok) return;
-  // よみあげ オンの ときは ゆっくり はしって 1えきずつ よむ（2かいめからは よまない）
+  // よみあげ オンの ときは 1えきずつ とまって、よみおわってから つぎの えきへ（2かいめからは よまない）
   const slow = SAVE.voice && TTS && n === 1;
-  const ms = slow ? 820 : Math.max(140, 300 - (n - 1) * 60);
+  const ms = Math.max(140, 300 - (n - 1) * 60);
   if (n >= 3) trainA.classList.add('dizzy');
   const from = trainA.pos;
   const dir = LINE.loop ? 1 : (from === 0 ? 1 : -1);
   const steps = LINE.loop ? N : N - 1;
-  await runTrain(trainA, from, dir, steps, ms, (i, k) => {
+  const arrive = (i, k) => {
     SFX.tick(k); const t = tilesEl[i];
-    t.classList.add('lit'); setTimeout(() => t.classList.remove('lit'), slow ? 900 : 650);
-    if (slow) speak(yomi(i), 1.15);
+    t.classList.add('lit'); setTimeout(() => t.classList.remove('lit'), 650);
     if (n === 1 || k % 5 === 0) setMsg(`<span class="kbig">${rubyHTML(i)}</span>`);
-  });
+  };
+  if (slow) {
+    for (let k = 1; k <= steps; k++) {
+      const ok = await runTrain(trainA, mod(from + dir * (k - 1)), dir, 1, 380, () => {});
+      if (!ok || tok !== S.tok) return;
+      const i = trainA.pos, t = tilesEl[i];
+      arrive(i, k);
+      t.classList.add('lit');
+      await speakWait(yomi(i), 1.1);
+      t.classList.remove('lit');
+      if (tok !== S.tok) return;
+    }
+  } else {
+    await runTrain(trainA, from, dir, steps, ms, arrive);
+  }
   if (tok !== S.tok) return;
-  await sleep(slow ? 700 : 0);
+  await sleep(slow ? 300 : 0);
   if (n >= 2) {
     trainA.classList.add('dizzy'); SFX.dizzy();
     say(trainA, n >= 3 ? 'ぐるぐる〜 め が まわる〜' : 'ふらふら〜', 2000);
@@ -1036,9 +1066,8 @@ async function answerQuiz(b, i, t) {
     if (!q.miss) q.good++;
     const fast = performance.now() - q.t0 < 4000 && !q.miss;
     tilesEl[t].classList.remove('quiz'); tilesEl[t].classList.add('lit');
-    speak(yomi(t));
     say(trainA, fast ? '⚡ はやい！ ' + praise() : praise(), 1300);
-    await sleep(SAVE.voice && TTS ? 1700 : 1400); q.lock = false;
+    await Promise.all([speakWait(yomi(t)), sleep(1200)]); q.lock = false;
     if (tok !== S.tok) return;
     nextQuiz();
   } else {
