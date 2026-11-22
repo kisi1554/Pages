@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>とっきゅう なまえの なぞ</title>
+<meta name="description" content="なまえを なくして ぷんぷん おこっている とっきゅうに、ヒントを みて なまえふだを つけて あげる ゲーム。とっきゅうの なまえの もとに なった 川・山・とり・むかしの くにを しろう。">
+<meta name="theme-color" content="#d6336c">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏷️</text></svg>">
+<style>
+*,*::before,*::after{ box-sizing:border-box; }
+:root{
+  --ink:#2a2233; --soft:#6f6580; --bg1:#fff0f6; --bg2:#e7f5ff;
+  --card:#fff; --line:#f3c6d8; --accent:#d6336c; --accent-dk:#a61e4d;
+  --ok:#2f9e44; --ng:#868e96; --shadow:rgba(166,30,77,.2);
+}
+html,body{ margin:0; padding:0; }
+html{ background:#eef3fb; }
+body{
+  min-height:100vh; color:var(--ink);
+  background:linear-gradient(170deg,var(--bg1) 0%,var(--bg2) 100%); background-attachment:fixed;
+  font-family:"Hiragino Maru Gothic ProN","ヒラギノ丸ゴ ProN","Yu Gothic","游ゴシック体","Meiryo",system-ui,sans-serif;
+  -webkit-tap-highlight-color:transparent; overflow-x:hidden;
+}
+.wrap{ max-width:1000px; margin:0 auto; padding:6px 14px calc(24px + env(safe-area-inset-bottom)); }
+rt{ font-size:.5em; font-weight:400; color:var(--soft); letter-spacing:0; }
+button{ font:inherit; color:inherit; }
+
+.bar{ display:flex; align-items:center; gap:8px; min-height:56px; }
+.bar .sp{ flex:1; }
+.bar .prog{ font-weight:800; color:var(--accent-dk); font-size:clamp(15px,4vw,18px); }
+.iconBtn{
+  min-width:52px; min-height:52px; padding:6px 12px; border:3px solid var(--line); border-radius:16px;
+  background:var(--card); font-size:clamp(15px,4vw,18px); font-weight:700; cursor:pointer;
+  box-shadow:0 4px 0 var(--shadow);
+}
+.iconBtn:active{ transform:translateY(3px); box-shadow:0 1px 0 var(--shadow); }
+.iconBtn[hidden]{ display:none; }
+
+.screen{ display:none; }
+.screen.on{ display:block; animation:fadeIn .25s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:none;} }
+
+.big{
+  display:block; width:100%; min-height:72px; margin:12px 0 0; padding:14px 18px;
+  border:none; border-radius:22px; background:var(--accent); color:#fff;
+  font-size:clamp(20px,5.6vw,26px); font-weight:800; letter-spacing:.06em; cursor:pointer;
+  box-shadow:0 6px 0 var(--accent-dk);
+}
+.big:active{ transform:translateY(4px); box-shadow:0 2px 0 var(--accent-dk); }
+.big.sub{ background:#fff; color:var(--accent-dk); border:3px solid var(--line); box-shadow:0 6px 0 var(--shadow); }
+
+/* ---------- タイトル ---------- */
+.hero{ text-align:center; padding:2px 0 6px; }
+.hero h1{ margin:4px 0 0; font-size:clamp(30px,8.6vw,50px); line-height:1.25; letter-spacing:.04em; color:var(--accent-dk); }
+.hero h1 small{ display:block; font-size:.4em; color:var(--soft); letter-spacing:.1em; }
+.hero p{ margin:10px auto 0; max-width:560px; font-size:clamp(15px,4.2vw,18px); line-height:1.8; color:var(--soft); }
+.titleTrain{ max-width:420px; margin:6px auto 0; position:relative; }
+.titleBtns{ max-width:480px; margin:6px auto 0; }
+.stat{ text-align:center; margin-top:14px; color:var(--soft); font-size:clamp(14px,3.8vw,16px); }
+
+/* ---------- でんしゃ ---------- */
+.train{ display:block; width:100%; height:auto; overflow:visible; }
+.train .bob{ transform-box:fill-box; transform-origin:50% 100%; animation:bob .9s ease-in-out infinite; }
+@keyframes bob{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-3px);} }
+.train.angry .bob{ animation:shake .35s ease-in-out infinite; }
+@keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-3px) rotate(-.6deg);} 75%{transform:translateX(3px) rotate(.6deg);} }
+.train.sad .bob{ animation:none; transform:translateY(4px) rotate(1.5deg); }
+.train.happy .bob{ animation:hop .5s ease-in-out infinite; }
+@keyframes hop{ 0%,100%{transform:translateY(0);} 50%{transform:translateY(-9px);} }
+.train .f{ display:none; }
+.train.angry .f-angry,.train.sad .f-sad,.train.happy .f-happy{ display:inline; }
+
+.stage{
+  position:relative; border-radius:22px; overflow:hidden; padding:34px 6px 0;
+  background:linear-gradient(#d0ebff 0 70%,#c9b79c 70% 73%,#868e96 73% 76%,#e9dcc6 76%);
+  min-height:150px;
+}
+.stage .trainBox{ position:relative; width:min(92%,520px); margin:0 auto; transition:transform 1.1s cubic-bezier(.3,.7,.3,1); }
+.stage .trainBox.left{ transform:translateX(-130vw); transition:none; }
+.stage .trainBox.right{ transform:translateX(140vw); transition:transform 1.3s cubic-bezier(.6,0,.9,.5); }
+.plate{
+  position:absolute; right:-1%; top:-30px; min-width:42%; max-width:60%; padding:4px 10px;
+  border:3px dashed #adb5bd; border-radius:12px; background:#fff;
+  font-size:clamp(16px,4.6vw,24px); font-weight:900; text-align:center; color:#adb5bd; line-height:1.3;
+  box-shadow:0 3px 0 rgba(0,0,0,.12);
+}
+.plate.set{ border:3px solid var(--plate,#d6336c); color:var(--plate,#d6336c); animation:stamp .4s ease; }
+@keyframes stamp{ 0%{transform:scale(1.6); opacity:0;} 100%{transform:scale(1); opacity:1;} }
+.puff{ position:absolute; font-size:30px; right:4%; top:6px; animation:puff 1s ease-in-out infinite; pointer-events:none; }
+@keyframes puff{ 0%,100%{transform:scale(.8); opacity:.6;} 50%{transform:scale(1.15); opacity:1;} }
+.bubble{
+  position:relative; margin:10px auto 0; max-width:620px; padding:12px 16px; border-radius:20px;
+  background:#fff; border:3px solid var(--line); font-size:clamp(17px,4.8vw,22px); font-weight:800;
+  line-height:1.6; text-align:center;
+}
+.bubble::before{ content:""; position:absolute; top:-14px; right:24%; border:10px solid transparent; border-bottom-color:var(--line); }
+
+/* ---------- ヒント ---------- */
+.playGrid{ display:grid; gap:12px; margin-top:12px; }
+.panel{ background:#fff; border:3px solid var(--line); border-radius:20px; padding:10px 12px; }
+.panel h3{ margin:0 0 6px; font-size:clamp(15px,4.2vw,18px); color:var(--accent-dk); }
+.mapBox{ border-radius:14px; overflow:hidden; background:#d0ebff; }
+.mapBox svg{ display:block; width:100%; height:auto; }
+.pref{ fill:#f8f4e8; stroke:#ced4da; stroke-width:1.2; }
+.route{ fill:none; stroke-linecap:round; stroke-linejoin:round; }
+.route.glow{ stroke:#fff; }
+.route.run{ stroke-dasharray:14 10; animation:dash 1s linear infinite; }
+@keyframes dash{ to{ stroke-dashoffset:-24; } }
+.routeTxt{ margin:8px 0 0; font-size:clamp(16px,4.4vw,20px); font-weight:800; text-align:center; line-height:1.7; }
+.scene{ font-size:clamp(40px,12vw,58px); text-align:center; letter-spacing:.08em; line-height:1.2; }
+.hintTxt{ margin:6px 0 0; font-size:clamp(16px,4.4vw,19px); line-height:1.8; text-align:center; }
+
+.cards{ display:grid; grid-template-columns:1fr; gap:10px; }
+.nameCard{
+  min-height:70px; padding:10px; border:4px solid var(--line); border-radius:18px; background:#fff;
+  font-size:clamp(22px,6.4vw,30px); font-weight:900; letter-spacing:.06em; cursor:pointer;
+  box-shadow:0 6px 0 var(--shadow); color:var(--ink);
+}
+.nameCard:active{ transform:translateY(4px); box-shadow:0 2px 0 var(--shadow); }
+.nameCard.no{ opacity:.35; transform:rotate(-2deg); box-shadow:none; pointer-events:none; }
+.nameCard.yes{ border-color:var(--ok); background:#ebfbee; }
+.cardsLabel{ text-align:center; font-weight:800; color:var(--accent-dk); font-size:clamp(16px,4.4vw,19px); margin:4px 0 8px; }
+
+@media (min-width:760px){
+  .playGrid{ grid-template-columns:1.05fr 1fr; align-items:start; }
+  .cards{ grid-template-columns:1fr; }
+}
+
+/* ---------- ポップアップ ---------- */
+.pop{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; padding:16px; background:rgba(40,20,40,.45); z-index:20; }
+.pop.on{ display:flex; animation:fadeIn .2s ease; }
+.popCard{
+  width:min(560px,100%); max-height:92vh; overflow:auto; background:#fff; border-radius:26px; padding:16px 18px 18px;
+  text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.25);
+}
+.popCard .tag{ display:inline-block; padding:4px 12px; border-radius:999px; background:var(--bg1); color:var(--accent-dk); font-weight:800; font-size:clamp(14px,3.8vw,16px); }
+.popCard h2{ margin:8px 0 4px; font-size:clamp(26px,7.4vw,38px); }
+.popCard p{ margin:8px 0 0; font-size:clamp(17px,4.8vw,21px); line-height:1.8; }
+.popCard .small{ font-size:clamp(13px,3.6vw,15px); color:var(--soft); }
+.origin{ font-size:clamp(70px,22vw,110px); line-height:1.1; animation:popIn .6s cubic-bezier(.3,1.6,.5,1); }
+@keyframes popIn{ 0%{transform:scale(0) rotate(-30deg);} 100%{transform:scale(1) rotate(0);} }
+
+/* まにうけ げきじょう */
+.gag{ position:relative; height:190px; border-radius:18px; overflow:hidden; margin-top:8px;
+  background:linear-gradient(#fff3bf 0 72%,#e9dcc6 72%); }
+.gag .mini{ position:absolute; left:50%; bottom:14px; width:180px; margin-left:-90px; }
+.gag .emo{ position:absolute; left:50%; top:20px; font-size:62px; margin-left:-40px; width:80px; text-align:center; }
+.gag .say{ position:absolute; left:8px; top:8px; font-weight:900; font-size:18px; color:var(--accent-dk); }
+.a-grab .mini{ animation:grabT 2.6s ease-in-out infinite; }
+.a-grab .emo{ animation:grabB 2.6s ease-in-out infinite; }
+@keyframes grabT{ 0%,15%{transform:translate(0,0) rotate(0);} 60%,80%{transform:translate(60px,-90px) rotate(-8deg);} 100%{transform:translate(0,0);} }
+@keyframes grabB{ 0%{transform:translate(-120px,-40px);} 15%{transform:translate(0,40px);} 60%,80%{transform:translate(60px,-40px);} 100%{transform:translate(0,40px);} }
+.a-sonic .mini{ animation:zoom 2.2s linear infinite; }
+.a-sonic .emo{ font-size:26px; font-weight:900; width:auto; top:auto; bottom:110px; color:#1971c2; animation:slowV 2.2s linear infinite; white-space:nowrap; }
+@keyframes zoom{ 0%{transform:translateX(-260px);} 45%,100%{transform:translateX(320px);} }
+@keyframes slowV{ 0%{transform:translateX(-200px); opacity:0;} 10%{opacity:1;} 100%{transform:translateX(120px); opacity:1;} }
+.a-spin .mini{ animation:spin 1.6s linear infinite; bottom:40px; }
+.a-spin .emo{ top:auto; bottom:10px; font-size:90px; margin-left:-50px; width:100px; animation:spin 1.6s linear infinite reverse; }
+@keyframes spin{ to{ transform:rotate(360deg); } }
+.a-bounce .emo{ animation:boing .8s ease-in-out infinite; }
+@keyframes boing{ 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-14px) scale(1.15);} }
+.a-bounce .mini{ animation:wob 1.2s ease-in-out infinite; }
+@keyframes wob{ 0%,100%{transform:rotate(-2deg);} 50%{transform:rotate(2deg);} }
+.a-zig .mini{ animation:zig 1s ease-in-out infinite; }
+@keyframes zig{ 0%,100%{transform:skewX(-14deg);} 50%{transform:skewX(14deg);} }
+.a-zig .emo{ animation:boing .8s ease-in-out infinite; }
+.a-limp .mini{ animation:limp 1.8s ease-in-out infinite; transform-origin:50% 100%; }
+@keyframes limp{ 0%,100%{transform:scaleY(1);} 50%{transform:scaleY(.6) scaleX(1.08);} }
+.a-limp .emo{ animation:boing 1s ease-in-out infinite; }
+
+/* ---------- ずかん ---------- */
+.zukanHead{ text-align:center; margin:4px 0 10px; }
+.zukanHead h2{ margin:0; font-size:clamp(24px,6.6vw,34px); color:var(--accent-dk); }
+.zukanHead p{ margin:4px 0 0; color:var(--soft); font-size:clamp(15px,4vw,17px); }
+.zukanGrid{ display:grid; gap:12px; }
+@media (min-width:760px){ .zukanGrid{ grid-template-columns:1fr 1fr; align-items:start; } }
+.zMap{ max-width:520px; margin:0 auto; width:100%; }
+.cat{ margin:0 0 12px; }
+.cat h3{ margin:0 0 6px; font-size:clamp(17px,4.6vw,20px); }
+.cat .list{ display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+.zItem{
+  min-height:64px; padding:8px 4px; border:3px solid var(--line); border-radius:16px; background:#fff;
+  font-size:clamp(14px,3.9vw,17px); white-space:nowrap; font-weight:900; cursor:pointer; line-height:1.3;
+}
+.zItem .em{ display:block; font-size:26px; }
+.zItem.locked{ color:#adb5bd; background:#f1f3f5; border-style:dashed; cursor:default; }
+
+/* ---------- けっか ---------- */
+.result{ text-align:center; padding:10px 0; }
+.result h2{ margin:6px 0; font-size:clamp(28px,8vw,42px); color:var(--accent-dk); }
+.stars{ font-size:clamp(40px,12vw,64px); letter-spacing:.1em; }
+.result p{ font-size:clamp(17px,4.8vw,21px); line-height:1.8; }
+.confetti{ position:fixed; inset:0; pointer-events:none; overflow:hidden; z-index:30; }
+.confetti i{ position:absolute; top:-20px; width:10px; height:16px; border-radius:3px; animation:fall linear forwards; }
+@keyframes fall{ to{ transform:translateY(110vh) rotate(720deg); } }
+.foot{ margin-top:18px; text-align:center; font-size:12px; color:var(--soft); line-height:1.7; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button class="iconBtn" id="btnHome" hidden aria-label="はじめに もどる">🏠</button>
+    <span class="prog" id="prog"></span>
+    <span class="sp"></span>
+    <button class="iconBtn" id="btnZukan" aria-label="とっきゅう ずかん">📖 ずかん</button>
+    <button class="iconBtn" id="btnSound" aria-label="おと オン">🔊</button>
+  </div>
+
+  <!-- タイトル -->
+  <section class="screen on" id="sTitle">
+    <div class="hero">
+      <h1><small>🏷️ なまえを とりもどせ！</small>とっきゅう<br>なまえの なぞ</h1>
+      <div class="titleTrain" id="titleTrain"></div>
+      <p>なまえを なくした とっきゅうが ぷんぷん！<br>ヒントを みて、ただしい なまえふだを つけて あげよう。<br>なまえには、<b>かわ・やま・とり・むかしの くに</b>が かくれているよ。</p>
+    </div>
+    <div class="titleBtns">
+      <button class="big" id="btnStart">🚄 えきへ いく！</button>
+      <button class="big sub" id="btnZukan2">📖 とっきゅう ずかん</button>
+    </div>
+    <div class="stat" id="stat"></div>
+  </section>
+
+  <!-- あそぶ -->
+  <section class="screen" id="sPlay">
+    <div class="stage" id="stage">
+      <div class="trainBox left" id="trainBox">
+        <div class="plate" id="plate">？？？</div>
+        <div id="trainSvg"></div>
+      </div>
+      <div class="puff" id="puff">💢</div>
+    </div>
+    <div class="bubble" id="bubble"></div>
+    <div class="playGrid">
+      <div class="panel" id="hintPanel">
+        <h3>🗾 ぼくが はしる ところ</h3>
+        <div class="mapBox" id="hintMap"></div>
+        <div class="routeTxt" id="routeTxt"></div>
+        <h3 style="margin-top:10px">👀 まどから みえる けしき</h3>
+        <div class="scene" id="scene"></div>
+        <p class="hintTxt" id="hintTxt"></p>
+      </div>
+      <div>
+        <div class="cardsLabel">🏷️ どの なまえふだ かな？</div>
+        <div class="cards" id="cards"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- けっか -->
+  <section class="screen" id="sResult">
+    <div class="result">
+      <div class="stars" id="stars"></div>
+      <h2>なまえが もどったよ！</h2>
+      <p id="resultTxt"></p>
+      <div class="titleBtns">
+        <button class="big" id="btnAgain">🚄 もう いっかい</button>
+        <button class="big sub" id="btnZukan3">📖 ずかんを みる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="screen" id="sZukan">
+    <div class="zukanHead">
+      <h2>📖 とっきゅう ずかん</h2>
+      <p id="zukanCount"></p>
+    </div>
+    <div class="zukanGrid">
+      <div class="panel"><div class="mapBox zMap" id="zukanMap"></div></div>
+      <div id="zukanList"></div>
+    </div>
+    <div class="titleBtns"><button class="big sub" id="btnBack">↩ もどる</button></div>
+  </section>
+
+  <div class="foot">でんしゃの え・なまえふだは この ゲームの オリジナルです（てつどうがいしゃの マークでは ありません）。<br>ちずの もと: 国土数値情報（国土交通省）</div>
+</div>
+
+<!-- せいかい -->
+<div class="pop" id="popGag">
+  <div class="popCard">
+    <span class="tag">🤪 まにうけ モード</span>
+    <p id="gagQ" style="margin-top:6px"></p>
+    <div class="gag" id="gag"><span class="say">もし ことばどおり だったら…</span><div class="emo" id="gagEmo"></div><div class="mini" id="gagMini"></div></div>
+    <p id="gagTxt"></p>
+    <button class="big" id="btnTrue">ほんとうは？ 👉</button>
+  </div>
+</div>
+<div class="pop" id="popOrigin">
+  <div class="popCard">
+    <span class="tag" id="oCat"></span>
+    <div class="origin" id="oEmo"></div>
+    <h2 id="oName"></h2>
+    <p id="oTxt"></p>
+    <p class="small" id="oRoute"></p>
+    <button class="big" id="btnGo">🚄 しゅっぱつ しんこう！</button>
+  </div>
+</div>
+<div class="pop" id="popInfo">
+  <div class="popCard">
+    <span class="tag" id="iCat"></span>
+    <div id="iTrain" style="max-width:300px;margin:8px auto 0"></div>
+    <h2 id="iName"></h2>
+    <div class="origin" id="iEmo" style="font-size:64px"></div>
+    <p id="iTxt"></p>
+    <p class="small" id="iRoute"></p>
+    <button class="big sub" id="btnInfoClose">とじる</button>
+  </div>
+</div>
+<div class="confetti" id="confetti"></div>
+
+<script src="map-data.js?v=6c72c90"></script>
+<script>
+'use strict';
+/* =====================================================================
+   とっきゅうの データ（ここ 1かしょに まとめる）
+   - 名前・走る区間・名前の由来は、鉄道会社の 公式サイトと
+     JRグループ協力の「トレたび」で たしかめた（README.md に 出典）。
+   - 由来が たしかめられなかった とっきゅうは のせていない。
+   - {漢字|かな} は ふりがな つきで 表示する。
+   - route: [けいど, いど] の ならび（地図に かく だいたいの みち）
+   ===================================================================== */
+const CATS = {
+  shizen: { em:'🏞️', name:'しぜん（かわ・やま・うみ・たんぼ）' },
+  tori:   { em:'🐦', name:'いきもの（とり）' },
+  tochi:  { em:'🏯', name:'とちの なまえ（むかしの くに・まち）' },
+  eigo:   { em:'🔤', name:'がいこくの ことば' },
+};
+const TRAINS = [
+  { id:'azusa', card:'あずさ', name:'あずさ', cat:'shizen', co:'JR{東日本|ひがしにほん}',
+    from:'{新宿|しんじゅく}', to:'{松本|まつもと}',
+    route:[[139.700,35.690],[139.339,35.656],[138.569,35.667],[137.946,36.115],[137.972,36.231]],
+    color:{ body:'#f8f9fa', line:'#7048e8', nose:'#e9ecef' },
+    scene:'🏔️🏞️🍎', hint:'たかい やまの あいだを、つめたくて きれいな <b>かわ</b>が ながれているよ。',
+    em:'🏞️', origin:'{松本|まつもと}の あたりを ながれる <b>「{梓川|あずさがわ}」</b>という かわの なまえ だよ。',
+    gag:{ anim:'bounce', emo:'🫘', txt:'あずさ… あずき？ でんしゃが あずきで いっぱいに！' } },
+  { id:'fujikawa', card:'ふじかわ', name:'ふじかわ', cat:'shizen', co:'JR{東海|とうかい}',
+    from:'{静岡|しずおか}', to:'{甲府|こうふ}',
+    route:[[138.389,34.972],[138.657,35.163],[138.440,35.370],[138.569,35.667]],
+    color:{ body:'#ffffff', line:'#f76707', nose:'#f1f3f5' },
+    scene:'🗻🏞️🍇', hint:'まどから <b>ふじさん</b>が みえるかも。せんろの そばを おおきな <b>かわ</b>が ながれているよ。',
+    em:'🏞️', origin:'せんろに そって ながれる <b>「{富士川|ふじかわ}」</b>という かわの なまえ。むかしの「{急行|きゅうこう} {富士川|ふじかわ}」を ひらがなに したよ。',
+    gag:{ anim:'bounce', emo:'🗻', txt:'ふじさんが かわで すいすい およいでる！' } },
+  { id:'ishizuchi', card:'いしづち', name:'いしづち', cat:'shizen', co:'JR{四国|しこく}',
+    from:'{高松|たかまつ}', to:'{松山|まつやま}',
+    route:[[134.047,34.351],[133.751,34.272],[133.270,33.952],[132.997,34.066],[132.755,33.837]],
+    color:{ body:'#f8f9fa', line:'#1c7ed6', nose:'#ffd43b' },
+    scene:'⛰️🌊🍊', hint:'まどの そとに、にしにほんで いちばん <b>たかい やま</b>が みえるよ。',
+    em:'⛰️', origin:'にしにほんで いちばん たかい やま <b>「{石鎚山|いしづちさん}」</b>（1982メートル）の なまえ だよ。',
+    gag:{ anim:'bounce', emo:'🔨', txt:'いしの つち（ハンマー）で トンテンカン！' } },
+  { id:'tsurugisan', card:'つるぎさん', name:'{剣山|つるぎさん}', cat:'shizen', co:'JR{四国|しこく}',
+    from:'{徳島|とくしま}', to:'{阿波池田|あわいけだ}',
+    route:[[134.551,34.074],[134.200,34.060],[133.806,34.027]],
+    color:{ body:'#f8f9fa', line:'#2f9e44', nose:'#d3f9d8' },
+    scene:'⛰️🏞️🌿', hint:'とくしまけんで いちばん <b>たかい やま</b>の なまえ。おおきな かわに そって はしるよ。',
+    em:'⛰️', origin:'とくしまけんで いちばん たかい やま <b>「{剣山|つるぎさん}」</b>の なまえ だよ。',
+    gag:{ anim:'bounce', emo:'⚔️', txt:'つるぎを もった おさむらいの「つるぎさん」？ こんにちは！' } },
+  { id:'uzushio', card:'うずしお', name:'うずしお', cat:'shizen', co:'JR{四国|しこく}',
+    from:'{高松|たかまつ}', to:'{徳島|とくしま}',
+    route:[[134.047,34.351],[134.400,34.220],[134.551,34.074]],
+    color:{ body:'#f8f9fa', line:'#0ca678', nose:'#c3fae8' },
+    scene:'🌊🌀🐟', hint:'ちかくの うみでは、みずが <b>ぐるぐる まわる</b> ふしぎな ものが みられるよ。',
+    em:'🌀', origin:'{鳴門|なると}かいきょうの うみで みられる、ぐるぐる まわる <b>「うずしお」</b>の なまえ だよ。',
+    gag:{ anim:'spin', emo:'🌀', txt:'でんしゃが うずに まきこまれて ぐるぐる〜！' } },
+  { id:'okhotsk', card:'オホーツク', name:'オホーツク', cat:'eigo', co:'JR{北海道|ほっかいどう}',
+    from:'{札幌|さっぽろ}', to:'{網走|あばしり}',
+    route:[[141.351,43.069],[142.357,43.763],[143.513,44.059],[143.898,43.807],[144.264,44.019]],
+    color:{ body:'#f1f3f5', line:'#1098ad', nose:'#c5f6fa' },
+    scene:'🧊🌊🦭', hint:'ほっかいどうの きたの <b>うみ</b>。ふゆには こおりが ながれてくるよ。ロシアの ことばから きた なまえ。',
+    em:'🧊', origin:'ほっかいどうの きたに ひろがる <b>「オホーツクかい」</b>という うみの なまえ。<b>ロシアの ことば</b>から きた なまえ だよ。',
+    gag:{ anim:'bounce', emo:'😮', txt:'「おほー！ つく〜！」って いいながら えきに つく でんしゃ？' } },
+  { id:'inaho', card:'いなほ', name:'いなほ', cat:'shizen', co:'JR{東日本|ひがしにほん}',
+    from:'{新潟|にいがた}', to:'{酒田|さかた}・{秋田|あきた}',
+    route:[[139.061,37.912],[139.480,38.224],[139.826,38.728],[139.846,38.915],[140.122,39.717]],
+    color:{ body:'#f8f9fa', line:'#1971c2', nose:'#d0ebff' },
+    scene:'🌾🌾🍙', hint:'まどの そとは どこまでも <b>たんぼ</b>。おいしい おこめが たくさん とれるよ。',
+    em:'🌾', origin:'おこめが たくさん とれる ところを はしるから、おこめの ほ <b>「いなほ（{稲穂|いなほ}）」</b>。',
+    gag:{ anim:'bounce', emo:'🍙', txt:'でんしゃが おおきな おにぎりに なっちゃった！' } },
+  { id:'kounotori', card:'こうのとり', name:'こうのとり', cat:'tori', co:'JR{西日本|にしにほん}',
+    from:'{新大阪|しんおおさか}', to:'{福知山|ふくちやま}・{豊岡|とよおか}・{城崎温泉|きのさきおんせん}',
+    route:[[135.500,34.733],[135.290,34.900],[135.130,35.297],[134.817,35.544],[134.810,35.627]],
+    color:{ body:'#f8f9fa', line:'#c2255c', nose:'#ffdeeb' },
+    scene:'🐦🌾♨️', hint:'{豊岡|とよおか}の たんぼには、しろと くろの <b>おおきな とり</b>が すんでいるよ。',
+    em:'🐦', origin:'ひょうごけんの とり <b>「コウノトリ」</b>の なまえ。{豊岡|とよおか}では コウノトリを まぢかで みられるよ。',
+    gag:{ anim:'grab', emo:'🐦', txt:'コウノトリが でんしゃを くわえて はこんできた！' } },
+  { id:'thunderbird', card:'サンダーバード', name:'サンダーバード', cat:'tori', co:'JR{西日本|にしにほん}',
+    from:'{大阪|おおさか}', to:'{敦賀|つるが}',
+    route:[[135.495,34.702],[135.758,34.985],[135.905,35.150],[136.030,35.413],[136.068,35.646]],
+    color:{ body:'#f8f9fa', line:'#1864ab', nose:'#dee2e6' },
+    scene:'🏔️🐦⚡', hint:'むかしは {漢字|かんじ}で「{雷鳥|らいちょう}」と いう なまえ だったよ。えいごに すると…？',
+    em:'⚡🐦', origin:'むかしの とっきゅう <b>「{雷鳥|らいちょう}」</b>の なまえを えいごに したよ。サンダー＝かみなり、バード＝とり。ライチョウは たかい やまに すむ とり だよ。',
+    gag:{ anim:'grab', emo:'🦅', txt:'かみなりの おおきな とりが、でんしゃを つかんで そらを とぶ！' } },
+  { id:'hinotori', card:'ひのとり', name:'ひのとり', cat:'tori', co:'{近鉄|きんてつ}',
+    from:'{大阪難波|おおさかなんば}', to:'{近鉄名古屋|きんてつなごや}',
+    route:[[135.501,34.668],[135.830,34.540],[136.200,34.600],[136.470,34.630],[136.512,34.733],[136.620,34.960],[136.883,35.170]],
+    color:{ body:'#c92a2a', line:'#862e2e', nose:'#e03131', ink:'#fff' },
+    scene:'🔥🪽✨', hint:'まっかな でんしゃ。<b>つばさを ひろげて とぶ</b> ふしぎな とりの なまえ だよ。',
+    em:'🔥🐦', origin:'つばさを おおきく ひろげて とぶ <b>「ひのとり（{火|ひ}の{鳥|とり}）」</b>に かさねて つけた なまえ。まっかな でんしゃに ぴったり！',
+    gag:{ anim:'bounce', emo:'🍢', txt:'ひの とり…？ やきとり？ あちち！' } },
+  { id:'hida', card:'ひだ', name:'ひだ', cat:'tochi', co:'JR{東海|とうかい}',
+    from:'{名古屋|なごや}', to:'{高山|たかやま}・{富山|とやま}',
+    route:[[136.881,35.171],[136.756,35.409],[137.100,35.650],[137.252,36.141],[137.250,36.340],[137.213,36.701]],
+    color:{ body:'#f8f9fa', line:'#e8590c', nose:'#ffe8cc' },
+    scene:'🏔️🏘️🍜', hint:'やまの なかの むかしの まちなみ「{高山|たかやま}」へ いくよ。このあたりの むかしの くにの なまえ。',
+    em:'🏘️', origin:'{高山|たかやま}の あたりは、むかし <b>「{飛騨|ひだ}の くに」</b>と よばれていたよ。',
+    gag:{ anim:'zig', emo:'👗', txt:'スカートの ひだひだ みたいに、でんしゃが ジグザグ！' } },
+  { id:'shinano', card:'しなの', name:'しなの', cat:'tochi', co:'JR{東海|とうかい}',
+    from:'{名古屋|なごや}', to:'{長野|ながの}',
+    route:[[136.881,35.171],[137.500,35.490],[137.694,35.842],[137.946,36.115],[137.972,36.231],[138.188,36.643]],
+    color:{ body:'#e9ecef', line:'#fd7e14', nose:'#ced4da' },
+    scene:'🏔️🍎🌲', hint:'{長野|ながの}けんへ いくよ。{長野|ながの}けんの むかしの くにの なまえ。',
+    em:'🍎', origin:'{長野|ながの}けんは、むかし <b>「{信濃|しなの}の くに」</b>と よばれていたよ。',
+    gag:{ anim:'limp', emo:'🥬', txt:'しな… しな…？ でんしゃが やさいみたいに しなしなに！' } },
+  { id:'yufuin', card:'ゆふいんの もり', name:'ゆふいんの{森|もり}', cat:'tochi', co:'JR{九州|きゅうしゅう}',
+    from:'{博多|はかた}', to:'{由布院|ゆふいん}',
+    route:[[130.420,33.590],[130.520,33.320],[130.940,33.320],[131.367,33.267]],
+    color:{ body:'#2b8a3e', line:'#e0b000', nose:'#37b24d', ink:'#fff' },
+    scene:'♨️🌳🏔️', hint:'みどりの やまに かこまれた <b>おんせんの まち</b>へ いくよ。',
+    em:'♨️', origin:'おんせんの まち <b>「{由布院|ゆふいん}」</b>へ いく でんしゃ だから、この なまえ だよ。',
+    gag:{ anim:'bounce', emo:'🌳', txt:'でんしゃから きが にょきにょき。でんしゃが もりに なっちゃった！' } },
+  { id:'hakone', card:'はこね', name:'はこね', cat:'tochi', co:'{小田急|おだきゅう}（ロマンスカー）',
+    from:'{新宿|しんじゅく}', to:'{箱根湯本|はこねゆもと}',
+    route:[[139.700,35.690],[139.520,35.550],[139.360,35.440],[139.155,35.256],[139.106,35.233]],
+    color:{ body:'#f08c00', line:'#e8590c', nose:'#ffa94d', ink:'#fff' },
+    scene:'♨️⛰️🗻', hint:'やまと <b>おんせん</b>の まちへ いく とっきゅう ロマンスカー だよ。',
+    em:'♨️', origin:'やまと おんせんの まち <b>「{箱根|はこね}」</b>へ いく ロマンスカー だから、この なまえ だよ。',
+    gag:{ anim:'bounce', emo:'📦', txt:'はこの なかで ねんね… はこ＋ね？ すやすや〜' } },
+  { id:'hashidate', card:'はしだて', name:'はしだて', cat:'tochi', co:'JR{西日本|にしにほん}',
+    from:'{京都|きょうと}', to:'{天橋立|あまのはしだて}',
+    route:[[135.758,34.985],[135.500,35.020],[135.350,35.150],[135.130,35.297],[135.196,35.540],[135.196,35.570]],
+    color:{ body:'#f8f9fa', line:'#5f3dc4', nose:'#e5dbff' },
+    scene:'🌊🌲🌉', hint:'うみに ほそながい <b>はし</b>の ような すなはまが のびている ところへ いくよ。',
+    em:'🌲🌊', origin:'うみに ほそながい みちの ような すなはまが のびる <b>「{天橋立|あまのはしだて}」</b>へ いく でんしゃ だよ。',
+    gag:{ anim:'bounce', emo:'🥢', txt:'おはしを ぴんと たてて… はし・だて！' } },
+  { id:'sonic', card:'ソニック', name:'ソニック', cat:'eigo', co:'JR{九州|きゅうしゅう}',
+    from:'{博多|はかた}', to:'{大分|おおいた}',
+    route:[[130.420,33.590],[130.882,33.887],[131.180,33.600],[131.500,33.280],[131.606,33.233]],
+    color:{ body:'#1c4f9c', line:'#74c0fc', nose:'#1971c2', ink:'#fff' },
+    scene:'💨🔊⚡', hint:'えいごの ことば だよ。「とっても はやい！」って いう いみ。',
+    em:'🔊💨', origin:'えいごで <b>「おとの はやさ（{音速|おんそく}）」</b>と いう いみ。とても はやく はしる でんしゃ だよ。',
+    gag:{ anim:'sonic', emo:'ガタン ゴトン…', txt:'おとより はやすぎて、じぶんの「ガタンゴトン」に おいこされちゃった！' } },
+];
+
+/* ---------- べんり ---------- */
+const $ = id => document.getElementById(id);
+const R = s => String(s).replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const BY = {}; TRAINS.forEach(t => BY[t.id] = t);
+
+/* ---------- ほぞん ---------- */
+const KEY = 'tokkyu-namae-v1';
+let save = { got:{}, plays:0, sound:true };
+try { const s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch (e) {}
+function store(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+/* ---------- おと（WebAudio の 合成音） ---------- */
+let ac = null;
+function ctx(){
+  if (!save.sound) return null;
+  try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === 'suspended') ac.resume(); } catch (e) { return null; }
+  return ac;
+}
+function tone(f, t0, d, type, v, f2){
+  const c = ctx(); if (!c) return;
+  const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v || .18, t + .02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d + .05);
+}
+const SE = {
+  tap(){ tone(660, 0, .08, 'triangle', .12); },
+  horn(){ tone(440, 0, .35, 'square', .07); tone(554, 0, .35, 'square', .05); tone(440, .42, .5, 'square', .07); tone(554, .42, .5, 'square', .05); },
+  angry(){ tone(220, 0, .12, 'sawtooth', .08); tone(196, .14, .16, 'sawtooth', .08); },
+  set(){ tone(880, 0, .07, 'triangle', .14); tone(1320, .06, .1, 'triangle', .1); },
+  ok(){ [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, .22, 'triangle', .16)); },
+  ng(){ tone(392, 0, .2, 'sine', .14, 300); tone(330, .2, .35, 'sine', .12, 220); },
+  silly(){ tone(300, 0, .25, 'sine', .14, 900); tone(900, .27, .3, 'sine', .12, 250); },
+  run(){ for (let i = 0; i < 6; i++){ tone(120, i * .18, .06, 'square', .06); tone(150, i * .18 + .08, .06, 'square', .05); } },
+  fanfare(){ [523, 523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .14, i === 6 ? .6 : .16, 'triangle', .16)); },
+};
+function setSoundBtn(){ $('btnSound').textContent = save.sound ? '🔊' : '🔇'; $('btnSound').setAttribute('aria-label', save.sound ? 'おと オン' : 'おと オフ'); }
+$('btnSound').onclick = () => { save.sound = !save.sound; store(); setSoundBtn(); SE.tap(); };
+setSoundBtn();
+
+/* ---------- でんしゃの え（オリジナル） ---------- */
+function trainSVG(t, opt){
+  opt = opt || {};
+  const c = t.color, ink = c.ink || '#343a40';
+  const win = [];
+  for (let i = 0; i < 6; i++) win.push(`<rect x="${22 + i * 34}" y="38" width="24" height="20" rx="5" fill="#a5d8ff" stroke="${ink === '#fff' ? 'rgba(255,255,255,.6)' : '#adb5bd'}" stroke-width="1.5"/>`);
+  const face = opt.noFace ? '' : `
+    <g class="f f-angry">
+      <path d="M262 40 l14 6 M290 46 l12 -6" stroke="#212529" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="272" cy="53" r="5" fill="#212529"/><circle cx="294" cy="53" r="5" fill="#212529"/>
+      <path d="M272 74 q11 -9 22 0" stroke="#212529" stroke-width="4" fill="none" stroke-linecap="round"/>
+    </g>
+    <g class="f f-sad">
+      <path d="M264 46 l12 -3 M290 43 l12 3" stroke="#212529" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="272" cy="54" r="4.5" fill="#212529"/><circle cx="294" cy="54" r="4.5" fill="#212529"/>
+      <path d="M298 60 q3 8 0 10 q-3 -2 0 -10z" fill="#4dabf7"/>
+      <path d="M274 74 q9 -6 18 0" stroke="#212529" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </g>
+    <g class="f f-happy">
+      <path d="M266 54 q6 -8 12 0 M288 54 q6 -8 12 0" stroke="#212529" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <circle cx="266" cy="66" r="6" fill="#ff8fab" opacity=".7"/><circle cx="302" cy="66" r="6" fill="#ff8fab" opacity=".7"/>
+      <path d="M272 66 q11 14 22 0z" fill="#c92a2a" stroke="#212529" stroke-width="3" stroke-linejoin="round"/>
+    </g>`;
+  return `<svg class="train ${opt.mood || ''}" viewBox="0 0 330 118" aria-hidden="true">
+    <ellipse cx="160" cy="112" rx="150" ry="5" fill="rgba(0,0,0,.15)"/>
+    <g class="bob">
+      <path d="M8 28 q0 -8 8 -8 h214 q46 0 76 42 q10 14 6 30 q-1 8 -10 8 h-286 q-8 0 -8 -8z" fill="${c.body}" stroke="#495057" stroke-width="2.5"/>
+      <path d="M232 22 q40 4 66 40 l-50 -2 q-10 -14 -16 -38z" fill="${c.nose}" opacity=".9"/>
+      ${win.join('')}
+      <rect x="8" y="72" width="298" height="9" fill="${c.line}"/>
+      <rect x="8" y="84" width="298" height="4" fill="${c.line}" opacity=".55"/>
+      ${face}
+      <g fill="#495057"><circle cx="50" cy="102" r="9"/><circle cx="80" cy="102" r="9"/><circle cx="220" cy="102" r="9"/><circle cx="250" cy="102" r="9"/></g>
+      <g fill="#ced4da"><circle cx="50" cy="102" r="3.5"/><circle cx="80" cy="102" r="3.5"/><circle cx="220" cy="102" r="3.5"/><circle cx="250" cy="102" r="3.5"/></g>
+    </g>
+  </svg>`;
+}
+
+/* ---------- ちず ---------- */
+const VB = MAP_VIEWBOX.split(' ').map(Number);
+const prefPaths = PREFECTURES.map(p => `<path class="pref" d="${p.path}"/>`).join('');
+function routePts(t){ return t.route.map(([lon, lat]) => project(lon, lat)); }
+function ptsStr(pts){ return pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' '); }
+function hintMapSVG(t){
+  const pts = routePts(t);
+  let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
+  let y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+  const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+  let w = Math.max(x1 - x0 + 120, 300), h = Math.max(y1 - y0 + 100, 220);
+  if (w / h < 1.35) w = h * 1.35; else h = w / 1.35;
+  const vb = [cx - w / 2, cy - h / 2, w, h];
+  const sw = w / 90;
+  const a = pts[0], b = pts[pts.length - 1];
+  return `<svg viewBox="${vb.map(v => v.toFixed(1)).join(' ')}" role="img" aria-label="はしる ところの ちず">
+    <rect x="${vb[0]}" y="${vb[1]}" width="${w}" height="${h}" fill="#d0ebff"/>
+    <g style="stroke-width:${(w / 400).toFixed(2)}">${prefPaths}</g>
+    <polyline class="route glow" points="${ptsStr(pts)}" style="stroke-width:${sw * 1.9}"/>
+    <polyline class="route run" points="${ptsStr(pts)}" style="stroke:${t.color.line};stroke-width:${sw}"/>
+    <circle cx="${a[0]}" cy="${a[1]}" r="${sw * 1.4}" fill="#fff" stroke="#212529" stroke-width="${sw * .4}"/>
+    <circle cx="${b[0]}" cy="${b[1]}" r="${sw * 1.6}" fill="#ffd43b" stroke="#212529" stroke-width="${sw * .4}"/>
+  </svg>`;
+}
+function zukanMapSVG(){
+  const lines = TRAINS.filter(t => save.got[t.id]).map(t => {
+    const p = routePts(t);
+    return `<polyline class="route glow" points="${ptsStr(p)}" style="stroke-width:14"/>
+      <polyline class="route" points="${ptsStr(p)}" style="stroke:${t.color.line};stroke-width:8"/>
+      <circle cx="${p[p.length - 1][0]}" cy="${p[p.length - 1][1]}" r="7" fill="#ffd43b" stroke="#212529" stroke-width="2"/>`;
+  }).join('');
+  // 沖縄の インセットは つかわないので、本州〜北海道〜九州だけを みせる
+  return `<svg viewBox="70 30 1060 1210" role="img" aria-label="ずかんに はいった とっきゅうの ちず">
+    <rect x="${VB[0]}" y="${VB[1] - 40}" width="${VB[2] + 40}" height="${VB[3] + 80}" fill="#d0ebff"/>
+    <g style="stroke-width:1.5">${prefPaths}</g>${lines}</svg>`;
+}
+
+/* ---------- がめん ---------- */
+function show(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id));
+  $('btnHome').hidden = id === 'sTitle';
+  $('btnZukan').hidden = id === 'sZukan';
+  if (id !== 'sPlay') $('prog').textContent = '';
+  window.scrollTo(0, 0);
+}
+function gotCount(){ return TRAINS.filter(t => save.got[t.id]).length; }
+function title(){
+  const t = TRAINS[Math.floor(Math.random() * TRAINS.length)];
+  $('titleTrain').innerHTML = trainSVG(t, { mood:'angry' });
+  $('stat').innerHTML = `📖 ずかん ${gotCount()} / ${TRAINS.length}`;
+  show('sTitle');
+}
+
+/* ---------- あそぶ ---------- */
+const PER = 5;
+let round = [], idx = 0, cur = null, busy = false, misses = 0, roundMiss = 0;
+function startRound(){
+  SE.tap();
+  const fresh = shuffle(TRAINS.filter(t => !save.got[t.id]));
+  const old = shuffle(TRAINS.filter(t => save.got[t.id]));
+  round = fresh.concat(old).slice(0, PER);
+  idx = 0; roundMiss = 0;
+  show('sPlay');
+  nextTrain();
+}
+async function nextTrain(){
+  cur = round[idx]; misses = 0; busy = true;
+  $('prog').textContent = `🚉 ${idx + 1} / ${round.length} ばんめ`;
+  const box = $('trainBox');
+  box.classList.remove('right'); box.classList.add('left');
+  $('trainSvg').innerHTML = trainSVG(cur, { mood:'angry' });
+  const plate = $('plate'); plate.className = 'plate'; plate.textContent = '？？？'; plate.style.removeProperty('--plate');
+  $('puff').style.display = 'none';
+  $('bubble').innerHTML = '🚄 とっきゅうが くるよ…';
+  $('hintMap').innerHTML = hintMapSVG(cur);
+  $('routeTxt').innerHTML = R(`🚉 ${cur.from} → ${cur.to}`);
+  $('scene').textContent = cur.scene;
+  $('hintTxt').innerHTML = R(cur.hint);
+  const others = shuffle(TRAINS.filter(t => t.id !== cur.id)).slice(0, 2);
+  $('cards').innerHTML = shuffle([cur].concat(others)).map(t => `<button class="nameCard" data-id="${t.id}">${t.card}</button>`).join('');
+  $('cards').querySelectorAll('.nameCard').forEach(b => b.onclick = () => pick(b));
+  await wait(60);
+  SE.horn();
+  box.classList.remove('left');
+  await wait(1100);
+  if (cur !== round[idx] || !$('sPlay').classList.contains('on')) return;
+  $('puff').style.display = '';
+  SE.angry();
+  $('bubble').innerHTML = 'ぷんぷん！ ぼくの なまえが なくなっちゃった！<br>ぼくの なまえを とりもどして！';
+  busy = false;
+}
+async function pick(btn){
+  if (busy) return;
+  const t = BY[btn.dataset.id];
+  const plate = $('plate');
+  const far = $('stage').getBoundingClientRect().top < -40;
+  if (far) $('stage').scrollIntoView({ behavior:'smooth', block:'start' });
+  SE.set();
+  plate.textContent = t.card; plate.className = 'plate set';
+  plate.style.setProperty('--plate', t.id === cur.id ? cur.color.line : '#868e96');
+  if (t.id !== cur.id){
+    busy = true; misses++; roundMiss++;
+    btn.classList.add('no');
+    await wait(350);
+    SE.ng();
+    setMood('sad');
+    $('puff').style.display = 'none';
+    $('bubble').innerHTML = `「${t.card}」…？ それ ぼくじゃない…<br><span style="font-size:.85em">ヒントを もういちど みてね</span>`;
+    await wait(1400);
+    plate.className = 'plate'; plate.textContent = '？？？'; plate.style.removeProperty('--plate');
+    setMood('angry'); $('puff').style.display = '';
+    if (far) $('cards').scrollIntoView({ behavior:'smooth', block:'center' });
+    busy = false;
+    return;
+  }
+  busy = true;
+  btn.classList.add('yes');
+  $('cards').querySelectorAll('.nameCard').forEach(b => { if (b !== btn) b.classList.add('no'); });
+  plate.innerHTML = R(cur.name);
+  $('puff').style.display = 'none';
+  SE.ok();
+  setMood('happy');
+  $('bubble').innerHTML = R(`それそれ！ ぼくは「${cur.name}」！ ありがとう！`);
+  const isNew = !save.got[cur.id];
+  save.got[cur.id] = true; store();
+  await wait(1300);
+  if (!$('sPlay').classList.contains('on')) return;
+  openGag(isNew);
+}
+function setMood(m){ const s = $('trainSvg').querySelector('svg'); if (s) s.setAttribute('class', 'train ' + m); }
+
+let newFlag = false;
+function openGag(isNew){
+  newFlag = isNew;
+  const g = cur.gag;
+  $('gagQ').innerHTML = R(`「${cur.name}」って きくと…`);
+  $('gag').className = 'gag a-' + g.anim;
+  $('gagEmo').textContent = g.emo;
+  $('gagMini').innerHTML = trainSVG(cur, { noFace:true });
+  $('gagTxt').innerHTML = R(g.txt);
+  $('popGag').classList.add('on');
+  SE.silly();
+}
+$('btnTrue').onclick = () => {
+  SE.tap();
+  $('popGag').classList.remove('on');
+  $('oCat').textContent = CATS[cur.cat].em + ' ' + CATS[cur.cat].name;
+  $('oEmo').textContent = cur.em;
+  $('oName').innerHTML = R(cur.name);
+  $('oTxt').innerHTML = R(cur.origin);
+  $('oRoute').innerHTML = R(`${cur.co}　${cur.from} 〜 ${cur.to}`) + (newFlag ? '<br>📖 ずかんに はいったよ！' : '');
+  $('popOrigin').classList.add('on');
+  SE.ok();
+};
+$('btnGo').onclick = async () => {
+  $('popOrigin').classList.remove('on');
+  $('bubble').innerHTML = 'しゅっぱつ しんこう！ いってきまーす！';
+  SE.run();
+  await wait(300);
+  $('trainBox').classList.add('right');
+  await wait(1500);
+  if (!$('sPlay').classList.contains('on')) return;
+  idx++;
+  if (idx < round.length) nextTrain(); else finish();
+};
+function finish(){
+  save.plays++; store();
+  const stars = roundMiss === 0 ? 3 : roundMiss <= 3 ? 2 : 1;
+  $('stars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
+  const msg = roundMiss === 0 ? 'ぜんぶ いっぱつで わかったね！ すごい！' : 'さいごまで あきらめずに、なまえを とりもどせたね！';
+  $('resultTxt').innerHTML = `${msg}<br>📖 ずかん ${gotCount()} / ${TRAINS.length}` + (gotCount() === TRAINS.length ? '<br>🎉 ずかん コンプリート！ とっきゅう はかせ だ！' : '');
+  show('sResult');
+  SE.fanfare();
+  confetti();
+}
+function confetti(){
+  const box = $('confetti'); box.innerHTML = '';
+  const cols = ['#d6336c', '#fcc419', '#51cf66', '#339af0', '#ff922b', '#845ef7'];
+  for (let i = 0; i < 70; i++){
+    const e = document.createElement('i');
+    e.style.left = Math.random() * 100 + 'vw';
+    e.style.background = cols[i % cols.length];
+    e.style.animationDuration = (2 + Math.random() * 2.2) + 's';
+    e.style.animationDelay = (Math.random() * .8) + 's';
+    box.appendChild(e);
+  }
+  setTimeout(() => box.innerHTML = '', 5200);
+}
+
+/* ---------- ずかん ---------- */
+let backTo = 'sTitle';
+function zukan(){
+  SE.tap();
+  const active = document.querySelector('.screen.on');
+  if (active && active.id !== 'sZukan' && active.id !== 'sPlay') backTo = active.id;
+  if (active && active.id === 'sPlay') backTo = 'sTitle';
+  $('zukanCount').innerHTML = `なまえを とりもどした とっきゅう ${gotCount()} / ${TRAINS.length}`;
+  $('zukanMap').innerHTML = zukanMapSVG();
+  $('zukanList').innerHTML = Object.keys(CATS).map(k => {
+    const items = TRAINS.filter(t => t.cat === k).map(t => save.got[t.id]
+      ? `<button class="zItem" data-id="${t.id}"><span class="em">${t.em}</span>${R(t.name)}</button>`
+      : `<button class="zItem locked" disabled><span class="em">❔</span>？？？</button>`).join('');
+    return `<div class="cat panel"><h3>${CATS[k].em} ${CATS[k].name}</h3><div class="list">${items}</div></div>`;
+  }).join('');
+  $('zukanList').querySelectorAll('.zItem[data-id]').forEach(b => b.onclick = () => info(BY[b.dataset.id]));
+  show('sZukan');
+}
+function info(t){
+  SE.tap();
+  $('iCat').textContent = CATS[t.cat].em + ' ' + CATS[t.cat].name;
+  $('iTrain').innerHTML = trainSVG(t, { mood:'happy' });
+  $('iName').innerHTML = R(t.name);
+  $('iEmo').textContent = t.em;
+  $('iTxt').innerHTML = R(t.origin);
+  $('iRoute').innerHTML = R(`${t.co}　${t.from} 〜 ${t.to}`);
+  $('popInfo').classList.add('on');
+}
+$('btnInfoClose').onclick = () => { SE.tap(); $('popInfo').classList.remove('on'); };
+
+/* ---------- ボタン ---------- */
+$('btnStart').onclick = startRound;
+$('btnAgain').onclick = startRound;
+$('btnZukan').onclick = zukan;
+$('btnZukan2').onclick = zukan;
+$('btnZukan3').onclick = zukan;
+$('btnBack').onclick = () => { SE.tap(); if (backTo === 'sResult') show('sResult'); else title(); };
+$('btnHome').onclick = () => { SE.tap(); document.querySelectorAll('.pop').forEach(p => p.classList.remove('on')); title(); };
+title();
+</script>
+</body>
+</html>
