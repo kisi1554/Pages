@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>はこね スイッチバック のぼり</title>
+<meta name="description" content="はこね とざん でんしゃで、ポイントを きりかえて ジグザグに やまを のぼろう。">
+<meta name="theme-color" content="#d9342b">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛰️</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; }
+  body {
+    background: #cfe6f5; color: #1d2b3a;
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体", "Meiryo", system-ui, sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  }
+  rt { font-size: .55em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  #cv { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  .hbtn {
+    width: 52px; height: 52px; border-radius: 50%; border: 3px solid #fff;
+    background: rgba(255,255,255,.9); font-size: 24px; display: grid; place-items: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,.18); padding: 0;
+  }
+  #sndBtn { position: fixed; top: calc(10px + env(safe-area-inset-top)); right: calc(10px + env(safe-area-inset-right)); z-index: 30; }
+
+  #hud {
+    position: fixed; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
+    right: 72px; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; z-index: 10; pointer-events: none;
+  }
+  #hud > * { pointer-events: auto; }
+  .pill {
+    background: rgba(255,255,255,.92); border-radius: 99px; padding: 6px 14px; font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15); font-size: 15px; display: flex; align-items: center; gap: 8px; white-space: nowrap;
+  }
+  #dots i {
+    display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 3px solid #d9342b;
+    margin-left: 3px; vertical-align: middle; background: #fff;
+  }
+  #dots i.on { background: #d9342b; }
+  #next { font-size: 15px; }
+  #next ruby { font-size: 17px; }
+
+  #toast {
+    position: fixed; left: 50%; top: calc(124px + env(safe-area-inset-top)); transform: translateX(-50%);
+    width: max-content; max-width: min(92vw, 560px); padding: 12px 20px; border-radius: 20px;
+    background: rgba(255,255,255,.96); border: 3px solid #ffd43b; font-size: 19px; font-weight: bold;
+    line-height: 1.7; text-align: center; box-shadow: 0 4px 14px rgba(0,0,0,.18);
+    opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 12;
+  }
+  #toast.show { opacity: 1; }
+
+  #ptBtn {
+    position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    width: 132px; height: 132px; border-radius: 50%; border: 6px solid #fff;
+    background: #ced4da; color: #495057; font-size: 40px; font-weight: bold; line-height: 1.1;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(0,0,0,.25); z-index: 11; padding: 0;
+  }
+  #ptBtn span { font-size: 19px; }
+  #ptBtn.ready { background: #ffe066; color: #5c3d00; animation: pulse 1s infinite; }
+  #ptBtn.now { background: #ff922b; color: #fff; animation: pulse .45s infinite; }
+  #ptBtn:active { transform: translateX(-50%) scale(.94); }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255,212,59,.9), 0 6px 18px rgba(0,0,0,.25); }
+    50% { box-shadow: 0 0 0 16px rgba(255,212,59,0), 0 6px 18px rgba(0,0,0,.25); }
+  }
+  #hint {
+    position: fixed; left: 50%; bottom: calc(160px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    font-size: 22px; font-weight: bold; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,.6), 0 0 2px #000;
+    white-space: nowrap; z-index: 11; pointer-events: none;
+  }
+  .hide { display: none !important; }
+
+  .screen {
+    position: fixed; inset: 0; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: calc(70px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+    background: rgba(20,40,60,.18);
+  }
+  .panel {
+    max-width: 560px; margin: 0 auto; background: rgba(255,255,255,.95); border-radius: 26px;
+    padding: 20px 20px 22px; box-shadow: 0 8px 30px rgba(0,0,0,.2); text-align: center;
+  }
+  h1 { margin: 0 0 6px; font-size: clamp(26px, 7vw, 38px); line-height: 1.3; color: #b02a20; letter-spacing: .04em; }
+  h2 { font-size: 18px; margin: 16px 0 8px; color: #4a5f75; }
+  .lead { font-size: 17px; line-height: 1.9; margin: 6px 0; }
+  .how { text-align: left; background: #fff8e1; border-radius: 16px; padding: 10px 14px; font-size: 16px; line-height: 1.9; }
+  .opts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .opt {
+    min-width: 112px; min-height: 64px; border-radius: 18px; border: 4px solid #dee2e6; background: #fff;
+    font-size: 19px; font-weight: bold; padding: 6px 12px;
+  }
+  .opt[aria-pressed="true"] { border-color: #d9342b; background: #fff0ee; }
+  .big {
+    margin-top: 18px; width: 100%; min-height: 76px; border-radius: 22px; border: 0;
+    background: #d9342b; color: #fff; font-size: 28px; font-weight: bold; box-shadow: 0 5px 0 #8f1f17;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #8f1f17; }
+  .row { display: flex; gap: 10px; margin-top: 14px; }
+  .row > * { flex: 1; }
+  .sub {
+    min-height: 60px; border-radius: 18px; border: 3px solid #dee2e6; background: #fff; font-size: 18px; font-weight: bold;
+    display: flex; align-items: center; justify-content: center; text-decoration: none; color: inherit; padding: 4px 8px;
+  }
+  .note { font-size: 15px; color: #4a5f75; line-height: 1.8; margin: 10px 0 0; }
+
+  .modal { position: fixed; inset: 0; z-index: 25; display: grid; place-items: center; padding: 16px; background: rgba(20,40,60,.45); overflow-y: auto; }
+  .cardbox {
+    width: min(520px, 100%); background: #fff; border-radius: 26px; padding: 18px 18px 20px; text-align: center;
+    border: 6px solid #ffd43b; box-shadow: 0 10px 30px rgba(0,0,0,.3); animation: pop .35s ease-out;
+  }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .cardbox .tag { font-size: 16px; color: #e8590c; font-weight: bold; }
+  .card-t { font-size: 26px; font-weight: bold; margin: 4px 0 8px; }
+  .card-b { font-size: 18px; line-height: 2.0; text-align: left; }
+  .card-b svg { display: block; margin: 6px auto; max-width: 100%; height: auto; }
+  .small { font-size: 14px; color: #6c7a89; }
+
+  #cardList { display: grid; gap: 12px; text-align: left; }
+  .mini { border: 4px solid #ffd43b; border-radius: 20px; padding: 12px 14px; background: #fff; }
+  .mini.locked { border-color: #dee2e6; color: #adb5bd; text-align: center; font-size: 20px; }
+
+  #goal { background: transparent; pointer-events: none; }
+  #goal .panel { margin-top: 52vh; pointer-events: auto; }
+  @media (min-aspect-ratio: 11/10) {
+    #goal .panel { margin: 0 0 0 auto; width: 420px; }
+  }
+  @media (max-width: 600px) { #toast { top: calc(180px + env(safe-area-inset-top)); } }
+  .stat { font-size: 18px; line-height: 1.9; margin: 6px 0; }
+  .praise { font-size: 22px; font-weight: bold; color: #e8590c; margin: 6px 0; }
+  .stations { font-size: 15px; line-height: 2.2; background: #f1f8ff; border-radius: 14px; padding: 8px 10px; margin-top: 10px; }
+  .stations ruby { font-size: 17px; }
+  .stations .sig { color: #868e96; font-size: 14px; }
+
+  @media (max-height: 520px) {
+    #ptBtn { width: 104px; height: 104px; font-size: 32px; }
+    #ptBtn span { font-size: 16px; }
+    #hint { bottom: calc(130px + env(safe-area-inset-bottom)); font-size: 19px; }
+    #toast { top: calc(70px + env(safe-area-inset-top)); font-size: 17px; padding: 8px 16px; }
+    .screen { padding-top: calc(12px + env(safe-area-inset-top)); }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<canvas id="cv" aria-label="はこね とざん でんしゃの やま"></canvas>
+
+<button id="sndBtn" class="hbtn" aria-label="おと オン/オフ">🔊</button>
+
+<div id="hud" class="hide">
+  <button id="homeBtn" class="hbtn" aria-label="はじめの がめんへ">🏠</button>
+  <div class="pill"><span>スイッチバック</span><span id="dots"><i></i><i></i><i></i></span></div>
+  <div class="pill"><span id="elev">⛰️ 96m</span><span id="clock">⏱ 0:00</span></div>
+  <div class="pill" id="next"></div>
+</div>
+
+<div id="toast"></div>
+<div id="hint"></div>
+<button id="ptBtn" class="hide" aria-label="ポイントを きりかえる">🔀<span>ポイント</span></button>
+
+<!-- はじめの がめん -->
+<div id="title" class="screen">
+  <div class="panel">
+    <h1>⛰️ はこね<br>スイッチバック のぼり</h1>
+    <p class="lead"><ruby>箱根湯本<rt>はこねゆもと</rt></ruby>から やまの うえの <ruby>強羅<rt>ごうら</rt></ruby>まで、<br>でんしゃで ジグザグに のぼろう！</p>
+    <div class="how">
+      🚃 でんしゃは かってに さかを のぼるよ<br>
+      🟡 いきどまりの きいろい ところに きたら <b>🔀 ポイント</b>を タップ！<br>
+      ↩️ でんしゃが むきを かえて、つぎの さかへ
+    </div>
+    <h2>きせつ</h2>
+    <div class="opts" id="optSeason">
+      <button class="opt" data-v="ajisai">💠 あじさい</button>
+      <button class="opt" data-v="koyo">🍁 こうよう</button>
+      <button class="opt" data-v="yuki">⛄ ゆき</button>
+    </div>
+    <h2>はやさ</h2>
+    <div class="opts" id="optSpeed">
+      <button class="opt" data-v="slow">🐢 ゆっくり</button>
+      <button class="opt" data-v="normal">🐇 ふつう</button>
+    </div>
+    <button id="startBtn" class="big">しゅっぱつ！ ▶</button>
+    <div class="row">
+      <button id="cardsBtn" class="sub">📗 まなびカード <span id="cardCount"></span></button>
+      <a href="../" class="sub">🏠 メニュー</a>
+    </div>
+    <p class="note" id="bestLine"></p>
+  </div>
+</div>
+
+<!-- まなびカード いちらん -->
+<div id="cardsView" class="screen hide">
+  <div class="panel">
+    <h1 style="font-size:28px">📗 まなびカード</h1>
+    <div id="cardList"></div>
+    <button id="cardsClose" class="big">とじる</button>
+  </div>
+</div>
+
+<!-- カード ゲット -->
+<div id="cardModal" class="modal hide">
+  <div class="cardbox">
+    <div class="tag">📗 まなびカード ゲット！</div>
+    <div id="cardBody"></div>
+    <button id="cardOk" class="big">つづける ▶</button>
+  </div>
+</div>
+
+<!-- ゴール -->
+<div id="goal" class="screen hide">
+  <div class="panel">
+    <h1>🎉 <ruby>強羅<rt>ごうら</rt></ruby>に とうちゃく！</h1>
+    <p class="praise" id="gPraise"></p>
+    <p class="stat" id="gStat"></p>
+    <p class="note">やまの うえから したの まちが みえるね。<br><ruby>箱根湯本<rt>はこねゆもと</rt></ruby>から やく 445メートル のぼったよ！</p>
+    <div class="stations" id="gStations"></div>
+    <div class="row">
+      <button id="againBtn" class="big" style="margin-top:0">もういちど</button>
+    </div>
+    <div class="row">
+      <button id="gCards" class="sub">📗 まなびカード</button>
+      <button id="toTitle" class="sub">はじめの がめん</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+
+/* ---------------- ほぞん ---------------- */
+const KEY = 'hakone-switchback:v1';
+const S = { sound: true, speed: 'slow', season: 'ajisai', cards: {}, best: {}, clears: 0 };
+try {
+  const d = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (d && typeof d === 'object') Object.assign(S, d);
+} catch (e) { }
+if (!S.cards || typeof S.cards !== 'object') S.cards = {};
+if (!S.best || typeof S.best !== 'object') S.best = {};
+if (!['ajisai', 'koyo', 'yuki'].includes(S.season)) S.season = 'ajisai';
+if (!['slow', 'normal'].includes(S.speed)) S.speed = 'slow';
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } };
+
+/* ---------------- おと（WebAudio の ごうせいおん だけ） ---------------- */
+let AC = null, MG = null, NB = null;
+function A() {
+  if (!S.sound) return null;
+  try {
+    if (!AC) {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      AC = new C(); MG = AC.createGain(); MG.gain.value = .55; MG.connect(AC.destination);
+      NB = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+      const d = NB.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    }
+    if (AC.state === 'suspended') AC.resume();
+    return AC;
+  } catch (e) { return null; }
+}
+function tone(f, d, o = {}) {
+  const a = A(); if (!a) return;
+  const t = a.currentTime + (o.at || 0), os = a.createOscillator(), g = a.createGain();
+  os.type = o.type || 'sine'; os.frequency.setValueAtTime(f, t);
+  if (o.to) os.frequency.exponentialRampToValueAtTime(o.to, t + d);
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .2, t + .012);
+  g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  os.connect(g); g.connect(MG); os.start(t); os.stop(t + d + .03);
+}
+function hiss(d, o = {}) {
+  const a = A(); if (!a) return;
+  const t = a.currentTime + (o.at || 0), src = a.createBufferSource(), fl = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = NB; fl.type = o.type || 'bandpass'; fl.frequency.setValueAtTime(o.f || 2000, t);
+  if (o.to) fl.frequency.exponentialRampToValueAtTime(o.to, t + d);
+  fl.Q.value = o.q || 1;
+  g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(o.vol || .15, t + .02);
+  g.gain.exponentialRampToValueAtTime(.0001, t + d);
+  src.connect(fl); fl.connect(g); g.connect(MG); src.start(t, Math.random() * .4); src.stop(t + d + .05);
+}
+const sfx = {
+  tap() { tone(660, .08, { type: 'triangle', vol: .14 }); },
+  click() { hiss(.05, { f: 3200, vol: .3 }); tone(420, .06, { type: 'square', vol: .07, at: .02 }); hiss(.06, { f: 2200, vol: .3, at: .13 }); tone(300, .08, { type: 'square', vol: .07, at: .14 }); },
+  bell() { tone(1175, .45, { type: 'triangle', vol: .15 }); tone(1175, .6, { type: 'triangle', vol: .15, at: .26 }); },
+  boing() { tone(330, .45, { to: 110, vol: .25 }); tone(520, .25, { type: 'triangle', to: 260, vol: .1, at: .06 }); },
+  early() { tone(330, .14, { type: 'triangle', vol: .14 }); tone(262, .2, { type: 'triangle', vol: .14, at: .14 }); },
+  yay() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .25, { type: 'triangle', vol: .15, at: i * .1 })); },
+  fanfare() { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i === 5 ? .7 : .2, { type: 'triangle', vol: .16, at: i * .14 })); },
+  brake() { hiss(.5, { f: 5000, to: 1500, vol: .07, type: 'highpass' }); },
+  sneeze1() { hiss(.15, { f: 1200, vol: .1 }); tone(400, .15, { to: 520, vol: .06, type: 'triangle' }); },
+  sneeze2() { hiss(.35, { f: 3500, to: 700, vol: .32 }); tone(520, .22, { to: 180, vol: .12 }); },
+  water() { hiss(.4, { f: 6000, vol: .05, type: 'highpass' }); },
+  joint() { tone(95, .06, { vol: .1 }); tone(82, .06, { vol: .08, at: .11 }); },
+  step() { tone(170 + Math.random() * 50, .05, { type: 'square', vol: .035 }); },
+};
+
+/* ---------------- はこね とざん てつどうの データ（しらべた もの。README を さんしょう） ---------------- */
+// スイッチバック: 出山信号場・大平台駅・上大平台信号場 の 3かしょ
+// いちばん きゅうな さか 80パーミル（1000m で 80m＝100m で 8m）、いちばん きつい カーブ はんけい 30m
+// 箱根湯本〜強羅 8.9km・やく 40ぷん、ひょうこう やく 96m → やく 541m（さ やく 445m）
+const SW_NAME = [
+  { kanji: '出山信号場', kana: 'でやま しんごうじょう' },
+  { kanji: '大平台', kana: 'おおひらだい' },
+  { kanji: '上大平台信号場', kana: 'かみおおひらだい しんごうじょう' },
+];
+
+/* ---------------- せんろの かたち（せかい ざひょう、y は した むきが ＋） ---------------- */
+const P1 = { x: 760, y: -290 }, P2 = { x: 240, y: -600 }, P3 = { x: 760, y: -910 };
+const D1 = { x: 1010, y: -330 }, D2 = { x: -10, y: -640 }, D3 = { x: 1010, y: -950 };
+const LEG4 = [P3, { x: 560, y: -1010 }, { x: 330, y: -1110 }, { x: 130, y: -1200 }, { x: 30, y: -1240 }, { x: -100, y: -1240 }];
+const TRACKS = [[{ x: -110, y: 0 }, { x: 200, y: 0 }, P1], [P1, D1], [P1, P2], [P2, D2], [P2, P3], [P3, D3], LEG4];
+const PT = [null, P1, P2, P3];
+const ARR = [null, { x: 200, y: 0 }, P1, P2];           // ポイントに くる がわ
+const DEP = [null, P2, P3, LEG4[1]];                     // ポイントから でる がわ
+const BUF = [D1, D2, D3, LEG4[5]];
+
+function mkRun(pts) {
+  const L = [0];
+  for (let i = 1; i < pts.length; i++) L.push(L[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
+  return { pts, L, len: L[L.length - 1], stops: [], spr: [] };
+}
+function at(r, s) {
+  const p = r.pts, L = r.L; let i = 1;
+  while (i < p.length - 1 && L[i] < s) i++;
+  const a = p[i - 1], b = p[i], t = (s - L[i - 1]) / (L[i] - L[i - 1]);
+  return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+}
+const runs = [
+  mkRun([{ x: -110, y: 0 }, { x: 200, y: 0 }, P1, D1]),
+  mkRun([D1, P1, P2, D2]),
+  mkRun([D2, P2, P3, D3]),
+  mkRun([D3, ...LEG4]),
+];
+for (let k = 0; k < 3; k++) runs[k].sw = { sP: runs[k].L[2], sD: runs[k].len };
+const R0 = runs[0], R2 = runs[2], R3 = runs[3];
+R0.stops = [{ s: R0.L[1] + 0.45 * (R0.L[2] - R0.L[1]), kanji: '塔ノ沢', kana: 'とうのさわ' }];
+R0.sneeze = R0.L[1] + 150;
+R2.spr = [[R2.L[1] + 120, R2.L[1] + 250], [R2.L[1] + 370, R2.L[1] + 490]];
+R3.stops = [
+  { s: R3.L[2], kanji: '宮ノ下', kana: 'みやのした' },
+  { s: R3.L[3], kanji: '小涌谷', kana: 'こわきだに' },
+  { s: R3.L[4], kanji: '彫刻の森', kana: 'ちょうこくのもり' },
+];
+R3.spr = [[R3.L[2] + 40, R3.L[2] + 170], [R3.L[4] + 8, R3.L[4] + 95]];
+R3.sneeze = R3.L[3] + 110;
+R3.goal = R3.len - 36;
+
+const CAR = 70, GAP = 6, TL = CAR * 2 + GAP;
+const SPEED = { slow: 62, normal: 96 }, SPUR = { slow: .5, normal: .6 };
+const DRV = [1.6, 2.2, 2.9];       // うんてんしさんが はしる じかん（だんだん へとへと）
+
+// えきの かんばん
+const SIGNS = [
+  { p: { x: 40, y: 0 }, kanji: '箱根湯本', kana: 'はこねゆもと', major: 1 },
+  { p: at(R0, R0.stops[0].s), kanji: '塔ノ沢', kana: 'とうのさわ' },
+  { p: { x: 880, y: -309 }, kanji: '出山信号場', kana: 'でやま しんごうじょう', sig: 1 },
+  { p: { x: 70, y: -630 }, kanji: '大平台', kana: 'おおひらだい' },
+  { p: { x: 880, y: -929 }, kanji: '上大平台信号場', kana: 'かみおおひらだい しんごうじょう', sig: 1 },
+  { p: at(R3, R3.L[1] + 70), kanji: '仙人台信号場', kana: 'せんにんだい しんごうじょう', sig: 1 },
+  { p: LEG4[1], kanji: '宮ノ下', kana: 'みやのした' },
+  { p: LEG4[2], kanji: '小涌谷', kana: 'こわきだに' },
+  { p: LEG4[3], kanji: '彫刻の森', kana: 'ちょうこくのもり' },
+  { p: { x: -40, y: -1240 }, kanji: '強羅', kana: 'ごうら', major: 1 },
+];
+const SPR_SIGNS = [];
+for (const r of [R2, R3]) for (const z of r.spr) SPR_SIGNS.push(at(r, z[0]));
+
+// ホーム（えきの のりば）
+function samplePath(r, a, b) { const out = []; for (let s = a; s <= b + .01; s += (b - a) / 8) out.push(at(r, s)); return out; }
+const PLATFORMS = [
+  samplePath(R0, 0, 250),
+  samplePath(R0, R0.stops[0].s - 150, R0.stops[0].s + 10),
+  samplePath(runs[1], runs[1].sw.sP + 60, runs[1].sw.sD - 4),
+  ...R3.stops.map(st => samplePath(R3, st.s - 150, st.s + 10)),
+  samplePath(R3, R3.len - 190, R3.len - 4),
+];
+
+/* ---------------- けしき ---------------- */
+const SEASONS = {
+  ajisai: { sky: ['#a9cbe3', '#e6f1f6'], far: '#a7c4b5', mt: '#6faa58', mt2: '#5e9a4c', ground: '#8dbf70', tree: ['#3f8f3a', '#4c9f45', '#2f7d32', '#58a84c'], river: '#6cb6e8' },
+  koyo: { sky: ['#8ec8ee', '#fdf0d9'], far: '#d8b48c', mt: '#c38a42', mt2: '#ad7634', ground: '#c9a35e', tree: ['#e03131', '#f76707', '#fab005', '#c2255c', '#e8590c'], river: '#5aa9e0' },
+  yuki: { sky: ['#b9cadb', '#eef3f8'], far: '#dce5ee', mt: '#f1f5f9', mt2: '#dfe7ef', ground: '#eef2f7', tree: ['#2f5d4a', '#3b6b55', '#355f50'], river: '#9cc8ea' },
+};
+let SP = SEASONS[S.season];
+
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const MT_TOP = [{ x: -1700, y: -500 }, { x: -900, y: -950 }, { x: -400, y: -1300 }, { x: -150, y: -1450 }, { x: 150, y: -1560 }, { x: 450, y: -1620 }, { x: 750, y: -1520 }, { x: 1050, y: -1350 }, { x: 1300, y: -1180 }, { x: 1700, y: -950 }, { x: 2700, y: -500 }];
+const FAR_TOP = [{ x: -3000, y: -900 }, { x: -1200, y: -1500 }, { x: -300, y: -1800 }, { x: 250, y: -1880 }, { x: 600, y: -1960 }, { x: 1000, y: -1820 }, { x: 1500, y: -1600 }, { x: 2200, y: -1300 }, { x: 3600, y: -900 }];
+function ridgeY(x) {
+  for (let i = 1; i < MT_TOP.length; i++) if (x <= MT_TOP[i].x) {
+    const a = MT_TOP[i - 1], b = MT_TOP[i]; return a.y + (b.y - a.y) * (x - a.x) / (b.x - a.x);
+  }
+  return -500;
+}
+function distSeg(p, a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y, l = dx * dx + dy * dy;
+  let t = ((p.x - a.x) * dx + (p.y - a.y) * dy) / l; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p.x - a.x - dx * t, p.y - a.y - dy * t);
+}
+function nearTrack(p, d) {
+  for (const tr of TRACKS) for (let i = 1; i < tr.length; i++) if (distSeg(p, tr[i - 1], tr[i]) < d) return true;
+  return false;
+}
+const TREES = [], BUSHES = [], HOUSES = [];
+(() => {
+  const R = rng(7);
+  let n = 0;
+  while (TREES.length < 110 && n++ < 4000) {
+    const p = { x: -520 + R() * 2040, y: -1600 + R() * 1590 };
+    if (p.y < ridgeY(p.x) + 30 || p.y > -20) continue;
+    if (nearTrack(p, 46)) continue;
+    if (Math.abs(p.x - 40) < 110 && p.y > -80) continue;
+    TREES.push({ x: p.x, y: p.y, r: 13 + R() * 12, c: (R() * 10) | 0, t: R() });
+  }
+  TREES.sort((a, b) => a.y - b.y);
+  // あじさい（せんろの そば）
+  for (const tr of [TRACKS[0], TRACKS[2], TRACKS[4], TRACKS[6]]) for (let i = 1; i < tr.length; i++) {
+    const a = tr[i - 1], b = tr[i], L = Math.hypot(b.x - a.x, b.y - a.y);
+    for (let s = 50; s < L - 30; s += 70 + R() * 40) {
+      const p = { x: a.x + (b.x - a.x) * s / L, y: a.y + (b.y - a.y) * s / L + 24 };
+      if (nearTrack(p, 18)) continue;
+      BUSHES.push({ x: p.x, y: p.y, c: (R() * 4) | 0, big: 0 });
+    }
+  }
+  for (const r of [R0, R3]) { const p = at(r, r.sneeze + 6); BUSHES.push({ x: p.x, y: p.y - 6, c: 1, big: 1 }); }
+  // したの まち（はこねゆもとの おんせんまち）
+  for (let i = 0; i < 60; i++) {
+    const row = i % 3, x = -700 + R() * 2100, y = [56, 110, 250][row] + R() * 30;
+    HOUSES.push({ x, y, w: 26 + R() * 26, h: 18 + R() * 14, c: (R() * 4) | 0, steam: R() < .18 });
+  }
+  HOUSES.sort((a, b) => a.y - b.y);
+})();
+
+/* ---------------- がめん ---------------- */
+const cv = $('cv'), ctx = cv.getContext('2d');
+let cw = 0, ch = 0, dpr = 1, baseSc = 1, sc = 1, skyG = null;
+const cam = { x: 120, y: -60 };
+// ゴールで みわたす ときに つかう がめんの ばしょ（パネルに かくれない ところ）
+function goalRect() { return cw > ch * 1.1 ? { x: 0, y: 0, w: cw - 440, h: ch } : { x: 0, y: 0, w: cw, h: ch * .52 }; }
+function fullSc() { const g = goalRect(); return Math.min(g.w / 1520, g.h / 2080); }
+const OFF = { x: 0, y: 0 };
+function resize() {
+  dpr = Math.min(2, window.devicePixelRatio || 1);
+  cw = window.innerWidth; ch = window.innerHeight;
+  cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+  baseSc = Math.min(cw / 600, ch / 500);
+  skyG = null;
+}
+window.addEventListener('resize', resize);
+resize();
+
+/* ---------------- ゲームの じょうたい ---------------- */
+const G = { state: 'title', time: 0, oops: 0, swDone: 0, paused: false, zoom: 0, arriveT: 0, t: 0 };
+const T = {};
+const pointAnim = [0, 0, 0, 0];
+function resetTrain() {
+  Object.assign(T, {
+    run: 0, s: 150, v: 0, mode: 'idle', timer: 0, stopI: 0, early: false, lean: 0, leanV: 0,
+    shake: 0, headCar: 1, drv: 0, clicked: 0, swFin: 0, sneezed: {}, sneezeT: 0, jAcc: 0, wasSp: false, sprT: 0,
+    bubble: null, face: 'normal',
+  });
+  pointAnim.fill(0);
+  G.time = 0; G.oops = 0; G.swDone = 0; G.zoom = 0; G.arriveT = 0; G.paused = false;
+  const m = at(runs[0], T.s - TL / 2); cam.x = m.x; cam.y = m.y;
+}
+resetTrain();
+
+/* ---------------- パーティクル ---------------- */
+const PTS = [];
+function addP(p) { if (PTS.length < 220) PTS.push(p); }
+let ambN = 0;
+
+/* ---------------- メッセージ ---------------- */
+let toastTimer = 0;
+function toast(html, sec = 2.6) { const el = $('toast'); el.innerHTML = html; el.classList.add('show'); toastTimer = sec; }
+const rb = (k, r) => `<ruby>${k}<rt>${r}</rt></ruby>`;
+
+/* ---------------- でんしゃの うごき ---------------- */
+function swInfo() {
+  const r = runs[T.run]; if (!r.sw) return null;
+  return { sP: r.sw.sP, sD: r.sw.sD, zs: r.sw.sP + TL + 4, ze: r.sw.sD - 16 };
+}
+function upAt(r, s) {
+  const a = at(r, s + 6), b = at(r, s - 6); let dx = a.x - b.x, dy = a.y - b.y;
+  if (dx < 0) { dx = -dx; dy = -dy; }
+  const ang = Math.atan2(dy, dx); return { x: Math.sin(ang), y: -Math.cos(ang), ang };
+}
+function startGame() {
+  resetTrain();
+  G.state = 'play';
+  T.mode = 'wait'; T.timer = 1.6;
+  show('title', false); show('goal', false); show('cardsView', false);
+  show('hud', true); show('ptBtn', true);
+  toast(`${rb('箱根湯本', 'はこねゆもと')}から しゅっぱつ！<br>やまの うえの ${rb('強羅', 'ごうら')}を めざそう`, 3);
+  hudCache = {};
+}
+function nextName() {
+  const r = runs[T.run];
+  const st = r.stops[T.stopI];
+  if (st) return rb(st.kanji, st.kana);
+  if (r.sw) return rb(SW_NAME[T.run].kanji, SW_NAME[T.run].kana);
+  return rb('強羅', 'ごうら');
+}
+
+function tapPoint() {
+  if (G.state !== 'play' || G.paused) return;
+  const z = swInfo();
+  if (T.mode !== 'run' || !z) { if (T.mode === 'run') { sfx.tap(); toast('ポイントは まだ さきだよ。<br>ひかったら タップしてね', 1.8); } return; }
+  if (T.early) return;
+  if (T.s < z.zs - 280) { sfx.tap(); toast('まだ だよ。<br>ポイントが ひかったら タップ！', 1.8); return; }
+  if (T.s < z.zs) {
+    sfx.early();
+    if (S.speed === 'slow') { toast('もうすこし まって！<br>でんしゃが きいろい ところに きたら タップ', 2); return; }
+    T.early = true; toast('はやすぎ〜！<br>でんしゃが まだ ポイントの うえだよ', 2.2); return;
+  }
+  if (T.s <= z.ze) {
+    T.mode = 'stop'; sfx.brake(); T.leanV += 5;
+    toast('ぴったり！ ポイント きりかえ！', 1.8);
+  }
+}
+
+function bump() {
+  const z = swInfo();
+  T.s = z.sD - 6; T.v = 0; T.mode = 'bump'; T.timer = 1.0; T.leanV += 14; G.oops++;
+  T.face = 'wow'; sfx.boing();
+  T.bubble = { text: 'おっとっと！', t: 1.5, who: 'train' };
+  toast(T.early ? 'はやすぎたね。<br>きいろい ところに きてから タップしよう' : 'いきすぎちゃった！<br>きいろい ところで タップしてね', 2.6);
+}
+
+function finishSwitch() {
+  G.swDone++;
+  sfx.yay();
+  const k = T.run;
+  const msg = [
+    `スイッチバック 1かいめ せいこう！<br>${rb('出山信号場', 'でやま しんごうじょう')}で むきを かえたよ`,
+    `スイッチバック 2かいめ！<br>${rb('大平台', 'おおひらだい')}${rb('駅', 'えき')}は えきの なかで むきを かえるよ`,
+    `スイッチバック 3かいめ！ ぜんぶ クリア！<br>あとは ${rb('強羅', 'ごうら')}まで まっすぐ のぼるよ`,
+  ][k];
+  toast(msg, 3);
+  const cid = ['sb', 'saka', 'mizu'][k];
+  if (!S.cards[cid]) {
+    S.cards[cid] = 1; save();
+    setTimeout(() => { openCard(cid, () => reverse()); }, 700);
+    T.mode = 'swwait'; T.timer = 99;
+  } else { T.mode = 'swwait'; T.timer = 1.0; }
+}
+
+function reverse() {
+  const r = runs[T.run];
+  const tail = T.s - TL;
+  T.s = r.len - tail;              // あたらしい みちの さきは いきどまり がわから はかる
+  T.run++; T.headCar = 3 - T.headCar; T.v = 0;
+  T.drv = 0; T.clicked = 0; T.swFin = 0; T.stopI = 0; T.early = false; T.face = 'normal';
+  T.mode = 'wait'; T.timer = .9;
+  hudCache = {};
+}
+
+function arrive() {
+  T.mode = 'arrive'; G.arriveT = 0; sfx.fanfare(); T.face = 'happy';
+  T.bubble = { text: 'ついたー！', t: 3, who: 'driver' };
+  const p = at(runs[T.run], T.s - 70);
+  for (let i = 0; i < 90; i++) addP({ k: 'conf', x: p.x + (Math.random() - .5) * 200, y: p.y - 120 - Math.random() * 80, vx: (Math.random() - .5) * 60, vy: 20 + Math.random() * 40, g: 30, life: 4 + Math.random() * 2, c: ['#ff6b6b', '#ffd43b', '#51cf66', '#339af0', '#cc5de8'][i % 5], r: 4 + Math.random() * 3, a: Math.random() * 6 });
+  const sp = S.speed, t = Math.round(G.time);
+  const prev = S.best[sp];
+  G.newBest = !prev || t < prev;
+  if (G.newBest) S.best[sp] = t;
+  S.clears = (S.clears || 0) + 1;
+  G.newCard = !S.cards.tozan;
+  S.cards.tozan = 1;
+  save();
+  toast(`${rb('強羅', 'ごうら')}に とうちゃく！`, 2.2);
+}
+
+function updateTrain(dt) {
+  const r = runs[T.run], z = swInfo();
+  T.leanV += (-T.lean * 40 - T.leanV * 5) * dt; T.lean += T.leanV * dt;
+  if (T.bubble) { T.bubble.t -= dt; if (T.bubble.t <= 0) T.bubble = null; }
+  switch (T.mode) {
+    case 'wait':
+      T.timer -= dt;
+      if (T.timer <= 0) { T.mode = 'run'; sfx.bell(); }
+      break;
+    case 'run': {
+      let tgt = SPEED[S.speed];
+      if (z && T.s > z.sP - 60) tgt *= SPUR[S.speed];
+      const st = r.stops[T.stopI];
+      const stopAt = st ? st.s : (r.goal != null ? r.goal : null);
+      if (stopAt != null) { const d = stopAt - T.s; if (d < 110) tgt *= Math.max(.16, d / 110); }
+      T.v += (tgt - T.v) * Math.min(1, dt * 2.2);
+      T.s += T.v * dt;
+      T.jAcc += T.v * dt; if (T.jAcc > 120) { T.jAcc = 0; sfx.joint(); }
+      if (st && T.s >= st.s) {
+        T.s = st.s; T.v = 0; T.stopI++; T.mode = 'wait'; T.timer = 1.4;
+        toast(`${rb(st.kanji, st.kana)}に つきました`, 1.6);
+        hudCache = {};
+      } else if (!st && r.goal != null && T.s >= r.goal) {
+        T.s = r.goal; T.v = 0; arrive();
+      } else if (z && T.s >= z.sD - 6) {
+        bump();
+      } else if (S.season === 'ajisai' && r.sneeze && !T.sneezed[T.run] && T.s >= r.sneeze) {
+        T.sneezed[T.run] = 1; T.mode = 'sneeze'; T.timer = 1.9; T.sneezeT = 0; T.v = 0; T.face = 'itch';
+        sfx.sneeze1();
+        T.bubble = { text: 'は… は…', t: .8, who: 'train' };
+        toast('あじさいの はなが でんしゃの はなを くすぐって…', 2);
+      }
+      const inSp = r.spr.some(z2 => T.s >= z2[0] && T.s <= z2[1]);
+      if (inSp) {
+        T.sprT -= dt; if (T.sprT <= 0) { T.sprT = .45; sfx.water(); }
+        for (const off of [8, 60]) {
+          const p = at(r, T.s - off);
+          if (Math.random() < .7) addP({ k: 'drop', x: p.x, y: p.y - 2, vx: (Math.random() - .5) * 70, vy: -30 - Math.random() * 40, g: 260, life: .5, r: 1.6 + Math.random() * 1.4 });
+        }
+        if (!T.wasSp) T.bubble = { text: 'みずを まいて カーブ！', t: 1.6, who: 'train' };
+      }
+      T.wasSp = inSp;
+      break;
+    }
+    case 'sneeze': {
+      T.timer -= dt; T.sneezeT += dt;
+      if (T.sneezeT >= .8 && T.face === 'itch') {
+        T.face = 'sneeze'; sfx.sneeze2(); T.leanV -= 12; T.shake = .5;
+        T.bubble = { text: 'はっくしょん！', t: 1.2, who: 'train' };
+        const b = at(r, T.s);
+        for (let i = 0; i < 26; i++) addP({ k: 'petal', x: b.x + (Math.random() - .5) * 30, y: b.y - 10, vx: (Math.random() - .5) * 160, vy: -60 - Math.random() * 90, g: 120, life: 1.6, r: 3 + Math.random() * 2.5, c: ['#5c7cfa', '#9775fa', '#f783ac', '#74c0fc'][i % 4] });
+      }
+      if (T.shake > 0) T.shake -= dt;
+      if (T.timer <= 0) { T.mode = 'run'; T.face = 'normal'; T.shake = 0; }
+      break;
+    }
+    case 'stop':
+      T.v = Math.max(0, T.v - dt * 140); T.s += T.v * dt;
+      if (z) T.s = Math.min(T.s, z.sD - 8);
+      if (T.v <= 0) { T.mode = 'switch'; T.timer = 0; T.leanV += 4; }
+      break;
+    case 'switch': {
+      T.timer += dt; const k = T.run + 1, dur = DRV[T.run];
+      if (T.timer < .5) {
+        pointAnim[k] = T.timer / .5;
+        if (!T.clicked && T.timer > .12) { T.clicked = 1; sfx.click(); }
+      } else {
+        pointAnim[k] = 1;
+        if (T.drv === 0) {
+          toast('うんてんしさんと しゃしょうさんが<br>いれかわるよ！', dur + .4);
+          T.bubble = { text: ['よいしょ！ うしろへ いどう！', 'ふう… ふう…', 'へと へと〜'][T.run], t: dur + .2, who: 'driver' };
+        }
+        const prev = T.drv;
+        T.drv = Math.min(1, (T.timer - .5) / dur);
+        if (Math.floor(prev * dur * 4) !== Math.floor(T.drv * dur * 4)) sfx.step();
+        if (T.drv >= 1 && !T.swFin) { T.swFin = 1; finishSwitch(); }
+      }
+      break;
+    }
+    case 'swwait':
+      T.timer -= dt; if (T.timer <= 0) reverse();
+      break;
+    case 'bump':
+      T.timer -= dt;
+      if (T.timer <= 0) { T.mode = 'back'; T.face = 'normal'; T.backTo = z.zs - 170; }
+      break;
+    case 'back':
+      T.v = -80; T.s += T.v * dt;
+      if (T.s <= T.backTo) { T.s = T.backTo; T.v = 0; T.mode = 'run'; T.early = false; toast('もういちど！<br>きいろい ところで タップ！', 2); }
+      break;
+    case 'arrive':
+      G.arriveT += dt;
+      if (G.arriveT > 1.6) G.zoom = Math.min(1, G.zoom + dt / 2.6);
+      if (G.arriveT > 2.2 && !G.zoomMsg) { G.zoomMsg = 1; toast('やまの うえから<br>したの まちが みえるよ！', 3.5); }
+      if (G.arriveT > 5.4 && G.state === 'play') showGoal();
+      break;
+  }
+}
+
+/* ---------------- まいフレーム ---------------- */
+function update(dt) {
+  G.t += dt;
+  if (toastTimer > 0) { toastTimer -= dt; if (toastTimer <= 0) $('toast').classList.remove('show'); }
+  if (G.state === 'play' && !G.paused) {
+    if (T.mode !== 'arrive') G.time += dt;
+    updateTrain(dt);
+  } else if (G.state === 'goal') {
+    G.zoom = Math.min(1, G.zoom + dt / 2.6);
+  }
+  // パーティクル
+  for (let i = PTS.length - 1; i >= 0; i--) {
+    const p = PTS[i];
+    p.life -= dt; p.vy += (p.g || 0) * dt; p.x += p.vx * dt; p.y += p.vy * dt;
+    if (p.k === 'leaf' || p.k === 'conf') { p.a += dt * 3; p.x += Math.sin(G.t * 2 + p.r * 3) * 18 * dt; }
+    if (p.life <= 0) { if (p.amb) ambN--; PTS.splice(i, 1); }
+  }
+  // きせつの ふるもの
+  if (S.season !== 'ajisai') {
+    const vw = cw / sc, vh = ch / sc, want = 40;
+    if (ambN < want && Math.random() < .5) {
+      ambN++;
+      const yuki = S.season === 'yuki';
+      addP({ amb: 1, k: yuki ? 'snow' : 'leaf', x: cam.x + (Math.random() - .5) * vw * 1.2, y: cam.y - vh / 2 - 20, vx: (Math.random() - .5) * 20, vy: (yuki ? 30 : 40) + Math.random() * 30, g: 0, life: vh / 40 + 3, r: yuki ? 2 + Math.random() * 2.5 : 4 + Math.random() * 3, c: SP.tree[(Math.random() * SP.tree.length) | 0], a: Math.random() * 6 });
+    }
+  }
+  updCam(dt);
+  updHud();
+}
+
+function updCam(dt) {
+  const r = runs[T.run];
+  let m = at(r, T.s - TL / 2);
+  const tx = m.x, ty = m.y - (ch / sc) * .06;
+  const e = G.zoom < .5 ? 2 * G.zoom * G.zoom : 1 - Math.pow(-2 * G.zoom + 2, 2) / 2;
+  sc = baseSc + (fullSc() - baseSc) * e;
+  cam.x += (tx - cam.x) * Math.min(1, dt * 3); cam.y += (ty - cam.y) * Math.min(1, dt * 3);
+  const vw = cw / sc, vh = ch / sc;
+  cam.x = vw >= 1520 ? 500 : Math.max(-260 + vw / 2, Math.min(1260 - vw / 2, cam.x));
+  cam.y = vh >= 2080 ? -660 : Math.max(-1700 + vh / 2, Math.min(380 - vh / 2, cam.y));
+  if (e > 0) {
+    cam.x += (500 - cam.x) * e; cam.y += (-660 - cam.y) * e;
+    const g = goalRect();
+    OFF.x = (g.x + g.w / 2 - cw / 2) * e; OFF.y = (g.y + g.h / 2 - ch / 2) * e;
+  } else { OFF.x = 0; OFF.y = 0; }
+}
+
+let hudCache = {};
+function setHud(id, v, prop = 'textContent') { if (hudCache[id] !== v) { hudCache[id] = v; $(id)[prop] = v; } }
+function updHud() {
+  if (G.state !== 'play') return;
+  const sec = Math.floor(G.time);
+  setHud('clock', `⏱ ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
+  const m = at(runs[T.run], T.s - TL / 2);
+  const el = 96 + Math.max(0, Math.min(1, -m.y / 1240)) * 445;
+  setHud('elev', `⛰️ やく ${Math.round(el / 10) * 10}m`);
+  setHud('next', T.mode === 'arrive' ? '🎉 とうちゃく！' : `つぎ ▶ ${nextName()}`, 'innerHTML');
+  const dots = $('dots').children;
+  for (let i = 0; i < 3; i++) dots[i].classList.toggle('on', i < G.swDone);
+  // ポイント ボタン
+  const z = swInfo();
+  let cls = '', hint = '';
+  if (z && T.mode === 'run' && !T.early && T.s >= z.zs - 280) {
+    cls = 'ready'; hint = 'きいろに きたら タップ！';
+    if (T.s >= z.zs && T.s <= z.ze) { cls = 'now'; hint = S.speed === 'slow' ? 'いまだ！ タップ！' : 'いま！'; }
+  }
+  if (hudCache.btn !== cls) { hudCache.btn = cls; const b = $('ptBtn'); b.classList.toggle('ready', cls === 'ready'); b.classList.toggle('now', cls === 'now'); }
+  setHud('hint', hint);
+}
+
+/* ---------------- えを かく ---------------- */
+function rr(x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+}
+function circle(x, y, r) { ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); }
+function poly(pts) { ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y); for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y); }
+function toScr(p) { return { x: (p.x - cam.x) * sc + cw / 2 + OFF.x, y: (p.y - cam.y) * sc + ch / 2 + OFF.y }; }
+let V = { x0: 0, x1: 0, y0: 0, y1: 0 };
+const vis = (x, y, m = 60) => x > V.x0 - m && x < V.x1 + m && y > V.y0 - m && y < V.y1 + m;
+
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  if (!skyG) { skyG = ctx.createLinearGradient(0, 0, 0, ch); skyG.addColorStop(0, SP.sky[0]); skyG.addColorStop(1, SP.sky[1]); }
+  ctx.fillStyle = skyG; ctx.fillRect(0, 0, cw, ch);
+  const vw = cw / sc, vh = ch / sc, ox = OFF.x / sc, oy = OFF.y / sc;
+  V = { x0: cam.x - vw / 2 - ox, x1: cam.x + vw / 2 - ox, y0: cam.y - vh / 2 - oy, y1: cam.y + vh / 2 - oy };
+  ctx.setTransform(sc * dpr, 0, 0, sc * dpr, (cw / 2 + OFF.x - cam.x * sc) * dpr, (ch / 2 + OFF.y - cam.y * sc) * dpr);
+
+  // とおくの やま
+  ctx.fillStyle = SP.far; poly([{ x: -3000, y: 200 }, ...FAR_TOP, { x: 3600, y: 200 }]); ctx.fill();
+  // やま
+  ctx.fillStyle = SP.mt; poly([{ x: -1700, y: 20 }, ...MT_TOP, { x: 2700, y: 20 }]); ctx.fill();
+  ctx.fillStyle = SP.mt2; poly([{ x: -1700, y: 20 }, { x: -1700, y: -300 }, { x: -600, y: -620 }, { x: 200, y: -380 }, { x: 900, y: -560 }, { x: 1600, y: -400 }, { x: 2700, y: -260 }, { x: 2700, y: 20 }]); ctx.fill();
+  if (S.season === 'yuki') { ctx.fillStyle = '#fff'; poly([{ x: -150, y: -1450 }, { x: 150, y: -1560 }, { x: 450, y: -1620 }, { x: 750, y: -1520 }, { x: 1050, y: -1350 }, { x: 800, y: -1430 }, { x: 450, y: -1540 }, { x: 100, y: -1480 }]); ctx.fill(); }
+  drawValley();
+  drawTrees();
+  drawBridge();
+  drawPlatforms();
+  drawTracks();
+  if (S.season === 'ajisai') drawBushes();
+  drawPosts();
+  drawPoints();
+  drawTrain();
+  drawParticles();
+  if (G.zoom > 0) {
+    ctx.globalAlpha = G.zoom * .8; ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 12 / Math.max(sc, .3) * .5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (const tr of [TRACKS[0], TRACKS[2], TRACKS[4], TRACKS[6]]) { poly(tr); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawLabels();
+  drawBubble();
+}
+
+function drawValley() {
+  ctx.fillStyle = SP.ground; ctx.fillRect(-3000, 14, 6600, 900);
+  if (!vis(500, 150, 400) && V.y1 < 0) return;
+  ctx.strokeStyle = SP.river; ctx.lineWidth = 34; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-2000, 180);
+  for (let x = -2000; x <= 2600; x += 200) ctx.quadraticCurveTo(x + 100, 160 + ((x / 200) % 2 ? 30 : -10), x + 200, 180);
+  ctx.stroke();
+  const roofs = ['#c0392b', '#495057', '#1971c2', '#8d5524'];
+  for (const h of HOUSES) {
+    if (!vis(h.x, h.y, 80)) continue;
+    ctx.fillStyle = '#fff8e7'; ctx.fillRect(h.x, h.y - h.h, h.w, h.h);
+    ctx.fillStyle = '#74a9cf'; ctx.fillRect(h.x + h.w * .2, h.y - h.h * .7, h.w * .22, h.h * .35);
+    ctx.fillStyle = S.season === 'yuki' ? '#fff' : roofs[h.c];
+    poly([{ x: h.x - 4, y: h.y - h.h }, { x: h.x + h.w / 2, y: h.y - h.h - 14 }, { x: h.x + h.w + 4, y: h.y - h.h }]); ctx.fill();
+    if (S.season === 'yuki') { ctx.strokeStyle = '#adb5bd'; ctx.lineWidth = 1.5; ctx.stroke(); }
+    if (h.steam) {
+      ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 3;
+      for (let j = 0; j < 2; j++) {
+        const ox = h.x + h.w * (.35 + j * .3), ph = G.t * 2 + j * 2;
+        ctx.beginPath(); ctx.moveTo(ox, h.y - h.h - 14);
+        ctx.quadraticCurveTo(ox + 6 * Math.sin(ph), h.y - h.h - 26, ox, h.y - h.h - 38); ctx.stroke();
+      }
+    }
+  }
+}
+
+function drawTrees() {
+  const yuki = S.season === 'yuki';
+  for (const t of TREES) {
+    if (!vis(t.x, t.y, 40)) continue;
+    const r = t.r;
+    ctx.fillStyle = '#6b4a2f'; ctx.fillRect(t.x - 2.5, t.y - r * .6, 5, r * .8);
+    if (yuki) {
+      ctx.fillStyle = SP.tree[t.c % SP.tree.length];
+      poly([{ x: t.x - r * .8, y: t.y - r * .4 }, { x: t.x, y: t.y - r * 2.2 }, { x: t.x + r * .8, y: t.y - r * .4 }]); ctx.fill();
+      ctx.fillStyle = '#fff';
+      poly([{ x: t.x - r * .38, y: t.y - r * 1.4 }, { x: t.x, y: t.y - r * 2.2 }, { x: t.x + r * .38, y: t.y - r * 1.4 }]); ctx.fill();
+    } else {
+      ctx.fillStyle = SP.tree[t.c % SP.tree.length];
+      circle(t.x, t.y - r * 1.1, r * .75);
+      circle(t.x - r * .45, t.y - r * .75, r * .55);
+      circle(t.x + r * .45, t.y - r * .75, r * .55);
+    }
+  }
+}
+
+function drawBridge() {
+  // 塔ノ沢と 出山信号場の あいだの てっきょう（たにを わたる）
+  const a = { x: 200 + 560 * .66, y: -290 * .66 }, b = { x: 200 + 560 * .82, y: -290 * .82 };
+  if (!vis(a.x, a.y, 200)) return;
+  const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+  ctx.fillStyle = 'rgba(40,70,90,.45)';
+  poly([{ x: a.x - 20, y: a.y + 4 }, { x: b.x + 20, y: b.y + 4 }, { x: mx + 10, y: my + 120 }, { x: mx - 10, y: my + 120 }]); ctx.fill();
+  ctx.strokeStyle = SP.river; ctx.lineWidth = 8; ctx.beginPath(); ctx.moveTo(mx - 10, my + 112); ctx.lineTo(mx + 10, my + 112); ctx.stroke();
+  ctx.strokeStyle = '#c92a2a'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.moveTo(a.x, a.y + 4); ctx.quadraticCurveTo(mx, my + 70, b.x, b.y + 4); ctx.stroke();
+  ctx.lineWidth = 2.5;
+  for (let i = 1; i < 6; i++) {
+    const t = i / 6, x = a.x + (b.x - a.x) * t, y = a.y + (b.y - a.y) * t + 4;
+    const yy = (1 - t) * (1 - t) * (a.y + 4) + 2 * t * (1 - t) * (my + 70) + t * t * (b.y + 4);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, yy); ctx.stroke();
+  }
+  ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(a.x, a.y + 5); ctx.lineTo(b.x, b.y + 5); ctx.stroke();
+}
+
+function drawPlatforms() {
+  for (const pl of PLATFORMS) {
+    const mid = pl[4]; if (!vis(mid.x, mid.y, 200)) continue;
+    ctx.lineCap = 'butt'; ctx.lineJoin = 'round';
+    // ホームは せんろの おくに みえる はいいろの だい
+    ctx.strokeStyle = '#c3c9d0'; ctx.lineWidth = 16;
+    ctx.beginPath(); pl.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - 9) : ctx.moveTo(p.x, p.y - 9)); ctx.stroke();
+    ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 2;
+    ctx.beginPath(); pl.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - 2) : ctx.moveTo(p.x, p.y - 2)); ctx.stroke();
+    // やね
+    ctx.strokeStyle = '#7b8794'; ctx.lineWidth = 2;
+    for (let i = 1; i < pl.length; i += 3) { ctx.beginPath(); ctx.moveTo(pl[i].x, pl[i].y - 17); ctx.lineTo(pl[i].x, pl[i].y - 52); ctx.stroke(); }
+    ctx.strokeStyle = S.season === 'yuki' ? '#fff' : '#5c6b7a'; ctx.lineWidth = 6; ctx.lineCap = 'round';
+    ctx.beginPath(); pl.forEach((p, i) => i ? ctx.lineTo(p.x, p.y - 54) : ctx.moveTo(p.x, p.y - 54)); ctx.stroke();
+  }
+}
+
+function drawTracks() {
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(80,64,48,.35)'; ctx.lineWidth = 20;
+  for (const tr of TRACKS) { poly(tr); ctx.stroke(); }
+  ctx.lineCap = 'butt'; ctx.strokeStyle = '#7a5a3c'; ctx.lineWidth = 14; ctx.setLineDash([3.5, 5]);
+  for (const tr of TRACKS) { poly(tr); ctx.stroke(); }
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#4f5763'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (const tr of TRACKS) for (let i = 1; i < tr.length; i++) {
+    const a = tr[i - 1], b = tr[i], L = Math.hypot(b.x - a.x, b.y - a.y), nx = -(b.y - a.y) / L, ny = (b.x - a.x) / L;
+    for (const o of [-4, 4]) { ctx.moveTo(a.x + nx * o, a.y + ny * o); ctx.lineTo(b.x + nx * o, b.y + ny * o); }
+  }
+  ctx.stroke();
+  // くるまどめ
+  for (let i = 0; i < BUF.length; i++) {
+    const d = BUF[i], prev = i < 3 ? PT[i + 1] : LEG4[4];
+    const L = Math.hypot(d.x - prev.x, d.y - prev.y), ux = (d.x - prev.x) / L, uy = (d.y - prev.y) / L;
+    ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(Math.atan2(uy, ux));
+    ctx.fillStyle = '#ffd43b'; ctx.fillRect(-2, -16, 8, 18);
+    ctx.fillStyle = '#212529'; for (let j = 0; j < 3; j++) ctx.fillRect(-2, -16 + j * 6, 8, 3);
+    ctx.restore();
+  }
+}
+
+function drawBushes() {
+  const cols = ['#5c7cfa', '#9775fa', '#f783ac', '#74c0fc'];
+  for (const b of BUSHES) {
+    if (!vis(b.x, b.y, 40)) continue;
+    const s = b.big ? 1.6 : 1;
+    ctx.fillStyle = '#2f7d32'; circle(b.x, b.y, 10 * s);
+    ctx.fillStyle = cols[b.c]; circle(b.x - 6 * s, b.y - 5 * s, 6 * s); circle(b.x + 6 * s, b.y - 4 * s, 6 * s);
+    ctx.fillStyle = cols[(b.c + 1) % 4]; circle(b.x, b.y - 9 * s, 6 * s);
+  }
+}
+
+function drawPosts() {
+  ctx.strokeStyle = '#6c757d'; ctx.lineWidth = 2.5; ctx.lineCap = 'butt';
+  ctx.beginPath();
+  for (const s of SIGNS) { if (s.sig) { ctx.moveTo(s.p.x, s.p.y + 10); ctx.lineTo(s.p.x, s.p.y + 40); } else { ctx.moveTo(s.p.x, s.p.y - 10); ctx.lineTo(s.p.x, s.p.y - 64); } }
+  for (const p of SPR_SIGNS) { ctx.moveTo(p.x, p.y + 10); ctx.lineTo(p.x, p.y + 34); }
+  ctx.stroke();
+}
+
+function drawPoints() {
+  const z = G.state === 'play' ? swInfo() : null;
+  for (let k = 1; k <= 3; k++) {
+    const p = PT[k];
+    if (!vis(p.x, p.y, 120)) continue;
+    const e = pointAnim[k];
+    const va = Math.atan2(ARR[k].y - p.y, ARR[k].x - p.x), vb = Math.atan2(DEP[k].y - p.y, DEP[k].x - p.x);
+    let da = vb - va; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
+    const ang = va + da * e;
+    const cur = z && T.run === k - 1;
+    if (cur && T.s > z.zs - 600) {
+      const pul = .5 + .5 * Math.sin(G.t * 8);
+      const hot = T.mode === 'run' && T.s >= z.zs - 280;
+      ctx.fillStyle = `rgba(255,212,59,${hot ? .45 + .35 * pul : .3})`; circle(p.x, p.y, 22 + pul * 6);
+      // とまる ところ
+      const r = runs[T.run], a = at(r, z.zs), b = at(r, z.ze);
+      ctx.strokeStyle = `rgba(255,200,40,${.45 + .3 * pul})`; ctx.lineWidth = 30; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+    }
+    ctx.strokeStyle = '#212529'; ctx.lineWidth = 8; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + Math.cos(ang) * 36, p.y + Math.sin(ang) * 36); ctx.stroke();
+    ctx.strokeStyle = '#ffd43b'; ctx.lineWidth = 4.5; ctx.stroke();
+    ctx.fillStyle = '#fff'; circle(p.x, p.y, 5.5); ctx.fillStyle = '#e8590c'; circle(p.x, p.y, 3.5);
+  }
+}
+
+function drawTrain() {
+  const r = runs[T.run];
+  const sx = T.shake > 0 ? Math.sin(G.t * 70) * 1.8 : 0;
+  const sneezeBack = T.face === 'sneeze' ? -Math.max(0, T.shake) * 8 : 0;
+  const cars = [];
+  for (let i = 0; i < 2; i++) {
+    const sF = T.s + sneezeBack - i * (CAR + GAP), sB = sF - CAR;
+    const a = at(r, sF), b = at(r, sB);
+    const dx = a.x - b.x, f = dx >= 0 ? 1 : -1;
+    const ang = Math.atan2((a.y - b.y) * f, dx * f);
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    cars.push({ i, f, ang, x: cx + Math.sin(ang) * 17 + sx, y: cy - Math.cos(ang) * 17 });
+  }
+  if (!vis(cars[0].x, cars[0].y, 200)) return;
+  for (const c of cars) {
+    ctx.save(); ctx.translate(c.x, c.y); ctx.rotate(c.ang); drawCar(c.i, c.f, c.ang); ctx.restore();
+  }
+  // いれかわる うんてんしさん・しゃしょうさん
+  if (T.mode === 'switch' && T.drv > 0 || T.mode === 'swwait') {
+    const p = T.mode === 'swwait' ? 1 : T.drv;
+    const sd = T.s - 6 - p * (TL - 12), sc2 = T.s - TL + 6 + p * (TL - 12);
+    crewWalk(r, sd, true, p);
+    crewWalk(r, sc2, false, p);
+  }
+}
+
+function crewWalk(r, s, isDriver, p) {
+  const q = at(r, s), u = upAt(r, s), bob = (p < 1 ? Math.abs(Math.sin(G.t * 16)) : 0) * 1.2;
+  const x = q.x + u.x * (11 + bob), y = q.y + u.y * (11 + bob);
+  ctx.save(); ctx.translate(x, y); ctx.rotate(u.ang);
+  ctx.fillStyle = '#1d3557'; rr(-3.5, -1, 7, 7, 2); ctx.fill();
+  ctx.fillStyle = '#ffd8b1'; circle(0, -5, 3.6);
+  ctx.fillStyle = '#1d3557'; ctx.beginPath(); ctx.arc(0, -6.2, 3.8, Math.PI, 0); ctx.fill(); ctx.fillRect(-4.8, -6.6, 9.6, 1.4);
+  ctx.fillStyle = '#ffd43b'; ctx.fillRect(-1, -9, 2, 1.6);
+  if (isDriver) {
+    ctx.fillStyle = '#4dabf7';
+    const n = T.run + 1;
+    for (let j = 0; j < n; j++) { const dx = 5 + j * 2.6, dy = -9 + j * 2.2; ctx.beginPath(); ctx.moveTo(dx, dy - 2.5); ctx.quadraticCurveTo(dx + 1.8, dy + .5, dx, dy + 1.2); ctx.quadraticCurveTo(dx - 1.8, dy + .5, dx, dy - 2.5); ctx.fill(); }
+  }
+  ctx.restore();
+}
+
+const SHIRT = ['#f06595', '#339af0', '#51cf66', '#fcc419', '#845ef7', '#ff922b'];
+const HAIR = ['#343a40', '#5c3d24', '#868e96', '#212529'];
+function drawCar(i, f, ang) {
+  const isHead = i === 0, outer = isHead ? f : -f, id = isHead ? T.headCar : 3 - T.headCar;
+  const walking = T.mode === 'switch' && T.drv > 0 || T.mode === 'swwait';
+  // しゃりん
+  ctx.fillStyle = '#343a40'; circle(-22, 14, 5.5); circle(22, 14, 5.5);
+  ctx.fillStyle = '#868e96'; circle(-22, 14, 2); circle(22, 14, 2);
+  // からだ
+  ctx.fillStyle = '#d9342b'; rr(-35, -15, 70, 29, 7); ctx.fill();
+  ctx.fillStyle = '#8f1f17'; ctx.fillRect(-34, 9, 68, 4.5);
+  ctx.fillStyle = '#fff3d6'; ctx.fillRect(-35, 2, 70, 3);
+  ctx.fillStyle = '#a8261d'; rr(-32, -18.5, 64, 4.5, 2); ctx.fill();
+  if (S.season === 'yuki') { ctx.fillStyle = '#fff'; rr(-30, -22, 60, 5, 2.5); ctx.fill(); }
+  if (id === 1) {
+    ctx.strokeStyle = '#343a40'; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(-6, -18.5); ctx.lineTo(1, -28); ctx.lineTo(6, -18.5); ctx.moveTo(-8, -28); ctx.lineTo(9, -28); ctx.stroke();
+  }
+  // まど
+  const WX = [-24, -8, 8, 24];
+  for (let w = 0; w < 4; w++) { ctx.fillStyle = '#d0ebff'; rr(WX[w] - 5.5, -11.5, 11, 10, 2); ctx.fill(); }
+  // ひと
+  const th = ang * 1.4 + T.lean * .06 * f;
+  for (let w = 0; w < 4; w++) {
+    const wx = WX[w];
+    if (wx === outer * 24) {
+      if (!walking) crewSit(wx, outer);
+      continue;
+    }
+    const k = (id * 4 + w) % 6;
+    const lx = Math.sin(th), ly = -Math.cos(th);
+    ctx.strokeStyle = SHIRT[k]; ctx.lineWidth = 4.5; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(wx, -1.5); ctx.lineTo(wx + lx * 3.5, -1.5 + ly * 3.5); ctx.stroke();
+    ctx.fillStyle = '#ffd8b1'; circle(wx + lx * 6.5, -1.5 + ly * 6.5, 2.8);
+    ctx.fillStyle = HAIR[k % 4]; ctx.beginPath(); ctx.arc(wx + lx * 6.8, -1.5 + ly * 6.8, 2.9, th - Math.PI, th); ctx.fill();
+  }
+  // かお（せんとうの はなさき）
+  const fx = outer * 32;
+  if (isHead) {
+    if (T.face === 'sneeze' || T.face === 'happy') {
+      ctx.strokeStyle = '#212529'; ctx.lineWidth = 1.2; ctx.beginPath();
+      ctx.moveTo(fx - 2, -5); ctx.lineTo(fx + 1.5 * outer, -3.6); ctx.lineTo(fx - 2, -2.4); ctx.stroke();
+    } else {
+      const big = T.face === 'wow' ? 3.2 : 2.5;
+      ctx.fillStyle = '#fff'; circle(fx, -4, big);
+      ctx.fillStyle = '#212529'; circle(fx + outer * .9, -4, big * .55);
+    }
+    ctx.fillStyle = 'rgba(255,135,135,.8)'; circle(fx - outer * 1.5, 1, 1.6);
+    ctx.strokeStyle = '#212529'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    if (T.face === 'sneeze' || T.face === 'wow') ctx.arc(fx, 6.5, 1.6, 0, Math.PI * 2);
+    else ctx.arc(fx, 5.2, 1.8, .2, Math.PI - .2);
+    ctx.stroke();
+    ctx.fillStyle = '#fff59d'; circle(outer * 34.2, 10, 1.6);
+  } else {
+    ctx.fillStyle = '#ff6b6b'; circle(outer * 34.2, 10, 1.5);
+  }
+}
+
+function crewSit(wx, outer) {
+  ctx.fillStyle = '#1d3557'; ctx.fillRect(wx - 3, -5, 6, 4);
+  ctx.fillStyle = '#ffd8b1'; circle(wx, -6.5, 2.8);
+  ctx.fillStyle = '#1d3557'; ctx.beginPath(); ctx.arc(wx, -7.5, 3, Math.PI, 0); ctx.fill();
+  ctx.fillRect(outer > 0 ? wx : wx - 4.6, -7.9, 4.6, 1.2);
+}
+
+function drawParticles() {
+  for (const p of PTS) {
+    if (!vis(p.x, p.y, 20)) continue;
+    if (p.k === 'snow') { ctx.fillStyle = 'rgba(255,255,255,.92)'; circle(p.x, p.y, p.r); }
+    else if (p.k === 'drop') { ctx.fillStyle = 'rgba(77,171,247,.85)'; circle(p.x, p.y, p.r); }
+    else if (p.k === 'petal') { ctx.globalAlpha = Math.min(1, p.life); ctx.fillStyle = p.c; circle(p.x, p.y, p.r); ctx.globalAlpha = 1; }
+    else {
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c;
+      if (p.k === 'leaf') { ctx.beginPath(); ctx.ellipse(0, 0, p.r, p.r * .5, 0, 0, Math.PI * 2); ctx.fill(); }
+      else ctx.fillRect(-p.r / 2, -p.r / 4, p.r, p.r / 2);
+      ctx.restore();
+    }
+  }
+}
+
+function signBoard(x, y, kanji, kana, sig) {
+  ctx.font = 'bold 17px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+  const w1 = ctx.measureText(kanji).width;
+  ctx.font = 'bold 11px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+  const w2 = ctx.measureText(kana).width;
+  const w = Math.max(w1, w2) + 18, h = 44;
+  ctx.fillStyle = sig ? '#fff4c2' : '#fff';
+  ctx.strokeStyle = sig ? '#e67700' : '#1d3557'; ctx.lineWidth = 2.5;
+  rr(x - w / 2, y - h, w, h, 8); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#d9342b'; ctx.fillRect(x - w / 2 + 4, y - 6, w - 8, 3);
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = '#495057'; ctx.fillText(kana, x, y - h + 15);
+  ctx.font = 'bold 17px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+  ctx.fillStyle = '#1d2b3a'; ctx.fillText(kanji, x, y - 11);
+}
+
+function drawLabels() {
+  const small = sc < .5;
+  for (const s of SIGNS) {
+    if (small && !s.major) continue;
+    const q = toScr({ x: s.p.x, y: s.p.y - 62 });
+    if (s.sig) q.y = toScr({ x: s.p.x, y: s.p.y + 34 }).y + 44;
+    if (q.x < -120 || q.x > cw + 120 || q.y < -20 || q.y > ch + 60) continue;
+    signBoard(q.x, q.y, s.kanji, s.kana, s.sig);
+  }
+  if (!small) {
+    for (const p of SPR_SIGNS) {
+      const q = toScr({ x: p.x, y: p.y + 30 }); q.y += 34;
+      if (q.x < -60 || q.x > cw + 60 || q.y < -20 || q.y > ch + 60) continue;
+      ctx.fillStyle = '#e7f5ff'; ctx.strokeStyle = '#1c7ed6'; ctx.lineWidth = 2;
+      rr(q.x - 22, q.y - 34, 44, 34, 6); ctx.fill(); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.fillStyle = '#1c7ed6';
+      ctx.font = 'bold 9px sans-serif'; ctx.fillText('さんすい', q.x, q.y - 23);
+      ctx.font = 'bold 15px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif'; ctx.fillText('散水', q.x, q.y - 6);
+    }
+    const z = G.state === 'play' ? swInfo() : null;
+    if (z && T.s > z.zs - 600 && (T.mode === 'run' || T.mode === 'back')) {
+      const r = runs[T.run], m = at(r, (z.zs + z.ze) / 2), q = toScr({ x: m.x, y: m.y - 46 });
+      const bob = Math.sin(G.t * 6) * 4;
+      ctx.font = 'bold 18px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif'; ctx.textAlign = 'center';
+      ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.strokeText('ここで とまる', q.x, q.y - 30 + bob);
+      ctx.fillStyle = '#e8590c'; ctx.fillText('ここで とまる', q.x, q.y - 30 + bob);
+      ctx.font = 'bold 24px sans-serif'; ctx.strokeText('▼', q.x, q.y - 6 + bob); ctx.fillText('▼', q.x, q.y - 6 + bob);
+      const pq = toScr(PT[T.run + 1]);
+      ctx.font = 'bold 14px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+      ctx.lineWidth = 4; ctx.strokeText('ポイント', pq.x, pq.y - 34); ctx.fillStyle = '#5c3d00'; ctx.fillText('ポイント', pq.x, pq.y - 34);
+    }
+  } else {
+    const q = toScr({ x: 520, y: 330 });
+    ctx.font = 'bold 18px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 5; ctx.strokeStyle = '#fff'; ctx.strokeText('したの まち（おんせんの まち）', q.x, q.y);
+    ctx.fillStyle = '#1d3557'; ctx.fillText('したの まち（おんせんの まち）', q.x, q.y);
+  }
+}
+
+function drawBubble() {
+  const b = T.bubble; if (!b || G.state !== 'play') return;
+  const r = runs[T.run];
+  let s = T.s - 8;
+  if (b.who === 'driver' && T.mode === 'switch') s = T.s - 6 - T.drv * (TL - 12);
+  const p = at(r, s), q = toScr({ x: p.x, y: p.y - 40 });
+  ctx.font = 'bold 18px "Hiragino Maru Gothic ProN","Yu Gothic",sans-serif';
+  const w = ctx.measureText(b.text).width + 24, h = 38;
+  let x = Math.max(w / 2 + 6, Math.min(cw - w / 2 - 6, q.x)), y = Math.max(h + 70, q.y - 14);
+  ctx.fillStyle = '#fff'; ctx.strokeStyle = '#1d3557'; ctx.lineWidth = 2.5;
+  rr(x - w / 2, y - h, w, h, 14); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(q.x - 7, y - 1); ctx.lineTo(q.x, y + 12); ctx.lineTo(q.x + 7, y - 1); ctx.fill();
+  ctx.fillStyle = '#1d2b3a'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(b.text, x, y - h / 2 + 1);
+  ctx.textBaseline = 'alphabetic';
+}
+
+/* ---------------- まなびカード ---------------- */
+const CARDS = {
+  sb: {
+    t: '🔀 スイッチバック',
+    b: () => `きゅうな やまを まっすぐ のぼれないので、<b>ジグザグに むきを かえて</b> のぼるよ。
+<svg viewBox="0 0 240 120" width="240" height="120" aria-hidden="true">
+<polyline points="20,110 200,86 220,82" fill="none" stroke="#d9342b" stroke-width="5" stroke-linecap="round"/>
+<polyline points="200,86 40,62 20,58" fill="none" stroke="#d9342b" stroke-width="5" stroke-linecap="round"/>
+<polyline points="40,62 200,38 220,34" fill="none" stroke="#d9342b" stroke-width="5" stroke-linecap="round"/>
+<polyline points="200,38 60,12" fill="none" stroke="#d9342b" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 8"/>
+<circle cx="200" cy="86" r="8" fill="#ffd43b"/><text x="200" y="90" font-size="11" text-anchor="middle" font-weight="bold">1</text>
+<circle cx="40" cy="62" r="8" fill="#ffd43b"/><text x="40" y="66" font-size="11" text-anchor="middle" font-weight="bold">2</text>
+<circle cx="200" cy="38" r="8" fill="#ffd43b"/><text x="200" y="42" font-size="11" text-anchor="middle" font-weight="bold">3</text>
+</svg>
+${rb('箱根湯本', 'はこねゆもと')}〜${rb('強羅', 'ごうら')}の あいだに <b>3かしょ</b>：<br>
+① ${rb('出山信号場', 'でやま しんごうじょう')}　② ${rb('大平台駅', 'おおひらだい えき')}　③ ${rb('上大平台信号場', 'かみおおひらだい しんごうじょう')}<br>
+むきを かえる たびに、${rb('運転士', 'うんてんし')}さんと ${rb('車掌', 'しゃしょう')}さんが いれかわるよ。`,
+  },
+  saka: {
+    t: '⛰️ とても きゅうな さか',
+    b: () => `いちばん きゅうな ところは、<b>100メートル すすむと 8メートル のぼる</b> さか（80パーミル）。
+<svg viewBox="0 0 300 78" width="300" height="78" aria-hidden="true">
+<polygon points="20,52 220,52 220,36" fill="#ffe8cc" stroke="#e8590c" stroke-width="2"/>
+<rect x="60" y="38" width="26" height="9" rx="3" fill="#d9342b" transform="rotate(-4.6 73 43)"/>
+<text x="120" y="70" font-size="12" text-anchor="middle">100メートル すすむと</text>
+<text x="226" y="48" font-size="12">8メートル</text>
+</svg>
+レールの うえを てつの しゃりんで はしる でんしゃの なかで、<b>にっぽんで いちばん きゅうな さか</b> だよ。<br>
+<span class="small">（うえの え は ほんとうの かたむき。ゲームの え は わかりやすいように、さかを おおげさに かいて いるよ）</span>`,
+  },
+  mizu: {
+    t: '💧 カーブで みずを まく',
+    b: () => `いちばん きつい カーブは、<b>はんけい 30メートル</b>の まるを かく くらい きゅう。<br>
+しゃりんと レールが こすれて へらないように、でんしゃに つんだ <b>タンクの みず</b>を まきながら はしるよ。<br>
+せんろの そばの「${rb('散水', 'さんすい')}」の ふだが、みずを まく あいず。`,
+  },
+  tozan: {
+    t: '🚃 はこね とざん でんしゃ',
+    b: () => `${rb('箱根湯本', 'はこねゆもと')}から ${rb('強羅', 'ごうら')}まで <b>8.9キロメートル</b>を、やく 40ぷんで のぼるよ。<br>
+たかさは やく 96メートル → やく 541メートル。<b>やく 445メートル</b> のぼるよ。<br>
+<span class="small">（でんしゃの え は ほんものに にせた オリジナルです）</span>`,
+  },
+};
+const CARD_ORDER = ['sb', 'saka', 'mizu', 'tozan'];
+let cardCb = null;
+function openCard(id, cb) {
+  G.paused = true; cardCb = cb;
+  $('cardBody').innerHTML = `<div class="card-t">${CARDS[id].t}</div><div class="card-b">${CARDS[id].b()}</div>`;
+  show('cardModal', true);
+  sfx.yay();
+}
+$('cardOk').addEventListener('click', () => {
+  show('cardModal', false); G.paused = false;
+  const cb = cardCb; cardCb = null; if (cb) cb();
+});
+function renderCardList() {
+  $('cardList').innerHTML = CARD_ORDER.map(id => S.cards[id]
+    ? `<div class="mini"><div class="card-t" style="font-size:21px">${CARDS[id].t}</div><div class="card-b" style="font-size:16px">${CARDS[id].b()}</div></div>`
+    : `<div class="mini locked">❓ まだ ないしょ</div>`).join('');
+}
+
+/* ---------------- がめんの きりかえ ---------------- */
+function show(id, on) { $(id).classList.toggle('hide', !on); }
+function fmt(t) { return `${Math.floor(t / 60)}ぷん ${String(t % 60).padStart(2, '0')}びょう`; }
+function refreshTitle() {
+  for (const b of $('optSeason').children) b.setAttribute('aria-pressed', b.dataset.v === S.season);
+  for (const b of $('optSpeed').children) b.setAttribute('aria-pressed', b.dataset.v === S.speed);
+  const n = CARD_ORDER.filter(id => S.cards[id]).length;
+  $('cardCount').textContent = `${n}/${CARD_ORDER.length}`;
+  const parts = [];
+  if (S.best.slow) parts.push(`🐢 ${fmt(S.best.slow)}`);
+  if (S.best.normal) parts.push(`🐇 ${fmt(S.best.normal)}`);
+  $('bestLine').innerHTML = (S.clears ? `🏔️ ${rb('強羅', 'ごうら')}に ついた かず: ${S.clears}かい<br>` : '') + (parts.length ? `⏱ ベスト（きろくだけ）: ${parts.join('　')}` : '');
+}
+function toTitle() {
+  G.state = 'title';
+  show('hud', false); show('ptBtn', false); show('goal', false); show('cardsView', false); show('cardModal', false);
+  $('hint').textContent = ''; $('toast').classList.remove('show');
+  resetTrain();
+  refreshTitle(); show('title', true);
+}
+function showGoal() {
+  G.state = 'goal';
+  show('ptBtn', false); show('hud', false); $('hint').textContent = '';
+  const t = Math.round(G.time);
+  $('gPraise').innerHTML = G.oops === 0 ? '🌟 おっとっと 0かい！ うんてんの めいじん！' : `🌟 ${G.oops}かい おっとっと しても、さいごまで がんばったね！`;
+  $('gStat').innerHTML = `⏱ ${fmt(t)}${G.newBest ? '　🆕 ベスト！' : ''}<br>🔀 スイッチバック 3かい せいこう<br>🧑‍✈️ うんてんしさんは へとへと… でも にっこり！${G.newCard ? '<br>📗 あたらしい まなびカード ゲット！' : ''}`;
+  const st = [
+    ['箱根湯本', 'はこねゆもと'], ['塔ノ沢', 'とうのさわ'], ['出山信号場', 'でやま しんごうじょう', 1], ['大平台', 'おおひらだい'],
+    ['上大平台信号場', 'かみおおひらだい しんごうじょう', 1], ['仙人台信号場', 'せんにんだい しんごうじょう', 1],
+    ['宮ノ下', 'みやのした'], ['小涌谷', 'こわきだに'], ['彫刻の森', 'ちょうこくのもり'], ['強羅', 'ごうら'],
+  ];
+  $('gStations').innerHTML = 'とおった ところ<br>' + st.map(s => s[2] ? `<span class="sig">${rb(s[0], s[1])}</span>` : rb(s[0], s[1])).join(' → ');
+  show('goal', true);
+  $('goal').scrollTop = 0;
+}
+
+/* ---------------- そうさ ---------------- */
+$('ptBtn').addEventListener('pointerdown', e => { e.preventDefault(); tapPoint(); });
+$('ptBtn').addEventListener('click', e => e.preventDefault());
+cv.addEventListener('pointerdown', e => { e.preventDefault(); A(); tapPoint(); });
+window.addEventListener('keydown', e => { if (e.code === 'Space' || e.code === 'Enter') { if (G.state === 'play') { e.preventDefault(); tapPoint(); } } });
+$('startBtn').addEventListener('click', () => { A(); sfx.bell(); startGame(); });
+$('againBtn').addEventListener('click', () => { A(); startGame(); });
+$('toTitle').addEventListener('click', toTitle);
+$('homeBtn').addEventListener('click', toTitle);
+$('cardsBtn').addEventListener('click', () => { renderCardList(); show('cardsView', true); $('cardsView').scrollTop = 0; });
+$('gCards').addEventListener('click', () => { renderCardList(); show('cardsView', true); $('cardsView').scrollTop = 0; });
+$('cardsClose').addEventListener('click', () => show('cardsView', false));
+for (const b of $('optSeason').children) b.addEventListener('click', () => {
+  S.season = b.dataset.v; SP = SEASONS[S.season]; skyG = null; save(); refreshTitle(); sfx.tap();
+  for (let i = PTS.length - 1; i >= 0; i--) if (PTS[i].amb) PTS.splice(i, 1);
+  ambN = 0;
+});
+for (const b of $('optSpeed').children) b.addEventListener('click', () => { S.speed = b.dataset.v; save(); refreshTitle(); sfx.tap(); });
+function refreshSnd() { $('sndBtn').textContent = S.sound ? '🔊' : '🔇'; }
+$('sndBtn').addEventListener('click', () => { S.sound = !S.sound; save(); refreshSnd(); if (S.sound) sfx.tap(); });
+refreshSnd(); refreshTitle();
+
+// テスト用（Playwright から じょうたいを みる）
+window.__hs = { G, T, S, runs, swInfo, tapPoint };
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(.05, Math.max(0, (now - last) / 1000)); last = now;
+  update(dt); draw();
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
