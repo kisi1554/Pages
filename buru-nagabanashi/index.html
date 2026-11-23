@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>はなしが長いブルくん</title>
+<meta name="description" content="ブルーラインの ブルくんが、おはなしの ひきだしから いろんな まめちしきを ながーく はなしてくれる アプリ">
+<style>
+  :root {
+    --blue: #1f5fbf;
+    --blue-d: #143f86;
+    --blue-l: #e6effc;
+    --wood: #c98a4b;
+    --wood-d: #8f5a2a;
+    --wood-l: #f3dcbc;
+    --ink: #22324a;
+    --paper: #fffdf7;
+    --ok: #2f9e44;
+    --ng: #e8590c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    color: var(--ink);
+    background: linear-gradient(#d9ecff, #f4f9ff 40%, #fff8ec);
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  ruby rt { font-size: .45em; }
+
+  header {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px max(12px, env(safe-area-inset-left)) 8px max(12px, env(safe-area-inset-right));
+    background: var(--blue); color: #fff;
+    box-shadow: 0 2px 8px rgba(0,0,0,.15);
+  }
+  header h1 { flex: 1; margin: 0; font-size: clamp(18px, 4.6vw, 26px); letter-spacing: .04em; line-height: 1.3; }
+  .hbtn {
+    min-width: 48px; height: 48px; border-radius: 14px; padding: 0 10px;
+    background: rgba(255,255,255,.18); color: #fff; font-size: 22px; font-weight: bold;
+    display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+  }
+  .hbtn small { font-size: 13px; }
+  .hbtn.off { opacity: .55; }
+  .hbtn:active { transform: scale(.94); }
+
+  main { max-width: 980px; margin: 0 auto; padding: 12px 14px 40px; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+
+  /* ===== ブルくん ===== */
+  .buru-wrap { display: flex; justify-content: center; }
+  .buru { width: min(46vw, 210px); height: auto; overflow: visible; }
+  .buru .body { transform-origin: 100px 210px; }
+  .buru.talking .body { animation: bounce .32s ease-in-out infinite alternate; }
+  .buru .mouth-open { display: none; }
+  .buru.talking .mouth-open { display: block; animation: mouth .18s steps(2) infinite; }
+  .buru.talking .mouth-smile { display: none; }
+  .buru .lids { transform-origin: 100px 78px; transform: scaleY(0); animation: blink 4.5s infinite; }
+  .buru.happy .eye-n { display: none; }
+  .buru .eye-h { display: none; }
+  .buru.happy .eye-h { display: block; }
+  @keyframes bounce { from { transform: translateY(0) rotate(-1deg); } to { transform: translateY(-5px) rotate(1deg); } }
+  @keyframes mouth { 0% { transform: scaleY(1); } 100% { transform: scaleY(.45); } }
+  .buru .mouth-open { transform-origin: 100px 152px; }
+  @keyframes blink { 0%, 94%, 100% { transform: scaleY(0); } 96%, 98% { transform: scaleY(1); } }
+
+  .bubble {
+    position: relative; background: #fff; border: 4px solid var(--blue);
+    border-radius: 24px; padding: 16px 18px; margin: 14px 0 12px;
+    font-size: clamp(20px, 5.2vw, 28px); line-height: 1.7; font-weight: bold;
+    min-height: 3.6em; box-shadow: 0 4px 0 var(--blue-d);
+    word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .bubble::before {
+    content: ""; position: absolute; top: -18px; left: 50%; margin-left: -14px;
+    border: 14px solid transparent; border-bottom-color: var(--blue); border-top: 0;
+  }
+  .bubble::after {
+    content: ""; position: absolute; top: -11px; left: 50%; margin-left: -10px;
+    border: 10px solid transparent; border-bottom-color: #fff; border-top: 0;
+  }
+  .bubble .name { display: block; font-size: .62em; color: var(--blue); margin-bottom: 2px; }
+  .bubble .tap { position: absolute; right: 14px; bottom: 6px; font-size: 14px; color: #8aa; }
+
+  /* ===== ホーム ===== */
+  .stats {
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 4px 0 12px;
+  }
+  .pill {
+    background: #fff; border: 3px solid var(--blue-l); border-radius: 999px;
+    padding: 6px 14px; font-weight: bold; font-size: 16px;
+  }
+  .pill b { color: var(--blue); font-size: 20px; }
+  .meter { height: 14px; background: #fff; border-radius: 999px; overflow: hidden; border: 2px solid var(--blue-l); margin: 0 auto 14px; max-width: 520px; }
+  .meter > i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #4dabf7, var(--blue)); transition: width .6s; }
+
+  .tansu {
+    background: var(--wood); border: 6px solid var(--wood-d); border-radius: 18px;
+    padding: 12px; box-shadow: 0 8px 0 var(--wood-d), inset 0 0 0 3px rgba(255,255,255,.15);
+  }
+  .tansu-top {
+    text-align: center; color: #fff; font-weight: bold; font-size: 18px; margin: -2px 0 10px;
+    text-shadow: 0 2px 0 var(--wood-d);
+  }
+  .drawers { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 640px) { .drawers { grid-template-columns: repeat(3, 1fr); } }
+  @media (min-width: 880px) { .drawers { grid-template-columns: repeat(4, 1fr); } }
+  .drawer {
+    position: relative; min-height: 104px; border-radius: 12px;
+    background: linear-gradient(#f6e2c4, var(--wood-l));
+    border: 3px solid var(--wood-d); box-shadow: 0 5px 0 var(--wood-d);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 10px 6px 14px; text-align: center; transition: transform .1s;
+  }
+  .drawer:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--wood-d); }
+  .drawer .em { font-size: 38px; line-height: 1.1; }
+  .drawer .lb { font-weight: bold; font-size: 19px; margin-top: 2px; }
+  .drawer .knob {
+    position: absolute; bottom: 5px; left: 50%; width: 34px; height: 7px; margin-left: -17px;
+    background: var(--wood-d); border-radius: 4px;
+  }
+  .drawer .stars { position: absolute; top: 4px; right: 7px; font-size: 13px; font-weight: bold; color: var(--wood-d); }
+  .drawer.done { background: linear-gradient(#fff4c2, #ffe58a); }
+  .drawer.done .stars { color: #b8860b; }
+  .drawer.open-anim { animation: pull .35s ease-out; }
+  @keyframes pull { 0% { transform: scale(1); } 50% { transform: scale(1.08) translateY(6px); } 100% { transform: scale(1); } }
+
+  .bigrow { display: flex; gap: 10px; margin: 16px 0 0; }
+  .bigbtn {
+    flex: 1; min-height: 64px; border-radius: 18px; font-size: 21px; font-weight: bold;
+    background: var(--blue); color: #fff; box-shadow: 0 5px 0 var(--blue-d);
+    display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 12px;
+  }
+  .bigbtn.sub { background: #fff; color: var(--blue); border: 3px solid var(--blue); box-shadow: 0 5px 0 var(--blue-l); }
+  .bigbtn.warm { background: #f59f00; box-shadow: 0 5px 0 #b87400; }
+  .bigbtn.green { background: var(--ok); box-shadow: 0 5px 0 #237032; }
+  .bigbtn:active { transform: translateY(4px); box-shadow: none; }
+  .bigbtn[hidden] { display: none; }
+  .bigbtn.small { font-size: 17px; min-height: 54px; }
+
+  /* ===== おはなし ===== */
+  .story-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .story-head .tag {
+    background: var(--wood-l); border: 3px solid var(--wood-d); border-radius: 999px;
+    padding: 4px 12px; font-weight: bold; font-size: 16px;
+  }
+  .story-head .ttl { font-weight: bold; font-size: clamp(17px, 4.4vw, 22px); flex: 1; }
+  .dots { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin: 6px 0 0; }
+  .dots i { width: 13px; height: 13px; border-radius: 50%; background: #cfdcef; display: block; }
+  .dots i.on { background: var(--blue); }
+  .dots i.q { background: #ffd43b; }
+  .dots i.q.on { background: #f59f00; }
+
+  .controls { display: grid; gap: 10px; }
+  .controls .row { display: flex; gap: 10px; }
+  .controls .bigbtn.next { flex: 2; font-size: 24px; min-height: 76px; }
+  .choice {
+    min-height: 66px; border-radius: 16px; font-size: 21px; font-weight: bold;
+    background: #fff; border: 4px solid var(--blue); box-shadow: 0 5px 0 var(--blue-l);
+    padding: 8px 12px;
+  }
+  .choice:active { transform: translateY(4px); box-shadow: none; }
+  .choice.right { background: #d3f9d8; border-color: var(--ok); }
+  .choice.wrong { background: #ffe8cc; border-color: var(--ng); opacity: .8; }
+  .choice:disabled { cursor: default; }
+
+  .auto { display: flex; justify-content: center; margin-top: 12px; }
+  .auto button {
+    min-height: 48px; padding: 6px 16px; border-radius: 999px; font-weight: bold; font-size: 17px;
+    background: #fff; border: 3px solid #cfdcef;
+  }
+  .auto button.on { border-color: var(--blue); background: var(--blue-l); color: var(--blue); }
+
+  @media (orientation: landscape) and (min-width: 760px) {
+    #story .stage { display: grid; grid-template-columns: 230px 1fr; gap: 18px; align-items: center; }
+    #story .buru { width: 220px; }
+    #story .bubble { margin: 0; }
+    #story .bubble::before { top: 50%; left: -18px; margin: -14px 0 0; border: 14px solid transparent; border-right-color: var(--blue); border-left: 0; }
+    #story .bubble::after { top: 50%; left: -11px; margin: -10px 0 0; border: 10px solid transparent; border-right-color: #fff; border-left: 0; }
+    #home .hero { display: grid; grid-template-columns: 200px 1fr; gap: 18px; align-items: center; }
+    #home .hero .bubble { margin: 0; }
+    #home .hero .bubble::before { top: 50%; left: -18px; margin: -14px 0 0; border: 14px solid transparent; border-right-color: var(--blue); border-left: 0; }
+    #home .hero .bubble::after { top: 50%; left: -11px; margin: -10px 0 0; border: 10px solid transparent; border-right-color: #fff; border-left: 0; }
+  }
+
+  /* ===== カード ===== */
+  .getcard {
+    position: fixed; inset: 0; z-index: 20; display: none; align-items: center; justify-content: center;
+    background: rgba(20,40,80,.45);
+  }
+  .getcard.on { display: flex; }
+  .card {
+    width: min(78vw, 300px); background: var(--paper); border-radius: 20px; border: 6px solid #f59f00;
+    padding: 18px 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,.3);
+    animation: pop .5s cubic-bezier(.2,1.6,.4,1);
+  }
+  .card .ce { font-size: 72px; line-height: 1.1; }
+  .card .ct { font-size: 22px; font-weight: bold; margin: 6px 0; }
+  .card .cs { font-size: 17px; line-height: 1.6; }
+  .card .cg { color: #e67700; font-weight: bold; font-size: 20px; margin-bottom: 4px; }
+  @keyframes pop { from { transform: scale(.3) rotate(-12deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* ===== ずかん ===== */
+  .zk-group { margin: 14px 0; }
+  .zk-group h3 { margin: 0 0 8px; font-size: 19px; display: flex; gap: 6px; align-items: center; }
+  .zk-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  @media (min-width: 640px) { .zk-grid { grid-template-columns: repeat(4, 1fr); } }
+  .zk {
+    min-height: 96px; border-radius: 14px; background: #fff; border: 3px solid #f59f00;
+    padding: 8px 6px; text-align: center; font-weight: bold; font-size: 15px; line-height: 1.4;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .zk .e { font-size: 34px; }
+  .zk.heard { border-color: #a5c8f0; }
+  .zk.lock { background: #edf1f7; border-color: #d0d8e4; color: #8a97a8; }
+  .zk:active { transform: scale(.96); }
+  .note { font-size: 15px; color: #5a6b80; text-align: center; margin: 8px 0; line-height: 1.6; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<header>
+  <h1>はなしが<ruby>長<rt>なが</rt></ruby>いブルくん</h1>
+  <button class="hbtn" id="btnZukan" aria-label="カードずかん">🃏</button>
+  <button class="hbtn" id="btnSound" aria-label="おと オン オフ">🔊</button>
+</header>
+
+<template id="buruTpl"><svg>
+      <g class="body">
+        <ellipse cx="100" cy="222" rx="74" ry="7" fill="rgba(0,0,0,.12)"/>
+        <!-- からだ -->
+        <rect x="22" y="14" width="156" height="200" rx="40" fill="#eef2f6" stroke="#8b99aa" stroke-width="4"/>
+        <!-- いきさき ひょうじ -->
+        <rect x="56" y="24" width="88" height="22" rx="6" fill="#1c2733"/>
+        <text x="100" y="40.5" text-anchor="middle" font-size="14" font-weight="bold" fill="#ffd43b" font-family="sans-serif">ブルくん</text>
+        <!-- まど（かお） -->
+        <rect x="38" y="54" width="124" height="62" rx="18" fill="#2b3f57"/>
+        <rect x="44" y="58" width="40" height="8" rx="4" fill="rgba(255,255,255,.22)"/>
+        <!-- め -->
+        <g class="eye-n">
+          <circle cx="74" cy="84" r="15" fill="#fff"/>
+          <circle cx="126" cy="84" r="15" fill="#fff"/>
+          <circle cx="77" cy="86" r="8" fill="#13233a"/>
+          <circle cx="129" cy="86" r="8" fill="#13233a"/>
+          <circle cx="80" cy="82" r="3" fill="#fff"/>
+          <circle cx="132" cy="82" r="3" fill="#fff"/>
+        </g>
+        <g class="eye-h" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round">
+          <path d="M60 90 Q74 72 88 90"/>
+          <path d="M112 90 Q126 72 140 90"/>
+        </g>
+        <g class="lids" fill="#2b3f57">
+          <rect x="56" y="66" width="36" height="36" rx="10"/>
+          <rect x="108" y="66" width="36" height="36" rx="10"/>
+        </g>
+        <!-- ほっぺ -->
+        <ellipse cx="50" cy="132" rx="11" ry="7" fill="#ffb3c1" opacity=".8"/>
+        <ellipse cx="150" cy="132" rx="11" ry="7" fill="#ffb3c1" opacity=".8"/>
+        <!-- くち -->
+        <path class="mouth-smile" d="M84 140 Q100 158 116 140" fill="none" stroke="#13233a" stroke-width="5" stroke-linecap="round"/>
+        <ellipse class="mouth-open" cx="100" cy="148" rx="13" ry="10" fill="#7a2230" stroke="#13233a" stroke-width="3"/>
+        <!-- あおい おび -->
+        <rect x="22" y="164" width="156" height="20" fill="#1f5fbf"/>
+        <rect x="22" y="186" width="156" height="5" fill="#4dabf7"/>
+        <!-- ライト -->
+        <circle cx="46" cy="202" r="7" fill="#fff3bf" stroke="#8b99aa" stroke-width="2"/>
+        <circle cx="154" cy="202" r="7" fill="#fff3bf" stroke="#8b99aa" stroke-width="2"/>
+        <rect x="88" y="196" width="24" height="10" rx="3" fill="#c3ccd7"/>
+      </g>
+</svg></template>
+
+<main>
+  <!-- ホーム -->
+  <section class="screen on" id="home">
+    <div class="hero">
+      <div class="buru-wrap"><svg class="buru" id="buruHome" viewBox="0 0 200 230" role="img" aria-label="ブルくん"></svg></div>
+      <div class="bubble" id="homeBubble"><span class="name">ブルくん</span><span id="homeText"></span></div>
+    </div>
+    <div class="stats">
+      <span class="pill">きいた おはなし <b id="stHeard">0</b>/<span id="stTotal">0</span></span>
+      <span class="pill">カード <b id="stCards">0</b>まい</span>
+      <span class="pill">きいた ぶん <b id="stLines">0</b></span>
+    </div>
+    <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+    <div class="tansu">
+      <div class="tansu-top">🗄️ おはなしの ひきだし</div>
+      <div class="drawers" id="drawers"></div>
+    </div>
+    <div class="bigrow">
+      <button class="bigbtn warm" id="btnRandom">🎲 おまかせ</button>
+      <button class="bigbtn sub" id="btnZukan2">🃏 カードずかん</button>
+    </div>
+  </section>
+
+  <!-- ひきだしの なか -->
+  <section class="screen" id="drawer">
+    <div class="story-head">
+      <button class="bigbtn sub" id="btnBack1" style="flex:0 0 auto;min-height:52px;font-size:18px">◀ もどる</button>
+      <span class="ttl" id="drawerTitle"></span>
+    </div>
+    <div class="bubble" id="drawerBubble" style="margin-top:22px"><span class="name">ブルくん</span><span id="drawerText"></span></div>
+    <div class="controls" id="drawerList"></div>
+  </section>
+
+  <!-- おはなし -->
+  <section class="screen" id="story">
+    <div class="story-head">
+      <button class="bigbtn sub" id="btnHome" style="flex:0 0 auto;min-height:52px;font-size:18px" aria-label="ひきだしに もどる">🗄️</button>
+      <span class="tag" id="stTag"></span>
+      <span class="ttl" id="stTitle"></span>
+    </div>
+    <div class="stage">
+      <div class="buru-wrap"><svg class="buru" id="buru" viewBox="0 0 200 230" role="img" aria-label="ブルくん"></svg></div>
+      <div>
+        <div class="bubble" id="bubble"><span class="name">ブルくん</span><span id="text"></span><span class="tap" id="tapHint"></span></div>
+        <div class="dots" id="dots"></div>
+      </div>
+    </div>
+    <div class="controls" id="controls" style="margin-top:14px"></div>
+    <div class="auto"><button id="btnAuto">▶▶ じどうで すすむ: オフ</button></div>
+  </section>
+
+  <!-- ずかん -->
+  <section class="screen" id="zukan">
+    <div class="story-head">
+      <button class="bigbtn sub" id="btnBack2" style="flex:0 0 auto;min-height:52px;font-size:18px">◀ もどる</button>
+      <span class="ttl">🃏 まめちしき カードずかん</span>
+    </div>
+    <p class="note">クイズに せいかい すると カードが もらえるよ。<br>カードを タップすると、もういちど おはなしが きける。</p>
+    <div id="zukanList"></div>
+  </section>
+</main>
+
+<div class="getcard" id="getcard">
+  <div class="card" id="cardBox"></div>
+</div>
+
+<script>
+"use strict";
+/* ============================================================
+   おはなしの データ
+   d: ひきだし / t: だいめい / e: えもじ / l: おはなし / s: まとめ
+   q: [しつもん, [せいかい, はずれ, はずれ]] / n: 「そういえば」で つぎに はなしたくなる おはなし
+   ============================================================ */
+const DRAWERS = [
+  { id: "blue", e: "🚇", t: "ブルーライン" },
+  { id: "densha", e: "🚃", t: "でんしゃ" },
+  { id: "uchu", e: "🪐", t: "うちゅう" },
+  { id: "ikimono", e: "🦒", t: "いきもの" },
+  { id: "karada", e: "💪", t: "からだ" },
+  { id: "tenki", e: "🌈", t: "てんき" },
+  { id: "mukashi", e: "🏯", t: "むかし" },
+  { id: "kazu", e: "🔢", t: "かず・かたち" },
+  { id: "tabemono", e: "🍙", t: "たべもの" },
+  { id: "sekai", e: "🌏", t: "せかい" },
+];
+
+const STORIES = [
+  // ---------- ブルーライン ----------
+  { id: "b1", d: "blue", e: "🚇", t: "ブルーラインの ひみつ", n: "b2", l: [
+    "ぼくは ブルーライン。よこはまの まちの したを はしる ちかてつ なんだ。",
+    "しょうなんだい から あざみの まで、えきは ぜんぶで 32こ も あるんだよ。",
+    "えきには B01、B02 みたいに ばんごうが ついてるの。しょうなんだいが B01 で、あざみのが B32。",
+    "ぼくの からだには あおい せんが ひいてあるでしょ？ だから ブルーライン って よばれてるんだ。",
+    "ぼくは 6りょう つながって はしってるよ。",
+    "さいしょに はしったのは 1972ねん。いせざきちょうじゃまち から かみおおおか までの みじかい あいだ だったんだって。",
+    "それから すこしずつ のびて、いまの ながさに なったんだよ。",
+  ], s: "ブルーラインの えきは 32こ。B01 から B32 まで ばんごうが ついてる。",
+    q: ["ブルーラインの えきは ぜんぶで いくつ？", ["32こ", "10こ", "100こ"]] },
+  { id: "b2", d: "blue", e: "🕳️", t: "トンネルは どうやって ほるの？", n: "i4", l: [
+    "ちかてつの トンネルはね、「シールドマシン」っていう おおきな きかいで ほることが おおいんだ。",
+    "シールドマシンは まるい つつの かたち。まえに ぐるぐる まわる はが ついてるよ。",
+    "はが まわって つちを けずりながら、すこしずつ まえに すすむの。",
+    "ほった あなには、すぐに 「セグメント」っていう かべの ぶひんを、わっかの ように はめていく。",
+    "だから トンネルが くずれないんだね。",
+    "すすむのは ゆっくり。でも やすまず こつこつ ほるんだ。",
+    "まちの したを、みんなが きづかない うちに ほっていくんだよ。すごいでしょ！",
+  ], s: "ちかてつの トンネルは シールドマシンで まるく ほる。",
+    q: ["トンネルを ほる きかいの なまえは？", ["シールドマシン", "ショベルマシン", "ドリルロボ"]] },
+  { id: "b3", d: "blue", e: "☀️", t: "ちかてつ なのに おそとを はしる？", n: "u1", l: [
+    "ちかてつ って、ずっと ちかを はしると おもうでしょ？",
+    "でもね、ぼくは ところどころ おそとに でるんだ。",
+    "センターみなみ や センターきた の あたりは、たかい ところを はしるんだよ。",
+    "そとに でると、まどから まちや そらが みえて きもちいいの。",
+    "ちかを ほるより、そとに せんろを つくるほうが かんたんな ばしょも あるんだって。",
+    "だから ちかてつ でも、おひさまを あびる ことが あるんだよ。",
+  ], s: "ちかてつ でも、おそとを はしる ところが ある。",
+    q: ["ブルーラインが おそとを はしるのは どのあたり？", ["センターきた・センターみなみ", "うみの なか", "やまの てっぺん"]] },
+  { id: "b4", d: "blue", e: "💨", t: "かいそく って なあに？", n: "d3", l: [
+    "ぼくには 「ふつう」と 「かいそく」が あるんだ。",
+    "ふつうは、ぜんぶの えきに とまるよ。",
+    "かいそくは、とまらない えきを ぴゅーっと とおりすぎるの。",
+    "だから とおくまで はやく いけるんだ。",
+    "でも、かいそくが とまらない えきで まってる ひとは、ふつうを まってね。",
+    "のるまえに、でんしゃの まえや よこに かいてある もじを みてみよう。「かいそく」って かいてあるかも！",
+  ], s: "かいそくは とまる えきが すくなくて はやい。",
+    q: ["ぜんぶの えきに とまるのは どっち？", ["ふつう", "かいそく", "どっちも とまらない"]] },
+
+  // ---------- でんしゃ ----------
+  { id: "d1", d: "densha", e: "⚡", t: "でんしゃは どうやって うごくの？", n: "t3", l: [
+    "でんしゃの やねに、ひしがたや 「く」の じの かたちの ぼうが ついてるの、しってる？ あれは パンタグラフ。",
+    "パンタグラフが うえの でんせんに さわって、でんきを もらってるんだ。",
+    "その でんきで 「モーター」が ぐるぐる まわる。",
+    "モーターが まわると しゃりんが まわって、でんしゃが すすむんだよ。",
+    "あっ、ちかてつには パンタグラフが ないのも あるんだ。せんろの よこの 「だいさんきじょう」っていう レールから でんきを もらうの。",
+    "ぼくも だいさんきじょう から でんきを もらう なかま なんだよ。",
+  ], s: "でんしゃは でんきで モーターを まわして はしる。",
+    q: ["でんしゃの やねで でんきを もらう ぶひんは？", ["パンタグラフ", "アンテナ", "えんとつ"]] },
+  { id: "d2", d: "densha", e: "🛤️", t: "ガタンゴトンの ひみつ", n: "t4", l: [
+    "でんしゃに のると、ガタンゴトン って おとが するよね。",
+    "あれは、レールと レールの つなぎめの すきまを、しゃりんが とおる おと なんだ。",
+    "どうして すきまが あるの？ それはね、レールは あつい ひに ちょっと のびるから。",
+    "すきまが ないと、のびた レールが ぐにゃっと まがっちゃう。",
+    "さいきんは、とても ながい レールを つかって、ガタンゴトンが すくない せんろも ふえてるよ。",
+    "てつは あたためると のびて、ひやすと ちぢむ。おぼえておくと かっこいいよ！",
+  ], s: "レールの すきまは、あつさで のびても だいじょうぶな ように あけてある。",
+    q: ["レールに すきまが あるのは なぜ？", ["あつい ひに のびるから", "ねずみの おうち", "かざり"]] },
+  { id: "d3", d: "densha", e: "🚄", t: "しんかんせんは どのくらい はやい？", n: "i1", l: [
+    "しんかんせんは、にっぽんで いちばん はやい でんしゃの なかまだよ。",
+    "はやい しんかんせんは、1じかんに 320キロメートル も すすめるんだ。",
+    "くるまが こうそくどうろを はしる はやさの、3ばい くらい！",
+    "はじめて しんかんせんが はしったのは 1964ねん。とうきょう と しんおおさか の あいだ だったよ。",
+    "はなが ながーい かたち なのは、トンネルに はいる ときの 「ドーン」という おとを ちいさく するため なんだって。",
+    "ぼくは そんなに はやくないけど、まちの みんなを まいにち はこぶのが じまん なんだ！",
+  ], s: "はやい しんかんせんは 1じかんに 320キロ すすむ。",
+    q: ["しんかんせんの はなが ながいのは なぜ？", ["トンネルの おとを ちいさくする ため", "においを かぐ ため", "ものを つかむ ため"]] },
+  { id: "d4", d: "densha", e: "🚧", t: "ふみきりの カンカン", n: "k3", l: [
+    "ふみきりの カンカン って おと、きいたこと あるよね。",
+    "でんしゃが ちかづくと、せんろの きかいが しらせて、カンカンが なりはじめるんだ。",
+    "しゃだんき っていう ぼうが おりて、ひとや くるまを とめるよ。",
+    "でんしゃは きゅうには とまれない。はしっている でんしゃが とまるまでには、とても ながい きょりが いるんだ。",
+    "だから カンカンが なったら、ぜったいに わたっちゃ だめ！",
+    "ぼくは ちかてつ だから、ふみきりは ないんだ。ちょっと うらやましい かも。",
+  ], s: "カンカンが なったら ぜったいに わたらない。",
+    q: ["ふみきりで カンカンが なったら どうする？", ["とまって まつ", "はしって わたる", "せんろで あそぶ"]] },
+
+  // ---------- うちゅう ----------
+  { id: "u1", d: "uchu", e: "🌞", t: "おひさまの はなし", n: "u2", l: [
+    "おひさま、つまり たいようは、じぶんで ひかって もえている おおきな ほし なんだ。",
+    "たいようは ちきゅうより ずっと おおきい。ちきゅうが 100こ よこに ならぶ くらいの おおきさ なんだって！",
+    "とおくに あるから ちいさく みえるけど、ほんとうは とても おおきいの。",
+    "たいようの ひかりが ちきゅうに とどくまで、だいたい 8ぷん かかるよ。",
+    "だから いま みてる ひかりは、8ぷん まえの ひかり なんだ。ふしぎだね。",
+    "あ、たいようを めで ちょくせつ みちゃ だめだよ。めが いたく なっちゃうからね。",
+  ], s: "たいようは ちきゅうが 100こ ならぶ くらい おおきい。",
+    q: ["たいようの ひかりが ちきゅうに とどくまで どのくらい？", ["だいたい 8ぷん", "1びょう", "1ねん"]] },
+  { id: "u2", d: "uchu", e: "🌙", t: "おつきさまの かたち", n: "u3", l: [
+    "おつきさまって、まんまるの ひも あれば、ほそーい ひも あるよね。",
+    "でも ほんとうは、つきの かたちは かわってないんだ。",
+    "つきは じぶんで ひからない。たいようの ひかりが あたって、ひかって みえるの。",
+    "ひかりが あたってる ところが どれだけ みえるかで、かたちが かわって みえるんだよ。",
+    "まんげつ から つぎの まんげつ まで、だいたい 30にち くらい。",
+    "つきには くうきが ないから かぜが ふかない。うちゅうひこうしの あしあとも、きえずに のこってるんだって。",
+  ], s: "つきは たいようの ひかりが あたって ひかって みえる。",
+    q: ["つきが ひかって みえるのは なぜ？", ["たいようの ひかりが あたるから", "でんきが ついてるから", "ほたるが いるから"]] },
+  { id: "u3", d: "uchu", e: "🪐", t: "わくせいの なかま", n: "u4", l: [
+    "たいようの まわりを まわる わくせいは、ぜんぶで 8こ あるんだ。",
+    "すいせい、きんせい、ちきゅう、かせい、もくせい、どせい、てんのうせい、かいおうせい。",
+    "いちばん おおきいのは もくせい。ちきゅうが 1000こ いじょう はいる くらい おおきいよ。",
+    "どせいには きれいな わっかが あるね。あの わっかは、こおりや いわの つぶで できてるんだ。",
+    "かせいは あかっぽい ほし。つちに てつが まざっていて、さびた いろ なんだって。",
+    "ぼくも いつか うちゅうを はしってみたいな〜。ブルーライン うちゅうせん！",
+  ], s: "たいようの まわりには 8この わくせいが ある。",
+    q: ["いちばん おおきい わくせいは？", ["もくせい", "ちきゅう", "すいせい"]] },
+  { id: "u4", d: "uchu", e: "🛰️", t: "うちゅうステーション", n: "s2", l: [
+    "ちきゅうの まわりを、うちゅうステーション っていう おおきな けんきゅうじょが まわってるんだ。",
+    "とんでいる たかさは、だいたい 400キロメートル。",
+    "だいたい 90ぷん で、ちきゅうを ひとまわり しちゃう。",
+    "だから なかに いる ひとは、1にちに なんかいも あさひ と ゆうひを みるんだって。",
+    "なかでは からだが ふわふわ うく。おみずも まるい たまに なって ういちゃうよ。",
+    "はれた よる、そらを みあげると、ひかりの てんが すーっと うごいて みえる ことも あるんだ。",
+  ], s: "うちゅうステーションは 90ぷんで ちきゅうを ひとまわり する。",
+    q: ["うちゅうステーションの なかで おみずは どうなる？", ["まるく なって うく", "かちかちに こおる", "けむりに なる"]] },
+
+  // ---------- いきもの ----------
+  { id: "i1", d: "ikimono", e: "🐆", t: "チーターは はやい", n: "i2", l: [
+    "どうぶつで いちばん あしが はやいのは チーター なんだ。",
+    "はやい ときは、1じかんに 100キロメートル くらいの はやさで はしれるよ。",
+    "でもね、ながくは はしれない。すぐ つかれちゃうんだ。",
+    "ほそい からだと ながい しっぽで、きゅうな カーブも まがれるの。",
+    "ちなみに ぼくの いちばん はやい スピードは、チーターより ちょっと おそい くらいかな。",
+    "でも ぼくは いちにちじゅう はしれるから、まけてないよ！",
+  ], s: "チーターは いちばん あしが はやい どうぶつ。でも ながくは はしれない。",
+    q: ["いちばん あしが はやい どうぶつは？", ["チーター", "かめ", "かば"]] },
+  { id: "i2", d: "ikimono", e: "🦒", t: "キリンの ながい くび", n: "k2", l: [
+    "キリンの くびは とても ながいよね。",
+    "でもね、くびの ほねの かずは、にんげんと おなじ 7こ なんだ！",
+    "ひとつ ひとつの ほねが、とても ながいんだよ。",
+    "たかい きの はっぱを たべられるのが、ながい くびの いいところ。",
+    "キリンは あまり ねないんだって。たったまま すこし ねる ことも あるよ。",
+    "ベロも ながくて、くろっぽい むらさきいろ なんだ。",
+  ], s: "キリンの くびの ほねは にんげんと おなじ 7こ。",
+    q: ["キリンの くびの ほねは いくつ？", ["7こ", "100こ", "1こ"]] },
+  { id: "i3", d: "ikimono", e: "🐧", t: "ペンギンは とり なの？", n: "s2", l: [
+    "ペンギンは そらを とべないけど、ちゃんと とりの なかま なんだ。",
+    "つばさは、うみの なかを およぐための ひれ みたいに なってるよ。",
+    "みずの なかでは、そらを とぶように すいすい およぐの。",
+    "せなかは くろ、おなかは しろ。",
+    "うえから みると くらい うみに まぎれて、したから みると あかるい そらに まぎれる。てきに みつかりにくいんだ。",
+    "さむい ところに すむ ペンギンが おおいけど、あったかい ところに すむ ペンギンも いるんだよ。",
+  ], s: "ペンギンは とべないけど とりの なかま。つばさで およぐ。",
+    q: ["ペンギンの つばさは なにに つかう？", ["およぐ", "そらを とぶ", "ごはんを もつ"]] },
+  { id: "i4", d: "ikimono", e: "🐾", t: "もぐらの くらし", n: "b2", l: [
+    "もぐらは つちの なかで くらしてる どうぶつ。",
+    "まえあしが シャベル みたいに おおきくて、つちを ぐいぐい ほるんだ。",
+    "めは とても ちいさくて、あまり みえない。そのかわり、はなの さきで さわって まわりを しるんだよ。",
+    "たべものは みみずや むし。",
+    "たくさん たべないと、すぐ おなかが すいちゃうんだって。",
+    "トンネルを ほる なかま として、ぼくは もぐらに しんきんかん！",
+  ], s: "もぐらは おおきな まえあしで つちを ほる。",
+    q: ["もぐらの すきな たべものは？", ["みみず", "ケーキ", "おにぎり"]] },
+
+  // ---------- からだ ----------
+  { id: "k1", d: "karada", e: "❤️", t: "しんぞうの ドキドキ", n: "k2", l: [
+    "むねに てを あててみて。ドキドキ してるね。それは しんぞうの おと。",
+    "しんぞうは ポンプ。ちを からだじゅうに おくりだしてるんだ。",
+    "こどもの しんぞうは、1ぷんかんに 90かい から 100かい くらい うごくよ。",
+    "はしると もっと はやく なるね。からだが、たくさん さんそを ほしがるから なんだ。",
+    "しんぞうは、ねている ときも やすまず うごいてる。がんばりやさん だね。",
+    "しんぞうの おおきさは、じぶんの にぎりこぶし くらい なんだって。",
+  ], s: "しんぞうは ちを からだじゅうに おくる ポンプ。",
+    q: ["しんぞうの おおきさは どのくらい？", ["じぶんの にぎりこぶし くらい", "スイカ くらい", "まめ くらい"]] },
+  { id: "k2", d: "karada", e: "🦴", t: "ほねの かず", n: "i2", l: [
+    "からだの なかには、ほねが たくさん あるよ。",
+    "おとなの ひとの ほねは、だいたい 206こ。",
+    "あかちゃんの ときは もっと おおくて、おおきく なると くっついて すくなく なるんだ。",
+    "いちばん ちいさい ほねは、みみの なかに あるんだって。",
+    "ほねを つよく するには、ぎゅうにゅうや こざかなを たべて、そとで いっぱい あそぶ ことが たいせつ。",
+    "ほねが あるから、ぼくたちは たったり はしったり できるんだね。…ぼくの ほねは てつ かな？",
+  ], s: "おとなの ほねは だいたい 206こ。",
+    q: ["ほねを つよく する たべものは？", ["ぎゅうにゅう", "あめ", "ジュース"]] },
+  { id: "k3", d: "karada", e: "👂", t: "みみは どうして きこえるの？", n: "u4", l: [
+    "おとは、くうきの 「ふるえ」 なんだ。",
+    "たいこを たたくと、くうきが ぶるぶる ふるえて、それが みみに とどくの。",
+    "みみの おくには 「こまく」っていう うすい まくが あって、ふるえを うけとるよ。",
+    "その ふるえが あたまに つたわって、「あ、カンカンの おとだ」って わかるんだ。",
+    "だから うちゅう みたいに くうきが ない ところでは、おとが つたわらないんだって。",
+    "ぼくの 「ファーン」って いう おとも、くうきが はこんでくれてるんだよ。",
+  ], s: "おとは くうきの ふるえ。みみの こまくで うけとる。",
+    q: ["おとは なにが ふるえて つたわる？", ["くうき", "ひかり", "かげ"]] },
+  { id: "k4", d: "karada", e: "🦷", t: "はは どうして ぬけるの？", n: "f4", l: [
+    "こどもの はは 「にゅうし」っていうんだ。ぜんぶで 20ぽん。",
+    "6さい ころから すこしずつ ぬけて、おとなの はに かわっていくよ。",
+    "おとなの はは、ぜんぶで 28ほん から 32ほん。",
+    "おとなの はは、いちど ぬけたら もう はえてこない。",
+    "だから はみがきが だいじ！ むしばきんは、あまい ものが だいすき なんだ。",
+    "ごはんの あとは シャカシャカ。ピカピカに しようね。",
+  ], s: "こどもの はは 20ぽん。おとなの はは もう はえかわらない。",
+    q: ["こどもの は（にゅうし）は ぜんぶで なんぼん？", ["20ぽん", "5ほん", "100ぽん"]] },
+
+  // ---------- てんき ----------
+  { id: "t1", d: "tenki", e: "🌈", t: "にじは どうして できるの？", n: "u1", l: [
+    "あめあがりに、そらに にじが でる ことが あるよね。",
+    "たいようの ひかりは しろっぽく みえるけど、ほんとうは いろんな いろが まざってるんだ。",
+    "そらに のこった ちいさな みずの つぶに ひかりが はいると、いろが わかれて みえるの。",
+    "それが にじ！ あか、だいだい、きいろ、みどり、あお、あい、むらさき の 7しょく って いわれてるよ。",
+    "にじを みつける コツは、たいようを せなかに すること。",
+    "にわで ホースで みずを まいても、にじが つくれるよ。やってみてね！",
+  ], s: "にじは、ひかりが みずの つぶで いろに わかれて できる。",
+    q: ["にじを さがす とき、たいようは どっちに ある？", ["せなかの ほう", "めの まえ", "あしの した"]] },
+  { id: "t2", d: "tenki", e: "☁️", t: "くもは なにで できてるの？", n: "t1", l: [
+    "ふわふわの くも。わたあめ みたいだけど、ほんとうは ちいさな みずや こおりの つぶ なんだ。",
+    "うみや かわの みずが おひさまで あたためられて、めに みえない 「すいじょうき」に なって そらへ のぼる。",
+    "そらの うえは さむいから、また ちいさな つぶに もどって くもに なるの。",
+    "つぶが あつまって おもく なると、あめに なって おちてくる。",
+    "その あめが、また かわや うみに もどる。みずは ぐるぐる たびを してるんだね。",
+    "ぼくが まいにち いったり きたり してるのと、ちょっと にてるかも！",
+  ], s: "くもは ちいさな みずや こおりの つぶ。",
+    q: ["くもの つぶが おもく なって おちてくると なにになる？", ["あめ", "すな", "はっぱ"]] },
+  { id: "t3", d: "tenki", e: "⛈️", t: "かみなりは なぜ ゴロゴロ？", n: "d1", l: [
+    "かみなりは、くもの なかで できた でんきが、いっきに ながれる こと なんだ。",
+    "くもの なかで こおりの つぶが ぶつかりあって、でんきが たまっていくの。",
+    "ピカッと ひかるのが いなずま。そのあと ゴロゴロ って おとが くるよね。",
+    "ひかりは とても はやいけど、おとは ちょっと ゆっくり。だから おとが あとから くるんだ。",
+    "ピカッ から ゴロゴロ まで 3びょう だったら、だいたい 1キロメートル はなれてる って いわれてるよ。",
+    "かみなりが なったら、たてものや くるま、でんしゃの なかに はいろうね。",
+  ], s: "かみなりは くもの でんき。ひかりの あとに おとが くる。",
+    q: ["かみなりで さきに くるのは どっち？", ["ひかり", "おと", "あめ"]] },
+  { id: "t4", d: "tenki", e: "🍂", t: "きせつは どうして かわるの？", n: "z3", l: [
+    "はる、なつ、あき、ふゆ。きせつは どうして かわるんだろう？",
+    "ちきゅうはね、ちょっと かたむいたまま、たいようの まわりを 1ねん かけて まわってるんだ。",
+    "たいようの ほうに かたむいてる ときは、ひかりが まっすぐ あたって あつい なつ。",
+    "はんたいに かたむいてる ときは、ひかりが ななめに あたって さむい ふゆに なるよ。",
+    "だから なつは ひるが ながくて、ふゆは ひるが みじかいんだ。",
+    "にっぽんの みなみの とおくに ある オーストラリアでは、にっぽんが ふゆの とき なつ なんだって！ クリスマスも なつ なんだよ。",
+  ], s: "ちきゅうが かたむいて まわってるから きせつが かわる。",
+    q: ["にっぽんが ふゆの とき、オーストラリアは？", ["なつ", "ふゆ", "ずっと よる"]] },
+
+  // ---------- むかし ----------
+  { id: "m1", d: "mukashi", e: "🦖", t: "きょうりゅうの じだい", n: "i3", l: [
+    "むかし むかし、ずーっと むかし。ちきゅうには きょうりゅうが いたんだ。",
+    "いまから やく 6600まんねん まえに、ほとんど いなくなったよ。",
+    "おおきな いんせきが ちきゅうに ぶつかったのが、りゆうの ひとつ って かんがえられてるの。",
+    "でもね、とりは きょうりゅうの しそん って いわれてるんだ。",
+    "すずめや はとも、きょうりゅうの なかま なのかも しれないね。",
+    "ティラノサウルスの ながさは 12メートル くらい。バスと おなじ くらいの おおきさ だよ！",
+  ], s: "きょうりゅうは 6600まんねん まえに いなくなった。とりは その しそん。",
+    q: ["きょうりゅうの しそん って いわれてるのは？", ["とり", "さかな", "いぬ"]] },
+  { id: "m2", d: "mukashi", e: "⚓", t: "よこはまと てつどうの はじまり", n: "b1", l: [
+    "ぼくの すむ よこはまは、むかしは ちいさな むら だったんだ。",
+    "いまから やく 170ねん まえ、1859ねんに みなとが ひらかれたよ。",
+    "せかいの くにから ふねが やってきて、いろんな ものや ひとが はいってきたの。",
+    "にっぽんで はじめての てつどうは、1872ねんに しんばし と よこはま の あいだを はしったんだ。",
+    "その ときの よこはまえきは、いまの さくらぎちょうえき の あたり なんだって。",
+    "ぼくも さくらぎちょうに とまるよ！ てつどうの ふるさとに とまるなんて、ちょっと じまん。",
+  ], s: "にっぽん はじめての てつどうは 1872ねん、しんばし〜よこはま。",
+    q: ["にっぽんで はじめての てつどうは どこを はしった？", ["しんばし と よこはま", "ほっかいどう と おきなわ", "つき と ちきゅう"]] },
+  { id: "m3", d: "mukashi", e: "🔺", t: "ピラミッドの なぞ", n: "s1", l: [
+    "エジプトの ピラミッドは、いまから 4500ねん くらい まえに つくられたんだ。",
+    "いちばん おおきい ピラミッドは、たかさが 140メートル くらい。",
+    "おおきな いしを、なんと 200まんこ いじょう つみあげてるんだって。",
+    "くるまも クレーンも ない じだいに、たくさんの ひとが ちからを あわせて つくったの。",
+    "おうさまの おはか だった と いわれてるよ。",
+    "せかいには、むかしの ひとの すごい しごとが いっぱい あるんだね。",
+  ], s: "ピラミッドは 4500ねん まえ、いしを つみあげて つくられた。",
+    q: ["ピラミッドは なにで できてる？", ["いし", "おかし", "プラスチック"]] },
+  { id: "m4", d: "mukashi", e: "🐚", t: "おかねの はじまり", n: "z1", l: [
+    "むかしは おかねが なかったんだ。",
+    "ほしい ものが ある ときは、じぶんの ものと とりかえっこ していたの。「ぶつぶつこうかん」って いうよ。",
+    "でも、さかなと やさいを とりかえたい とき、あいてが さかなを いらなかったら こまるよね。",
+    "そこで、かいがらや おこめ、ぬのなどを、おかねの かわりに つかうように なったんだ。",
+    "「かう」って かく かんじ 「買」には、かいがらの 「貝」が はいってるんだよ。その なごり なんだって。",
+    "ぼくに のる ときの きっぷも、おかねで かうんだよ。",
+  ], s: "むかしは とりかえっこ や かいがらを おかねの かわりに つかった。",
+    q: ["むかし おかねの かわりに つかわれた ものは？", ["かいがら", "ゲーム", "でんわ"]] },
+
+  // ---------- かず・かたち ----------
+  { id: "z1", d: "kazu", e: "0️⃣", t: "ゼロの ふしぎ", n: "z2", l: [
+    "0（ゼロ）は 「なにも ない」っていう かず。",
+    "でも、むかしは ゼロ という かずが なかったんだ。",
+    "インドの ひとたちが、ゼロを かずとして つかいはじめた と いわれてるよ。",
+    "ゼロが あるから、10、100、1000 みたいに、かずを かんたんに かけるんだ。",
+    "どんな かずに 0を かけても、こたえは 0。ふしぎだね。",
+    "ぼくの えきに 0ばんは ないよ。B01 から はじまるんだ！",
+  ], s: "ゼロは インドで かずとして つかわれはじめた。",
+    q: ["どんな かずでも、0を かけると？", ["0に なる", "100に なる", "かわらない"]] },
+  { id: "z2", d: "kazu", e: "♾️", t: "いちばん おおきい かず", n: "u3", l: [
+    "いちばん おおきい かずって なんだろう？",
+    "1、10、100、1000、10000。10000は 「いちまん」だね。",
+    "まんの つぎは おく、その つぎは ちょう。",
+    "もっと もっと あって、「むりょうたいすう」っていう なまえの かずも あるんだって。",
+    "でもね、ほんとうは いちばん おおきい かずは ないんだ。どんな かずにも 1を たせば、もっと おおきく なるからね。",
+    "この 「おわりが ない」 ことを 「むげん」って いうよ。ぼくの おはなしも、むげんに つづく かも〜！",
+  ], s: "いちばん おおきい かずは ない。1を たせば もっと おおきく なる。",
+    q: ["「まん」の つぎの おおきな くらいは？", ["おく", "せん", "ひゃく"]] },
+  { id: "z3", d: "kazu", e: "📅", t: "カレンダーの かず", n: "t4", l: [
+    "1ねんは 365にち。",
+    "でも 4ねんに いちど、2がつが 29にちまで ある 「うるうどし」が あって、366にちに なるんだ。",
+    "どうしてか というとね、ちきゅうが たいようを ひとまわり するのに、365にちと すこし かかるから。",
+    "その 「すこし」が、4ねんで だいたい 1にちぶんに なるんだよ。",
+    "1しゅうかんは 7にち。にちようびから どようびまで。",
+    "ぼくは まいにち はしってるから、おやすみの ひは ないんだ〜。",
+  ], s: "4ねんに いちど、1ねんが 366にちの うるうどしが ある。",
+    q: ["うるうどしに 1にち ふえるのは なんがつ？", ["2がつ", "8がつ", "12がつ"]] },
+  { id: "z4", d: "kazu", e: "🔺", t: "まると さんかく", n: "d2", l: [
+    "まわりを みてみて。かたちが いっぱい あるよ。",
+    "かどが 3つ あるのが さんかく、4つ あるのが しかく。",
+    "まるには かどが ない。だから ころころ ころがるんだ。",
+    "でんしゃの しゃりんが まる なのは、ころがって すすむ ため なんだよ。",
+    "さんかくは、ぼうを くむと とても じょうぶ。だから てっきょうには さんかくが たくさん つかわれてるの。",
+    "こんど はしを わたる とき、さんかくを さがしてみてね！",
+  ], s: "しゃりんは まるで ころがる。さんかくは じょうぶ。",
+    q: ["しゃりんが まる なのは なぜ？", ["ころがって すすむ ため", "かわいいから", "おいしいから"]] },
+
+  // ---------- たべもの ----------
+  { id: "f1", d: "tabemono", e: "🍙", t: "おこめの はなし", n: "z2", l: [
+    "おこめは、たんぼで そだつ 「いね」の たね なんだ。",
+    "はるに なえを うえて、なつに ぐんぐん そだって、あきに かりとるよ。",
+    "いっかぶの いねから、おこめが たくさん とれるの。",
+    "おちゃわん いっぱいの ごはんは、だいたい 3000つぶ くらい なんだって。",
+    "たくさんの ひとが てまを かけて そだててるから、のこさず たべようね。",
+    "おにぎりを もって、ぼくに のって おでかけ してね！",
+  ], s: "おちゃわん いっぱいの ごはんは だいたい 3000つぶ。",
+    q: ["おこめは どこで そだつ？", ["たんぼ", "うみ", "そら"]] },
+  { id: "f2", d: "tabemono", e: "🍞", t: "パンが ふくらむ ひみつ", n: "f3", l: [
+    "パンは こむぎこ から つくるよ。",
+    "こむぎこに 「イースト」っていう、めに みえない ちいさな いきものを まぜるんだ。",
+    "イーストは さとうを たべて、ガスを だす。",
+    "その ガスが きじの なかに たまって、ぷくーっと ふくらむの。",
+    "パンを ちぎると、ちいさな あなが いっぱい あるでしょ？ あれは ガスの あと なんだ。",
+    "ちいさな いきものの おかげで、ふわふわの パンが たべられるんだね。",
+  ], s: "パンは イーストの ガスで ふくらむ。",
+    q: ["パンを ふくらませる ちいさな いきものは？", ["イースト", "ありんこ", "めだか"]] },
+  { id: "f3", d: "tabemono", e: "🥚", t: "たまごの ひみつ", n: "m1", l: [
+    "にわとりの たまごは、ひよこに なるかも しれない たまご なんだ。",
+    "でも おみせで うってる たまごは、ほとんどが ひよこに ならない たまご なんだよ。",
+    "たまごの からは かたいけど、ちいさな あなが たくさん あいてて、いきが できるように なってるの。",
+    "きみは きいろ、しろみは とうめい。ゆでると しろみが しろく かたまるよ。",
+    "にわとりは、ほぼ まいにち 1こ たまごを うむんだって。",
+    "にわとりも とりの なかま。ってことは… きょうりゅうの しそん かも！",
+  ], s: "たまごの からには ちいさな あなが あいてる。",
+    q: ["たまごを ゆでると、しろみは どうなる？", ["しろく かたまる", "あおく なる", "きえる"]] },
+  { id: "f4", d: "tabemono", e: "🫘", t: "なっとうの ねばねば", n: "f2", l: [
+    "なっとうは だいず から できてるよ。",
+    "だいずに 「なっとうきん」っていう ちいさな いきものを くっつけて、あたためると なっとうに なるんだ。",
+    "あの ねばねばは、なっとうきんが つくってるの。",
+    "たくさん まぜると、もっと ねばねばに なるよね。",
+    "だいずは 「はたけの おにく」って よばれる くらい、えいようが たっぷり なんだ。",
+    "においが ちょっと ふしぎ だけど、ごはんに あうよね！",
+  ], s: "なっとうは だいずと なっとうきんで できる。",
+    q: ["なっとうは なにから できてる？", ["だいず", "おこめ", "さかな"]] },
+
+  // ---------- せかい ----------
+  { id: "s1", d: "sekai", e: "🏔️", t: "せかいで いちばん たかい やま", n: "s2", l: [
+    "せかいで いちばん たかい やまは エベレスト。たかさは 8848メートル。",
+    "にっぽんで いちばん たかい ふじさんが 3776メートル だから、2ばいより もっと たかいんだ。",
+    "うえの ほうは とても さむくて、くうきも うすいの。",
+    "エベレストは、ネパールと ちゅうごくの さかいめに あるよ。",
+    "じつは エベレストの てっぺんには、むかし うみの そこに あった いしが あるんだって！",
+    "ながーい ながーい じかんを かけて、うみの そこが もちあがったんだ。すごいね！",
+  ], s: "エベレストは 8848メートル。てっぺんには うみの そこの いしが ある。",
+    q: ["にっぽんで いちばん たかい やまは？", ["ふじさん", "エベレスト", "たかおさん"]] },
+  { id: "s2", d: "sekai", e: "🌍", t: "ちきゅうは まるい", n: "u3", l: [
+    "ぼくたちが すんでる ちきゅうは、ボール みたいに まるいんだ。",
+    "おおきすぎて、たっていると たいらに みえるけどね。",
+    "ちきゅうを ぐるっと ひとまわり すると、だいたい 4まんキロメートル。",
+    "ぼくの せんろを 1000かい くらい はしると、ちきゅう ひとまわりぶん！",
+    "ちきゅうの ひょうめんの 7わりは うみ なんだ。",
+    "うちゅうから みると あおく みえるから、「あおい ほし」って よばれるよ。ぼくと おそろいの いろ だね！",
+  ], s: "ちきゅうは まるくて、ひとまわり 4まんキロ。7わりが うみ。",
+    q: ["ちきゅうの ひょうめんで いちばん おおいのは？", ["うみ", "りく", "こおり"]] },
+  { id: "s3", d: "sekai", e: "👋", t: "せかいの こんにちは", n: "m2", l: [
+    "せかいには たくさんの ことばが あるよ。",
+    "えいごで こんにちは は 「ハロー」。",
+    "ちゅうごくごでは 「ニーハオ」。",
+    "かんこくごでは 「アンニョンハセヨ」。",
+    "フランスごでは 「ボンジュール」。",
+    "ぼくの なかの アナウンスでも えいごが ながれてるよ。「ネクスト ステーション イズ…」って、きいたこと あるかな？",
+  ], s: "こんにちはは、えいごで ハロー、ちゅうごくごで ニーハオ。",
+    q: ["えいごで こんにちは は？", ["ハロー", "ニーハオ", "ボンジュール"]] },
+  { id: "s4", d: "sekai", e: "🏞️", t: "せかいで いちばん ながい かわ", n: "m3", l: [
+    "せかいで いちばん ながい かわは、アフリカの ナイルがわ って いわれてるよ。ながさは 6000キロメートル いじょう。",
+    "みなみアメリカの アマゾンがわも まけない くらい ながくて、ながれる みずの りょうは せかいいち なんだ。",
+    "にっぽんで いちばん ながい かわは しなのがわ。367キロメートル。",
+    "かわは、やまに ふった あめが あつまって、うみへ ながれていくんだ。",
+    "むかしの ひとは、かわの ちかくに まちを つくったよ。みずが あると くらしやすい からね。",
+    "ピラミッドの ある エジプトも、ナイルがわの そばに あるんだ。",
+  ], s: "せかいで いちばん ながい かわは ナイルがわ。",
+    q: ["にっぽんで いちばん ながい かわは？", ["しなのがわ", "ナイルがわ", "たまがわ"]] },
+];
+const BY_ID = Object.fromEntries(STORIES.map(s => [s.id, s]));
+const DRAWER_BY_ID = Object.fromEntries(DRAWERS.map(d => [d.id, d]));
+
+/* ============================================================
+   ほぞん
+   ============================================================ */
+const KEY = "buru-nagabanashi-v1";
+let save = { heard: {}, cards: {}, lines: 0, sound: true, auto: false };
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) save = Object.assign(save, JSON.parse(raw));
+} catch (e) {}
+function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+/* ============================================================
+   おと（WebAudio の ごうせいおん）と よみあげ
+   ============================================================ */
+let ac = null;
+function ctx() {
+  if (!save.sound) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === "suspended") ac.resume();
+  } catch (e) { return null; }
+  return ac;
+}
+function tone(freq, dur, type, vol, delay) {
+  const a = ctx(); if (!a) return;
+  const t = a.currentTime + (delay || 0);
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || "sine"; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.15, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+const sfx = {
+  tap() { tone(660, 0.08, "triangle", 0.12); },
+  drawer() { // ガラガラ〜
+    const a = ctx(); if (!a) return;
+    for (let i = 0; i < 6; i++) tone(180 + Math.random() * 60, 0.06, "square", 0.05, i * 0.05);
+    tone(880, 0.15, "triangle", 0.1, 0.32);
+  },
+  ok() { [784, 988, 1319].forEach((f, i) => tone(f, 0.22, "triangle", 0.14, i * 0.11)); },
+  ng() { tone(330, 0.18, "sine", 0.12); tone(262, 0.3, "sine", 0.12, 0.16); },
+  card() { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, 0.2, "triangle", 0.12, i * 0.08)); },
+  hmm() { tone(392, 0.12, "triangle", 0.1); tone(523, 0.18, "triangle", 0.1, 0.12); },
+};
+
+let voice = null;
+function pickVoice() {
+  try {
+    const vs = window.speechSynthesis.getVoices() || [];
+    const ja = vs.filter(v => /^ja/i.test(v.lang));
+    voice = ja.find(v => /kyoko|otoya|google|nanami|keita/i.test(v.name)) || ja[0] || null;
+  } catch (e) {}
+}
+if (window.speechSynthesis) {
+  pickVoice();
+  try { window.speechSynthesis.onvoiceschanged = pickVoice; } catch (e) {}
+}
+function speakText(s) {
+  return s.replace(/B(\d)(\d)/g, (m, a, b) => "ビー" + (a === "0" ? "" : a) + b)
+          .replace(/[「」]/g, "").replace(/\s+/g, " ");
+}
+
+/* ============================================================
+   しゃべる（ふきだし・くち・よみあげ）
+   ============================================================ */
+let typing = null, talkTimer = null, utterGen = 0, onSpoken = null;
+function setTalking(svg, on) { svg.classList.toggle("talking", on); }
+
+function say(el, svg, text, done) {
+  // ふきだしに 1もじずつ だす ＋ よみあげ。おわったら done
+  clearInterval(typing); clearTimeout(talkTimer);
+  const gen = ++utterGen;
+  onSpoken = null;
+  el.textContent = "";
+  let i = 0;
+  const chars = Array.from(text);
+  typing = setInterval(() => {
+    i += 2; el.textContent = chars.slice(0, i).join("");
+    if (i >= chars.length) { clearInterval(typing); typing = null; el.textContent = text; }
+  }, 35);
+  setTalking(svg, true);
+  let finished = false;
+  const finish = () => {
+    if (finished || gen !== utterGen) return;
+    finished = true; setTalking(svg, false);
+    if (done) done();
+  };
+  const synth = window.speechSynthesis;
+  if (save.sound && synth) {
+    try {
+      synth.cancel();
+      const u = new SpeechSynthesisUtterance(speakText(text));
+      u.lang = "ja-JP"; if (voice) u.voice = voice;
+      u.rate = 1.0; u.pitch = 1.25;
+      u.onend = finish; u.onerror = finish;
+      synth.speak(u);
+      // よみあげが うごかない ブラウザ むけの ほけん
+      talkTimer = setTimeout(finish, chars.length * 220 + 3000);
+      return;
+    } catch (e) {}
+  }
+  talkTimer = setTimeout(finish, Math.min(6000, chars.length * 70 + 900));
+}
+function hush() {
+  utterGen++;
+  clearInterval(typing); clearTimeout(talkTimer);
+  try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+  document.querySelectorAll(".buru").forEach(s => s.classList.remove("talking"));
+}
+
+/* ============================================================
+   がめん きりかえ
+   ============================================================ */
+const $ = id => document.getElementById(id);
+function show(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("on", s.id === id));
+  window.scrollTo(0, 0);
+}
+function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function btn(label, cls, fn) {
+  const b = document.createElement("button");
+  b.className = cls; b.innerHTML = label;
+  b.addEventListener("click", () => { sfx.tap(); fn(b); });
+  return b;
+}
+
+/* ===== ホーム ===== */
+const GREET = [
+  "ぼく ブルくん！ おはなしの ひきだしが いーっぱい あるんだ。どれから きく？",
+  "やあ！ きょうは どの ひきだしを あけようかな〜。ぜんぶ はなすと よるに なっちゃう かも！",
+  "ブルくん だよ。ぼく、はなしが ちょっと ながいって いわれるんだ。…ちょっと だけ だよ？",
+  "ひきだしを タップしてね。ぼくの とっておきの おはなしを きかせて あげる！",
+];
+function heardCount() { return STORIES.filter(s => save.heard[s.id]).length; }
+function cardCount() { return STORIES.filter(s => save.cards[s.id]).length; }
+
+function renderHome(greet) {
+  $("stHeard").textContent = heardCount();
+  $("stTotal").textContent = STORIES.length;
+  $("stCards").textContent = cardCount();
+  $("stLines").textContent = save.lines;
+  $("meter").style.width = (cardCount() / STORIES.length * 100) + "%";
+  const box = $("drawers"); box.innerHTML = "";
+  DRAWERS.forEach(d => {
+    const list = STORIES.filter(s => s.d === d.id);
+    const got = list.filter(s => save.cards[s.id]).length;
+    const b = document.createElement("button");
+    b.className = "drawer" + (got === list.length ? " done" : "");
+    b.innerHTML = `<span class="stars">${"★".repeat(got)}${"☆".repeat(list.length - got)}</span>
+      <span class="em" aria-hidden="true">${d.e}</span><span class="lb">${d.t}</span><span class="knob"></span>`;
+    b.setAttribute("aria-label", d.t + " の ひきだし");
+    b.addEventListener("click", () => { b.classList.add("open-anim"); sfx.drawer(); setTimeout(() => openDrawer(d.id), 220); });
+    box.appendChild(b);
+  });
+  if (greet !== false) {
+    let msg = pick(GREET);
+    if (cardCount() === STORIES.length) msg = "すごい！ ぼくの カード、ぜんぶ あつめたね！ もう はかせ だよ。でも まだまだ はなしたい ことが あるんだけどね〜。";
+    say($("homeText"), $("buruHome"), msg);
+  }
+}
+
+/* ===== ひきだしの なか ===== */
+let curDrawer = null;
+function openDrawer(did) {
+  hush();
+  curDrawer = did;
+  const d = DRAWER_BY_ID[did];
+  $("drawerTitle").textContent = d.e + " " + d.t + " の ひきだし";
+  const list = $("drawerList"); list.innerHTML = "";
+  STORIES.filter(s => s.d === did).forEach(s => {
+    const mark = save.cards[s.id] ? " 🃏" : (save.heard[s.id] ? " ✔︎" : "");
+    list.appendChild(btn(`<span aria-hidden="true">${s.e}</span> ${s.t}${mark}`, "bigbtn sub", () => startStory(s.id)));
+  });
+  show("drawer");
+  say($("drawerText"), $("buruHome"), pick([
+    `${d.t}の ひきだしには、こんな おはなしが はいってるよ。どれに する？`,
+    `ガラガラ〜。${d.t}の おはなし、ぜんぶ おもしろいんだ。どれから いく？`,
+  ]));
+}
+
+/* ===== おはなし ===== */
+let cur = null; // { s, idx, phase }
+const FILLER = ["それでね、", "えっとね、", "それでそれで、", "でね、"];
+
+function startStory(id, viaSoiieba) {
+  hush();
+  const s = BY_ID[id];
+  cur = { s, idx: -1, phase: "intro" };
+  $("stTag").textContent = DRAWER_BY_ID[s.d].e + " " + DRAWER_BY_ID[s.d].t;
+  $("stTitle").textContent = s.t;
+  show("story");
+  renderDots();
+  const open = viaSoiieba
+    ? `よーし！ じゃあ 「${s.t}」の おはなし、いくよ！`
+    : pick([`ひきだし オープン！ きょうは 「${s.t}」の おはなし だよ。`,
+            `「${s.t}」だね。これは ながく なるよ〜。じゅんびは いい？`,
+            `おっ、「${s.t}」を えらんだね。ぼくの だいすきな おはなしなんだ！`]);
+  talk(open, "talk");
+}
+
+function renderDots() {
+  const box = $("dots"); box.innerHTML = "";
+  if (!cur) return;
+  for (let i = 0; i < cur.s.l.length; i++) {
+    const d = document.createElement("i");
+    if (i <= cur.idx || cur.phase !== "talk" && cur.phase !== "intro") d.className = "on";
+    box.appendChild(d);
+  }
+  const q = document.createElement("i");
+  q.className = "q" + (["result", "nori"].includes(cur.phase) ? " on" : "");
+  box.appendChild(q);
+}
+
+function talk(text, phase) {
+  cur.phase = phase;
+  renderControls();
+  renderDots();
+  $("tapHint").textContent = "";
+  say($("text"), $("buru"), text, () => {
+    if (save.auto && cur && cur.phase === phase && (phase === "talk" || phase === "sum")) {
+      setTimeout(() => { if (cur && cur.phase === phase && save.auto && $("story").classList.contains("on")) next(); }, 700);
+    }
+  });
+}
+
+function next() {
+  if (!cur) return;
+  const s = cur.s;
+  if (cur.phase === "talk" || cur.phase === "intro") {
+    cur.idx++;
+    if (cur.idx < s.l.length) {
+      let line = s.l[cur.idx];
+      if (cur.idx > 0 && Math.random() < 0.3 && !/^(それ|でも|でね|だから|あっ|あ、|ちなみに|じつは)/.test(line)) line = pick(FILLER) + line;
+      save.lines++; persist();
+      talk(line, "talk");
+    } else {
+      markHeard();
+      talk(pick(["…というわけで、", "つまり、まとめると、", "ふう、いっぱい はなしちゃった。まとめると、"]) + s.s, "sum");
+    }
+  } else if (cur.phase === "sum") {
+    quiz();
+  } else if (cur.phase === "result") {
+    soiieba();
+  }
+}
+
+function markHeard() { save.heard[cur.s.id] = true; persist(); }
+
+function shorten() {
+  sfx.hmm();
+  markHeard();
+  cur.idx = cur.s.l.length;
+  talk(pick([
+    "えーっ！ ここからが いいところ なのに〜。…しょうがないなあ。ひとことで いうとね、",
+    "みじかく？ ぼくに それを いう？ …わかったよ、がんばる。つまりね、",
+    "うう、はなしたい ことが まだ 100こ くらい あるのに〜。ぎゅっと すると、",
+  ]) + cur.s.s, "sum");
+}
+
+function again() {
+  if (cur.phase === "talk" && cur.idx >= 0) talk(cur.s.l[cur.idx], "talk");
+  else if (cur.phase === "sum") talk(cur.s.s, "sum");
+}
+
+function quiz() {
+  const [q, ans] = cur.s.q;
+  cur.choices = shuffle(ans);
+  cur.answer = ans[0];
+  talk("おぼえてる かな？ " + q, "quiz");
+}
+
+function answer(b, c) {
+  const right = c === cur.answer;
+  $("controls").querySelectorAll(".choice").forEach(x => {
+    x.disabled = true;
+    if (x.dataset.c === cur.answer) x.classList.add("right");
+    else if (x === b) x.classList.add("wrong");
+  });
+  if (right) {
+    sfx.ok();
+    $("buru").classList.add("happy");
+    const first = !save.cards[cur.s.id];
+    save.cards[cur.s.id] = true; persist();
+    setTimeout(() => {
+      $("buru").classList.remove("happy");
+      if (first) showCard(cur.s);
+      talk(pick(["せいかい！ ちゃんと きいてて くれたんだね。うれしい！", "ピンポーン！ すごい すごい！", "だいせいかい！ もう ブルくん はかせ だね！"])
+        + (first ? ` 「${cur.s.t}」の カードを あげる！` : ""), "result");
+    }, 700);
+  } else {
+    sfx.ng();
+    setTimeout(() => talk(`おしい！ こたえは 「${cur.answer}」 だよ。もういちど きけば きっと おぼえられるよ！`, "result"), 700);
+  }
+}
+
+function soiieba() {
+  const nx = BY_ID[cur.s.n];
+  cur.next = nx;
+  talk(pick([
+    `あっ、そういえば！ 「${nx.t}」の はなしも あるんだけど… きく？ きくよね？`,
+    `それで おもいだした！ 「${nx.t}」って しってる？ はなしても いい？`,
+    `ねえねえ、まだ じかん ある？ 「${nx.t}」の はなしも したいんだけど…`,
+  ]), "nori");
+}
+
+function renderControls() {
+  const box = $("controls"); box.innerHTML = "";
+  const p = cur.phase;
+  if (p === "intro" || p === "talk") {
+    box.appendChild(btn("つぎ ▶", "bigbtn next", next));
+    const row = document.createElement("div"); row.className = "row";
+    row.appendChild(btn("✂️ みじかく！", "bigbtn sub small", shorten));
+    if (p === "talk" && cur.idx >= 0) row.appendChild(btn("🔁 もういちど", "bigbtn sub small", again));
+    box.appendChild(row);
+  } else if (p === "sum") {
+    const row = document.createElement("div"); row.className = "row";
+    row.appendChild(btn("🔁 もういちど", "bigbtn sub small", again));
+    row.appendChild(btn("クイズ ▶", "bigbtn next warm", next));
+    box.appendChild(row);
+  } else if (p === "quiz") {
+    cur.choices.forEach(c => {
+      const b = btn(c, "choice", el => answer(el, c));
+      b.dataset.c = c;
+      box.appendChild(b);
+    });
+  } else if (p === "result") {
+    box.appendChild(btn("つぎ ▶", "bigbtn next", next));
+  } else if (p === "nori") {
+    const row = document.createElement("div"); row.className = "row";
+    row.appendChild(btn("🗄️ ひきだしに<br>もどる", "bigbtn sub", goBack));
+    row.appendChild(btn(`きく！ ${cur.next.e}`, "bigbtn next green", () => startStory(cur.next.id, true)));
+    box.appendChild(row);
+  }
+}
+
+function goBack() {
+  hush();
+  const did = cur ? cur.s.d : curDrawer;
+  cur = null;
+  renderHome(false);
+  if (did) openDrawer(did); else { show("home"); renderHome(); }
+}
+
+/* ===== カード ===== */
+function showCard(s) {
+  sfx.card();
+  $("cardBox").innerHTML = `<div class="cg">🃏 カード ゲット！</div><div class="ce">${s.e}</div>
+    <div class="ct">${s.t}</div><div class="cs">${s.s}</div>`;
+  $("getcard").classList.add("on");
+  setTimeout(() => $("getcard").classList.remove("on"), 2600);
+}
+$("getcard").addEventListener("click", () => $("getcard").classList.remove("on"));
+
+/* ===== ずかん ===== */
+function openZukan() {
+  hush();
+  const box = $("zukanList"); box.innerHTML = "";
+  DRAWERS.forEach(d => {
+    const g = document.createElement("div"); g.className = "zk-group";
+    g.innerHTML = `<h3><span aria-hidden="true">${d.e}</span>${d.t}</h3>`;
+    const grid = document.createElement("div"); grid.className = "zk-grid";
+    STORIES.filter(s => s.d === d.id).forEach(s => {
+      const got = save.cards[s.id], heard = save.heard[s.id];
+      const b = document.createElement("button");
+      b.className = "zk" + (got ? "" : heard ? " heard" : " lock");
+      b.innerHTML = got ? `<span class="e">${s.e}</span>${s.t}`
+        : heard ? `<span class="e">❔</span>${s.t}<small>クイズに せいかいで ゲット</small>`
+        : `<span class="e">🔒</span>？？？`;
+      b.addEventListener("click", () => { sfx.tap(); startStory(s.id); });
+      grid.appendChild(b);
+    });
+    g.appendChild(grid); box.appendChild(g);
+  });
+  show("zukan");
+}
+
+/* ===== ボタン ===== */
+function goHome() { hush(); cur = null; show("home"); renderHome(); }
+$("btnHome").addEventListener("click", () => { sfx.tap(); goBack(); });
+$("btnBack1").addEventListener("click", () => { sfx.tap(); goHome(); });
+$("btnBack2").addEventListener("click", () => { sfx.tap(); goHome(); });
+$("btnZukan").addEventListener("click", () => { sfx.tap(); openZukan(); });
+$("btnZukan2").addEventListener("click", () => { sfx.tap(); openZukan(); });
+$("btnRandom").addEventListener("click", () => {
+  sfx.drawer();
+  const fresh = STORIES.filter(s => !save.cards[s.id]);
+  startStory(pick(fresh.length ? fresh : STORIES).id);
+});
+$("bubble").addEventListener("click", () => {
+  // ふきだしを タップ → もじを ぜんぶ だす
+  if (typing) { clearInterval(typing); typing = null; }
+});
+
+function renderSound() {
+  $("btnSound").textContent = save.sound ? "🔊" : "🔇";
+  $("btnSound").classList.toggle("off", !save.sound);
+}
+$("btnSound").addEventListener("click", () => {
+  save.sound = !save.sound; persist(); renderSound();
+  if (!save.sound) { try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {} }
+  else sfx.tap();
+});
+function renderAuto() {
+  $("btnAuto").textContent = "▶▶ じどうで すすむ: " + (save.auto ? "オン" : "オフ");
+  $("btnAuto").classList.toggle("on", save.auto);
+}
+$("btnAuto").addEventListener("click", () => {
+  sfx.tap(); save.auto = !save.auto; persist(); renderAuto();
+  if (save.auto && cur && (cur.phase === "talk" || cur.phase === "intro" || cur.phase === "sum") && !$("buru").classList.contains("talking")) next();
+});
+
+document.querySelectorAll("svg.buru").forEach(svg => { svg.innerHTML = $("buruTpl").content.firstElementChild.innerHTML; });
+renderSound();
+renderAuto();
+renderHome();
+</script>
+</body>
+</html>
