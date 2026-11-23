@@ -205,6 +205,24 @@
   .st.blink circle:first-child { animation: stblink .6s ease-in-out infinite; }
   @keyframes stblink { 50% { fill: #ff8787; stroke: #e03131; stroke-width: 5; } }
   .st.miss circle:first-child { fill: #ffc9c9; }
+  /* どっちが さき？ */
+  #dochi { background: linear-gradient(#1d2b53, #3a2f6b); }
+  .dq { text-align: center; color: #fff; font-size: 22px; font-weight: bold; margin: 6px 0 4px; }
+  .dn { text-align: center; color: #ffe8a3; font-size: 16px; margin: 0 0 10px; }
+  .dcards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; margin: 0 auto; }
+  .dcard { background: #fff8e7; border: 5px solid #fff; border-radius: 22px; box-shadow: 0 5px 0 rgba(0,0,0,.3); padding: 12px 8px; min-height: 170px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .dcard svg { width: 100%; max-width: 160px; height: 54px; }
+  .dcard b { font-size: 22px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }
+  .dcard .yr { display: none; font-size: 17px; font-weight: bold; color: var(--navy); }
+  .dcard .yr small { display: block; font-size: 14px; font-weight: normal; color: #7a6a48; }
+  .dcards.open .yr { display: block; }
+  .dcard.ok { border-color: var(--ok); background: #ebfbee; }
+  .dcard.ng { border-color: #ff8787; background: #fff5f5; }
+  .dcard:active { transform: translateY(3px); }
+  .dres { text-align: center; color: #9ff7c1; font-size: 19px; font-weight: bold; min-height: 56px; margin: 12px auto 0; max-width: 720px; line-height: 1.5; }
+  .dres.ng { color: #ffd0a8; }
+  #dNext { display: none; }
   .tapnote { font-size: 13px; color: #7a6a48; text-align: center; margin: 0; }
 </style>
 <!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
@@ -292,6 +310,7 @@
     </div>
     <button class="big" id="sagashiBtn">🔍 えき さがし</button>
     <button class="big" id="dosenBtn">🚃 どの せんで いく？</button>
+    <button class="big" id="dochiBtn">⚖️ どっちが さき？</button>
     <button class="big sub" id="toZukan">📖 ろせんず ずかん</button>
     <p class="pnote">保護者の方へ：東京・横浜の鉄道が 1872年の新橋〜横浜から どう広がったかを、できごと順に たどります。
       「みじかい たび」（8つ）、横浜の路線が中心の「よこはまの たび」、東京の路線が中心の「とうきょうの たび」、全部の「ぜんぶの たび」（30の できごと・25路線）から選べます。さいごに 建設中の リニアを「みらい」として のぞけます（開業時期は未定）。「えき さがし」は いまの地図で 駅を 見つける、「どの せんで いく？」は 2つの駅を 乗りかえなしで 結ぶ線を えらぶ あそびです。年と区間は 鉄道会社・自治体の公式資料などで確認しています。
@@ -351,6 +370,22 @@
       </div>
       <div class="tl" id="tl"></div>
     </div>
+  </div>
+</section>
+
+<!-- どっちが さき？ -->
+<section class="screen" id="dochi">
+  <div class="bar">
+    <button class="ibtn" id="dHome" aria-label="さいしょに もどる">🏠</button>
+    <h2>⚖️ どっちが さき？</h2>
+    <button class="ibtn" id="dSay" aria-label="もういちど よむ">🗣 よむ</button>
+  </div>
+  <div class="scroll">
+    <p class="dq">どっちの せんが さきに できた？</p>
+    <p class="dn" id="dNum"></p>
+    <div class="dcards" id="dCards"></div>
+    <p class="dres" id="dRes"></p>
+    <button class="big" id="dNext">つぎへ ▶</button>
   </div>
 </section>
 
@@ -489,7 +524,7 @@ const LINES = {
   toyoko: { name: `${R('東横線', 'とうよこせん')}`, sp: 'とうよこせん', color: '#e64980', kind: 'rail', ev: 'toyoko',
     kid: '「とう」きょうと 「よこ」はまを むすぶから、とうよこせん！ いまは よこはまから みなとみらいせんに そのまま はいるよ。',
     st: ['渋谷|しぶや', '中目黒|なかめぐろ', '自由が丘|じゆうがおか', '日吉|ひよし', '菊名|きくな', '横浜|よこはま'],
-    note: '1932年 渋谷〜桜木町 全通。2004年 横浜〜桜木町は おわり、みなとみらい線と 直通に。' },
+    note: '1926年 丸子多摩川〜神奈川で 開業、1932年 渋谷〜桜木町 全通。2004年 横浜〜桜木町は おわり、みなとみらい線と 直通に。' },
   maru: { name: `${R('丸ノ内線', 'まるのうちせん')}`, sp: 'まるのうちせん', color: '#e03131', kind: 'sub', ev: 'maru',
     kid: 'ちかてつ なのに、おちゃのみずや よつやで そとに かおを だすよ。せんそうの あと はじめて できた ちかてつ。',
     st: ['池袋|いけぶくろ', '御茶ノ水|おちゃのみず', '東京|とうきょう', '銀座|ぎんざ', '新宿|しんじゅく', '荻窪|おぎくぼ'],
@@ -562,10 +597,10 @@ const LINES = {
     kid: 'じしゃくの ちからで うかんで はしる、とっても はやい でんしゃ。しながわから なごやまで、いま トンネルを ほって つくって いるよ。',
     st: ['品川|しながわ', '神奈川県駅（仮）|かながわけんえき', '名古屋|なごや'],
     note: 'リニア中央新幹線 品川〜名古屋は 建設中。開業時期は 決まっていません（2026年時点）。' },
-  shinyoko: { name: `${R('新横浜線', 'しんよこはません')}`, sp: 'しんよこはません', color: '#ae3ec9', kind: 'sub', ev: 'shinyoko',
-    kid: 'しんよこはまえきの ちかを とおって、そうてつせんと とうきゅうせんが つながったよ。',
+  shinyoko: { name: `${R('新横浜線', 'しんよこはません')}`, sp: 'しんよこはません', color: '#ae3ec9', kind: 'sub', ev: 'sojr',
+    kid: 'さいしょは はざわよこはまこくだいから JRの せんろへ。そのあと しんよこはまえきの ちかを とおって、そうてつせんと とうきゅうせんが つながったよ。',
     st: ['羽沢横浜国大|はざわよこはまこくだい', '新横浜|しんよこはま', '新綱島|しんつなしま', '日吉|ひよし'],
-    note: '2023年3月18日 相鉄新横浜線（羽沢横浜国大〜新横浜）と 東急新横浜線（新横浜〜日吉）が 開業。' },
+    note: '2019年11月30日 西谷〜羽沢横浜国大 開業（JR線と直通）。2023年3月18日 羽沢横浜国大〜新横浜（相鉄新横浜線）と 新横浜〜日吉（東急新横浜線）が 開業。' },
 };
 
 // 線の かけら: ev = でてくる できごと、until = きえる できごと
@@ -599,6 +634,7 @@ const SEGS = [
   { line: 'linear', ev: 'mirai', pts: [[275, 222], [150, 240], [0, 262]] },
   { line: 'fukutoshin', ev: 'fukutoshin', pts: ['ikebukuro', [205, 124], [205, 178], 'shibuya'] },
   { line: 'uenotokyo', ev: 'uenotokyo', pts: [[329, 138], [317, 72]] },
+  { line: 'shinyoko', ev: 'sojr', pts: [[140, 372], 'hazawa'] },
   { line: 'shinyoko', ev: 'shinyoko', pts: ['hazawa', 'shinyoko', [182, 292], 'hiyoshi'] },
   // いま
   { line: 'chuo', ev: 'now', pts: ['tokyo', [262, 128], 'shinjuku'] },
@@ -739,6 +775,10 @@ const EVENTS = [
     body: `${R('品川', 'しながわ')}と ${R('田町', 'たまち')}の あいだに、${R('高輪', 'たかなわ')}ゲートウェイえきが できたよ。${R('山手線', 'やまのてせん')}の えきは 30こに なった！`,
     sp: 'しながわと たまちの あいだに、たかなわゲートウェイえきが できたよ。やまのてせんの えきは さんじゅっこに なった！',
     note: '2020年3月14日 高輪ゲートウェイ駅 開業（山手線・京浜東北線）。' },
+  { id: 'sojr', y: 2019, yr: '2019年（令和元年）', era: '7ねん まえ', ttl: 'そうてつの でんしゃが しんじゅくへ', kobi: 'しんじゅくまで いっきに〜！',
+    body: `${R('羽沢横浜国大', 'はざわよこはまこくだい')}えきが できて、${R('相鉄線', 'そうてつせん')}の でんしゃが JRの せんろに はいり、${R('新宿', 'しんじゅく')}まで のりかえ なしで いけるように なったよ。`,
+    sp: 'はざわよこはまこくだいえきが できて、そうてつせんの でんしゃが ジェイアールの せんろに はいり、しんじゅくまで のりかえ なしで いけるように なったよ。',
+    note: '2019年11月30日 相鉄・JR直通線 開業（西谷〜羽沢横浜国大。羽沢横浜国大駅も同日）。海老名〜新宿などを 直通運転。' },
   { id: 'shinyoko', y: 2023, yr: '2023年（令和5年）', era: '3ねん まえ', ttl: 'しんよこはまで つながった',
     body: `${R('新横浜', 'しんよこはま')}えきの ちかを とおって、そうてつせんと とうきゅうせんが つながったよ。ついこの あいだ！`,
     sp: 'しんよこはまえきの ちかを とおって、そうてつせんと とうきゅうせんが つながったよ。ついこの あいだ！',
@@ -756,7 +796,7 @@ const EV = Object.fromEntries(EVENTS.map((e, i) => [e.id, Object.assign(e, { i }
 const byOrder = ids => ids.slice().sort((a, b) => EV[a].i - EV[b].i);
 const COURSES = {
   short: EVENTS.filter(e => e.s).map(e => e.id),
-  yoko: byOrder(['sl', 'jr', 'yokohamasen', 'keikyu', 'nambu', 'toyoko', 'sotetsu', 'shin', 'denen', 'kodomo', 'blue', 'seaside', 'mm', 'green', 'shinyoko', 'now']),
+  yoko: byOrder(['sl', 'jr', 'yokohamasen', 'keikyu', 'nambu', 'toyoko', 'sotetsu', 'shin', 'denen', 'kodomo', 'blue', 'seaside', 'mm', 'green', 'sojr', 'shinyoko', 'now']),
   tokyo: byOrder(['sl', 'ueno', 'jr', 'shinagawa', 'chuo', 'keio', 'tokyo', 'yama', 'odakyu', 'chika', 'ginza', 'maru', 'mono', 'shin', 'yuri', 'fukutoshin', 'uenotokyo', 'takanawa', 'now']),
   all: EVENTS.filter(e => e.id !== 'mirai').map(e => e.id),
 };
@@ -785,6 +825,11 @@ const OPTS = {
   sora: { name: 'そらとぶ でんしゃ', ev: null, ng: 'そらとぶ でんしゃは… まだ ないよ〜！',
     art: '<ellipse cx="12" cy="34" rx="12" ry="6" fill="#e7f5ff"/><ellipse cx="54" cy="34" rx="10" ry="5" fill="#e7f5ff"/><path d="M22 10 L8 2 M42 10 L56 2" stroke="#ffc9c9" stroke-width="5" stroke-linecap="round"/><rect x="14" y="10" width="36" height="16" rx="5" fill="#ffa8a8" stroke="#c92a2a" stroke-width="2"/><rect x="19" y="14" width="7" height="5" fill="#fff"/><rect x="30" y="14" width="7" height="5" fill="#fff"/>' },
 };
+// その せんの いちばん さいしょの くかんが できた 年（だんだん のびた せんは ev の 年と ちがう）
+const OPEN = { toyoko: 1926, sotetsu: 1926 };
+// できた じゅんが いいにくい せん（ふるい せんろを つないだ・名前が かわった）は どっちが さき？に ださない
+const NO_DOCHI = ['denen', 'uenotokyo', 'linear'];
+const openY = l => OPEN[l] || EV[LINES[l].ev].y;
 const ngText = (id, target) => {
   const o = OPTS[id];
   if (!o.ev) return o.ng;
@@ -804,6 +849,7 @@ try {
     if (o.cc && typeof o.cc === 'object') ['short', 'yoko', 'tokyo', 'all'].forEach(k => { if (Number.isInteger(o.cc[k]) && o.cc[k] > 0) S.cc[k] = o.cc[k]; });
     if (Number.isInteger(o.longClears) && o.longClears > 0 && !S.cc.all) S.cc.all = o.longClears; // まえの はんの「ながい たび」
     if (Number.isInteger(o.best) && o.best >= 0 && o.best <= 3) S.best = o.best;
+    if (Number.isInteger(o.dcBest) && o.dcBest >= 0 && o.dcBest <= 8) S.dcBest = o.dcBest;
     if (Number.isInteger(o.dsBest) && o.dsBest >= 0 && o.dsBest <= 8) S.dsBest = o.dsBest;
     if (Number.isInteger(o.sgBest) && o.sgBest >= 0 && o.sgBest <= 10) S.sgBest = o.sgBest;
     if (o.seen && typeof o.seen === 'object') Object.keys(o.seen).forEach(k => { if (LINES[k]) S.seen[k] = 1; });
@@ -1048,6 +1094,7 @@ function renderHome() {
   if (cc.length) r.push('クリア：' + cc.join('・'));
   if (S.sgBest) r.push(`えき さがし さいこう ${S.sgBest} / 10`);
   if (S.dsBest) r.push(`どの せん クイズ さいこう ${S.dsBest} / 8`);
+  if (S.dcBest) r.push(`どっちが さき？ さいこう ${S.dcBest} / 8`);
   Object.keys(COURSES).forEach(k => {
     const p = COURSES[k], qn = p.filter(id => hasQ(id, k)).length, ln = new Set(SEGS.filter(sg => sg.ev !== 'now' && p.includes(sg.ev)).map(sg => sg.line)).size;
     const min = Math.max(2, Math.round(p.length * 0.27));
@@ -1061,9 +1108,13 @@ $('homeBtn').addEventListener('click', goHome);
 $('backBtn').addEventListener('click', goHome);
 $('zHome').addEventListener('click', goHome);
 document.querySelectorAll('[data-course]').forEach(b => b.addEventListener('click', () => { sfx.pick(); startGame(b.dataset.course); }));
-$('againBtn').addEventListener('click', () => { sfx.pick(); if (mode === 'sagashi') startSagashi(); else if (mode === 'dosen') startDosen(); else startGame(course); });
+$('againBtn').addEventListener('click', () => { sfx.pick(); if (mode === 'sagashi') startSagashi(); else if (mode === 'dosen') startDosen(); else if (mode === 'dochi') startDochi(); else startGame(course); });
 $('sagashiBtn').addEventListener('click', () => { sfx.pick(); startSagashi(); });
 $('dosenBtn').addEventListener('click', () => { sfx.pick(); startDosen(); });
+$('dochiBtn').addEventListener('click', () => { sfx.pick(); startDochi(); });
+$('dHome').addEventListener('click', goHome);
+$('dSay').addEventListener('click', () => speak(dc.say || ''));
+$('dNext').addEventListener('click', () => { sfx.pick(); dc.n++; if (dc.n < dc.qs.length) askDochi(); else dochiDone(); });
 $('miraiBtn').addEventListener('click', () => {
   if (busy || mode !== 'trip' || path.includes('mirai')) return;
   sfx.pick(); $('doneOver').classList.remove('on');
@@ -1082,8 +1133,8 @@ function openZukan() {
   $('zgrid').innerHTML = order.map(id => {
     const L = LINES[id], ev = EV[L.ev];
     return S.seen[id]
-      ? `<button class="zl" data-line="${id}"><i style="background:${L.color}"></i><b>${L.name}</b><small>${L.kind === 'plan' ? 'つくって いる ところ' : ev.y + '年に できた'}</small></button>`
-      : `<button class="zl lock" data-line="${id}"><i></i><b>？？？</b><small>${L.kind === 'plan' ? 'みらいの せん' : ev.y + '年ごろ'}</small></button>`;
+      ? `<button class="zl" data-line="${id}"><i style="background:${L.color}"></i><b>${L.name}</b><small>${L.kind === 'plan' ? 'つくって いる ところ' : openY(id) + '年に できた'}</small></button>`
+      : `<button class="zl lock" data-line="${id}"><i></i><b>？？？</b><small>${L.kind === 'plan' ? 'みらいの せん' : openY(id) + '年ごろ'}</small></button>`;
   }).join('');
   $('zgrid').querySelectorAll('.zl').forEach(b => b.addEventListener('click', () => {
     if (S.seen[b.dataset.line]) openLine(b.dataset.line);
@@ -1095,7 +1146,7 @@ function openLine(id) {
   sfx.pick();
   const sts = L.st.map(t => { const [k, y] = t.split('|'); return k === y ? `<span>${k}</span>` : `<span>${R(k, y)}</span>`; }).join('<em>―</em>');
   $('lineBox').innerHTML = `<h2>${L.name}</h2><div class="lbar" style="background:${L.color}"></div>
-    <span class="when">${L.kind === 'plan' ? 'いま つくって いる ところ' : `${ev.y}年に できた（${ev.era}）`}</span>
+    <span class="when">${L.kind === 'plan' ? 'いま つくって いる ところ' : `${openY(id)}年に できた（${OPEN[id] ? (2026 - openY(id)) + 'ねん くらい まえ' : ev.era}）`}</span>
     <p class="kid">${L.kid}</p>
     <div><b>おもな えき</b></div><div class="sts">${sts}</div>
     <p class="note">${L.note}</p>
@@ -1464,6 +1515,68 @@ function dosenDone() {
   $('doneOver').classList.add('on');
   sfx.fanfare(); confetti();
   speak(`どの せん クイズ おしまい！ ${ds.ok}もん いっぱつで せいかい！`);
+}
+
+/* ========== どっちが さき？（2つの せんの できた じゅん） ==========
+   年は openY（その せんの さいしょの くかんが できた 年）。NO_DOCHI の せんは ださない。
+   おなじ年や 5年より ちかい くみあわせは ださない。 */
+const DC_N = 8;
+let dc = { qs: [], n: 0, ok: 0, say: '' };
+function startDochi() {
+  clearTimers(); hush(); mode = 'dochi'; busy = false;
+  const ls = Object.keys(LINES).filter(l => !NO_DOCHI.includes(l));
+  const qs = [], used = new Set();
+  for (let t = 0; qs.length < DC_N && t < 500; t++) {
+    const a = ls[Math.random() * ls.length | 0], b = ls[Math.random() * ls.length | 0];
+    if (a === b || used.has(a + b) || used.has(b + a)) continue;
+    if (Math.abs(openY(a) - openY(b)) < 5) continue;
+    used.add(a + b); qs.push([a, b]);
+  }
+  dc = { qs, n: 0, ok: 0, say: '' };
+  renderToggles(); show('dochi');
+  askDochi();
+}
+function askDochi() {
+  const [a, b] = dc.qs[dc.n];
+  $('dNum').textContent = `${dc.n + 1} / ${dc.qs.length}もんめ`;
+  $('dRes').textContent = ''; $('dRes').classList.remove('ng'); $('dNext').style.display = 'none';
+  const card = l => { const L = LINES[l], e = EV[L.ev];
+    return `<button class="dcard" data-l="${l}"><svg viewBox="0 0 64 40" aria-hidden="true">${lineArt(l)}</svg><b>${L.name}</b>
+      <span class="yr">${openY(l)}年<small>${OPEN[l] ? '' : e.era}</small></span></button>`; };
+  $('dCards').className = 'dcards';
+  $('dCards').innerHTML = card(a) + card(b);
+  $('dCards').querySelectorAll('.dcard').forEach(c => c.addEventListener('click', () => dochiAnswer(c)));
+  dc.say = `${LINES[a].sp}と ${LINES[b].sp}、どっちが さきに できた？`;
+  speak(dc.say);
+}
+function dochiAnswer(c) {
+  if ($('dCards').classList.contains('open')) return;
+  const [a, b] = dc.qs[dc.n], ya = openY(a), yb = openY(b);
+  const first = ya < yb ? a : b, diff = Math.abs(ya - yb), pick = c.dataset.l;
+  $('dCards').classList.add('open');
+  $('dCards').querySelectorAll('.dcard').forEach(x => x.classList.add(x.dataset.l === first ? 'ok' : 'ng'));
+  const fn = plain(LINES[first].name);
+  if (pick === first) {
+    dc.ok++; sfx.ok();
+    $('dRes').textContent = `せいかい！ ${fn}の ほうが ${diff}ねん はやいよ！`;
+    speak(`せいかい！ ${LINES[first].sp}の ほうが ${diff}ねん はやいよ！`);
+  } else {
+    sfx.ng(); $('dRes').classList.add('ng');
+    $('dRes').textContent = `ざんねん！ さきに できたのは ${fn}。${diff}ねん はやいよ。`;
+    speak(`ざんねん。さきに できたのは ${LINES[first].sp}。${diff}ねん はやいよ。`);
+  }
+  $('dNext').style.display = 'block';
+}
+function dochiDone() {
+  const n = dc.qs.length, st = dc.ok >= n - 1 ? 3 : dc.ok >= n / 2 ? 2 : 1;
+  S.dcBest = Math.max(S.dcBest || 0, dc.ok); save();
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
+  $('doneTitle').textContent = 'どっちが さき？ おしまい！';
+  $('doneMsg').textContent = `${n}もん中 ${dc.ok}もん せいかい！` + (dc.ok === n ? ' れきし はかせだ！' : '');
+  $('doneSub').style.display = 'none'; $('mapBtn').style.display = 'none'; $('miraiBtn').style.display = 'none';
+  $('doneOver').classList.add('on');
+  sfx.fanfare(); confetti();
+  speak(`どっちが さき？ おしまい！ ${dc.ok}もん せいかい！`);
 }
 
 renderHome();
