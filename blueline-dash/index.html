@@ -386,6 +386,7 @@ const sfx = {
   bossHit() { note(150, .3, 'square', .1, -90); note(600, .15, 'triangle', .08, -300); },
   win() { [60, 64, 67, 72, 76, 79, 84].forEach((m, i) => note(mf(m), .25, 'triangle', .1, 0, i * .1)); },
 };
+function doorChime() { note(1318, .35, 'sine', .08); note(1046, .5, 'sine', .08, 0, .3); }
 /* BGM（ちいさな ループ） */
 const MEL = [76,0,79,0,84,0,79,0, 81,0,79,0,76,0,74,0, 72,0,76,0,79,0,81,79, 77,0,76,0,74,0,0,0,
              76,0,79,0,84,0,86,0, 84,0,81,0,79,0,76,0, 77,0,81,0,79,0,76,74, 72,0,0,0,0,0,0,0];
@@ -509,7 +510,7 @@ function startStage(k, demo = false, retry = false) {
 }
 function beginPlay() {
   setMode('play');
-  G.msg = { text: 'しゅっぱつ しんこう！', t: 2 };
+  G.msg = { text: 'ドアが しまります… しゅっぱつ しんこう！', t: 2.2 };
   hudStatic(); hudDyn(true);
   sfx.depart(); setTimeout(() => { if (mode === 'play') bgmStart(); }, 600);
 }
@@ -564,6 +565,7 @@ function update(dt) {
   const bossOn = B && B.active && !B.dead;
   if (bossOn || P.dead) P.vx = Math.max(0, P.vx - S.speed * 3 * dt);
   else if (S.arrive) P.vx = Math.max(0, P.vx - S.speed * 1.15 * dt);
+  else if (S.t < .8) P.vx = 0;   // ホームドアが しまってから しゅっぱつ
   else P.vx = Math.min(S.speed, P.vx + S.speed * 1.6 * dt);
 
   // ジャンプ
@@ -597,7 +599,7 @@ function update(dt) {
     S.msg = { text: 'ヒューン…', t: 1.2 };
   }
   if (!S.arrive && P.x >= S.L) { S.arrive = true; if (!S.demo) bgmStop(); }
-  if (S.arrive && P.vx === 0 && P.onGround) { S.arriveT += dt; if (S.arriveT > .6) { if (S.demo) startStage((S.k + 1) % NSTAGE, true); else stageClear(); return; } }
+  if (S.arrive && P.vx === 0 && P.onGround) { if (S.arriveT === 0 && !S.demo) doorChime(); S.arriveT += dt; if (S.arriveT > .9) { if (S.demo) startStage((S.k + 1) % NSTAGE, true); else stageClear(); return; } }
 
   const cx = P.x + P.w / 2, cy = P.y + P.h / 2;
   // きっぷ
@@ -808,17 +810,43 @@ function drawPortal(x) { // トンネルの でいりぐち
   ctx.fillStyle = '#a9aeb5'; ctx.fillRect(x - 26, 140, 52, 10);
 }
 
-function drawHome(x0, w, i) { // えきの ホーム（でんしゃの むこうがわ）
+function drawDoors(x0, w, o) { // ホームドア（o: 0=しまる 1=ひらく）
+  const top = GY - 60, bot = GY - 16, h = bot - top, pitch = 64;
+  for (let px = x0 + 16; px + pitch <= x0 + w - 8; px += pitch) {
+    const ox = px + 14, ow = 36, pw = ow / 2, sl = o * (pw - 2);
+    // すきま（ドアの むこう）
+    ctx.fillStyle = 'rgba(40,60,80,.18)'; ctx.fillRect(ox, top + 4, ow, h - 4);
+    // うごく とびら（2まい）
+    for (const [dx, dir] of [[ox - sl, -1], [ox + pw + sl, 1]]) {
+      ctx.fillStyle = '#f1f3f5'; ctx.fillRect(dx, top + 6, pw, h - 6);
+      ctx.fillStyle = '#cfe8fb'; ctx.fillRect(dx + 3, top + 10, pw - 6, h - 24);
+      ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(dx + 5, top + 12, 2, h - 30);
+      ctx.fillStyle = '#0a6fc2'; ctx.fillRect(dx, top + h - 13, pw, 4);
+      ctx.strokeStyle = '#8a96a3'; ctx.lineWidth = 1; ctx.strokeRect(dx + .5, top + 6.5, pw - 1, h - 7);
+    }
+    // とぶくろ（はしら）
+    for (const bx of [px, px + 14 + ow]) {
+      ctx.fillStyle = '#e9edf1'; ctx.fillRect(bx, top, 14, h);
+      ctx.fillStyle = '#0a6fc2'; ctx.fillRect(bx, top + h - 13, 14, 4);
+      ctx.fillStyle = '#5c6470'; ctx.fillRect(bx, top, 14, 4);
+      ctx.strokeStyle = '#8a96a3'; ctx.lineWidth = 1; ctx.strokeRect(bx + .5, top + .5, 13, h - 1);
+    }
+    // ランプ（あいてる ときは みどり、しまってる ときは あか）
+    ctx.fillStyle = o > .05 ? '#40c057' : '#fa5252';
+    ctx.beginPath(); ctx.arc(px + 7, top + 9, 2.6, 0, 7); ctx.fill();
+    // ばんごう
+    ctx.fillStyle = '#064a85'; ctx.font = `bold 6px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(String(1 + Math.round((px - x0 - 16) / pitch)), px + 14 + ow + 7, top + 20);
+  }
+}
+function drawHome(x0, w, i, o = 0) { // えきの ホーム（でんしゃの むこうがわ）
   ctx.fillStyle = '#dfe6ee'; ctx.fillRect(x0, 150, w, GY - 150);           // かべ
   ctx.fillStyle = '#0a6fc2'; ctx.fillRect(x0, 196, w, 10);                 // ブルーの ライン
   ctx.fillStyle = '#c3ccd6'; for (let px = x0 + 40; px < x0 + w; px += 150) ctx.fillRect(px, 150, 16, GY - 150);
   ctx.fillStyle = '#b8c1cc'; ctx.fillRect(x0, 140, w, 12);                  // てんじょう
-  for (let px = x0 + 20; px < x0 + w - 30; px += 40) {                    // ホームドア
-    ctx.fillStyle = '#9aa5b1'; ctx.fillRect(px, GY - 46, 32, 30);
-    ctx.fillStyle = '#cfe3f5'; ctx.fillRect(px + 4, GY - 42, 24, 12);
-  }
   ctx.fillStyle = '#e8d9a8'; ctx.fillRect(x0, GY - 16, w, 16);               // ホームの はし
   ctx.fillStyle = '#f5c400'; ctx.fillRect(x0, GY - 16, w, 4);
+  drawDoors(x0, w, o);
   // えきめい ひょう
   const sx = x0 + w / 2 - 100, sy = 58;
   ctx.fillStyle = '#7d8793'; ctx.fillRect(sx + 30, sy + 64, 6, 20); ctx.fillRect(sx + 164, sy + 64, 6, 20);
@@ -981,8 +1009,8 @@ function draw() {
   }
   ctx.setTransform(k, 0, 0, k, (-camX + sh) * k, oy * k);
   const vis = (x, w) => x + w > camX - 40 && x < camX + viewW + 40;
-  if (vis(-520, 720)) drawHome(-520, 720, G.k);
-  if (vis(G.L - 300, 760)) drawHome(G.L - 300, 760, G.k + 1);
+  if (vis(-520, 720)) drawHome(-520, 720, G.k, Math.max(0, Math.min(1, 1 - (G.t - .15) / .55)));
+  if (vis(G.L - 300, 760)) drawHome(G.L - 300, 760, G.k + 1, G.arrive && P.vx === 0 ? Math.min(1, G.arriveT / .45) : 0);
   if (G.portal != null && vis(G.portal - 30, 60)) drawPortal(G.portal);
   for (const s of G.grounds) if (vis(s.x, s.w)) drawGround(s, above(s.x + s.w / 2));
   for (const p of G.plats) if (vis(p.x, p.w)) drawPlat(p);
