@@ -34,6 +34,38 @@
   const mapsURL = s => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(s.name)}&query_place_id=${encodeURIComponent(s.id)}`;
   const reviewsURL = s => `https://search.google.com/local/reviews?placeid=${encodeURIComponent(s.id)}`;
 
+  /* ---------- 営業時間 ---------- */
+  // hours は [月, 火, …, 日]。"11:30-14:30,17:00-25:00"（25:00 は翌1:00）、"" は定休日、null は不明
+  const WD = ['月', '火', '水', '木', '金', '土', '日'];
+  const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+  const ranges = (s, d) => {
+    const h = s.hours && s.hours[d];
+    return h ? h.split(',').map(x => x.split('-').map(toMin)) : [];
+  };
+  const clock = m => { const h = Math.floor(m / 60); return `${h >= 24 ? '翌' + (h - 24) : h}:${String(m % 60).padStart(2, '0')}`; };
+  const dayText = (s, d) => {
+    const h = s.hours && s.hours[d];
+    if (h == null) return '不明';
+    if (h === '') return '定休日';
+    if (h === '0:00-24:00') return '24時間営業';
+    return ranges(s, d).map(([a, b]) => `${clock(a)}〜${clock(b)}`).join(' / ');
+  };
+  const today = () => (new Date().getDay() + 6) % 7;   // 月=0 … 日=6
+  // いまの営業状況: { cls, text }。前の日の深夜営業（翌2:00まで など）も見る
+  function status(s) {
+    if (!s.hours) return null;
+    const now = new Date(), d = today(), t = now.getHours() * 60 + now.getMinutes();
+    const spans = [...ranges(s, d), ...ranges(s, (d + 6) % 7).map(([a, b]) => [a - 1440, b - 1440])];
+    const open = spans.find(([a, b]) => a <= t && t < b);
+    if (open) return open[1] - t <= 60
+      ? { cls: 'soon', text: `まもなく閉店（${clock(((open[1] % 1440) + 1440) % 1440)}まで）` }
+      : { cls: 'open', text: `営業中（${clock(open[1] < 0 ? open[1] + 1440 : open[1])}まで）` };
+    const next = ranges(s, d).map(([a]) => a).filter(a => a > t).sort((a, b) => a - b)[0];
+    if (next != null) return { cls: 'closed', text: `準備中（${clock(next)}から）` };
+    if (s.hours[d] === '') return { cls: 'closed', text: 'きょうは定休日' };
+    return { cls: 'closed', text: 'きょうの営業は終了' };
+  }
+
   /* ---------- しぼりこみ ---------- */
   function matches(s, skip) {
     if (skip !== 'area' && state.area !== 'all' && s.area !== state.area) return false;
@@ -43,6 +75,7 @@
       if (state.mark === 'want' && !m.want) return false;
       if (state.mark === 'went' && !m.went) return false;
       if (state.mark === 'yet' && m.went) return false;
+      if (state.mark === 'open' && !['open', 'soon'].includes((status(s) || {}).cls)) return false;
     }
     if (state.q) {
       const hay = (s.name + ' ' + s.cats.join(' ') + ' ' + s.addr + ' ' + (r(s.id).memo || '') + ' ' +
@@ -88,6 +121,7 @@
       { id: 'want', label: '❤️ 行きたい', n: count('mark', s => r(s.id).want) },
       { id: 'went', label: '✅ 行った',   n: count('mark', s => r(s.id).went) },
       { id: 'yet',  label: 'まだ行ってない', n: count('mark', s => !r(s.id).went) },
+      { id: 'open', label: '🕒 いま営業中', n: count('mark', s => ['open', 'soon'].includes((status(s) || {}).cls)) },
     ], 'mark');
   }
 
@@ -98,7 +132,7 @@
     grid.innerHTML = '';
     const frag = document.createDocumentFragment();
     list.forEach((s, i) => {
-      const g = genreOf[s.genre], m = r(s.id);
+      const g = genreOf[s.genre], m = r(s.id), st = status(s);
       const li = document.createElement('li');
       const rank = i + 1;
       li.innerHTML = `
@@ -109,6 +143,7 @@
             <span class="card__score"><span class="card__rating">★${s.rating.toFixed(1)}</span>${starsHTML(s.rating)}
               <span class="card__count">口コミ ${fmt(s.count)}件</span>${s.count >= 2000 ? '<span class="badge">🔥 大人気</span>' : ''}</span>
             <span class="card__meta">${areaOf[s.area].name} ・ ${s.cats[0] || g.name}</span>
+            ${s.hours ? `<span class="card__hours"><span class="state state--${st.cls}">${st.text}</span> きょう（${WD[today()]}） ${dayText(s, today())}</span>` : ''}
           </span>
           <span class="card__marks">${m.want ? '❤️' : ''}${m.went ? '✅' : ''}</span>
         </button>`;
@@ -142,6 +177,11 @@
     $('dCats').innerHTML = '';
     for (const c of s.cats) { const sp = document.createElement('span'); sp.textContent = c; $('dCats').appendChild(sp); }
     $('dAddr').textContent = `📮 ${s.addr}`;
+    const st = status(s), d0 = today();
+    $('dHours').innerHTML = s.hours
+      ? `<p class="dhours__now"><span class="state state--${st.cls}">${st.text}</span></p><table>${WD.map((w, d) =>
+          `<tr${d === d0 ? ' class="is-today"' : ''}><th>${w}</th><td>${dayText(s, d)}</td></tr>`).join('')}</table>`
+      : '<p>営業時間はわかりません。Googleマップで確かめてください。</p>';
     $('dMap').href = mapsURL(s);
     $('dReviews').href = reviewsURL(s);
     $('dMemo').value = r(s.id).memo || '';
@@ -192,6 +232,9 @@
     if (!pool.length) pool = SPOTS;
     open(pool[Math.floor(Math.random() * pool.length)]);
   });
+
+  // 時間がたつと「営業中」がずれるので、1分ごとに書きなおす（詳細を開いているあいだは止める）
+  setInterval(() => { if ($('sheet').hidden) render(); }, 60000);
 
   $('fetched').textContent = FETCHED.replace(/-/g, '/');
   $('criteria').textContent = `★${CRITERIA.rating}以上・口コミ${CRITERIA.count}件以上` +
