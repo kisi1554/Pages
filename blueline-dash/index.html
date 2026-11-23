@@ -215,6 +215,7 @@
   <div><span>🐛</span><span><b>おじゃまムシ</b>は うえから ふむと やっつけられる。</span></div>
   <div><span>📣</span><span><b>ファーン</b>で おとの なみを とばす！ コウモリや カラスも やっつけられる。</span></div>
   <div><span>🎫</span><span><b>きっぷ</b>を あつめよう。ぜんぶ とると ろせんずに ★が つくよ。</span></div>
+  <div><span>🛸</span><span>そらから <b>ポイポイUFO</b> が ばくだんを おとすよ！ せんろの <b style="color:#e03131">⭕</b> に おちて くるから ジャンプで よけよう。ファーンは そらまで とどくよ。</span></div>
   <div><span>⭐</span><span>ほしで むてき！ ❤️ で げんき かいふく。</span></div>
   <div><span>🦗</span><span><b>ミンせんせい</b>（ミンミンゼミ）が いる えきでは <b>むしクイズ</b>！ せいかい すると さきに すすめるよ。</span></div>
   <div><span>👾</span><span>よこはま と あざみの の てまえには <b>でっかい おじゃまムシ</b>！ ファーンで やっつけよう。</span></div>
@@ -436,6 +437,7 @@ const sfx = {
     src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
     note(110, .7, 'sine', .35, -70);
   },
+  ufo() { const a = audio(); if (!a) return; for (let i = 0; i < 3; i++) note(600, .25, 'sine', .05, 500, i * .22); },
   boss() { [0, .25, .5].forEach(w => note(196, .2, 'sawtooth', .07, -60, w)); },
   bossHit() { note(150, .3, 'square', .1, -90); note(600, .15, 'triangle', .08, -300); },
   win() { [60, 64, 67, 72, 76, 79, 84].forEach((m, i) => note(mf(m), .25, 'triangle', .1, 0, i * .1)); },
@@ -571,6 +573,8 @@ function buildStage(k) {
     if (dk >= 2) opts.push('flyer', 'walker');
     if (dk >= 5) opts.push('gapPlat', 'gap');
     if (dk >= 10) opts.push('combo', 'flyer', 'gapPlat');
+    if (dk >= 3) opts.push('bomber');
+    if (dk >= 14) opts.push('bomber');
     let t = opts[Math.floor(rnd() * opts.length)];
     if (t === prev) t = 'flat';
     prev = t;
@@ -603,6 +607,12 @@ function buildStage(k) {
       const p = { x: x + gw / 2 - 55, y: GY - 55, w: 110 }; S.plats.push(p);
       for (let i = 0; i < 3; i++) tk(p.x + 20 + i * 35, p.y - 22);
       x += gw; g(x, 160); x += 160;
+    }
+    else if (t === 'bomber') {   // そらから こうげき: ポイポイUFO（ひろい たいらな ところで）
+      const w = 760; g(x, w);
+      S.en.push({ type: 'bomber', x: x + 260, y: 96, w: 44, h: 28, vx: 0, act: false, t: 0, dropT: .9 });
+      for (let i = 0; i < 4; i++) tk(x + 120 + i * 120, GY - 34);
+      x += w;
     }
     else if (t === 'combo') { const w = 440; g(x, w); S.cones.push({ x: x + 110, y: GY - 28, w: 24, h: 28 });
       S.en.push(walker(x + 400)); tk(x + 122, GY - 100); x += w; }
@@ -748,26 +758,53 @@ function update(dt) {
   // てき
   for (const e of S.en) {
     if (e.dead) continue;
-    if (!e.act) { if (e.x < camX + viewW + 30) { e.act = true; e.vx = e.type === 'walker' ? -45 : e.type === 'flyer' ? -35 : e.vx; } else continue; }
-    e.t += dt; e.x += e.vx * dt;
-    if (e.type === 'flyer') e.y = e.by + Math.sin(e.t * 3) * 18;
+    if (!e.act) { if (e.x < camX + viewW + 30) { e.act = true; e.vx = e.type === 'walker' ? -45 : e.type === 'flyer' ? -35 : e.vx;
+      if (e.type === 'bomber') { e.sx = e.x - camX; if (!S.ufoSaid && !S.demo) { S.ufoSaid = true; S.msg = { text: 'そらから ポイポイUFO！ ⭕の ところに おちて くるよ', t: 2.6 }; sfx.ufo(); } } } else continue; }
+    e.t += dt;
+    if (e.type === 'bomber') {
+      e.sx -= (S.easy ? 95 : 115) * dt; e.x = camX + e.sx;
+      e.y = 96 + Math.sin(e.t * 2.4) * 10 - (e.leave || 0);
+      if (S.arrive || !S.departed || (S.boss && S.boss.active)) e.leave = (e.leave || 0) + 160 * dt;
+      e.dropT -= dt;
+      if (e.dropT <= 0 && !e.leave && e.sx > viewW * .3 && e.sx < viewW - 30) {
+        const sx0 = e.x + e.w / 2, sy0 = e.y + e.h, tf = Math.sqrt(2 * (GY - 9 - sy0) / 900);
+        const aim = P.x + P.w / 2 + P.vx * tf + (Math.random() - .5) * 16;
+        S.en.push({ type: 'drop', x: sx0 - 9, y: sy0, w: 18, h: 18, vx: (aim - sx0) / tf, vy: 0, act: true, t: 0, aim });
+        e.dropT = S.easy ? 2.0 : 1.45; e.open = .3;
+        if (!S.demo) note(900, .35, 'sine', .04, -600);
+      }
+      e.open = (e.open || 0) - dt;
+      if (e.sx < -90 || e.y < -offY - 80) { e.dead = true; continue; }
+    } else if (e.type === 'drop') {
+      e.vy += 900 * dt; e.x += e.vx * dt; e.y += e.vy * dt;
+      if (e.y + e.h >= GY && G.grounds.some(g => e.x + 9 >= g.x && e.x + 9 <= g.x + g.w)) {   // せんろに おちて ドカン
+        e.dead = true; burst(e.x + 9, GY - 6, '#ff922b', 10); burst(e.x + 9, GY - 6, '#868e96', 5);
+        S.parts.push({ x: e.x + 9, y: GY - 8, vx: 0, vy: 0, life: .35, color: '#ffd43b', r: 0, ring: 1 });
+        if (!S.demo) note(130, .25, 'square', .06, -60);
+        if (Math.abs(P.x + P.w / 2 - (e.x + 9)) < 30 && P.y + P.h > GY - 14) hurt(false);
+        continue;
+      }
+      if (e.y > GY + 300) { e.dead = true; continue; }
+    }
+    else if (e.type === 'flyer') { e.x += e.vx * dt; e.y = e.by + Math.sin(e.t * 3) * 18; }
     else {
+      e.x += e.vx * dt;
       e.vy = (e.vy || 0) + GRAV * dt; const pb = e.y + e.h; e.y += e.vy * dt;
       if (e.vy >= 0) for (const s of S.grounds) if (e.x + e.w > s.x && e.x < s.x + s.w && pb <= s.y + 2 && e.y + e.h >= s.y) {
         e.y = s.y - e.h; e.vy = e.type === 'ball' && e.bounce ? -e.bounce : 0; break; }
       if (e.y > GY + 300) e.dead = true;
     }
-    if (e.x < camX - 200) { e.dead = true; continue; }
+    if (e.type !== 'bomber' && e.x < camX - 200) { e.dead = true; continue; }
     if (P.x + P.w - 6 > e.x + 3 && P.x + 6 < e.x + e.w - 3 && P.y + P.h > e.y + 4 && P.y < e.y + e.h - 3) {
       if (P.star > 0) kill(e, 'star');
-      else if (P.vy > 0 && prevB <= e.y + 14 && e.type !== 'ball') { kill(e, 'stomp'); P.vy = -430; P.jumps = 1; if (!S.demo) sfx.stomp(); }
+      else if (P.vy > 0 && prevB <= e.y + 14 && e.type !== 'ball' && e.type !== 'drop') { kill(e, 'stomp'); P.vy = -430; P.jumps = 1; if (!S.demo) sfx.stomp(); }
       else hurt(false);
     }
   }
   // ファーン
   for (const w of S.waves) {
     w.x += 520 * dt; w.life -= dt;
-    for (const e of S.en) if (!e.dead && e.act && Math.abs(e.y + e.h / 2 - w.y) < 62 && e.x < w.x + 24 && e.x + e.w > w.x - 34) kill(e, 'horn');
+    for (const e of S.en) if (!e.dead && e.act && (e.type === 'bomber' || Math.abs(e.y + e.h / 2 - w.y) < 62) && e.x < w.x + 24 && e.x + e.w > w.x - 34) kill(e, 'horn');
     if (bossOn && !w.hitBoss && w.x + 20 > B.x && w.x < B.x + B.w) { w.hitBoss = true; w.life = 0; bossHit(); }
   }
   S.waves = S.waves.filter(w => w.life > 0);
@@ -855,7 +892,8 @@ function bot() {
     if (G.cones.some(c => !c.dead && near(c, 26 + P.vx * .14))) pressJump();
     for (const e of G.en) {
       if (e.dead || !e.act) continue;
-      if (e.type === 'flyer' && near(e, 230) && P.cd <= 0) pressHorn();
+      if ((e.type === 'flyer' && near(e, 230) || e.type === 'bomber' && near(e, 240)) && P.cd <= 0) pressHorn();
+      else if (e.type === 'drop' && e.y > GY - 170 && Math.abs(e.aim - (P.x + P.w / 2)) < 40 && Math.abs(e.x + 9 - (P.x + P.w / 2)) < 120) pressJump();
       else if ((e.type === 'walker' || e.type === 'ball') && near(e, 30 + (P.vx - e.vx) * .16)) pressJump();
     }
   } else if (P.jumps === 1 && P.vy > 60) {
@@ -1054,6 +1092,23 @@ function drawEnemy(e, above) {
     else { ctx.beginPath(); ctx.moveTo(cx - 7, cy - 7); ctx.lineTo(cx - 5, cy - 15); ctx.lineTo(cx - 2, cy - 8); ctx.moveTo(cx + 7, cy - 7); ctx.lineTo(cx + 5, cy - 15); ctx.lineTo(cx + 2, cy - 8); ctx.fill(); }
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx - 4, cy - 2, 3, 0, 7); ctx.arc(cx + 3, cy - 2, 3, 0, 7); ctx.fill();
     ctx.fillStyle = '#e03131'; ctx.beginPath(); ctx.arc(cx - 4, cy - 2, 1.4, 0, 7); ctx.arc(cx + 3, cy - 2, 1.4, 0, 7); ctx.fill();
+  } else if (e.type === 'bomber') {   // ポイポイUFO
+    const cx = e.x + e.w / 2, cy = e.y + 14, blink = Math.floor(e.t * 6) % 3;
+    ctx.fillStyle = 'rgba(190,240,255,.85)'; ctx.beginPath(); ctx.ellipse(cx, cy - 4, 13, 12, 0, Math.PI, 0); ctx.fill();
+    ctx.fillStyle = '#9c36b5'; ctx.beginPath(); ctx.arc(cx, cy - 3, 7, Math.PI, 0); ctx.fill();          // なかの こ
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(cx - 3, cy - 6, 2.4, 0, 7); ctx.arc(cx + 3, cy - 6, 2.4, 0, 7); ctx.fill();
+    ctx.fillStyle = '#222'; ctx.beginPath(); ctx.arc(cx - 2.4, cy - 5.6, 1.2, 0, 7); ctx.arc(cx + 3.6, cy - 5.6, 1.2, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(cx - 6, cy - 10); ctx.lineTo(cx - 1, cy - 8); ctx.moveTo(cx + 6, cy - 10); ctx.lineTo(cx + 1, cy - 8); ctx.stroke();
+    ctx.fillStyle = '#f783ac'; ctx.beginPath(); ctx.ellipse(cx, cy + 2, 22, 7, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#c2255c'; ctx.beginPath(); ctx.ellipse(cx, cy + 4, 22, 3.5, 0, 0, Math.PI); ctx.fill();
+    for (let i = 0; i < 3; i++) { ctx.fillStyle = blink === i ? '#ffe066' : '#fab005'; ctx.beginPath(); ctx.arc(cx - 12 + i * 12, cy + 3, 2.2, 0, 7); ctx.fill(); }
+    if (e.open > 0) { ctx.fillStyle = 'rgba(255,224,102,.5)'; ctx.beginPath(); ctx.moveTo(cx - 5, cy + 8); ctx.lineTo(cx + 5, cy + 8); ctx.lineTo(cx + 12, cy + 30); ctx.lineTo(cx - 12, cy + 30); ctx.fill(); }
+  } else if (e.type === 'drop') {     // おちて くる ばくだん
+    const cx = e.x + 9, cy = e.y + 9;
+    ctx.fillStyle = '#343a40'; ctx.beginPath(); ctx.arc(cx, cy, 8, 0, 7); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.beginPath(); ctx.arc(cx - 3, cy - 3, 2.4, 0, 7); ctx.fill();
+    ctx.strokeStyle = '#8d6e63'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, cy - 8); ctx.quadraticCurveTo(cx + 4, cy - 12, cx + 2, cy - 15); ctx.stroke();
+    ctx.fillStyle = Math.floor(e.t * 20) % 2 ? '#ffd43b' : '#ff6b6b'; ctx.beginPath(); ctx.arc(cx + 2, cy - 15, 2.6, 0, 7); ctx.fill();
   } else if (e.type === 'ball') {
     ctx.translate(e.x + 13, e.y + 13); ctx.rotate(-e.x / 13);
     ctx.fillStyle = '#8a5a2b'; ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); ctx.fill();
@@ -1150,6 +1205,12 @@ function draw() {
   for (const c of G.cones) if (!c.dead && vis(c.x, c.w)) drawCone(c);
   for (const t of G.tix) if (!t.got && vis(t.x - 12, 24)) drawTicket(t, time);
   for (const it of G.items) if (!it.got && vis(it.x - 14, 28)) drawItem(it, time);
+  for (const e of G.en) if (!e.dead && e.type === 'drop' && vis(e.aim - 20, 40)) {   // おちる ばしょの しるし ⭕
+    const near = Math.max(0, Math.min(1, (e.y - 60) / (GY - 80))), pul = 1 + Math.sin(G.t * 18) * .12;
+    ctx.globalAlpha = .35 + near * .55; ctx.strokeStyle = '#fa5252'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(e.aim, GY - 2, 16 * pul, 5 * pul, 0, 0, 7); ctx.stroke();
+    ctx.fillStyle = 'rgba(250,82,82,.25)'; ctx.fill(); ctx.globalAlpha = 1;
+  }
   for (const e of G.en) if (!e.dead && vis(e.x, e.w)) drawEnemy(e, above(e.x));
   if (G.boss && G.boss.active) drawBoss(G.boss, time);
   // ヘッドライトの ひかり
@@ -1224,7 +1285,7 @@ function finishClear(fanfare) {
   const i = k + 1, s = ST[i];
   setTimeout(() => say(`${s[1]}、${s[1]}です`), 500);
   if (k === NSTAGE - 1) {
-    setTimeout(showEnd, 2600);
+    setTimeout(() => { if (mode === 'clear') showEnd(); }, 2600);
   }
   $('clearBody').innerHTML = `
     <div class="logo">🚉</div>
