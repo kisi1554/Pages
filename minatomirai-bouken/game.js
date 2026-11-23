@@ -1133,7 +1133,7 @@ void main(){
       default: return false;
     }
   }
-  const EVENT_IC = { bday: '🎂', halloween: '🎃', xmas: '🎄', hanabi: '🎆', shogatsu: '🎍', setsubun: '👹', hina: '🎎', kodomo: '🎏', tanabata: '🎋', tsukimi: '🎑' };
+  const EVENT_IC = { bday: '🎂', mamabd: '💐', papabd: '👔', halloween: '🎃', xmas: '🎄', hanabi: '🎆', shogatsu: '🎍', setsubun: '👹', hina: '🎎', kodomo: '🎏', tanabata: '🎋', tsukimi: '🎑' };
   function seasonOf(day) { const f = save.settings.season; if (f >= 0) return f; const m = dateOf(day).m; return m >= 3 && m <= 5 ? 0 : m >= 6 && m <= 8 ? 1 : m >= 9 && m <= 11 ? 2 : 3; }
   function weatherOf(day) {
     const r = hash01(day * 1.7 + 3, 11.3), s = seasonOf(day), mo = dateOf(day).m;
@@ -2785,7 +2785,7 @@ void main(){
     window.Places.open(kind, {
       night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3,
       week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: schedOf(d0 + i), done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
-      wallet: Wallet, tone, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
+      wallet: Wallet, tone, confetti, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
       stats: () => { let o = {}; try { o = JSON.parse(localStorage.getItem('minatomirai-bouken-odekake-v1')) || {}; } catch (e) { o = {}; } return { stamps: save.stamps.length, stars: save.stars.length, passed: window.Kumon ? window.Kumon.passed.length : 0, hs: save.hs || 0, photos: photos.length, cups: (o.cups || []).length, maru: Object.keys(o.maru || {}).length >= 5, toys: save.items.filter((id) => window.Shops && window.Shops.TOYS.some((t) => t.id === id && !t.acc)).length }; }, confetti,
       event: eventToday(), year: yearNow(), age: aoAge(), dateStr: (() => { const D = dateOf(save.clock.day); return `${D.y}.${D.m}.${D.d}`; })(),
       addPhoto: (url) => { photos.unshift({ url, t: clockStr() + ' 🎂' }); photos = photos.slice(0, 12); while (!storePhotos() && photos.length > 1) photos.pop(); $('photoN').textContent = photos.length; }, zukan: (root, done) => window.Kotoba && window.Kotoba.zukan({ root, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()) }, done),
@@ -3363,7 +3363,7 @@ void main(){
     window.Kumon.open({
       home: true,
       sfx: (n) => { if (n === 'drink') SFX.drink(); else if (n === 'tap') SFX.tap(); else if (n === 'ng') SFX.tired(); else if (n === 'good') SFX.star(); else if (n === 'pass') { SFX.big(); confetti(); } },
-      onReward: (r) => { if (r.type !== 'print') return ''; save.wallet[500] = (save.wallet[500] || 0) + 1; save.homework = (save.homework || 0) + 1; store(); refreshHud(); SFX.coin(); return 'ママ から おこづかい 🪙 500えん！（おさいふ ' + walletTotal().toLocaleString() + 'えん）'; },
+      onReward: (r) => { if (r.type !== 'print') return ''; const big = r.level === '3A'; if (big) { save.wallet[1000] = (save.wallet[1000] || 0) + 1; save.wallet[100] = (save.wallet[100] || 0) + 2; } else save.wallet[500] = (save.wallet[500] || 0) + 1; save.homework = (save.homework || 0) + 1; store(); refreshHud(); SFX.coin(); if (window.Toys) setTimeout(() => window.Toys.levelUp('くもん ' + r.level + ' の しゅくだい', { tone, confetti }), 600); if (big) return 'ママ から おこづかい 💴 1200えん！（3A を 1まい がんばった！）'; return 'ママ から おこづかい 🪙 500えん！（おさいふ ' + walletTotal().toLocaleString() + 'えん）'; },
       onClose: () => { show('ovKumon', false); setPaused(); openPlace('home'); },
     });
   }
@@ -3504,7 +3504,7 @@ void main(){
   const PAPA = { on: false, x: 0, y: 0, z: 0, face: 0, phase: 0, speed: 0, sit: false, sayT: 0, talkT: 30, was: false };
   const PAPA_LINES = ['あおちゃん、パパと きょうそう しよう！ 🏃', 'でんしゃ みにいく？ パパは でんしゃが だいすき 🚃', 'おなか すいたら ちゅうかがいの にくまん たべよう 🥟', 'たかい ところは パパに まかせて… ちょっと こわいな 😅',
     'しゃしんを とろうか？ 📷 ボタンで パシャッ！', 'くもん がんばってて えらいね ✏️', 'みなとみらいは よる きらきら きれいだよ 🌃', 'パパの かたぐるま、たかいだろ〜！'];
-  function papaWanted() { const h = CLK.h; if (eventToday() === 'bday') return h >= 7.5 && h < 21.5; return (CLK.wd >= 5 && h >= 8 && h < 20) || (CLK.wd < 5 && h >= 18.5 && h < 21); }
+  function papaWanted() { const h = CLK.h; if (eventToday() === 'bday' || eventToday() === 'papabd') return h >= 7.5 && h < 21.5; return (CLK.wd >= 5 && h >= 8 && h < 20) || (CLK.wd < 5 && h >= 18.5 && h < 21); }
   function papaSay(t, sec) { PAPA.sayT = sec || 3.5; const b = $('papaTalk'); b.textContent = t; b.style.display = 'block'; if (save.settings.voice >= 2 && window.Voice) window.Voice.say(t, 'papa'); }
   function papaUpdate(dt) {
     const p = PAPA, want = papaWanted();
@@ -3794,12 +3794,14 @@ void main(){
   bagHud();
   // ================= きせつ と イベント（ゲームの 1しゅうかん で きせつが かわる）=================
   const SEASONS = [{ id: 'spring', n: 'はる', e: '🌸' }, { id: 'summer', n: 'なつ', e: '🌻' }, { id: 'autumn', n: 'あき', e: '🍁' }, { id: 'winter', n: 'ふゆ', e: '⛄' }];
-  const EVENTS = { bday: { e: '🎂', n: 'あおちゃんの おたんじょうび' }, halloween: { e: '🎃', n: 'ハロウィン' }, xmas: { e: '🎄', n: 'クリスマス' }, hanabi: { e: '🎆', n: 'はなび たいかい' }, shogatsu: { e: '🎍', n: 'おしょうがつ' }, setsubun: { e: '👹', n: 'せつぶん' }, hina: { e: '🎎', n: 'ひなまつり' }, kodomo: { e: '🎏', n: 'こどもの ひ' }, tanabata: { e: '🎋', n: 'たなばた' }, tsukimi: { e: '🎑', n: 'おつきみ' } };
+  const EVENTS = { bday: { e: '🎂', n: 'あおちゃんの おたんじょうび' }, mamabd: { e: '💐', n: 'ママ の おたんじょうび' }, papabd: { e: '👔', n: 'パパ の おたんじょうび' }, halloween: { e: '🎃', n: 'ハロウィン' }, xmas: { e: '🎄', n: 'クリスマス' }, hanabi: { e: '🎆', n: 'はなび たいかい' }, shogatsu: { e: '🎍', n: 'おしょうがつ' }, setsubun: { e: '👹', n: 'せつぶん' }, hina: { e: '🎎', n: 'ひなまつり' }, kodomo: { e: '🎏', n: 'こどもの ひ' }, tanabata: { e: '🎋', n: 'たなばた' }, tsukimi: { e: '🎑', n: 'おつきみ' } };
   function seasonNow() { return seasonOf(save.clock.day); }
   function yearNow() { return dateOf(save.clock.day).y; }
   function eventToday(day) {
     const { m, d, wd } = dateOf(day === undefined ? save.clock.day : day);
     if (m === 7 && d === 29) return 'bday';                       // あおちゃん の たんじょうび
+    if (m === 7 && d === 31) return 'mamabd';                     // ママ の たんじょうび
+    if (m === 10 && d === 15) return 'papabd';                    // パパ の たんじょうび
     if (m === 10 && d >= 25) return 'halloween';
     if (m === 12 && (d === 24 || d === 25)) return 'xmas';
     if (m === 8 && wd >= 5) return 'hanabi';
@@ -3839,7 +3841,7 @@ void main(){
       if (lastSeason >= 0) banner(`${SEASONS[s].e} ${SEASONS[s].n} に なったよ！<small>${['さくらが さいたよ。きしゃみち や さくらどおり へ いこう', 'あついね！ しゅうまつ の よる は うみで はなび', 'はっぱが あかや きいろに なったよ', 'さむい！ ゆきが ふる ことも。よるは イルミネーション'][s]}</small>`, 4);
       lastSeason = s; todayHud();
     }
-    if (ev !== lastEv) { lastEv = ev || ''; todayHud(); if (ev && EV_LINE[ev]) { momSay(EV_LINE[ev], 4.5); if (ev === 'bday') { banner(`🎂 きょうは あおちゃん の ${aoAge()}さい の おたんじょうび！<small>まちじゅう で おいわい・のりもの は むりょう・よる 7じ から おいわい はなび</small>`, 5); confetti(); } } }
+    if (ev !== lastEv) { lastEv = ev || ''; todayHud(); if (ev && EV_LINE[ev]) { momSay(EV_LINE[ev], 4.5); if (ev === 'mamabd' || ev === 'papabd') banner(`🎂 きょうは ${ev === 'mamabd' ? 'ママ' : 'パパ'} の おたんじょうび！<small>🏠 おうち に かえって パーティー を しよう</small>`, 5); if (ev === 'bday') { banner(`🎂 きょうは あおちゃん の ${aoAge()}さい の おたんじょうび！<small>まちじゅう で おいわい・のりもの は むりょう・よる 7じ から おいわい はなび</small>`, 5); confetti(); } } }
     // はなび
     if ((ev === 'hanabi' && CLK.h >= 19.5 && CLK.h < 21) || (ev === 'bday' && CLK.h >= 19 && CLK.h < 20.5)) {
       if ((hanabiT -= dt) < 0) {
@@ -4584,7 +4586,7 @@ void main(){
   }
   // ================= 📅 カレンダー（すきな ひづけ を えらぶ）=================
   let calView = null;
-  const EV_LINE = { bday: 'きょうは あおちゃん の おたんじょうび！ 🎂 まちじゅう で おいわい だよ', halloween: 'ハロウィン！ まちの ひとに「トリック オア トリート」🎃', xmas: 'メリー クリスマス！ 🎄 あかレンガ に サンタさん', hanabi: 'こんやは うみで はなび 🎆（19:30〜21:00）', shogatsu: 'あけまして おめでとう！ 🎍', setsubun: 'おにはそと、ふくはうち！ 👹', hina: 'ひなまつり 🎎', kodomo: 'こどもの ひ！ こいのぼり が およいでるね 🎏', tanabata: 'たなばた 🎋 おねがいごと なに に する？', tsukimi: 'おつきみ 🎑 おだんご たべよう' };
+  const EV_LINE = { mamabd: 'きょうは ママ の おたんじょうび なの 💐 おうち で おいわい して くれる？', papabd: 'きょうは パパ の おたんじょうび！ 🤫 おうち で サプライズ パーティー しよう', bday: 'きょうは あおちゃん の おたんじょうび！ 🎂 まちじゅう で おいわい だよ', halloween: 'ハロウィン！ まちの ひとに「トリック オア トリート」🎃', xmas: 'メリー クリスマス！ 🎄 あかレンガ に サンタさん', hanabi: 'こんやは うみで はなび 🎆（19:30〜21:00）', shogatsu: 'あけまして おめでとう！ 🎍', setsubun: 'おにはそと、ふくはうち！ 👹', hina: 'ひなまつり 🎎', kodomo: 'こどもの ひ！ こいのぼり が およいでるね 🎏', tanabata: 'たなばた 🎋 おねがいごと なに に する？', tsukimi: 'おつきみ 🎑 おだんご たべよう' };
   function openCal(y, m) {
     const cur = dateOf(save.clock.day); y = y || cur.y; m = m || cur.m; calView = { y, m };
     const root = $('calRoot'); root.innerHTML = '';
@@ -4603,7 +4605,7 @@ void main(){
     for (let d = 1; d <= last; d++) {
       const day = first + d - 1, wd = ((day % 7) + 7) % 7, ev = eventToday(day), sc = schedOf(day);
       const ic = (ev ? EVENT_IC[ev] : '') + sc.map((w) => SCHED_IC[w]).join('') + (wd < 5 && yochienHoliday(day) ? '🏖️' : '');
-      const b = el('button', 'calc' + (day === save.clock.day ? ' now' : '') + (day === real ? ' real' : '') + (wd >= 5 ? ' off' : '') + (ev === 'bday' ? ' bday' : ''), `<b>${d}</b><i>${ic}</i>`);
+      const b = el('button', 'calc' + (day === save.clock.day ? ' now' : '') + (day === real ? ' real' : '') + (wd >= 5 ? ' off' : '') + (ev === 'bday' ? ' bday' : ev === 'mamabd' || ev === 'papabd' ? ' pbday' : ''), `<b>${d}</b><i>${ic}</i>`);
       b.addEventListener('click', () => {
         save.clock.day = day; if (save.clock.min < 7 * 60 || save.clock.min > 21 * 60) save.clock.min = 8 * 60; store(); lastSeason = seasonOf(day); lastEv = eventToday(day) || '';
         show('ovCal', false); setPaused(); refreshHud(); todayHud(); SFX.star(); PUD.clear();

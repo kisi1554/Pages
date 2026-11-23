@@ -124,6 +124,8 @@
     root.appendChild(el('div', 'room', '<span>🪟</span><span>🛋️</span><span>📺</span><span>🧸</span><span>🪴</span>'));
     say('👩', 'ママ「おかえり、あおちゃん！ ようちえんバスは すぐ ちかくの いわかめどおり から でるよ 🚌」');
     if (api.event === 'bday' && !(Y.bdays && Y.bdays[api.year])) root.appendChild(btn('🎂 おたんじょうび パーティー！', 'sbig bday', birthday));
+    const PB = { mamabd: 'mama', papabd: 'papa' }[api.event];
+    if (PB && !(Y.pbd && Y.pbd[PB + api.year])) root.appendChild(btn(`🎂 ${PB === 'mama' ? 'ママ' : 'パパ'} の おたんじょうび を おいわい する！`, 'sbig bday', () => parentBday(PB)));
     if (api.papa) say('👨', 'パパ「おかえり！ きょうは パパも いっしょ。でんしゃを みに いこうか 🚃」');
     const items = api.wallet.items(), TOYS = (window.Shops && window.Shops.TOYS) || [];
     const mine = items.map((id) => TOYS.find((t) => t.id === id)).filter(Boolean);
@@ -133,10 +135,15 @@
     if (!mine.length) g.appendChild(el('div', 'wempty', 'まだ ないよ。マークイズの トイザらスで かえるよ 🧸'));
     root.appendChild(g);
     if (mine.some((t) => !t.acc)) root.appendChild(btn('🚂 プラレールで あそぶ', 'sbig', () => playTrains(mine)));
+    if (window.Toys) {
+      const T2 = window.Toys, left = T2.boxesLeft();
+      root.appendChild(el('div', 'lvbadge', `🧢 あおちゃん <b>Lv.${T2.level}</b>「${T2.title()}」`));
+      root.appendChild(btn(`🧸 おもちゃばこ（${T2.owned(api.wallet).length}しゅるい）${left ? ` ・ 🎁 のこり ${left}こ` : ''}`, 'sbig toybtn', () => T2.open(toyCtx(home))));
+    }
     const cups = window.Odekake ? window.Odekake.cups() : [];
     if (cups.length) { root.appendChild(el('div', 'tlabel', `🍜 マイカップヌードル（${cups.length}こ）`)); root.appendChild(window.Odekake.cupGrid()); }
     const row0 = el('div', 'brow'); row0.appendChild(btn('🛏️ へやの かざりつけ', 'sbig', myRoom)); row0.appendChild(btn('🐷 ちょきんばこ', 'sbig', () => piggy())); root.appendChild(row0);
-    root.appendChild(btn('✏️ くもん の しゅくだい（1まい 500えん）', 'sbig', () => api.onClose({ homework: true })));
+    root.appendChild(btn('✏️ くもん の しゅくだい（1まい 500えん・3A は 1200えん）', 'sbig', () => api.onClose({ homework: true })));
     root.appendChild(btn('📅 カレンダーを みる', 'sbig sub', calendar));
     if (api.zukan) root.appendChild(btn('📖 ことば ずかん', 'sbig sub', () => api.zukan(root, home)));
     root.appendChild(btn('🖼️ しゃしんの アルバム（' + api.photos().length + 'まい）', 'sbig sub', () => album(true)));
@@ -145,6 +152,7 @@
     root.appendChild(btn(api.night ? '🌙 ねる まえの したく（あさに なる）' : '🛏️ おひるね する', 'sbig sub', nap));
     root.appendChild(btn('🚪 そとへ でる', 'sout', () => api.onClose()));
   }
+  const toyCtx = (back) => ({ root, el, btn, say, sfx, tone: api.tone, confetti: api.confetti, wallet: api.wallet, onBack: back, clear: (t, sub) => clear(t, sub, 'home toyroom') });
   function playTrains(mine) {
     clear('🚂 プラレールで あそぼう', 'あおちゃんの へや', 'home');
     const trains = mine.filter((t) => !t.acc), acc = mine.filter((t) => t.acc).map((t) => t.acc).join(' ');
@@ -222,20 +230,24 @@
   // ================= 🎂 7がつ 29にち の だいパーティー =================
   const GUESTS = [['👨', 'パパ', 'あおちゃん、おたんじょうび おめでとう！ きょうは パパも ずっと いっしょだよ'], ['👩', 'ママ', 'うまれて きてくれて ありがとう。だいすき だよ'],
     ['👴', 'じいじ', 'おお、また おおきく なったなあ！'], ['👵', 'ばあば', 'おめでとう。ケーキ たのしみ だね'],
-    ['🧒', 'ゆうとくん', 'あおちゃん、おめでとう！ いっしょに あそぼう！'], ['👧', 'はなちゃん', 'おめでとう！ おてがみ かいて きたよ'], ['👦', 'そうたくん', 'おめでとう〜！ プレゼント もって きた！']];
+    ['🧒', 'ゆうとくん', 'あおちゃん、おめでとう！ いっしょに あそぼう！'], ['👧', 'はなちゃん', 'おめでとう！ おてがみ かいて きたよ'], ['👦', 'そうたくん', 'おめでとう〜！ プレゼント もって きた！'],
+    ['👩‍🏫', 'ようちえん の せんせい', 'あおちゃん、おめでとう！ せんせい も おいわい に きちゃった'], ['🧑', 'おじさん', 'おめでとう！ おおきな はこ を もって きたぞ〜'],
+    ['👩‍🦱', 'おばさん', 'おめでとう！ ケーキ やさん で いちばん おおきい の かって きたよ'], ['🧒🏻', 'いとこ の りくくん', 'あおちゃん、 あとで いっしょに おもちゃ で あそぼう！'],
+    ['🤡', 'ピエロ さん', 'パーティー を もりあげに きたよ〜！ バルーン アート を どうぞ 🎈'], ['🐶', 'となり の ポチ', 'わん わん！（おめでとう！）']];
   const WISHES = ['🚄 でんしゃの うんてんしさん に なりたい', '🚀 うちゅう に いきたい', '🎹 ピアノ が じょうず に なりたい', '🏗️ ランドマークタワー みたいな たてもの を つくりたい', '😊 みんなが ずっと げんき で いますように'];
   const vsay = (t, who) => { if (window.Voice) window.Voice.say(t, who); };
   function birthday() {
     const age = api.age || 5;
     const step = (title) => { clear(`🎂 ${age}さい の おたんじょうび おめでとう！`, title, 'home party'); root.appendChild(el('div', 'pdeco', '🎈🎉🎊🎈🎁🎈🎊🎉🎈')); };
     // 1. みんな が くる
-    step('2021ねん 7がつ 29にち うまれ ・ きょうは だいパーティー！');
+    step('2021ねん 7がつ 29にち うまれ ・ きょうは おうち で だいパーティー！');
+    root.appendChild(el('div', 'pbanner', '🎊 HAPPY BIRTHDAY あおちゃん 🎊'));
     const room = el('div', 'guests'); root.appendChild(room);
     let gi = 0;
     const nextGuest = () => {
       if (gi >= GUESTS.length) { root.appendChild(btn('🎵 みんなで うたを うたう', 'sbig bday', song)); return; }
-      const [e, n, t] = GUESTS[gi++]; room.appendChild(el('span', 'gst', `<i>${e}</i><small>${n}</small>`)); say(e, `${n}「${t}」`); vsay(t, n === 'パパ' ? 'papa' : n === 'ママ' ? 'mama' : n === 'じいじ' ? 'grandpa' : n === 'ばあば' ? 'granny' : 'sister');
-      sfx('pick'); setTimeout(nextGuest, 1100);
+      const [e, n, t] = GUESTS[gi++]; room.appendChild(el('span', 'gst', `<i>${e}</i><small>${n}</small>`)); say(e, `${n}「${t}」`); vsay(t, n === 'パパ' ? 'papa' : n === 'ママ' ? 'mama' : n === 'じいじ' ? 'grandpa' : n === 'ばあば' ? 'granny' : n === 'となり の ポチ' ? 'dog' : n === 'おじさん' ? 'fisher' : n === 'ようちえん の せんせい' ? 'teacher' : 'sister');
+      sfx('pick'); setTimeout(nextGuest, 900);
     };
     say('🔔', 'ピンポーン！ おきゃくさん が きたよ'); setTimeout(nextGuest, 700);
     // 2. うた（ハッピーバースデー の メロディ）
@@ -262,22 +274,27 @@
       WISHES.forEach((w) => g.appendChild(btn(w, 'kch2', () => { Y.wish = w; store(); sfx('star'); say('👴', `じいじ「${w.replace(/^\S+\s/, '')}…きっと かなうよ！」`); vsay('きっと かなうよ', 'grandpa'); setTimeout(gifts, 1300); })));
       root.appendChild(g);
     }
-    // 5. プレゼント
+    // 5. プレゼント（なんと 100こ！ なにが でるかは おたのしみ）
     function gifts() {
       step('🎁 プレゼント の じかん！');
-      say('👨', 'パパ と ママ から：すきな おもちゃ を ひとつ えらんでね');
-      const T = (window.Shops && window.Shops.TOYS) || [], own = api.wallet.items(), cand = T.filter((t) => !t.acc && !own.includes(t.id)).sort(() => Math.random() - 0.5).slice(0, 3);
-      const g = el('div', 'igrid');
-      const after = (name) => {
-        const w = api.wallet.get(); w[1000] = (w[1000] || 0) + 1; api.wallet.set(w);    // じいじ と ばあば から おいわい
-        Y.stickers = (Y.stickers || 0) + 3; Y.bdays = Y.bdays || {}; Y.bdays[api.year] = 1; store(); sfx('big');
-        step('🎁 もらった プレゼント');
-        root.appendChild(el('div', 'giftlist', `<p>👨👩 パパ と ママ： <b>${name}</b></p><p>👴👵 じいじ と ばあば： <b>おいわい 1000えん 💴</b></p><p>🧒👧👦 ともだち： <b>にがおえ と シール 3まい 🌟</b></p>`));
-        root.appendChild(btn('🍰 ケーキ を たべる', 'sbig bday', cakeEat));
-      };
-      cand.forEach((t) => { const b = el('button', 'icard', `${window.Shops.toySvg(t, 100)}<span>${t.name}</span>`); b.addEventListener('click', () => { api.wallet.addItem(t.id); after(t.name); }); g.appendChild(b); });
-      if (!cand.length) { const b = btn('🍙 おにぎり いっぱい（おもちゃ は ぜんぶ もってる）', 'sbig', () => after('おにぎり いっぱい')); g.appendChild(b); }
-      root.appendChild(g);
+      say('👨', 'パパ「みんな から の プレゼント が…… なんと 100こ！！」'); vsay('プレゼントが なんと 100こ！', 'papa');
+      const T2 = window.Toys, fresh = T2 ? T2.giveBirthday(api.year) : false;
+      const pile = el('div', 'gpile'); root.appendChild(pile);
+      for (let i = 0; i < 100; i++) { const b = el('i', '', '🎁'); b.style.animationDelay = (i * 0.025) + 's'; b.style.setProperty('--h', (i * 47) % 360); pile.appendChild(b); }
+      sfx('big'); api.confetti && api.confetti();
+      if (fresh) { const w = api.wallet.get(); w[1000] = (w[1000] || 0) + 1; api.wallet.set(w); }   // じいじ と ばあば から おいわい
+      Y.stickers = (Y.stickers || 0) + 3; Y.bdays = Y.bdays || {}; Y.bdays[api.year] = 1; store();
+      root.appendChild(el('div', 'giftlist', `<p>🎁 おもちゃ <b>100こ</b>（なかみ は あけて からの おたのしみ！）</p><p>👴👵 じいじ と ばあば： <b>おいわい 1000えん 💴</b></p><p>🧒👧👦 ともだち： <b>にがおえ と シール 3まい 🌟</b></p>`));
+      say('👩', 'ママ「ひとつずつ あけて みよう！ あそんだり、 おべんきょう すると レベル アップ するよ。 のこり は おうち の 🧸 おもちゃばこ で いつでも あけられるよ」');
+      if (T2) root.appendChild(btn('🎁 ひとつ あけて みる！', 'sbig bday', () => T2.open(toyCtx(afterGifts), 'open')));
+      root.appendChild(btn('🍰 ケーキ を たべる', 'sbig', cakeEat));
+    }
+    function afterGifts() {
+      step('🎁 プレゼント');
+      const left = window.Toys ? window.Toys.boxesLeft() : 0;
+      say('👩', `ママ「たのしかったね！ のこり ${left}こ は あとで あけようか」`);
+      if (left) root.appendChild(btn(`🎁 もっと あける（のこり ${left}こ）`, 'sbig bday', () => window.Toys.open(toyCtx(afterGifts), 'open')));
+      root.appendChild(btn('🍰 ケーキ を たべる', 'sbig', cakeEat));
     }
     // 6. ケーキ
     function cakeEat() {
@@ -302,6 +319,99 @@
       api.tone && api.tone(1800, 0.04, 'square', 0.06); api.confetti && api.confetti();
       root.appendChild(el('p', 'desc', '📷 しゃしん を アルバム に いれたよ'));
       root.appendChild(el('div', 'prize', `<i>🏅</i><b>さいこう の おたんじょうび！</b><span>${age}さい の あおちゃん、おめでとう！ よるは みなとみらい の うみ で おいわい の はなび 🎆</span>`));
+      root.appendChild(btn('← へやに もどる', 'sbig', home));
+    }
+  }
+  // ================= 💐 ママ（7/31）と 👔 パパ（10/15）の おたんじょうび =================
+  // あおちゃん が おいわい する がわ。かざりつけ → てづくり プレゼント → ケーキ → うた → ろうそく → きねん しゃしん
+  const HB_NOTES = [[392, 0.38], [392, 0.12], [440, 0.5], [392, 0.5], [523, 0.5], [494, 1], [392, 0.38], [392, 0.12], [440, 0.5], [392, 0.5], [587, 0.5], [523, 1], [392, 0.38], [392, 0.12], [784, 0.5], [659, 0.5], [523, 0.5], [494, 0.5], [440, 1], [698, 0.38], [698, 0.12], [659, 0.5], [523, 0.5], [587, 0.5], [523, 1.2]];
+  function hbSong(name, done) {
+    const lines = ['ハッピー バースデー トゥー ユー', 'ハッピー バースデー トゥー ユー', `ハッピー バースデー ディア ${name}`, 'ハッピー バースデー トゥー ユー'];
+    const lyr = el('div', 'lyrics'); lines.forEach((l) => lyr.appendChild(el('p', '', l))); root.appendChild(lyr);
+    let t = 0; HB_NOTES.forEach(([f, d], i) => { api.tone && api.tone(f, d * 0.95, 'triangle', 0.07, null, t); const li = i < 6 ? 0 : i < 12 ? 1 : i < 19 ? 2 : 3; setTimeout(() => { lyr.querySelectorAll('p').forEach((p, k) => p.classList.toggle('on', k === li)); }, t * 1000); t += d * 0.9; });
+    setTimeout(done, t * 1000 + 300);
+  }
+  const PBD = {
+    mama: { n: 'ママ', e: '👩', v: 'mama', other: ['👨', 'パパ', 'papa'], col: 'mama',
+      gifts: [['💐', 'おはな の ブーケ', 'わあ、 きれい！ ママ の すきな いろ だ'], ['🎨', 'ママ の にがおえ', 'これ ママ？ にてる〜！ かざって おくね'], ['📿', 'てづくり ビーズ の ネックレス', 'すてき！ きょう ずっと つけて いるね'], ['🍪', 'クッキー（パパ と やいた）', 'おいしそう！ いっしょに たべよう']],
+      words: ['いつも おいしい ごはん ありがとう', 'ママ だいすき！', 'おしごと と かじ おつかれさま', 'ずっと げんき で いてね', 'こんど いっしょに コスモワールド いこうね'],
+      thanks: 'ありがとう、 あおちゃん！ ママ、 せかい で いちばん しあわせ だよ', last: 'ママ の おたんじょうび、 だいせいこう！' },
+    papa: { n: 'パパ', e: '👨', v: 'papa', other: ['👩', 'ママ', 'mama'], col: 'papa',
+      gifts: [['👔', 'ネクタイ の え', 'かっこいい！ あした かいしゃ に もって いこう'], ['🚃', 'でんしゃ の え', 'すごい！ パパ も でんしゃ だいすき なんだ'], ['🪪', 'かたたたき けん', 'やった！ さっそく つかって いい？'], ['☕', 'パパ の マグカップ（えを かいた）', 'まいあさ これ で コーヒー を のむよ']],
+      words: ['いつも あそんで くれて ありがとう', 'パパ だいすき！', 'おしごと がんばってね', 'また でんしゃ みに いこうね', 'パパ みたいに かっこよく なりたい'],
+      thanks: 'あおちゃん…… ありがとう！ パパ、 なきそう だよ', last: 'パパ の おたんじょうび、 だいせいこう！' },
+  };
+  function parentBday(who) {
+    const P = PBD[who], step = (sub) => { clear(`🎂 ${P.n} の おたんじょうび`, sub, 'home party'); root.appendChild(el('div', 'pdeco', '🎈🎀🌸⭐🎉⭐🌸🎀🎈')); };
+    // 1. サプライズ の じゅんび（かざりつけ）
+    step(`${who === 'mama' ? '7がつ 31にち' : '10がつ 15にち'} ・ ${P.n} には ないしょ だよ 🤫`);
+    say(P.other[0], `${P.other[1]}「${P.n} が かえって くる まえ に、 へや を かざろう！ ぜんぶ タップ してね」`); vsay(`${P.n}が かえってくる まえに、 へやを かざろう`, P.other[2]);
+    const DEC = ['🎈', '🎀', '🌸', '⭐', '🎉', '🏮'], wall = el('div', 'decowall'); root.appendChild(wall);
+    let left = DEC.length;
+    DEC.forEach((d, i) => { const b = el('button', 'decoit', '❔'); b.addEventListener('click', () => { if (b.classList.contains('on')) return; b.classList.add('on'); b.textContent = d; sfx('pick'); api.tone && api.tone(600 + i * 90, 0.12, 'triangle', 0.06); if (!--left) { say('✨', 'かんせい！ すてきな へや に なった'); setTimeout(gift, 900); } }); wall.appendChild(b); });
+    // 2. てづくり プレゼント と おてがみ
+    function gift() {
+      step('🎁 てづくり の プレゼント を えらぼう');
+      say(P.other[0], `${P.other[1]}「${P.n} に なにを つくる？」`);
+      const g = el('div', 'kchoice');
+      P.gifts.forEach((gf) => g.appendChild(btn(`${gf[0]} ${gf[1]}`, 'kch2', () => { sfx('star'); letter(gf); })));
+      root.appendChild(g);
+    }
+    function letter(gf) {
+      step('💌 おてがみ を かこう（ことば を 2つ えらんでね）');
+      const card = el('div', 'pletter', `<b>${P.n} へ</b><p class="lw"></p><small>あお より</small>`); root.appendChild(card);
+      const picked = [], g = el('div', 'kchoice');
+      P.words.forEach((w) => { const b = btn(w, 'kch2', () => { if (b.disabled || picked.length >= 2) return; b.disabled = true; picked.push(w); card.querySelector('.lw').innerHTML = picked.map((x) => `${x}<br>`).join(''); sfx('pick');
+        if (picked.length === 2) setTimeout(() => cake(gf, picked), 900); }); g.appendChild(b); });
+      root.appendChild(g);
+    }
+    // 3. ケーキ を かざる
+    function cake(gf, words) {
+      step('🍰 ケーキ に いちご を のせよう');
+      say(P.other[0], `${P.other[1]}「いちご を 5こ のせてね」`);
+      const ck = el('div', 'cake big', '<i>🎂</i>'), tops = el('div', 'tops'); ck.prepend(tops); root.appendChild(ck);
+      let n = 0; const b = btn('🍓 いちご を のせる', 'sbig', () => { if (n >= 5) return; n++; tops.appendChild(el('i', '', '🍓')); sfx('pick'); if (n === 5) { b.remove(); say('😋', 'おいしそう！ あ、 ピンポーン…… かえって きた！'); api.tone && api.tone(880, 0.2, 'sine', 0.06); api.tone && api.tone(660, 0.3, 'sine', 0.06, null, 0.25); setTimeout(() => surprise(gf, words), 1500); } });
+      root.appendChild(b);
+    }
+    // 4. サプライズ！ うた と ろうそく
+    function surprise(gf, words) {
+      step('🎉 サプライズ！');
+      root.appendChild(el('div', 'tybig', P.e));
+      say(P.e, `${P.n}「ただいま〜…… えっ！？ なに これ！？」`); vsay('ただいま。 えっ、 なに これ！？', P.v);
+      api.confetti && api.confetti(); sfx('big');
+      say('🧢', `あおちゃん「${P.n}、 おたんじょうび おめでとう〜！！」`); vsay(`${P.n}、 おたんじょうび おめでとう！`, 'ao');
+      setTimeout(() => { say('🎵', 'みんな で うたおう'); hbSong(P.n, () => candles(gf, words)); }, 2200);
+    }
+    function candles(gf, words) {
+      step('🕯️ ろうそく を ふーっ');
+      say(P.e, `${P.n}「あおちゃん、 いっしょに けして くれる？（${P.n} の としは ないしょ 🤫）」`);
+      const ck = el('div', 'cake big', '<div class="candles"></div><i>🎂</i>'); root.appendChild(ck);
+      let left = 5;
+      for (let i = 0; i < 5; i++) { const c = el('button', 'candle', '🕯️'); c.addEventListener('click', () => { if (c.classList.contains('off')) return; c.classList.add('off'); c.textContent = '💨'; api.tone && api.tone(300, 0.2, 'sine', 0.04, 150); if (!--left) { api.confetti && api.confetti(); sfx('big'); setTimeout(() => present(gf, words), 1000); } }); ck.firstChild.appendChild(c); }
+    }
+    // 5. プレゼント を わたす → よろこぶ
+    function present(gf, words) {
+      step('🎁 プレゼント を わたそう');
+      root.appendChild(el('div', 'tybig', gf[0]));
+      root.appendChild(el('div', 'pletter', `<b>${P.n} へ</b><p>${words.join('<br>')}</p><small>あお より</small>`));
+      say(P.e, `${P.n}「${gf[2]}」`); vsay(gf[2], P.v);
+      setTimeout(() => { say(P.e, `${P.n}「${P.thanks}」 🤗 ぎゅー！`); vsay(P.thanks, P.v); root.appendChild(btn('📷 きねん しゃしん を とる', 'sbig bday', () => photo(gf))); }, 2600);
+    }
+    // 6. しゃしん（アルバム に はいる）
+    function photo(gf) {
+      step('📷 はい、チーズ！');
+      const c = document.createElement('canvas'); c.width = 480; c.height = 320; c.className = 'bdphoto'; const g = c.getContext('2d');
+      const gr = g.createLinearGradient(0, 0, 0, 320); gr.addColorStop(0, who === 'mama' ? '#ffdeeb' : '#d0ebff'); gr.addColorStop(1, '#fff9db'); g.fillStyle = gr; g.fillRect(0, 0, 480, 320);
+      g.font = '34px sans-serif'; g.textAlign = 'center'; '🎈🎀🌸⭐🎉⭐🌸🎀🎈'.match(/\p{Extended_Pictographic}/gu).forEach((e, i) => g.fillText(e, 30 + i * 52, 44));
+      g.font = 'bold 28px sans-serif'; g.fillStyle = who === 'mama' ? '#d6336c' : '#1c7ed6'; g.fillText(`${P.n} おたんじょうび おめでとう！`, 240, 92);
+      g.font = '64px sans-serif'; [P.other[0], '🧢', P.e].forEach((e, i) => g.fillText(e, 140 + i * 100, i === 2 ? 200 : 210)); g.fillText(gf[0], 400, 270); g.fillText('🎂', 90, 280);
+      g.font = 'bold 15px sans-serif'; g.fillStyle = '#5a6b8c'; g.fillText(`${api.dateStr || ''} ・ おうち で`, 240, 310);
+      root.appendChild(c);
+      let url = ''; try { url = c.toDataURL('image/jpeg', 0.8); } catch (e) { url = ''; }
+      if (url && api.addPhoto) api.addPhoto(url);
+      Y.pbd = Y.pbd || {}; Y.pbd[who + api.year] = 1; Y.stickers = (Y.stickers || 0) + 2; store();
+      api.tone && api.tone(1800, 0.04, 'square', 0.06); api.confetti && api.confetti();
+      root.appendChild(el('div', 'prize', `<i>🏅</i><b>${P.last}</b><span>しゃしん は アルバム に いれたよ ・ シール 2まい 🌟</span>`));
       root.appendChild(btn('← へやに もどる', 'sbig', home));
     }
   }

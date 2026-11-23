@@ -86,7 +86,7 @@
     const items = api.wallet.items();
     root.appendChild(el('div', 'tlabel', '🎁 かったもの'));
     const g = el('div', 'igrid');
-    items.forEach((id) => { const t = TOYS.find((x) => x.id === id); if (t) g.appendChild(el('div', 'icard', `${toySvg(t, 90)}<span>${t.name}</span>`)); });
+    items.forEach((id) => { const t = TOYS.find((x) => x.id === id) || (window.Toys && window.Toys.byId(id)); if (t) g.appendChild(el('div', 'icard', `${anySvg(t, 90)}<span>${t.name}</span>`)); });
     if (!items.length) g.appendChild(el('div', 'wempty', 'まだ なにも かっていないよ'));
     root.appendChild(g);
     const gc = api.wallet.gacha(), ks = Object.keys(gc);
@@ -124,15 +124,22 @@
       ${[18, 40, 66, 96].map((x) => `<circle cx="${x}" cy="48" r="6" fill="#343a40"/><circle cx="${x}" cy="48" r="2" fill="#adb5bd"/>`).join('')}
       <rect x="0" y="56" width="120" height="6" rx="3" fill="#1971c2"/></svg>`.replace(/BODY/g, t.body);
   }
+  const anySvg = (t, w) => (t.e && window.Toys ? window.Toys.svg(t, w) : toySvg(t, w));
+  let toyTab = 'plarail';
   function toys() {
     const cart = [];
     const list = () => {
-      clear('🧸 トイザらス', 'マークイズ みなとみらい 3かい ・ プラレール うりば', 'toy');
+      const TY = window.Toys, tabs = Object.assign({ plarail: '🚃 プラレール' }, TY ? TY.CATS : {});
+      clear('🧸 トイザらス', `マークイズ みなとみらい 3かい ・ ${tabs[toyTab].slice(2).trim()} うりば`, 'toy');
+      const tr = el('div', 'ttabs');
+      Object.keys(tabs).forEach((k) => { const b = el('button', 'ttab' + (k === toyTab ? ' on' : ''), tabs[k]); b.addEventListener('click', () => { toyTab = k; sfx('tap'); list(); }); tr.appendChild(b); });
+      root.appendChild(tr);
       root.appendChild(el('div', 'tlabel', `👛 ${yen(api.wallet.total())}　🛒 かご ${cart.length}こ（${yen(cart.reduce((s, t) => s + t.price, 0))}）`));
       const g = el('div', 'tgrid');
-      TOYS.forEach((t) => {
-        const own = api.wallet.items().includes(t.id), inCart = cart.includes(t);
-        const c = el('button', 'tcard' + (inCart ? ' in' : ''), `${toySvg(t)}<span>${t.name}</span><b>${yen(t.price)}</b>${own ? '<em>もってる</em>' : ''}${inCart ? '<em class="c">かごの なか</em>' : ''}`);
+      const shelf = toyTab === 'plarail' || !TY ? TOYS : TY.CATALOG.filter((t) => t.cat === toyTab);
+      shelf.forEach((t) => {
+        const own = api.wallet.items().includes(t.id) || (TY && t.e && TY.owned().some((x) => x.id === t.id)), inCart = cart.includes(t);
+        const c = el('button', 'tcard' + (inCart ? ' in' : ''), `${anySvg(t)}<span>${t.name}</span><b>${yen(t.price)}</b>${own ? '<em>もってる</em>' : ''}${inCart ? '<em class="c">かごの なか</em>' : ''}`);
         c.addEventListener('click', () => look(t));
         g.appendChild(c);
       });
@@ -144,7 +151,7 @@
         pay(total, cart.map((t) => t.name).join('・'), () => {
           cart.forEach((t) => api.wallet.addItem(t.id)); api.confetti && api.confetti(); sfx('big');
           clear('🎁 かえた！', 'トイザらスの ふくろに いれて もらったよ', 'toy');
-          const g2 = el('div', 'igrid'); cart.forEach((t) => g2.appendChild(el('div', 'icard', `${toySvg(t, 100)}<span>${t.name}</span>`))); root.appendChild(g2);
+          const g2 = el('div', 'igrid'); cart.forEach((t) => g2.appendChild(el('div', 'icard', `${anySvg(t, 100)}<span>${t.name}</span>`))); root.appendChild(g2);
           cart.length = 0;
           root.appendChild(btn('🧸 おみせに もどる', 'sbig', list)); root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
         }, list);
@@ -153,6 +160,14 @@
       root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
     };
     const look = (t) => { // ながめる: レールの うえを はしらせる
+      if (t.e) { // プラレール いがい の おもちゃ
+        clear('👀 ' + t.name, yen(t.price), 'toy');
+        root.appendChild(el('div', 'tybig', t.e));
+        root.appendChild(el('p', 'desc', 'かったら おうち の 🧸 おもちゃばこ で あそべるよ。 おべんきょう も できて、 あおちゃん の レベル が あがる！'));
+        const row2 = el('div', 'brow');
+        row2.appendChild(btn(cart.includes(t) ? '🛒 かごから だす' : '🛒 かごに いれる', 'sbig', () => { const i = cart.indexOf(t); if (i >= 0) cart.splice(i, 1); else cart.push(t); sfx('pick'); list(); }));
+        root.appendChild(row2); root.appendChild(btn('← たなに もどる', 'sout', list)); return;
+      }
       clear('👀 ' + t.name, yen(t.price), 'toy');
       const show = t.acc ? TOYS[0] : t;
       const stage = el('div', 'stage', `<svg viewBox="0 0 320 200" width="100%"><rect width="320" height="200" rx="16" fill="#e7f5ff"/>
