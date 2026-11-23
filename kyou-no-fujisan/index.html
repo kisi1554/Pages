@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>きょうの ふじさん</title>
+<style>
+  :root {
+    --ink: #2b3340; --sub: #5d6878; --bg: #eaf5ff; --card: #ffffff;
+    --accent: #3a6fb0; --ok: #2f9e5a; --ng: #d9534f; --gold: #f2b01e;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+    color: var(--ink); background: linear-gradient(#dff0ff, #f7fbff 60%, #fff8ec);
+    -webkit-user-select: none; user-select: none; overflow-x: hidden;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  rt { font-size: .55em; }
+  .screen { display: none; min-height: 100dvh; padding: max(10px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)); }
+  .screen.on { display: block; }
+
+  /* ── うえの バー ── */
+  .bar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .bar h2 { flex: 1; margin: 0; font-size: 1.25rem; text-align: center; }
+  .icon-btn {
+    min-width: 52px; height: 52px; border: none; border-radius: 16px; background: #fff;
+    font-size: 1.6rem; box-shadow: 0 3px 0 #c9d6e6;
+  }
+  .icon-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #c9d6e6; }
+
+  /* ── タイトル ── */
+  #home { text-align: center; }
+  .title-scene { max-width: 560px; margin: 4px auto 0; border-radius: 22px; overflow: hidden; box-shadow: 0 6px 18px #0002; }
+  .title-scene svg { display: block; width: 100%; height: auto; }
+  #home h1 { font-size: clamp(1.8rem, 7vw, 2.6rem); margin: 14px 0 2px; letter-spacing: .08em; }
+  #home .lead { margin: 0 0 14px; color: var(--sub); font-size: 1.05rem; }
+  .menu { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 560px; margin: 0 auto; }
+  .menu button {
+    border: none; border-radius: 20px; padding: 14px 8px; background: #fff; font-size: 1.15rem; font-weight: bold;
+    box-shadow: 0 5px 0 var(--sh, #b9cbe0); display: flex; flex-direction: column; align-items: center; gap: 4px; min-height: 104px;
+  }
+  .menu button:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--sh, #b9cbe0); }
+  .menu .big { font-size: 2.3rem; line-height: 1; }
+  .menu small { font-weight: normal; color: var(--sub); font-size: .85rem; }
+  .album-count { margin-top: 12px; color: var(--sub); }
+  .parents { max-width: 560px; margin: 16px auto 0; text-align: left; font-size: .85rem; color: var(--sub); }
+  .parents summary { cursor: pointer; padding: 8px 0; }
+
+  /* ── あそぶ ── */
+  .play { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; max-width: 1100px; margin: 0 auto; }
+  .odai {
+    display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 18px; padding: 8px;
+    box-shadow: 0 3px 10px #0001; border: 3px dashed #f2b01e;
+  }
+  .odai .thumb { width: 118px; flex: none; border-radius: 10px; overflow: hidden; border: 4px solid #fff; box-shadow: 0 2px 6px #0003; transform: rotate(-3deg); }
+  .odai .thumb svg { display: block; width: 100%; height: auto; }
+  .odai .txt { flex: 1; min-width: 0; }
+  .odai .lbl { font-size: .9rem; color: var(--sub); }
+  .odai .nm { font-size: 1.3rem; font-weight: bold; margin: 2px 0 6px; }
+  .hint-btn { border: none; border-radius: 12px; background: #fff3cf; padding: 8px 12px; font-size: 1rem; box-shadow: 0 3px 0 #ecd28a; min-height: 44px; }
+  .scene-wrap { position: relative; margin: 0 auto; width: min(100%, calc((100dvh - 430px) * 1.538)); min-width: 240px; }
+  .scene { border-radius: 20px; overflow: hidden; box-shadow: 0 6px 16px #0003; background: #9cc; }
+  .scene svg { display: block; width: 100%; height: auto; }
+  .lake-tag {
+    position: absolute; left: 3%; bottom: 5%; border: none; border-radius: 12px; padding: 6px 10px;
+    background: #fffffff0; font-size: .95rem; font-weight: bold; box-shadow: 0 2px 6px #0003; min-height: 40px;
+  }
+  .info { text-align: center; font-size: 1rem; min-height: 1.5em; color: var(--ink); }
+  .info b { color: var(--accent); }
+  .dials { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 559px) { .dial .arrow { display: none; } .dial .val { font-size: .9rem; min-height: 2.2em; } .knob { width: 66px; height: 66px; } .knob .em { font-size: 1.8rem; } }
+  .dial { background: #fff; border-radius: 18px; padding: 8px 4px 10px; text-align: center; box-shadow: 0 3px 10px #0001; position: relative; border: 3px solid transparent; }
+  .dial .dl { font-size: .9rem; color: var(--sub); }
+  .dial .row { display: flex; align-items: center; justify-content: center; gap: 2px; }
+  .arrow { border: none; background: #eef3f9; border-radius: 12px; width: 34px; height: 52px; font-size: 1.1rem; flex: none; }
+  .knob {
+    width: 76px; height: 76px; border-radius: 50%; border: none; position: relative; flex: none;
+    background: radial-gradient(circle at 35% 30%, #fff, #dfe7f1 70%, #c2cfdf); box-shadow: 0 4px 0 #a9b8cb, inset 0 -3px 6px #0001;
+  }
+  .knob:active { transform: translateY(2px); box-shadow: 0 2px 0 #a9b8cb; }
+  .knob .ring { position: absolute; inset: 0; border-radius: 50%; transition: transform .35s cubic-bezier(.3,1.6,.5,1); }
+  .knob .ring::before { content: ""; position: absolute; left: 50%; top: 4px; width: 8px; height: 14px; margin-left: -4px; border-radius: 4px; background: #e85a3a; }
+  .knob .em { position: absolute; inset: 0; display: grid; place-items: center; font-size: 2.1rem; }
+  .dial .val { font-weight: bold; font-size: 1rem; margin-top: 4px; min-height: 2.5em; display: flex; align-items: center; justify-content: center; line-height: 1.2; }
+  .dial.ok { border-color: var(--ok); }
+  .dial.ng { border-color: var(--ng); animation: wig .5s; }
+  .dial.free { border-color: #c9d6e6; }
+  .dial .mark { position: absolute; top: -10px; right: -6px; background: #fff; border-radius: 50%; width: 30px; height: 30px; display: none; place-items: center; font-size: 1.1rem; box-shadow: 0 2px 4px #0003; }
+  .dial.ok .mark, .dial.ng .mark, .dial.free .mark { display: grid; }
+  @keyframes wig { 20%,60% { transform: rotate(-3deg); } 40%,80% { transform: rotate(3deg); } }
+
+  @media (orientation: landscape) and (min-width: 640px) {
+    .play { grid-template-columns: minmax(0, 1.55fr) minmax(280px, 1fr); grid-template-areas: "scene side"; align-items: start; }
+    .play .main { grid-area: scene; }
+    .play .side { grid-area: side; display: grid; gap: 10px; }
+    .scene-wrap { width: min(100%, calc((100dvh - 120px) * 1.538)); }
+    .dials { grid-template-columns: 1fr; }
+    .dial { display: grid; grid-template-columns: 74px 1fr; align-items: center; text-align: left; padding: 6px 10px; }
+    .dial .dl { grid-row: 1 / 3; text-align: center; font-weight: bold; }
+    .dial .row { justify-content: flex-start; }
+    .dial .val { justify-content: flex-start; min-height: 1.4em; }
+  }
+  .main, .side { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; min-width: 0; }
+
+  /* ── モーダル ── */
+  .modal { position: fixed; inset: 0; background: #0007; display: none; place-items: center; padding: 16px; z-index: 20; }
+  .modal.on { display: grid; }
+  .sheet { background: #fff; border-radius: 24px; padding: 16px; max-width: 460px; width: 100%; text-align: center; animation: pop .45s cubic-bezier(.3,1.6,.5,1); max-height: 92dvh; overflow: auto; }
+  @keyframes pop { from { transform: scale(.6); opacity: 0; } }
+  .sheet .yatta { font-size: 1.8rem; font-weight: bold; color: #e8732a; }
+  .sheet .pic { border-radius: 14px; overflow: hidden; margin: 8px 0; box-shadow: 0 3px 10px #0003; }
+  .sheet .pic svg { display: block; width: 100%; height: auto; }
+  .sheet h3 { margin: 6px 0; font-size: 1.5rem; }
+  .sheet p { font-size: 1.05rem; line-height: 1.7; margin: 6px 0 12px; text-align: left; }
+  .btns { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn { border: none; border-radius: 16px; padding: 12px 20px; font-size: 1.15rem; font-weight: bold; background: var(--accent); color: #fff; box-shadow: 0 4px 0 #24508a; min-height: 52px; }
+  .btn.sub { background: #fff; color: var(--ink); box-shadow: 0 4px 0 #c9d6e6; border: 2px solid #dfe6ef; }
+  .btn:active { transform: translateY(2px); }
+  .toast { position: fixed; left: 50%; top: 14px; transform: translate(-50%, -140%); background: #fff; padding: 10px 18px; border-radius: 16px; box-shadow: 0 4px 14px #0003; font-weight: bold; z-index: 30; transition: transform .3s; max-width: 92vw; text-align: center; }
+  .toast.on { transform: translate(-50%, 0); }
+
+  /* ── クイズ ── */
+  .quiz { max-width: 640px; margin: 0 auto; display: grid; gap: 10px; }
+  .qprog { text-align: center; font-size: 1.2rem; letter-spacing: .2em; }
+  .qscene { border-radius: 18px; overflow: hidden; box-shadow: 0 4px 12px #0003; width: min(100%, calc((100dvh - 400px) * 1.538)); min-width: 240px; margin: 0 auto; }
+  .qscene svg { display: block; width: 100%; height: auto; }
+  .qtext { font-size: 1.3rem; font-weight: bold; text-align: center; margin: 4px 0; }
+  .choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .choice { border: 3px solid #dfe6ef; background: #fff; border-radius: 18px; padding: 10px 4px; font-size: 1.1rem; line-height: 1.3; font-weight: bold; min-height: 64px; box-shadow: 0 4px 0 #c9d6e6; }
+  .choice .ce { font-size: 1.8rem; display: block; }
+  .choice.wrong { opacity: .35; animation: wig .4s; }
+  .choice.right { border-color: var(--ok); background: #e9f9ef; }
+  .qexp { background: #fffbe8; border-radius: 14px; padding: 10px 14px; font-size: 1.05rem; line-height: 1.7; display: none; }
+  .qexp.on { display: block; }
+  .qnext { justify-self: center; display: none; }
+  .qnext.on { display: inline-block; }
+  @media (orientation: landscape) and (min-width: 640px) and (max-height: 560px) {
+    .quiz { max-width: 1000px; grid-template-columns: 1fr 1fr; align-items: start; }
+    .quiz .qprog, .quiz .qtext { grid-column: 1 / -1; }
+    .qscene { width: 100%; grid-row: span 3; }
+  }
+
+  /* ── ちず ── */
+  .mapbox { max-width: 760px; margin: 0 auto; display: grid; gap: 8px; }
+  .msg { background: #fff; border-radius: 16px; padding: 10px 14px; font-size: 1.15rem; font-weight: bold; text-align: center; min-height: 3em; display: grid; place-items: center; box-shadow: 0 3px 10px #0001; }
+  #map { width: 100%; height: min(70dvh, 120vw); display: block; background: #bfe3f5; border-radius: 18px; box-shadow: 0 4px 12px #0002; touch-action: manipulation; }
+  #prefs path { fill: #efe6c6; stroke: #fff; stroke-width: 1.2; vector-effect: non-scaling-stroke; transition: fill .4s; }
+  #prefs path.shizuoka { fill: #ffb25b; }
+  #prefs path.yamanashi { fill: #8fd18a; }
+  #prefs path.flash { fill: #d9e7f5; }
+  #map .lbl { font-weight: bold; paint-order: stroke; stroke: #fff; stroke-linejoin: round; fill: #333; }
+  @media (orientation: landscape) and (min-width: 640px) {
+    .mapbox { max-width: 1100px; grid-template-columns: 300px 1fr; align-items: start; }
+    #map { height: calc(100dvh - 100px); }
+  }
+
+  /* ── アルバム ── */
+  .album { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; max-width: 900px; margin: 0 auto; }
+  .acard { border: none; background: #fff; border-radius: 14px; padding: 6px 6px 8px; box-shadow: 0 3px 8px #0002; text-align: center; }
+  .acard svg { display: block; width: 100%; height: auto; border-radius: 8px; }
+  .acard .an { font-weight: bold; margin-top: 4px; font-size: 1rem; }
+  .acard.locked .ph { aspect-ratio: 400/260; border-radius: 8px; background: repeating-linear-gradient(45deg, #eef2f7 0 10px, #e4eaf2 10px 20px); display: grid; place-items: center; font-size: 2.4rem; color: #9aa9bb; }
+
+  .confetti { position: fixed; top: -20px; width: 10px; height: 14px; z-index: 40; pointer-events: none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  .whoosh { animation: whoosh .6s linear infinite; }
+  @keyframes whoosh { from { transform: translateX(0); } to { transform: translateX(-80px); } }
+  .drift { animation: drift 30s linear infinite alternate; }
+  @keyframes drift { to { transform: translateX(40px); } }
+  .tw { animation: tw 2s ease-in-out infinite alternate; }
+  @keyframes tw { to { opacity: .3; } }
+  .shine { animation: shine 1.4s ease-in-out infinite alternate; transform-origin: 200px 72px; transform-box: view-box; }
+  @keyframes shine { to { transform: scale(1.25) rotate(20deg); } }
+  @media (prefers-reduced-motion: reduce) { .whoosh, .drift, .tw, .shine { animation: none; } }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ======== タイトル ======== -->
+<section id="home" class="screen on">
+  <div class="bar"><span style="flex:1"></span><button class="icon-btn snd" aria-label="おと">🔊</button></div>
+  <div class="title-scene" id="titleScene"></div>
+  <h1>きょうの ふじさん</h1>
+  <p class="lead">きせつ・じかん・ばしょで ふじさんは すがたが かわるよ</p>
+  <div class="menu">
+    <button data-go="play" style="--sh:#e6b84a"><span class="big">🖼️</span>おだい あそび<small>おなじ けしきを つくろう</small></button>
+    <button data-go="quiz" style="--sh:#7fbf8f"><span class="big">❓</span>クイズ<small>ゆき と くもを よもう</small></button>
+    <button data-go="map" style="--sh:#e8a06a"><span class="big">🗾</span>ちず<small>ふじさんは どこ？</small></button>
+    <button data-go="album" style="--sh:#a49ad6"><span class="big">📒</span>アルバム<small>あつめた けしき</small></button>
+  </div>
+  <div class="album-count" id="homeCount"></div>
+  <details class="parents">
+    <summary>おうちの かたへ</summary>
+    <p>富士山の見え方が「季節（雪の量）」「時刻（朝焼け・夕焼け）」「見る場所」で変わること、富士山が静岡県と山梨県にまたがることを、ダイヤルで景色を作りながら学ぶアプリです。赤富士・逆さ富士・ダイヤモンド富士・初冠雪など8つの景色を集めます。</p>
+    <p>「笠雲（かさぐも）が出ると雨」は昔からの言い伝え（観天望気）として紹介しています。景色はすべて CSS/SVG で描いたイメージで、実際の写真ではありません。地図は国土数値情報（国土交通省）由来の都道府県境界データを簡略化したものです。</p>
+  </details>
+</section>
+
+<!-- ======== おだい あそび ======== -->
+<section id="play" class="screen">
+  <div class="bar">
+    <button class="icon-btn" data-go="home" aria-label="もどる">🏠</button>
+    <h2>おだい あそび</h2>
+    <button class="icon-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="play">
+    <div class="main">
+      <div class="scene-wrap">
+        <div class="scene" id="scene"></div>
+        <button class="lake-tag" id="lakeTag" hidden></button>
+      </div>
+      <div class="info" id="info"></div>
+    </div>
+    <div class="side">
+      <div class="odai">
+        <div class="thumb" id="odaiThumb"></div>
+        <div class="txt">
+          <div class="lbl">この けしきを つくろう！</div>
+          <div class="nm" id="odaiName"></div>
+          <button class="hint-btn" id="hintBtn">💡 ヒント</button>
+        </div>
+      </div>
+      <div class="dials" id="dials"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== クイズ ======== -->
+<section id="quiz" class="screen">
+  <div class="bar">
+    <button class="icon-btn" data-go="home" aria-label="もどる">🏠</button>
+    <h2>ふじさん クイズ</h2>
+    <button class="icon-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="quiz">
+    <div class="qprog" id="qprog"></div>
+    <div class="qtext" id="qtext"></div>
+    <div class="qscene" id="qscene"></div>
+    <div class="choices" id="choices"></div>
+    <div class="qexp" id="qexp"></div>
+    <button class="btn qnext" id="qnext">つぎへ ▶</button>
+  </div>
+</section>
+
+<!-- ======== ちず ======== -->
+<section id="map-screen" class="screen">
+  <div class="bar">
+    <button class="icon-btn" data-go="home" aria-label="もどる">🏠</button>
+    <h2>ふじさんは どこ？</h2>
+    <button class="icon-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="mapbox">
+    <div class="side">
+      <div class="msg" id="mapMsg"></div>
+      <div class="btns" id="mapBtns"></div>
+    </div>
+    <svg id="map" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+</section>
+
+<!-- ======== アルバム ======== -->
+<section id="album" class="screen">
+  <div class="bar">
+    <button class="icon-btn" data-go="home" aria-label="もどる">🏠</button>
+    <h2 id="albumTitle">アルバム</h2>
+    <button class="icon-btn snd" aria-label="おと">🔊</button>
+  </div>
+  <div class="album" id="albumGrid"></div>
+</section>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script src="map-data.js?v=6fbcc58"></script>
+<script>
+'use strict';
+/* =========================================================
+   データ
+   ========================================================= */
+const SEASONS = [
+  { k: 'haru',  e: '🌸', n: 'はる' },
+  { k: 'natsu', e: '🌻', n: 'なつ' },
+  { k: 'aki',   e: '🍁', n: 'あき' },
+  { k: 'fuyu',  e: '⛄', n: 'ふゆ' },
+];
+const TIMES = [
+  { k: 'asa',  e: '🌅', n: 'あさやけ' },
+  { k: 'hiru', e: '☀️', n: 'ひる' },
+  { k: 'yuu',  e: '🌇', n: 'ゆうやけ' },
+  { k: 'yoru', e: '🌙', n: 'よる' },
+];
+const PLACES = [
+  { k: 'lake',       e: '🏞️', n: 'みずうみ',            ken: 'やまなしけん' },
+  { k: 'shinkansen', e: '🚄', n: 'しんかんせんの まど', ken: 'しずおかけん（ふじかわの あたり）' },
+  { k: 'cha',        e: '🍵', n: 'ちゃばたけ',          ken: 'しずおかけん' },
+  { k: 'umi',        e: '🌊', n: 'うみ',                ken: 'しずおかけん（みほの まつばら）' },
+  { k: 'machi',      e: '🏙️', n: 'とおくの まち',       ken: 'とうきょう や かながわ（とおくからも みえる）' },
+];
+const LAKES = [
+  { n: 'やまなかこ', t: 'ふじごこで いちばん おおきい' },
+  { n: 'かわぐちこ', t: 'さかさふじが ゆうめい' },
+  { n: 'さいこ',     t: 'もりに かこまれた しずかな みずうみ' },
+  { n: 'しょうじこ', t: 'ふじごこで いちばん ちいさい' },
+  { n: 'もとすこ',   t: 'ふじごこで いちばん ふかい。おさつの えにも なったよ' },
+];
+const SNOW_TALK = {
+  haru: 'はるは ゆきが すこし とけて しまもよう',
+  natsu: 'なつは ゆきが ない！ やまのぼりの きせつ',
+  aki: 'あきは てっぺんに はじめての ゆき',
+  fuyu: 'ふゆは ゆきで まっしろ',
+};
+const DIALS = [
+  { key: 'season', label: 'きせつ', list: SEASONS },
+  { key: 'time',   label: 'じかん', list: TIMES },
+  { key: 'place',  label: 'ばしょ', list: PLACES },
+];
+
+const CARDS = [
+  { id: 'aka', name: 'あかふじ', need: { season: 'natsu', time: 'asa' },
+    show: { season: 'natsu', time: 'asa', place: 'lake' },
+    text: 'なつの おわりの あさ、あさひを あびて ふじさんが まっかに そまるよ。ゆきが ない きせつだけの めずらしい けしき。' },
+  { id: 'sakasa', name: 'さかさふじ', need: { place: 'lake', time: 'hiru' },
+    show: { season: 'fuyu', time: 'hiru', place: 'lake' },
+    text: 'かぜの ない ひは、みずうみが かがみに なって ふじさんが さかさまに うつるよ。ふじごこ（やまなかこ・かわぐちこ・さいこ・しょうじこ・もとすこ）で みられる。' },
+  { id: 'diamond', name: 'ダイヤモンドふじ', need: { season: 'fuyu', time: 'yuu', place: 'lake' },
+    show: { season: 'fuyu', time: 'yuu', place: 'lake' },
+    text: 'ふゆの ゆうがた、おひさまが ちょうど てっぺんに しずむと、ダイヤモンドみたいに きらっと ひかるよ。やまなかこ が ゆうめい。' },
+  { id: 'yukigesho', name: 'ゆきげしょう', need: { season: 'aki', time: 'hiru' },
+    show: { season: 'aki', time: 'hiru', place: 'machi' },
+    text: 'あきに はじめて ゆきが つもる ことを「はつかんせつ」と いうよ。てっぺんだけ しろくて、おけしょう したみたい。' },
+  { id: 'shinkansen', name: 'しんかんせんの まどから', need: { place: 'shinkansen', time: 'hiru' },
+    show: { season: 'fuyu', time: 'hiru', place: 'shinkansen' },
+    text: 'とうきょうから おおさかへ むかう しんかんせんでは、ふじさんは みぎがわの まどに みえるよ。しずおかけんの ふじかわの あたりが いちばん ちかい。' },
+  { id: 'cha', name: 'ちゃばたけと ふじ', need: { place: 'cha', season: 'haru' },
+    show: { season: 'haru', time: 'hiru', place: 'cha' },
+    text: 'しずおかけんは おちゃの ふるさと。はるの おわりに あたらしい はっぱ「しんちゃ」を つむよ。' },
+  { id: 'umi', name: 'うみと ふじ', need: { place: 'umi', season: 'fuyu' },
+    show: { season: 'fuyu', time: 'hiru', place: 'umi' },
+    text: 'しずおかけんの「みほの まつばら」。あおい うみと まつの きと ふじさんは、むかしから たくさんの えに かかれて きたよ。' },
+  { id: 'yoru', name: 'よるの ふじ', need: { place: 'machi', time: 'yoru' },
+    show: { season: 'fuyu', time: 'yoru', place: 'machi' },
+    text: 'はれた ひは、とおくの まちからも ふじさんが みえるよ。よるは まちの あかりの むこうに、くろい かげが うかぶ。' },
+];
+
+/* =========================================================
+   ほぞん
+   ========================================================= */
+const SKEY = 'kyou-no-fujisan-v1';
+let save = { album: [], sound: true };
+try { const s = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (s && Array.isArray(s.album)) save = Object.assign(save, s); } catch (e) {}
+function persist() { try { localStorage.setItem(SKEY, JSON.stringify(save)); } catch (e) {} }
+
+/* =========================================================
+   おと（WebAudio の 合成音）
+   ========================================================= */
+let AC = null;
+function ac() {
+  if (!save.sound) return null;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) { return null; }
+  return AC;
+}
+function tone(freq, dur, type, vol, when) {
+  const c = ac(); if (!c) return;
+  const t = c.currentTime + (when || 0);
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.18, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+const SND = {
+  tick() { tone(880, 0.06, 'square', 0.06); tone(1320, 0.05, 'sine', 0.05, 0.03); },
+  tap() { tone(660, 0.08, 'triangle', 0.12); },
+  good() { [523, 659, 784].forEach((f, i) => tone(f, 0.18, 'triangle', 0.16, i * 0.09)); },
+  bad() { tone(220, 0.22, 'sawtooth', 0.07); tone(180, 0.25, 'sine', 0.1, 0.1); },
+  fanfare() {
+    [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.22, 'triangle', 0.16, i * 0.11));
+    [784, 988, 1175, 1568].forEach((f, i) => tone(f, 0.5, 'sine', 0.08, 0.5 + i * 0.02));
+  },
+  sparkle() { [1568, 2093, 2637, 3136].forEach((f, i) => tone(f, 0.12, 'sine', 0.06, i * 0.06)); },
+};
+function updateSndBtns() { document.querySelectorAll('.snd').forEach(b => { b.textContent = save.sound ? '🔊' : '🔇'; }); }
+document.querySelectorAll('.snd').forEach(b => b.addEventListener('click', () => {
+  save.sound = !save.sound; persist(); updateSndBtns(); if (save.sound) SND.tap();
+}));
+updateSndBtns();
+
+/* =========================================================
+   けしきを かく（SVG）
+   ========================================================= */
+const FUJI_D = 'M6,190 C80,172 136,130 176,78 L186,73 L194,76 L201,71 L209,75 L216,73 L224,78 C264,130 320,172 394,190 Z';
+const SKY = {
+  asa:  ['#f39a9b', '#ffd3a4', '#fff0c8'],
+  hiru: ['#4f9fe6', '#9fd0f6', '#dff1ff'],
+  yuu:  ['#4b3f8f', '#e57c6a', '#ffc070'],
+  yoru: ['#070d2a', '#16245a', '#2d3c78'],
+};
+function fujiColor(st) {
+  if (st.time === 'asa') return st.season === 'natsu' ? '#c9412e' : '#9a6a86';
+  if (st.time === 'yuu') return '#4b3868';
+  if (st.time === 'yoru') return '#1a2243';
+  return st.season === 'natsu' ? '#3f6a9e' : '#5a7eb0';
+}
+const SNOW_COL = { asa: '#ffd9d2', hiru: '#ffffff', yuu: '#ffc6b2', yoru: '#8f9bc4' };
+const SNOW_Y = { haru: 120, natsu: 0, aki: 92, fuyu: 140 };
+let SVGN = 0;
+
+function isDiamond(st) { return st.season === 'fuyu' && st.time === 'yuu' && st.place === 'lake'; }
+
+function snowShape(st) {
+  const y = SNOW_Y[st.season]; if (!y) return '';
+  const dy = st.season === 'haru' ? 16 : st.season === 'aki' ? 5 : 9;
+  const step = st.season === 'haru' ? 9 : 12;
+  let pts = '0,40 400,40 ';
+  const arr = [];
+  for (let x = 400, i = 0; x >= 0; x -= step, i++) {
+    const wob = (i % 2 ? dy : -dy * 0.4) + (i % 3 === 0 ? 3 : 0);
+    arr.push(x + ',' + (y + wob).toFixed(1));
+  }
+  pts += arr.join(' ');
+  return '<polygon points="' + pts + '" fill="' + SNOW_COL[st.time] + '"/>' +
+    (st.season === 'fuyu' ? '<path d="M200,73 L188,140 M200,73 L214,135" stroke="#0001" stroke-width="3" fill="none"/>' : '');
+}
+
+function tree(x, y, s, season, night) {
+  const sh = night ? 0.45 : 1;
+  const trunk = '<rect x="' + (x - 2 * s) + '" y="' + (y - 4 * s) + '" width="' + (4 * s) + '" height="' + (16 * s) + '" fill="#6b4a2f"/>';
+  if (season === 'fuyu') {
+    return '<g opacity="' + sh + '" stroke="#6b4a2f" stroke-width="' + (2 * s) + '" stroke-linecap="round" fill="none">' +
+      '<path d="M' + x + ',' + (y + 12 * s) + ' L' + x + ',' + (y - 16 * s) + ' M' + x + ',' + (y - 4 * s) + ' L' + (x - 9 * s) + ',' + (y - 14 * s) +
+      ' M' + x + ',' + (y - 8 * s) + ' L' + (x + 10 * s) + ',' + (y - 18 * s) + ' M' + x + ',' + (y + 2 * s) + ' L' + (x + 8 * s) + ',' + (y - 4 * s) + '"/></g>';
+  }
+  const col = { haru: ['#ffb7cf', '#ff9fc0'], natsu: ['#3f9e4a', '#2f8a3c'], aki: ['#e8642c', '#f2a12a'] }[season];
+  return '<g opacity="' + sh + '">' + trunk +
+    '<circle cx="' + (x - 6 * s) + '" cy="' + (y - 8 * s) + '" r="' + (9 * s) + '" fill="' + col[0] + '"/>' +
+    '<circle cx="' + (x + 6 * s) + '" cy="' + (y - 10 * s) + '" r="' + (10 * s) + '" fill="' + col[1] + '"/>' +
+    '<circle cx="' + x + '" cy="' + (y - 18 * s) + '" r="' + (9 * s) + '" fill="' + col[0] + '"/></g>';
+}
+
+function pine(x, y, s) {
+  return '<g fill="#1f5a3a"><rect x="' + (x - 2 * s) + '" y="' + y + '" width="' + (4 * s) + '" height="' + (18 * s) + '" fill="#5b3b25"/>' +
+    '<ellipse cx="' + x + '" cy="' + y + '" rx="' + (18 * s) + '" ry="' + (6 * s) + '"/>' +
+    '<ellipse cx="' + (x + 4 * s) + '" cy="' + (y - 9 * s) + '" rx="' + (14 * s) + '" ry="' + (5 * s) + '"/>' +
+    '<ellipse cx="' + (x - 2 * s) + '" cy="' + (y - 17 * s) + '" rx="' + (9 * s) + '" ry="' + (4 * s) + '"/></g>';
+}
+
+function sceneSVG(st, opt) {
+  opt = opt || {};
+  const id = 'f' + (++SVGN);
+  const night = st.time === 'yoru';
+  const sky = SKY[st.time];
+  let s = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" role="img" aria-label="ふじさんの けしき">';
+  s += '<defs><linearGradient id="' + id + 's" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="' + sky[0] + '"/><stop offset=".6" stop-color="' + sky[1] + '"/><stop offset="1" stop-color="' + sky[2] + '"/></linearGradient>' +
+    '<clipPath id="' + id + 'c"><path d="' + FUJI_D + '"/></clipPath>' +
+    '<clipPath id="' + id + 'w"><rect x="0" y="190" width="400" height="70"/></clipPath>' +
+    '<radialGradient id="' + id + 'g"><stop offset="0" stop-color="#fff" stop-opacity="1"/><stop offset=".3" stop-color="#fff6c0" stop-opacity=".9"/><stop offset="1" stop-color="#ffd27a" stop-opacity="0"/></radialGradient>' +
+    '</defs>';
+  s += '<rect width="400" height="260" fill="url(#' + id + 's)"/>';
+
+  // ほし・つき・たいよう
+  if (night) {
+    const stars = [[30, 30], [70, 60], [120, 22], [160, 50], [250, 30], [290, 70], [350, 20], [380, 60], [90, 100], [330, 110], [40, 120], [220, 18]];
+    s += stars.map((p, i) => '<circle class="' + (opt.still ? '' : 'tw') + '" style="animation-delay:' + (i % 4) * 0.5 + 's" cx="' + p[0] + '" cy="' + p[1] + '" r="' + (i % 3 ? 1.2 : 1.8) + '" fill="#fff"/>').join('');
+    s += '<circle cx="320" cy="48" r="15" fill="#fff6c8"/><circle cx="327" cy="43" r="13" fill="' + sky[0] + '"/>';
+  } else if (isDiamond(st)) {
+    // おひさまは てっぺんの うしろ（ふじさんの まえに かがやきを かさねる）
+  } else {
+    const sun = { asa: [62, 150, '#ffe6a0', 18], hiru: [330, 44, '#fff3b0', 16], yuu: [328, 140, '#ff8a4a', 20] }[st.time];
+    s += '<circle cx="' + sun[0] + '" cy="' + sun[1] + '" r="' + (sun[3] + 12) + '" fill="' + sun[2] + '" opacity=".35"/>';
+    s += '<circle cx="' + sun[0] + '" cy="' + sun[1] + '" r="' + sun[3] + '" fill="' + sun[2] + '"/>';
+  }
+  // ふつうの くも
+  if (!night && !opt.noCloud) {
+    s += '<g class="' + (opt.still ? '' : 'drift') + '" fill="#fff" opacity="' + (st.time === 'hiru' ? .9 : .5) + '">' +
+      '<ellipse cx="60" cy="56" rx="30" ry="9"/><ellipse cx="78" cy="50" rx="18" ry="9"/>' +
+      '<ellipse cx="270" cy="96" rx="26" ry="7"/><ellipse cx="284" cy="91" rx="14" ry="7"/></g>';
+  }
+  // とおくの やまなみ
+  const ridge = { asa: '#c78a9a', hiru: '#8fb3d6', yuu: '#7a5a8a', yoru: '#141c3a' }[st.time];
+  s += '<path d="M0,175 Q40,160 80,170 T160,172 T250,170 T330,166 T400,172 L400,192 L0,192 Z" fill="' + ridge + '" opacity=".8"/>';
+
+  // ふじさん
+  const fuji = '<g id="' + id + 'm"><path d="' + FUJI_D + '" fill="' + fujiColor(st) + '"/>' +
+    '<g clip-path="url(#' + id + 'c)">' + snowShape(st) +
+    '<path d="M120,190 L190,80 M280,190 L212,80" stroke="#0000001a" stroke-width="10" fill="none"/></g></g>';
+  s += fuji;
+
+  // かさぐも
+  if (opt.kasa) {
+    s += '<g fill="#fff"><ellipse cx="200" cy="66" rx="62" ry="11" opacity=".95"/><ellipse cx="200" cy="56" rx="44" ry="9" opacity=".9"/>' +
+      '<ellipse cx="200" cy="48" rx="24" ry="6" opacity=".85"/></g>';
+  }
+  // ダイヤモンド
+  if (isDiamond(st)) {
+    s += '<circle cx="200" cy="72" r="40" fill="url(#' + id + 'g)"/>' +
+      '<g class="' + (opt.still ? '' : 'shine') + '" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".95">' +
+      '<path d="M200,40 V104 M168,72 H232 M180,52 L220,92 M220,52 L180,92"/></g>' +
+      '<circle cx="200" cy="72" r="9" fill="#fff"/>';
+  }
+
+  // まえの けしき
+  s += foreground(st, id, opt);
+
+  // きせつの き（しんかんせん いがい）
+  if (st.place !== 'shinkansen' && !opt.noTrees) {
+    const y = st.place === 'machi' ? 214 : 222;
+    s += tree(22, y, 1.3, st.season, night) + tree(48, y + 14, 1.0, st.season, night) + tree(378, y + 6, 1.2, st.season, night);
+  }
+  if (st.time === 'yuu') s += '<rect width="400" height="260" fill="#ff7a3a" opacity=".08"/>';
+  if (st.place === 'shinkansen') s += windowFrame();
+  s += '</svg>';
+  return s;
+}
+
+function foreground(st, id, opt) {
+  const t = st.time, night = t === 'yoru';
+  let s = '';
+  const dim = night ? '<rect x="0" y="188" width="400" height="72" fill="#050a20" opacity=".55"/>' : '';
+  if (st.place === 'lake') {
+    const water = { asa: '#e0a6a6', hiru: '#5c9fd6', yuu: '#8a5e8e', yoru: '#121c44' }[t];
+    s += '<rect x="0" y="190" width="400" height="70" fill="' + water + '"/>';
+    if (!night) s += '<g clip-path="url(#' + id + 'w)" opacity="' + (t === 'hiru' ? .55 : .45) + '"><use href="#' + id + 'm" transform="matrix(1,0,0,-1,0,380)"/></g>';
+    s += '<g stroke="#ffffff66" stroke-width="1.5" stroke-linecap="round"><path d="M60,205 h30 M250,214 h40 M140,232 h26 M300,240 h34 M90,248 h20"/></g>';
+    s += '<path d="M0,250 Q100,242 200,250 T400,248 L400,260 L0,260 Z" fill="#5c8a3e"/>';
+    s += '<g stroke="#3d6a2a" stroke-width="2" stroke-linecap="round"><path d="M330,252 l-4,-18 M336,252 l2,-22 M342,252 l6,-16 M100,254 l-3,-14 M106,254 l3,-16"/></g>';
+    s += dim;
+  } else if (st.place === 'shinkansen') {
+    s += '<rect x="0" y="188" width="400" height="72" fill="' + (night ? '#1d2a1d' : '#86b85a') + '"/>';
+    s += '<path d="M0,214 Q200,205 400,214" stroke="#5e8fc8" stroke-width="7" fill="none"/>';
+    s += '<g class="' + (opt.still ? '' : 'whoosh') + '">';
+    for (let x = 0; x < 520; x += 80) {
+      s += '<rect x="' + x + '" y="196" width="3" height="64" fill="#555"/><rect x="' + (x - 8) + '" y="198" width="19" height="3" fill="#555"/>';
+    }
+    s += '<path d="M-20,200 Q20,206 60,200 T140,200 T220,200 T300,200 T380,200 T460,200 T540,200" stroke="#333" stroke-width="1" fill="none"/>';
+    s += '<g stroke="#ffffff80" stroke-width="2"><path d="M20,240 h60 M140,250 h80 M260,236 h50 M360,246 h70 M470,240 h40"/></g></g>';
+    s += dim;
+  } else if (st.place === 'cha') {
+    s += '<rect x="0" y="188" width="400" height="72" fill="' + (st.season === 'fuyu' ? '#7a8f5a' : '#8cc864') + '"/>';
+    const rows = [[198, 5, '#4f9a3c'], [208, 6, '#478f36'], [221, 8, '#3f8530'], [238, 10, '#377a2a'], [258, 13, '#2f6e24']];
+    const fresh = st.season === 'haru';
+    rows.forEach((r, i) => {
+      s += '<path d="M-20,' + r[0] + ' Q100,' + (r[0] - 6 - i * 2) + ' 200,' + r[0] + ' T420,' + r[0] + '" stroke="' + r[2] + '" stroke-width="' + r[1] * 1.6 + '" stroke-linecap="round" fill="none"/>';
+      if (fresh) s += '<path d="M-20,' + (r[0] - r[1] * .5) + ' Q100,' + (r[0] - 6 - i * 2 - r[1] * .5) + ' 200,' + (r[0] - r[1] * .5) + ' T420,' + (r[0] - r[1] * .5) + '" stroke="#b6e86a" stroke-width="' + r[1] * .5 + '" stroke-linecap="round" fill="none"/>';
+    });
+    s += dim;
+  } else if (st.place === 'umi') {
+    const sea = { asa: '#d58f9b', hiru: '#2f78c0', yuu: '#7a4f86', yoru: '#0e1a40' }[t];
+    s += '<rect x="0" y="190" width="400" height="50" fill="' + sea + '"/>';
+    s += '<g stroke="#ffffffaa" stroke-width="2" fill="none" stroke-linecap="round"><path d="M40,202 q8,-5 16,0 q8,5 16,0 M180,212 q8,-5 16,0 q8,5 16,0 M300,200 q8,-5 16,0 q8,5 16,0 M110,226 q8,-5 16,0 q8,5 16,0 M250,230 q8,-5 16,0 q8,5 16,0"/></g>';
+    s += '<g transform="translate(232,196)"><path d="M0,8 h30 l-5,6 h-20 z" fill="#8a4a2a"/><path d="M14,8 v-18 l12,14 z" fill="#fff"/></g>';
+    s += '<path d="M0,238 Q200,230 400,240 L400,260 L0,260 Z" fill="#e9d6a2"/>';
+    s += dim;
+    s += pine(80, 232, 1.2) + pine(130, 238, .9) + pine(310, 234, 1.1);
+  } else { // machi
+    s += '<rect x="0" y="200" width="400" height="60" fill="' + (night ? '#151a2e' : '#9aa3ae') + '"/>';
+    const b = [[0, 218, 34], [36, 200, 26], [64, 226, 30], [96, 208, 40], [138, 230, 28], [168, 214, 30], [200, 224, 36], [238, 196, 24], [264, 220, 34], [300, 206, 30], [332, 228, 32], [366, 210, 34]];
+    const bc = { asa: '#7a6a80', hiru: '#7d8a9c', yuu: '#4a3a5a', yoru: '#0c1028' }[t];
+    b.forEach((r, i) => {
+      s += '<rect x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + (260 - r[1]) + '" fill="' + bc + '"/>';
+      if (night || t === 'yuu') {
+        for (let wy = r[1] + 6; wy < 254; wy += 9) for (let wx = r[0] + 5; wx < r[0] + r[2] - 4; wx += 8) {
+          if ((wx * 7 + wy * 3 + i) % 5 < (night ? 3 : 1)) s += '<rect x="' + wx + '" y="' + wy + '" width="4" height="4" fill="#ffd86a"/>';
+        }
+      } else {
+        for (let wy = r[1] + 6; wy < 254; wy += 9) s += '<rect x="' + (r[0] + 4) + '" y="' + wy + '" width="' + (r[2] - 8) + '" height="2" fill="#ffffff40"/>';
+      }
+    });
+    s += '<rect x="238" y="186" width="3" height="12" fill="' + bc + '"/><circle cx="239.5" cy="186" r="2" fill="#ff4040"/>';
+  }
+  return s;
+}
+
+function windowFrame() {
+  return '<path fill-rule="evenodd" fill="#d9dde4" d="M0,0 H400 V260 H0 Z M26,22 Q26,14 40,14 H360 Q374,14 374,22 V232 Q374,244 360,244 H40 Q26,244 26,232 Z"/>' +
+    '<path fill="none" stroke="#aeb5c0" stroke-width="4" d="M26,22 Q26,14 40,14 H360 Q374,14 374,22 V232 Q374,244 360,244 H40 Q26,244 26,232 Z"/>' +
+    '<rect x="0" y="246" width="400" height="14" fill="#7b8794"/>' +
+    '<path d="M60,40 l30,-18 M70,52 l40,-26" stroke="#ffffff55" stroke-width="5" stroke-linecap="round"/>';
+}
+
+/* =========================================================
+   がめん きりかえ
+   ========================================================= */
+const $ = id => document.getElementById(id);
+const SCREEN_ID = { home: 'home', play: 'play', quiz: 'quiz', map: 'map-screen', album: 'album' };
+function go(name) {
+  document.querySelectorAll('.screen').forEach(e => e.classList.remove('on'));
+  $(SCREEN_ID[name]).classList.add('on');
+  window.scrollTo(0, 0);
+  if (name === 'home') renderHome();
+  if (name === 'play') startPlay();
+  if (name === 'quiz') startQuiz();
+  if (name === 'map') startMap();
+  if (name === 'album') renderAlbum();
+}
+document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => { SND.tap(); go(b.dataset.go); }));
+
+function renderHome() {
+  $('titleScene').innerHTML = sceneSVG({ season: 'fuyu', time: 'asa', place: 'lake' });
+  const n = save.album.length;
+  $('homeCount').textContent = n ? '📒 アルバム ' + n + ' / ' + CARDS.length + ' まい' : '';
+}
+
+let toastT = 0;
+function toast(msg, ms) {
+  const t = $('toast'); t.innerHTML = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), ms || 2200);
+}
+function confetti(n) {
+  const cols = ['#ff6b6b', '#ffd93d', '#6bcB77', '#4d96ff', '#ff9ff3', '#ffffff'];
+  for (let i = 0; i < (n || 60); i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw';
+    c.style.background = cols[i % cols.length];
+    c.style.animationDuration = 1.8 + Math.random() * 1.6 + 's';
+    c.style.animationDelay = Math.random() * 0.5 + 's';
+    c.style.borderRadius = i % 2 ? '50%' : '2px';
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4200);
+  }
+}
+function modal(html) { $('sheet').innerHTML = html; $('modal').classList.add('on'); }
+function closeModal() { $('modal').classList.remove('on'); }
+
+/* =========================================================
+   おだい あそび
+   ========================================================= */
+const st = { season: 'haru', time: 'hiru', place: 'machi' };
+let lakeIdx = 0, odai = null, hintOn = false, moves = 0;
+
+function matches(card, s) { return Object.keys(card.need).every(k => card.need[k] === s[k]); }
+
+function buildDials() {
+  $('dials').innerHTML = DIALS.map(d =>
+    '<div class="dial" data-key="' + d.key + '"><span class="mark"></span><div class="dl">' + d.label + '</div>' +
+    '<div class="row"><button class="arrow" data-step="-1" aria-label="まえ">◀</button>' +
+    '<button class="knob" aria-label="' + d.label + 'を かえる"><span class="ring"></span><span class="em"></span></button>' +
+    '<button class="arrow" data-step="1" aria-label="つぎ">▶</button></div><div class="val"></div></div>').join('');
+  $('dials').querySelectorAll('.dial').forEach(el => {
+    const key = el.dataset.key;
+    el.querySelector('.knob').addEventListener('click', () => turn(key, 1));
+    el.querySelectorAll('.arrow').forEach(a => a.addEventListener('click', () => turn(key, +a.dataset.step)));
+  });
+}
+const rot = { season: 0, time: 0, place: 0 };
+function turn(key, step) {
+  const d = DIALS.find(x => x.key === key);
+  const i = d.list.findIndex(x => x.k === st[key]);
+  st[key] = d.list[(i + step + d.list.length) % d.list.length].k;
+  rot[key] += step * 360 / d.list.length;
+  moves++;
+  SND.tick();
+  drawPlay();
+  check();
+}
+function drawDials() {
+  DIALS.forEach(d => {
+    const el = $('dials').querySelector('[data-key="' + d.key + '"]');
+    const v = d.list.find(x => x.k === st[d.key]);
+    el.querySelector('.em').textContent = v.e;
+    el.querySelector('.val').textContent = v.n;
+    el.querySelector('.ring').style.transform = 'rotate(' + rot[d.key] + 'deg)';
+    el.classList.remove('ok', 'ng', 'free');
+    if (hintOn && odai) {
+      const need = odai.need[d.key];
+      const cls = !need ? 'free' : need === st[d.key] ? 'ok' : 'ng';
+      el.classList.add(cls);
+      el.querySelector('.mark').textContent = cls === 'ok' ? '⭕' : cls === 'ng' ? '❓' : '🆗';
+    }
+  });
+}
+function drawPlay() {
+  $('scene').innerHTML = sceneSVG(st);
+  const p = PLACES.find(x => x.k === st.place);
+  const tag = $('lakeTag');
+  if (st.place === 'lake') {
+    tag.hidden = false; tag.textContent = '🏞️ ' + LAKES[lakeIdx].n + ' ▶';
+  } else tag.hidden = true;
+  let info = 'ここは <b>' + p.ken + '</b>';
+  if (st.place === 'lake') info = '<b>' + LAKES[lakeIdx].n + '</b>：' + LAKES[lakeIdx].t + '（やまなしけん）';
+  $('info').innerHTML = info + '<br><small>' + SNOW_TALK[st.season] + '</small>';
+  drawDials();
+}
+$('lakeTag').addEventListener('click', () => {
+  lakeIdx = (lakeIdx + 1) % LAKES.length; SND.tap(); drawPlay();
+  toast('ふじごこ ' + (lakeIdx + 1) + '/5：' + LAKES[lakeIdx].n);
+});
+$('hintBtn').addEventListener('click', () => {
+  hintOn = true; SND.sparkle(); drawDials();
+  toast('⭕ は あってる！ ❓ を まわしてね。🆗 は どれでも いいよ', 3000);
+});
+
+function pickOdai() {
+  const fresh = CARDS.filter(c => !save.album.includes(c.id) && !matches(c, st) && c !== odai);
+  const pool = fresh.length ? fresh : CARDS.filter(c => !matches(c, st) && c !== odai);
+  odai = pool[Math.floor(Math.random() * pool.length)];
+  hintOn = false; moves = 0;
+  $('odaiThumb').innerHTML = sceneSVG(odai.show, { still: true });
+  $('odaiName').textContent = odai.name;
+  drawPlay();
+}
+function startPlay() {
+  if (!$('dials').children.length) buildDials();
+  pickOdai();
+}
+function addAlbum(id) {
+  if (save.album.includes(id)) return false;
+  save.album.push(id); persist(); return true;
+}
+function check() {
+  if (!odai) return;
+  // おだい いがいの けしきも みつけたら アルバムへ
+  CARDS.forEach(c => {
+    if (c !== odai && matches(c, st) && addAlbum(c.id)) {
+      setTimeout(() => { SND.sparkle(); toast('✨ べつの けしき「' + c.name + '」も みつけた！ アルバムに いれたよ', 2600); }, 200);
+    }
+  });
+  if (matches(odai, st)) {
+    const first = addAlbum(odai.id);
+    const card = odai;
+    setTimeout(() => {
+      SND.fanfare(); confetti(70);
+      const praise = ['やったね！', 'すごい！', 'できた！', 'ぴったり！'][Math.floor(Math.random() * 4)];
+      modal('<div class="yatta">🎉 ' + praise + '</div>' +
+        '<div class="pic">' + sceneSVG(Object.assign({}, st), { still: true }) + '</div>' +
+        '<h3>' + card.name + '</h3><p>' + card.text + '</p>' +
+        '<p style="text-align:center;margin:0 0 12px">' + (first ? '📒 アルバムに はいったよ！（' + save.album.length + '/' + CARDS.length + '）' : '📒 もう アルバムに あるよ') + '</p>' +
+        '<div class="btns"><button class="btn" id="mNext">つぎの おだい ▶</button><button class="btn sub" id="mHome">🏠</button></div>');
+      $('mNext').onclick = () => { SND.tap(); closeModal(); pickOdai(); };
+      $('mHome').onclick = () => { SND.tap(); closeModal(); go('home'); };
+    }, 450);
+    odai = null;
+  } else if (moves === 6 && !hintOn) {
+    toast('💡 こまったら「ヒント」を おしてね');
+  }
+}
+
+/* =========================================================
+   クイズ
+   ========================================================= */
+const SEASON_Q = ['natsu', 'aki', 'fuyu'].map(sea => ({
+  scene: { season: sea, time: 'hiru', place: 'machi' }, opt: { noTrees: true },
+  q: 'ゆきを みてね。いまの きせつは？',
+  choices: [{ e: '🌻', t: 'なつ', ok: sea === 'natsu' }, { e: '🍁', t: 'あき', ok: sea === 'aki' }, { e: '⛄', t: 'ふゆ', ok: sea === 'fuyu' }],
+  exp: { natsu: 'ゆきが ない ふじさんは なつ。なつは ゆきが とけて、やまのぼりが できるよ。',
+         aki: 'てっぺんに ちょっとだけ ゆき。あきに はじめて ゆきが つもる ことを「はつかんせつ」と いうよ。',
+         fuyu: 'ふもとの ほうまで まっしろ。ふゆの ふじさんだね。' }[sea],
+}));
+const OTHER_Q = [
+  { scene: { season: 'haru', time: 'hiru', place: 'cha' }, q: 'ふじさんが ある けんは どこと どこ？',
+    choices: [{ e: '🍵🍇', t: 'しずおか と やまなし', ok: true }, { e: '🗼', t: 'とうきょう と かながわ' }, { e: '🐄', t: 'ほっかいどう と あおもり' }],
+    exp: 'ふじさんは しずおかけん と やまなしけんの あいだに あるよ。「ちず」で たしかめてみよう！' },
+  { scene: { season: 'fuyu', time: 'hiru', place: 'lake' }, q: 'ふじさんの まわりの みずうみ「ふじごこ」は いくつ？',
+    choices: [{ e: '3️⃣', t: '3つ' }, { e: '5️⃣', t: '5つ', ok: true }, { e: '🔟', t: '10こ' }],
+    exp: 'やまなかこ・かわぐちこ・さいこ・しょうじこ・もとすこ の 5つ。ぜんぶ やまなしけんに あるよ。' },
+  { scene: { season: 'fuyu', time: 'yuu', place: 'lake' }, q: 'ダイヤモンドふじ。てっぺんで ひかって いるのは？',
+    choices: [{ e: '🌙', t: 'おつきさま' }, { e: '☀️', t: 'おひさま', ok: true }, { e: '⭐', t: 'ほし' }],
+    exp: 'おひさまが ちょうど てっぺんに かさなると、ダイヤモンドみたいに ひかるよ。' },
+  { scene: { season: 'fuyu', time: 'hiru', place: 'lake' }, q: 'ふじさんが さかさまに うつって いるよ。どこで みてる？',
+    choices: [{ e: '🏞️', t: 'みずうみ', ok: true }, { e: '🏙️', t: 'まち' }, { e: '🍵', t: 'ちゃばたけ' }],
+    exp: 'かぜの ない ひの みずうみは かがみ みたい。「さかさふじ」と いうよ。' },
+  { scene: { season: 'natsu', time: 'asa', place: 'lake' }, q: 'ふじさんが まっか！ なんじごろ かな？',
+    choices: [{ e: '🌅', t: 'あさ', ok: true }, { e: '☀️', t: 'おひる' }, { e: '🌙', t: 'よる' }],
+    exp: 'なつの おわりの あさ、あさひで まっかに なるのが「あかふじ」。' },
+];
+const KASA_Q = {
+  scene: { season: 'fuyu', time: 'hiru', place: 'machi' }, opt: { kasa: true },
+  q: 'ふじさんが くもの「かさ」を かぶったよ。この あと てんきは？',
+  choices: [{ e: '☀️', t: 'はれ' }, { e: '☔', t: 'あめ', ok: true }, { e: '🌈', t: 'にじ' }],
+  exp: '「ふじさんが かさを かぶると あめ」は むかしからの いいつたえ。くもの ようすで てんきを よそうする ちえ だよ。よく あたると いわれて いるよ。',
+};
+let QS = [], qi = 0, qFirst = 0, qMiss = false;
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function startQuiz() {
+  const sq = shuffle(SEASON_Q.slice()).slice(0, 2);
+  const oq = shuffle(OTHER_Q.slice()).slice(0, 2);
+  QS = shuffle([sq[0], oq[0], KASA_Q, oq[1]]); QS.splice(2, 0, sq[1]);
+  qi = 0; qFirst = 0; showQ();
+}
+function showQ() {
+  const q = QS[qi];
+  qMiss = false;
+  $('qprog').textContent = QS.map((_, i) => i < qi ? '🗻' : i === qi ? '🔸' : '・').join(' ');
+  $('qtext').textContent = q.q;
+  $('qscene').innerHTML = sceneSVG(q.scene, Object.assign({ still: false }, q.opt || {}));
+  $('qexp').classList.remove('on'); $('qnext').classList.remove('on');
+  $('choices').innerHTML = shuffle(q.choices.slice()).map(c =>
+    '<button class="choice" data-ok="' + (c.ok ? 1 : 0) + '"><span class="ce">' + c.e + '</span>' + c.t + '</button>').join('');
+  $('choices').querySelectorAll('.choice').forEach(b => b.addEventListener('click', () => answer(b)));
+}
+function answer(b) {
+  if ($('qnext').classList.contains('on') || b.classList.contains('wrong')) return;
+  if (b.dataset.ok === '1') {
+    b.classList.add('right'); SND.good();
+    if (!qMiss) qFirst++;
+    $('qexp').innerHTML = (qMiss ? '⭕ そう！ ' : '⭕ せいかい！ ') + QS[qi].exp;
+    $('qexp').classList.add('on'); $('qnext').classList.add('on');
+    $('qnext').textContent = qi === QS.length - 1 ? 'けっかへ ▶' : 'つぎへ ▶';
+  } else {
+    b.classList.add('wrong'); SND.bad(); qMiss = true;
+    toast('ざんねん！ もういちど えらんでね');
+  }
+}
+$('qnext').addEventListener('click', () => {
+  SND.tap();
+  if (qi < QS.length - 1) { qi++; showQ(); return; }
+  const n = QS.length;
+  const msg = qFirst === n ? 'ぜんもん いっぱつ せいかい！ ふじさん はかせ だね！' : qFirst >= 3 ? 'よく できました！' : 'さいごまで できたね！ また ちょうせん してね';
+  SND.fanfare(); confetti(qFirst === n ? 90 : 40);
+  modal('<div class="yatta">🎉 クイズ おしまい</div><div style="font-size:2.2rem;margin:10px 0">' + '⭐'.repeat(qFirst) + '☆'.repeat(n - qFirst) + '</div>' +
+    '<p style="text-align:center">' + msg + '<br>（いっぱつで ' + qFirst + ' / ' + n + ' もん）</p>' +
+    '<div class="btns"><button class="btn" id="qAgain">もういちど</button><button class="btn sub" id="qHome">🏠</button></div>');
+  $('qAgain').onclick = () => { SND.tap(); closeModal(); startQuiz(); };
+  $('qHome').onclick = () => { SND.tap(); closeModal(); go('home'); };
+});
+
+/* =========================================================
+   ちず
+   ========================================================= */
+const NS = 'http://www.w3.org/2000/svg';
+const FUJI_LL = [138.7274, 35.3606];
+const LAKE_LL = [
+  { n: 'やまなかこ', ll: [138.873, 35.418], dx: 6, dy: 3, a: 'start' },
+  { n: 'かわぐちこ', ll: [138.755, 35.517], dx: 3, dy: -4, a: 'start' },
+  { n: 'さいこ',     ll: [138.680, 35.498], dx: -3, dy: -6, a: 'end' },
+  { n: 'しょうじこ', ll: [138.605, 35.474], dx: -6, dy: -1, a: 'end' },
+  { n: 'もとすこ',   ll: [138.582, 35.461], dx: -6, dy: 6, a: 'end' },
+];
+const KEN_INFO = {
+  22: { n: 'しずおかけん', cls: 'shizuoka', t: 'ちゃばたけ と うみが ある。みなみがわから ふじさんが みえるよ', ll: [138.15, 34.98] },
+  19: { n: 'やまなしけん', cls: 'yamanashi', t: 'ふじごこ が ある。ぶどう や もも の くだものも ゆうめい', ll: [138.55, 35.72] },
+};
+let mapStep = 0, mapMiss = 0, found = {}, fullVB = null, mapBuilt = false, vbAnim = 0;
+function kana(code) { const p = PREFECTURES.find(x => x.code === code); return p ? p.kana : ''; }
+function buildMap() {
+  const svg = $('map');
+  fullVB = MAP_VIEWBOX.split(' ').map(Number);
+  const g = document.createElementNS(NS, 'g'); g.id = 'prefs';
+  PREFECTURES.forEach(p => {
+    const e = document.createElementNS(NS, 'path');
+    e.setAttribute('d', p.path); e.dataset.code = p.code;
+    g.appendChild(e);
+  });
+  svg.appendChild(g);
+  const ov = document.createElementNS(NS, 'g'); ov.id = 'mapOv'; svg.appendChild(ov);
+  svg.addEventListener('click', mapClick);
+  mapBuilt = true;
+}
+function setVB(v) { $('map').setAttribute('viewBox', v.map(n => n.toFixed(2)).join(' ')); }
+function animVB(to, ms) {
+  const from = $('map').getAttribute('viewBox').split(' ').map(Number);
+  const t0 = performance.now(); cancelAnimationFrame(vbAnim);
+  const stepf = now => {
+    let k = Math.min(1, (now - t0) / ms); k = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    setVB(from.map((f, i) => f + (to[i] - f) * k));
+    if (k < 1) vbAnim = requestAnimationFrame(stepf);
+  };
+  vbAnim = requestAnimationFrame(stepf);
+}
+function zoomBox() {
+  const a = project(137.35, 36.0), b = project(139.35, 34.55);
+  return [a[0], a[1], b[0] - a[0], b[1] - a[1]];
+}
+function svgPt(evt) {
+  const svg = $('map'), pt = svg.createSVGPoint();
+  pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+function text(x, y, str, size, anchor) {
+  const t = document.createElementNS(NS, 'text');
+  t.setAttribute('x', x); t.setAttribute('y', y); t.setAttribute('font-size', size);
+  t.setAttribute('text-anchor', anchor || 'middle'); t.setAttribute('class', 'lbl');
+  t.setAttribute('stroke-width', size * 0.25);
+  t.textContent = str; return t;
+}
+function el(tag, attrs) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+function startMap() {
+  if (!mapBuilt) buildMap();
+  mapStep = 0; mapMiss = 0; found = {};
+  $('mapOv').innerHTML = '';
+  $('prefs').querySelectorAll('path').forEach(p => p.classList.remove('shizuoka', 'yamanashi', 'flash'));
+  setVB(fullVB);
+  $('mapMsg').innerHTML = '🗻 ふじさんは どこかな？<br>にほんの ちずで タップしてね';
+  $('mapBtns').innerHTML = '';
+}
+function mapClick(evt) {
+  const p = svgPt(evt);
+  const code = evt.target.dataset && evt.target.dataset.code ? +evt.target.dataset.code : 0;
+  if (mapStep === 0) {
+    const f = project(FUJI_LL[0], FUJI_LL[1]);
+    const dx = p.x - f[0], dy = p.y - f[1], d = Math.hypot(dx, dy);
+    const vb = $('map').viewBox.baseVal;
+    const scr = $('map').getBoundingClientRect().width / vb.width; // 1たんい あたりの px
+    const R = Math.max(55, 34 / scr);
+    if (d < R) { foundFuji(); return; }
+    SND.bad(); mapMiss++;
+    let dir = '';
+    if (Math.abs(dx) > Math.abs(dy)) dir = dx > 0 ? 'もっと ひだり ⬅️' : 'もっと みぎ ➡️';
+    else dir = dy > 0 ? 'もっと うえ ⬆️' : 'もっと した ⬇️';
+    const nm = code ? 'そこは ' + kana(code) + '。' : 'そこは うみ だよ。';
+    $('mapMsg').innerHTML = nm + '<br>' + dir;
+    if (code) flash(code);
+    if (mapMiss >= 2) showFujiHint();
+  } else if (mapStep === 1) {
+    if (KEN_INFO[code]) {
+      const k = KEN_INFO[code];
+      if (!found[code]) {
+        found[code] = true; SND.good();
+        $('map').querySelector('path[data-code="' + code + '"]').classList.add(k.cls);
+        const ll = project(k.ll[0], k.ll[1]);
+        $('mapOv').appendChild(text(ll[0], ll[1], k.n, 6));
+      } else SND.tap();
+      $('mapMsg').innerHTML = 'ここは <span style="color:' + (code === 22 ? '#d9771a' : '#2f8a3c') + '">' + k.n + '</span><br><small>' + k.t + '</small>';
+      if (found[22] && found[19]) setTimeout(finishMap, 1200);
+    } else if (code) {
+      SND.bad(); flash(code);
+      $('mapMsg').innerHTML = 'そこは ' + kana(code) + '。<br>ふじさんに くっついて いる けんを タップ！';
+    }
+  }
+}
+function flash(code) {
+  const e = $('map').querySelector('path[data-code="' + code + '"]'); if (!e) return;
+  e.classList.add('flash'); setTimeout(() => e.classList.remove('flash'), 600);
+}
+function showFujiHint() {
+  if ($('fujiHint')) return;
+  const f = project(FUJI_LL[0], FUJI_LL[1]);
+  const c = el('circle', { id: 'fujiHint', cx: f[0], cy: f[1], r: 40, fill: 'none', stroke: '#e8732a', 'stroke-width': 4, 'stroke-dasharray': '8 6' });
+  c.innerHTML = '<animate attributeName="r" values="30;55;30" dur="1.4s" repeatCount="indefinite"/>';
+  $('mapOv').appendChild(c);
+  $('mapMsg').innerHTML += '<br><small>🟠 まるの なかを さがしてね</small>';
+}
+function foundFuji() {
+  mapStep = 1; SND.fanfare(); confetti(40);
+  $('mapOv').innerHTML = '';
+  const f = project(FUJI_LL[0], FUJI_LL[1]);
+  const m = el('g', { transform: 'translate(' + f[0] + ',' + f[1] + ')' });
+  m.innerHTML = '<path d="M-9,4 L-2,-7 L2,-7 L9,4 Z" fill="#4f74a8" stroke="#fff" stroke-width=".6"/><path d="M-4,-2.5 L-2,-7 L2,-7 L4,-2.5 L2,-3.6 L0,-2.2 L-2,-3.6 Z" fill="#fff"/>';
+  $('mapOv').appendChild(m);
+  $('mapOv').appendChild(text(f[0], f[1] + 10, 'ふじさん', 4.2));
+  animVB(zoomBox(), 1200);
+  $('mapMsg').innerHTML = '🎉 みつけた！ ふじさんは ここ！<br><small>ふじさんに くっついて いる 2つの けんを タップしてね</small>';
+}
+function finishMap() {
+  const ov = $('mapOv');
+  LAKE_LL.forEach((l, i) => {
+    const p = project(l.ll[0], l.ll[1]);
+    setTimeout(() => {
+      ov.appendChild(el('circle', { cx: p[0], cy: p[1], r: 1.4, fill: '#2a78d0', stroke: '#fff', 'stroke-width': .4 }));
+      ov.appendChild(el('line', { x1: p[0], y1: p[1], x2: p[0] + l.dx * .8, y2: p[1] + l.dy * .8, stroke: '#2a78d0', 'stroke-width': .35 }));
+      ov.appendChild(text(p[0] + l.dx, p[1] + l.dy + 1, l.n, 2.8, l.a));
+      SND.tap();
+    }, i * 300);
+  });
+  setTimeout(() => {
+    SND.fanfare(); confetti(60);
+    $('mapMsg').innerHTML = '🗻 ふじさんは しずおかけん と やまなしけん の あいだ！<br><small>あおい ●は「ふじごこ」。5つの みずうみ だよ</small>';
+    $('mapBtns').innerHTML = '<button class="btn" id="mapAgain">もういちど</button><button class="btn sub" id="mapHome">🏠</button>';
+    $('mapAgain').onclick = () => { SND.tap(); startMap(); };
+    $('mapHome').onclick = () => { SND.tap(); go('home'); };
+  }, 1700);
+}
+
+/* =========================================================
+   アルバム
+   ========================================================= */
+function renderAlbum() {
+  $('albumTitle').textContent = 'アルバム ' + save.album.length + ' / ' + CARDS.length;
+  $('albumGrid').innerHTML = CARDS.map(c => save.album.includes(c.id)
+    ? '<button class="acard" data-id="' + c.id + '">' + sceneSVG(c.show, { still: true }) + '<div class="an">' + c.name + '</div></button>'
+    : '<div class="acard locked"><div class="ph">？</div><div class="an">？？？</div></div>').join('');
+  $('albumGrid').querySelectorAll('button.acard').forEach(b => b.addEventListener('click', () => {
+    const c = CARDS.find(x => x.id === b.dataset.id); SND.tap();
+    modal('<div class="pic">' + sceneSVG(c.show) + '</div><h3>' + c.name + '</h3><p>' + c.text + '</p>' +
+      '<div class="btns"><button class="btn" id="aClose">とじる</button></div>');
+    $('aClose').onclick = () => { SND.tap(); closeModal(); };
+  }));
+}
+
+renderHome();
+</script>
+</body>
+</html>
