@@ -200,6 +200,11 @@
   .lpanel .sts em { font-style: normal; color: #b39a5a; font-weight: bold; }
   .lpanel .note { font-size: 13px; }
   .seg .hit { fill: none; stroke: transparent; stroke-width: 22; stroke-linecap: round; stroke-linejoin: round; pointer-events: stroke; cursor: pointer; }
+  .st .sthit { cursor: pointer; }
+  .st.found circle:first-child { fill: #ffd43b; stroke: #e67700; stroke-width: 4; }
+  .st.blink circle:first-child { animation: stblink .6s ease-in-out infinite; }
+  @keyframes stblink { 50% { fill: #ff8787; stroke: #e03131; stroke-width: 5; } }
+  .st.miss circle:first-child { fill: #ffc9c9; }
   .tapnote { font-size: 13px; color: #7a6a48; text-align: center; margin: 0; }
 </style>
 <!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
@@ -285,9 +290,10 @@
       <button class="course" data-course="tokyo"><b>🗼 とうきょうの たび</b><span id="cd-tokyo"></span></button>
       <button class="course long" data-course="all"><b>🚄 ぜんぶの たび</b><span id="cd-all"></span></button>
     </div>
+    <button class="big" id="sagashiBtn">🔍 えき さがし</button>
     <button class="big sub" id="toZukan">📖 ろせんず ずかん</button>
     <p class="pnote">保護者の方へ：東京・横浜の鉄道が 1872年の新橋〜横浜から どう広がったかを、できごと順に たどります。
-      「みじかい たび」（8つ）、横浜の路線が中心の「よこはまの たび」、東京の路線が中心の「とうきょうの たび」、全部の「ぜんぶの たび」（25の できごと・21路線）から選べます。年と区間は 鉄道会社・自治体の公式資料などで確認しています。
+      「みじかい たび」（8つ）、横浜の路線が中心の「よこはまの たび」、東京の路線が中心の「とうきょうの たび」、全部の「ぜんぶの たび」（28の できごと・24路線）から選べます。さいごに 建設中の リニアを「みらい」として のぞけます（開業時期は未定）。「えき さがし」は いまの地図で 駅を 見つける あそびです。年と区間は 鉄道会社・自治体の公式資料などで確認しています。
       地図は わかりやすくした図で、実際の位置・形とは ちがいます（ほかの多くの路線は省略）。線を タッチすると ずかんが ひらきます。</p>
   </div>
 </section>
@@ -362,10 +368,11 @@
 <div class="over" id="doneOver">
   <div class="dpanel">
     <div class="stars" id="stars"></div>
-    <h2>いまに ついた！</h2>
+    <h2 id="doneTitle">いまに ついた！</h2>
     <p id="doneMsg"></p>
-    <p>さいしょは <b>しんばし〜よこはまの 1ぽん</b>だけ。<br>それが、こんなに いっぱいに なったんだね。</p>
+    <p id="doneSub">さいしょは <b>しんばし〜よこはまの 1ぽん</b>だけ。<br>それが、こんなに いっぱいに なったんだね。</p>
     <div class="pbtns">
+      <button class="big" id="miraiBtn">🔮 みらいを のぞく</button>
       <button class="big" id="mapBtn">🗺 ちずを みる</button>
       <button class="big" id="againBtn">🔁 もういちど</button>
       <button class="big sub" id="zBtn">📖 ずかん</button>
@@ -411,7 +418,7 @@
 const STATIONS = {
   akabane:   ['赤羽', 'あかばね', 232, 24, 'e'],
   tachikawa: ['立川', 'たちかわ', 30, 120, 'n'],
-  ogikubo:   ['荻窪', 'おぎくぼ', 140, 115, 's'],
+  ogikubo:   ['荻窪', 'おぎくぼ', 140, 115, 'n'],
   shinjuku:  ['新宿', 'しんじゅく', 195, 120, 'w'],
   ikebukuro: ['池袋', 'いけぶくろ', 215, 62, 'n'],
   ueno:      ['上野', 'うえの', 308, 70, 'n'],
@@ -443,6 +450,9 @@ const STATIONS = {
   noborito:  ['登戸', 'のぼりと', 100, 184, 'n'],
   higashikanagawa: ['東神奈川', 'ひがしかながわ', 192, 344, 'e'],
   futamatagawa: ['二俣川', 'ふたまたがわ', 95, 400, 's'],
+  chofu:     ['調布', 'ちょうふ', 120, 155, 'n'],
+  kodomo:    ['こどもの国', 'こどものくに', 35, 232, 'n'],
+  shinsugita: ['新杉田', 'しんすぎた', 238, 482, 'e'],
   takanawa:  ['高輪ゲートウェイ', 'たかなわげーとうぇい', 281, 210, 'w'],
 };
 // 1915年より まえ、いまの 桜木町駅は「横浜駅」だった
@@ -531,6 +541,22 @@ const LINES = {
     kid: 'とうきょうと うえのの あいだに せんろを つないで、しずおかの ほうと、とちぎ・ぐんま・いばらきの ほうの でんしゃが とおりぬけ できるように なったよ。',
     st: ['品川|しながわ', '東京|とうきょう', '上野|うえの'],
     note: '2015年3月14日 開業。東京〜上野の 列車用の線路が 42年ぶりに つながった。' },
+  keio: { name: `${R('京王線', 'けいおうせん')}`, sp: 'けいおうせん', color: '#d6336c', kind: 'rail', ev: 'keio',
+    kid: 'さいしょは しんじゅくまで せんろを つくれなくて、ささづかから ちょうふまでで スタート。たりない ところは バスで つないだんだって。',
+    st: ['新宿|しんじゅく', '笹塚|ささづか', '調布|ちょうふ', '府中|ふちゅう', '京王八王子|けいおうはちおうじ'],
+    note: '1913年4月15日 京王電気軌道 笹塚〜調布 開業（新宿〜笹塚などはバスで連絡）。1915年 新宿まで、1916年 府中まで。' },
+  kodomo: { name: `こどもの${R('国', 'くに')}${R('線', 'せん')}`, sp: 'こどものくにせん', color: '#fab005', kind: 'rail', ev: 'kodomo',
+    kid: 'こどもの ための おおきな こうえん「こどもの くに」へ いく、みじかい せん。たった 3つの えきしか ないよ。',
+    st: ['長津田|ながつた', '恩田|おんだ', 'こどもの国|こどものくに'],
+    note: '1967年4月28日 長津田〜こどもの国（約3.4km）開業。2000年に通勤線化（恩田駅 開業）。' },
+  seaside: { name: `${R('金沢', 'かなざわ')}シーサイドライン`, sp: 'かなざわ シーサイドライン', color: '#3bc9db', kind: 'mono', ev: 'seaside',
+    kid: 'うみの そばを はしる、ゴムタイヤの ちいさな でんしゃ。いまは うんてんしさんが いなくても はしるよ。',
+    st: ['新杉田|しんすぎた', '八景島|はっけいじま', '金沢八景|かなざわはっけい'],
+    note: '1989年7月5日 新杉田〜金沢八景 開業。1994年から 無人運転。' },
+  linear: { name: 'リニア', sp: 'リニア ちゅうおう しんかんせん', color: '#7048e8', kind: 'plan', ev: 'mirai',
+    kid: 'じしゃくの ちからで うかんで はしる、とっても はやい でんしゃ。しながわから なごやまで、いま トンネルを ほって つくって いるよ。',
+    st: ['品川|しながわ', '神奈川県駅（仮）|かながわけんえき', '名古屋|なごや'],
+    note: 'リニア中央新幹線 品川〜名古屋は 建設中。開業時期は 決まっていません（2026年時点）。' },
   shinyoko: { name: `${R('新横浜線', 'しんよこはません')}`, sp: 'しんよこはません', color: '#ae3ec9', kind: 'sub', ev: 'shinyoko',
     kid: 'しんよこはまえきの ちかを とおって、そうてつせんと とうきゅうせんが つながったよ。',
     st: ['羽沢横浜国大|はざわよこはまこくだい', '新横浜|しんよこはま', '新綱島|しんつなしま', '日吉|ひよし'],
@@ -561,6 +587,10 @@ const SEGS = [
   { line: 'yuri', ev: 'yuri', pts: ['shimbashi', [340, 192], 'ariake'] },
   { line: 'mm', ev: 'mm', pts: ['yokohama', [214, 366], 'motomachi'] },
   { line: 'green', ev: 'green', pts: ['nakayama', 'center', [160, 262], 'hiyoshi'] },
+  { line: 'keio', ev: 'keio', pts: [[180, 129], 'chofu'] },
+  { line: 'kodomo', ev: 'kodomo', pts: ['nagatsuta', 'kodomo'] },
+  { line: 'seaside', ev: 'seaside', pts: ['shinsugita', [252, 510]] },
+  { line: 'linear', ev: 'mirai', pts: [[275, 222], [150, 240], [0, 262]] },
   { line: 'fukutoshin', ev: 'fukutoshin', pts: ['ikebukuro', [205, 124], [205, 178], 'shibuya'] },
   { line: 'uenotokyo', ev: 'uenotokyo', pts: [[329, 138], [317, 72]] },
   { line: 'shinyoko', ev: 'shinyoko', pts: ['hazawa', 'shinyoko', [182, 292], 'hiyoshi'] },
@@ -574,6 +604,8 @@ const SEGS = [
   { line: 'keikyu', ev: 'now', pts: [[283, 224], [270, 252], [256, 282], [196, 352], [212, 405], 'kamiooka'] },
   { line: 'keikyu', ev: 'now', pts: [[270, 252], 'haneda'] },
   { line: 'nambu', ev: 'now', pts: ['noborito', [60, 150], 'tachikawa'] },
+  { line: 'keio', ev: 'now', pts: ['shinjuku', [180, 129]] },
+  { line: 'keio', ev: 'now', pts: ['chofu', [0, 170]] },
 ];
 
 // できごと（ぜんぶの たびの じゅん）。s = みじかい たびにも でる、q = その まえに でる クイズ（qIn が あれば その たびだけ）
@@ -598,6 +630,10 @@ const EVENTS = [
     body: `${R('東神奈川', 'ひがしかながわ')}から ${R('八王子', 'はちおうじ')}まで、${R('横浜線', 'よこはません')}が できたよ。かいこが つくる いと「きいと」を、よこはまの みなとまで はこんだんだ。`,
     sp: 'ひがしかながわから はちおうじまで、よこはませんが できたよ。かいこが つくる いと、きいとを、よこはまの みなとまで はこんだんだ。',
     note: '1908年9月23日 横浜鉄道 東神奈川〜八王子 開業（1917年 国有化）。八王子などの生糸を横浜港へ運ぶ目的。' },
+  { id: 'keio', y: 1913, yr: '1913年（大正2年）', era: '110ねん くらい まえ', ttl: 'たりない ところは バスで', kobi: 'しんじゅくまで とどかない〜！',
+    body: `${R('笹塚', 'ささづか')}から ${R('調布', 'ちょうふ')}まで、${R('京王線', 'けいおうせん')}の でんしゃが はしりだしたよ。${R('新宿', 'しんじゅく')}までは まだ せんろが なくて、バスで つないだんだ。`,
+    sp: 'ささづかから ちょうふまで、けいおうせんの でんしゃが はしりだしたよ。しんじゅくまでは まだ せんろが なくて、バスで つないだんだ。',
+    note: '1913年4月15日 京王電気軌道 笹塚〜調布 開業。1915年 新宿まで、1916年 府中まで。' },
   { id: 'tokyo', s: 1, y: 1914, yr: '1914年（大正3年）', era: '110ねん くらい まえ', ttl: 'とうきょうえきが できた',
     body: `れんがの おおきな えき、${R('東京', 'とうきょう')}えきが できたよ。せんが ${R('東京', 'とうきょう')}まで のびた。`,
     sp: 'れんがの おおきな えき、とうきょうえきが できたよ。',
@@ -650,11 +686,19 @@ const EVENTS = [
     body: `${R('溝の口', 'みぞのくち')}から ${R('長津田', 'ながつた')}まで、${R('田園都市線', 'でんえんとしせん')}が のびたよ。まわりは まだ のはらと やま！`,
     sp: 'みぞのくちから ながつたまで、でんえんとしせんが のびたよ。まわりは まだ のはらと やま！',
     note: '1966年4月1日 田園都市線 溝の口〜長津田 開業。' },
+  { id: 'kodomo', y: 1967, yr: '1967年（昭和42年）', era: 'おじいちゃんが こどもの ころ', ttl: 'こどもの くにへ いく せん', kobi: 'こどもの くに？ いきたい〜！',
+    body: `${R('長津田', 'ながつた')}から おおきな こうえん「こどもの${R('国', 'くに')}」まで、みじかい せんが できたよ。`,
+    sp: 'ながつたから おおきな こうえん、こどものくにまで、みじかい せんが できたよ。',
+    note: '1967年4月28日 こどもの国線 長津田〜こどもの国 開業。' },
   { id: 'blue', s: 1, y: 1972, yr: '1972年（昭和47年）', era: '50ねん くらい まえ', ttl: 'よこはまの ちかてつ', mole: 'よこはまにも でた！',
     body: `よこはまにも ちかてつが できたよ。${R('伊勢佐木長者町', 'いせざきちょうじゃまち')}から ${R('上大岡', 'かみおおおか')}まで。いまの ブルーライン。`,
     sp: 'よこはまにも ちかてつが できたよ。いせざきちょうじゃまちから かみおおおかまで。いまの ブルーライン。',
     note: '1972年12月16日 横浜市営地下鉄 伊勢佐木長者町〜上大岡 開業。',
     q: { ask: 'つぎは、よこはまで はじめての ちかてつ。なにいろ かな？', ans: 'aoi', opts: ['aoi', 'midori', 'kiiro'], qIn: ['yoko', 'all'] } },
+  { id: 'seaside', y: 1989, yr: '1989年（平成元年）', era: '40ねん くらい まえ', ttl: 'うみの そばの ちいさな でんしゃ', kobi: 'うみが みえる〜！',
+    body: `${R('新杉田', 'しんすぎた')}から ${R('金沢八景', 'かなざわはっけい')}まで、うみの そばを はしる シーサイドラインが できたよ。ゴムの タイヤで はしるんだ。`,
+    sp: 'しんすぎたから かなざわはっけいまで、うみの そばを はしる シーサイドラインが できたよ。ゴムの タイヤで はしるんだ。',
+    note: '1989年7月5日 金沢シーサイドライン 新杉田〜金沢八景 開業（1994年から 無人運転）。' },
   { id: 'yuri', y: 1995, yr: '1995年（平成7年）', era: 'パパや ママが こどもの ころ', ttl: 'うんてんしさんが いない！',
     body: `${R('新橋', 'しんばし')}から うみの うえを わたって ${R('有明', 'ありあけ')}まで。ゆりかもめは コンピューターが うんてんするよ。`,
     sp: 'しんばしから うみの うえを わたって ありあけまで。ゆりかもめは コンピューターが うんてんするよ。',
@@ -688,15 +732,19 @@ const EVENTS = [
   { id: 'now', s: 1, y: 2026, yr: '', era: 'いま！', ttl: 'いまの ろせんず',
     body: 'せんが のびて、つながって、いっぱい！ でも、さいしょは きらっと ひかる 1ぽん だけ だったね。せんを タッチすると、くわしく わかるよ。',
     sp: 'いまの ろせんず。せんが のびて、つながって、いっぱい！ でも、さいしょは ひかっている いっぽん だけ だったね。',
-    note: 'いまの姿：中央線は東京まで（1919年）、丸ノ内線は荻窪まで（1962年）、田園都市線は渋谷〜中央林間（1984年 全通）、ブルーラインは あざみ野〜湘南台（1999年）、京急は羽田空港まで（1998年）、新幹線に品川駅（2003年）。ほかの多くの路線は省略。' },
+    note: 'いまの姿：京王線は新宿まで（1915年）、南武線は立川まで（1929年）、中央線は東京まで（1919年）、丸ノ内線は荻窪まで（1962年）、田園都市線は渋谷〜中央林間（1984年 全通）、ブルーラインは あざみ野〜湘南台（1999年）、京急は羽田空港まで（1998年）、新幹線に品川駅（2003年）。ほかの多くの路線は省略。' },
+  { id: 'mirai', y: 2026, yr: 'いつ できるかは まだ きまって いない', era: 'みらい', ttl: 'みらいの せん リニア（つくって いる ところ）', kobi: 'はやく のりたい〜！',
+    body: `${R('品川', 'しながわ')}から ${R('名古屋', 'なごや')}まで、じしゃくの ちからで うかんで はしる リニアを つくって いるよ。いつ のれるかは、まだ きまって いないんだ。`,
+    sp: 'みらいの せん。しながわから なごやまで、じしゃくの ちからで うかんで はしる リニアを つくって いるよ。いつ のれるかは、まだ きまって いないんだ。',
+    note: 'リニア中央新幹線 品川〜名古屋は 建設中（神奈川県駅は 相模原市）。開業時期は 決まっていません（2026年時点）。点線は 地下の トンネル。' },
 ];
 const EV = Object.fromEntries(EVENTS.map((e, i) => [e.id, Object.assign(e, { i })]));
 const byOrder = ids => ids.slice().sort((a, b) => EV[a].i - EV[b].i);
 const COURSES = {
   short: EVENTS.filter(e => e.s).map(e => e.id),
-  yoko: byOrder(['sl', 'yokohamasen', 'keikyu', 'nambu', 'toyoko', 'sotetsu', 'shin', 'denen', 'blue', 'mm', 'green', 'shinyoko', 'now']),
-  tokyo: byOrder(['sl', 'shinagawa', 'chuo', 'tokyo', 'yama', 'odakyu', 'chika', 'ginza', 'maru', 'mono', 'shin', 'yuri', 'fukutoshin', 'uenotokyo', 'takanawa', 'now']),
-  all: EVENTS.map(e => e.id),
+  yoko: byOrder(['sl', 'yokohamasen', 'keikyu', 'nambu', 'toyoko', 'sotetsu', 'shin', 'denen', 'kodomo', 'blue', 'seaside', 'mm', 'green', 'shinyoko', 'now']),
+  tokyo: byOrder(['sl', 'shinagawa', 'chuo', 'keio', 'tokyo', 'yama', 'odakyu', 'chika', 'ginza', 'maru', 'mono', 'shin', 'yuri', 'fukutoshin', 'uenotokyo', 'takanawa', 'now']),
+  all: EVENTS.filter(e => e.id !== 'mirai').map(e => e.id),
 };
 const hasQ = (id, c) => { const q = EV[id].q; return !!q && (!q.qIn || q.qIn.includes(c)); };
 
@@ -742,6 +790,7 @@ try {
     if (o.cc && typeof o.cc === 'object') ['short', 'yoko', 'tokyo', 'all'].forEach(k => { if (Number.isInteger(o.cc[k]) && o.cc[k] > 0) S.cc[k] = o.cc[k]; });
     if (Number.isInteger(o.longClears) && o.longClears > 0 && !S.cc.all) S.cc.all = o.longClears; // まえの はんの「ながい たび」
     if (Number.isInteger(o.best) && o.best >= 0 && o.best <= 3) S.best = o.best;
+    if (Number.isInteger(o.sgBest) && o.sgBest >= 0 && o.sgBest <= 10) S.sgBest = o.sgBest;
     if (o.seen && typeof o.seen === 'object') Object.keys(o.seen).forEach(k => { if (LINES[k]) S.seen[k] = 1; });
   }
 } catch (e) {}
@@ -805,7 +854,7 @@ const landColor = y => {
 };
 const pt = p => typeof p === 'string' ? STATIONS[p].slice(2, 4) : p;
 const dOf = s => s.pts.map((p, i) => (i ? 'L' : 'M') + pt(p).join(' ')).join(' ') + (s.close ? ' Z' : '');
-const WIDTH = { rail: 6.5, sub: 6.5, shin: 7.5, mono: 6.5 };
+const WIDTH = { rail: 6.5, sub: 6.5, shin: 7.5, mono: 6.5, plan: 5 };
 
 function buildMap() {
   let h = '';
@@ -843,13 +892,14 @@ function buildMap() {
       g.appendChild(p); return p;
     };
     s.base = mk('base', WIDTH[kind], LINES[s.line].color);
-    if (kind !== 'rail') {
+    if (kind === 'plan') s.base.setAttribute('stroke-dasharray', '7 5');
+    if (kind !== 'rail' && kind !== 'plan') {
       const core = mk('core', kind === 'shin' ? 2.4 : kind === 'mono' ? 1.6 : 2.2);
       if (kind === 'sub') core.setAttribute('stroke-dasharray', '4 5');
       if (kind === 'mono') core.setAttribute('stroke-dasharray', '1 3');
     }
     mk('hit');
-    g.addEventListener('click', () => { if (!busy) openLine(s.line); });
+    g.addEventListener('click', () => { if (!busy && mode === 'trip') openLine(s.line); });
     segG.appendChild(g);
     s.el = g;
   });
@@ -862,7 +912,9 @@ function buildMap() {
     const tx = x + off[0], ty = yy + off[1];
     g.innerHTML = `<circle cx="${x}" cy="${yy}" r="5" fill="#fff" stroke="#333" stroke-width="2.3"/>
       <text class="kana" x="${tx}" y="${ty - 3}" font-size="8" text-anchor="${off[2]}" fill="#555">${y}</text>
-      <text class="kanji" x="${tx}" y="${ty + 10}" font-size="12.5" text-anchor="${off[2]}" fill="#222">${k}</text>`;
+      <text class="kanji" x="${tx}" y="${ty + 10}" font-size="12.5" text-anchor="${off[2]}" fill="#222">${k}</text>
+      <circle class="sthit" cx="${x}" cy="${yy}" r="13" fill="transparent"/>`;
+    g.addEventListener('click', e => { e.stopPropagation(); tapStation(id); });
     stG.appendChild(g);
   });
 }
@@ -871,7 +923,7 @@ function buildMap() {
 let course = 'short', path = [], step = 0;
 const curEv = () => EV[path[step]];
 function segOn(s) {
-  const cur = curEv(), atNow = cur.id === 'now';
+  const cur = curEv(), atNow = cur.id === 'now' || cur.id === 'mirai';
   if (EV[s.ev].i > cur.i) return false;
   if (s.until && cur.i >= EV[s.until].i) return false;
   return atNow || path.slice(0, step + 1).includes(s.ev) || s.ev === 'now';
@@ -882,7 +934,7 @@ function setStations() {
   SEGS.forEach(s => { if (segOn(s)) s.pts.forEach(p => { if (typeof p === 'string') on.add(p); }); });
   // えきだけの できごと（高輪ゲートウェイ など）
   const cur = curEv();
-  EVENTS.forEach(e => { if (e.sts && e.i <= cur.i && (cur.id === 'now' || path.slice(0, step + 1).includes(e.id))) e.sts.forEach(id => on.add(id)); });
+  EVENTS.forEach(e => { if (e.sts && e.i <= cur.i && (cur.id === 'now' || cur.id === 'mirai' || path.slice(0, step + 1).includes(e.id))) e.sts.forEach(id => on.add(id)); });
   const y = curEv().y;
   Object.keys(STATIONS).forEach(id => {
     const g = $('st-' + id); g.style.opacity = on.has(id) ? 1 : 0;
@@ -897,9 +949,10 @@ function setStations() {
   // ちずの そとへ つづく せんの いきさき
   const edge = [];
   if (SEGS.some(s => s.line === 'yokohamasen' && segOn(s))) edge.push('<text x="2" y="250" font-size="10.5" fill="#8a7a00" font-weight="bold">← はちおうじ</text>');
+  if (SEGS.some(s => s.line === 'seaside' && segOn(s))) edge.push('<text x="256" y="506" font-size="10.5" fill="#1098ad" font-weight="bold">↓ かなざわはっけい</text>');
   if (SEGS.some(s => s.line === 'sotetsu' && segOn(s))) edge.push('<text x="2" y="402" font-size="10.5" fill="#0b7285" font-weight="bold">← えびな</text>');
   if (SEGS.some(s => s.line === 'shin' && segOn(s))) edge.push('<text x="4" y="458" font-size="10.5" fill="#364fc7" font-weight="bold">← おおさか</text>');
-  if (SEGS.some(s => s.line === 'odakyu' && segOn(s))) edge.push('<text x="4" y="232" font-size="10.5" fill="#1971c2" font-weight="bold">← おだわら</text>');
+  if (SEGS.some(s => s.line === 'odakyu' && segOn(s))) edge.push('<text x="4" y="189" font-size="10.5" fill="#1971c2" font-weight="bold">← おだわら</text>');
   $('edge').innerHTML = edge.join('');
 }
 
@@ -915,7 +968,7 @@ function showSegs(animate) {
       return;
     }
     if (g.style.display === 'none') {
-      g.style.display = ''; S.seen[s.line] = 1;
+      g.style.display = ''; if (mode === 'trip') S.seen[s.line] = 1;
       if (animate) fresh.push(s);
       else g.classList.add('drawn');
     }
@@ -977,6 +1030,7 @@ function renderHome() {
   const nm = { short: 'みじかい', yoko: 'よこはま', tokyo: 'とうきょう', all: 'ぜんぶ' };
   const cc = Object.keys(nm).filter(k => S.cc[k]).map(k => `${nm[k]} ${S.cc[k]}かい`);
   if (cc.length) r.push('クリア：' + cc.join('・'));
+  if (S.sgBest) r.push(`えき さがし さいこう ${S.sgBest} / 10`);
   Object.keys(COURSES).forEach(k => {
     const p = COURSES[k], qn = p.filter(id => hasQ(id, k)).length, ln = new Set(SEGS.filter(sg => sg.ev !== 'now' && p.includes(sg.ev)).map(sg => sg.line)).size;
     const min = Math.max(2, Math.round(p.length * 0.27));
@@ -990,11 +1044,17 @@ $('homeBtn').addEventListener('click', goHome);
 $('backBtn').addEventListener('click', goHome);
 $('zHome').addEventListener('click', goHome);
 document.querySelectorAll('[data-course]').forEach(b => b.addEventListener('click', () => { sfx.pick(); startGame(b.dataset.course); }));
-$('againBtn').addEventListener('click', () => { sfx.pick(); startGame(course); });
+$('againBtn').addEventListener('click', () => { sfx.pick(); if (mode === 'sagashi') startSagashi(); else startGame(course); });
+$('sagashiBtn').addEventListener('click', () => { sfx.pick(); startSagashi(); });
+$('miraiBtn').addEventListener('click', () => {
+  if (busy || mode !== 'trip' || path.includes('mirai')) return;
+  sfx.pick(); $('doneOver').classList.remove('on');
+  path = path.concat('mirai'); renderTL(); travel();
+});
 $('mapBtn').addEventListener('click', () => { sfx.pick(); $('doneOver').classList.remove('on'); setMsg('せんを タッチすると、くわしく わかるよ！'); });
 $('zBtn').addEventListener('click', () => { sfx.pick(); openZukan(); });
 $('toZukan').addEventListener('click', () => { sfx.pick(); openZukan(); });
-$('sayBtn').addEventListener('click', () => { if (quiz != null) speak(EV[quiz].q.ask); else speak(curEv().sp); });
+$('sayBtn').addEventListener('click', () => { if (mode === 'sagashi') speak(sg.say || ''); else if (quiz != null) speak(EV[quiz].q.ask); else speak(curEv().sp); });
 
 /* ========== ずかん ========== */
 function openZukan() {
@@ -1004,8 +1064,8 @@ function openZukan() {
   $('zgrid').innerHTML = order.map(id => {
     const L = LINES[id], ev = EV[L.ev];
     return S.seen[id]
-      ? `<button class="zl" data-line="${id}"><i style="background:${L.color}"></i><b>${L.name}</b><small>${ev.y}年に できた</small></button>`
-      : `<button class="zl lock" data-line="${id}"><i></i><b>？？？</b><small>${ev.y}年ごろ</small></button>`;
+      ? `<button class="zl" data-line="${id}"><i style="background:${L.color}"></i><b>${L.name}</b><small>${L.kind === 'plan' ? 'つくって いる ところ' : ev.y + '年に できた'}</small></button>`
+      : `<button class="zl lock" data-line="${id}"><i></i><b>？？？</b><small>${L.kind === 'plan' ? 'みらいの せん' : ev.y + '年ごろ'}</small></button>`;
   }).join('');
   $('zgrid').querySelectorAll('.zl').forEach(b => b.addEventListener('click', () => {
     if (S.seen[b.dataset.line]) openLine(b.dataset.line);
@@ -1017,7 +1077,7 @@ function openLine(id) {
   sfx.pick();
   const sts = L.st.map(t => { const [k, y] = t.split('|'); return k === y ? `<span>${k}</span>` : `<span>${R(k, y)}</span>`; }).join('<em>―</em>');
   $('lineBox').innerHTML = `<h2>${L.name}</h2><div class="lbar" style="background:${L.color}"></div>
-    <span class="when">${ev.y}年に できた（${ev.era}）</span>
+    <span class="when">${L.kind === 'plan' ? 'いま つくって いる ところ' : `${ev.y}年に できた（${ev.era}）`}</span>
     <p class="kid">${L.kid}</p>
     <div><b>おもな えき</b></div><div class="sts">${sts}</div>
     <p class="note">${L.note}</p>
@@ -1029,7 +1089,7 @@ function openLine(id) {
 $('lineOver').addEventListener('click', e => { if (e.target.id === 'lineOver') { hush(); $('lineOver').classList.remove('on'); } });
 
 /* ========== あそびの すすみかた ========== */
-let quiz = null, busy = false, misses = {}, timers = [], kobiN = 0;
+let mode = 'trip', quiz = null, busy = false, misses = {}, timers = [], kobiN = 0;
 const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
 function clearTimers() { timers.forEach(clearTimeout); timers = []; cancelAnimationFrame(runAnim); }
 const lever = $('lever');
@@ -1037,7 +1097,7 @@ function setMsg(t, ng) { $('msg').textContent = t; $('msg').classList.toggle('ng
 function setLever(on) { lever.disabled = !on; lever.classList.toggle('glow', on); }
 
 function renderTL() {
-  $('tl').innerHTML = path.map((id, i) => `<span class="${i < step ? 'done' : i === step ? 'now' : ''}"><i></i>${i % Math.ceil(path.length / 7) && i !== path.length - 1 ? '' : id === 'now' ? 'いま' : EV[id].y}</span>`).join('');
+  $('tl').innerHTML = path.map((id, i) => `<span class="${i < step ? 'done' : i === step ? 'now' : ''}"><i></i>${i % Math.ceil(path.length / 7) && i !== path.length - 1 ? '' : id === 'now' ? 'いま' : id === 'mirai' ? 'みらい' : EV[id].y}</span>`).join('');
 }
 function renderText() {
   const e = curEv();
@@ -1048,6 +1108,7 @@ function renderText() {
 
 function startGame(c) {
   clearTimers(); hush();
+  mode = 'trip'; lever.style.display = ''; $('tl').style.display = '';
   course = c; path = COURSES[c]; step = 0; quiz = null; busy = true; misses = {}; kobiN = 0;
   show('play');
   buildMap();
@@ -1097,14 +1158,15 @@ function answer(b) {
 
 function travel() {
   busy = true; setLever(false);
-  const from = curEv().y, to = EV[path[step + 1]].y, last = step + 1 === path.length - 1;
+  const toMirai = path[step + 1] === 'mirai';
+  const from = curEv().y, to = EV[path[step + 1]].y, last = !toMirai && step + 1 === path.length - 1;
   const wrap = $('mapwrap');
   wrap.classList.add('warping'); sfx.warp();
   setMsg('びゅーん… じかんが すすむよ！');
   const t0 = performance.now(), dur = 1100;
   const tickYear = now => {
     const k = Math.min(1, (now - t0) / dur), y = Math.round(from + (to - from) * k);
-    $('ybadge').innerHTML = `びゅーん…<small>${last && k === 1 ? 'いま' : y + '年'}</small>`;
+    $('ybadge').innerHTML = `びゅーん…<small>${toMirai ? '20' + (Math.random() * 90 + 10 | 0) + '年？' : last && k === 1 ? 'いま' : y + '年'}</small>`;
     if (k < 1) { if (Math.random() < 0.35) sfx.tick(); requestAnimationFrame(tickYear); }
   };
   requestAnimationFrame(tickYear);
@@ -1114,8 +1176,9 @@ function travel() {
     const n = showSegs(true);
     if (n) sfx.draw();
     speak(curEv().sp);
-    setMsg(last ? 'いまに ついた！' : 'あたらしい せんが できたよ！');
-    if (last) later(finale, n > 3 ? 2300 : 1900);
+    setMsg(toMirai ? 'みらいを のぞいたよ！ てんせんは つくって いる ところ。' : last ? 'いまに ついた！' : 'あたらしい せんが できたよ！');
+    if (toMirai) later(() => { bubble(curEv().kobi); busy = false; }, 1900);
+    else if (last) later(finale, n > 3 ? 2300 : 1900);
     else later(laugh, 1800);
   }, dur + 100);
 }
@@ -1173,6 +1236,8 @@ function finish() {
   $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
   $('doneMsg').textContent = (first === qs.length ? 'クイズ ぜんぶ いっかいで せいかい！ ろせんず はかせだ！' : 'さいごまで いけたね！ すごい！') +
     ` ずかんの せん ${seenN()} / ${LN}`;
+  $('doneTitle').textContent = 'いまに ついた！'; $('doneSub').style.display = ''; $('mapBtn').style.display = '';
+  $('miraiBtn').style.display = path.includes('mirai') ? 'none' : '';
   $('doneOver').classList.add('on');
   sfx.fanfare(); confetti();
   speak('いまに ついた！ さいしょは いっぽん だけ。それが こんなに いっぱいに なったんだね。');
@@ -1186,6 +1251,86 @@ function confetti() {
     c.style.animationDuration = 2 + Math.random() * 2 + 's'; c.style.animationDelay = Math.random() * 0.6 + 's';
     document.body.appendChild(c); setTimeout(() => c.remove(), 5000);
   }
+}
+
+/* ========== えきを タッチ（たび: どの せんの えきか おしえる／えき さがし: こたえ） ========== */
+const linesAt = id => [...new Set(SEGS.filter(s => segOn(s) && s.pts.includes(id)).map(s => s.line))];
+const lineSp = id => linesAt(id).map(l => LINES[l].sp).join('、');
+function tapStation(id) {
+  const g = $('st-' + id);
+  if (!g || g.style.opacity !== '1') return;
+  const [k, y] = STATIONS[id];
+  if (mode === 'sagashi') { sagashiAnswer(id); return; }
+  if (busy) return;
+  sfx.pick();
+  const ls = lineSp(id);
+  bubble(`${y}えき！`, 1600);
+  setMsg(`「${y}」えき。${ls ? ls + 'が とまるよ。' : ''}`);
+  speak(`${y}えき。${ls ? ls + 'が とまるよ。' : ''}`);
+}
+
+/* ========== えき さがし ========== */
+const SG_N = 10;
+let sg = { qs: [], n: 0, ok: 0, miss: 0, say: '' };
+function startSagashi() {
+  clearTimers(); hush();
+  mode = 'sagashi'; course = 'all'; path = COURSES.all.slice(); step = path.length - 1; quiz = null; busy = false;
+  show('play');
+  buildMap();
+  $('kobito').className = 'kobito'; $('bub').classList.remove('on'); $('choices').classList.remove('on');
+  $('sparks').innerHTML = '';
+  setStations(); showSegs(false);
+  lever.style.display = 'none'; $('tl').style.display = 'none';
+  $('era').textContent = 'えき さがし';
+  $('ybadge').innerHTML = 'えき さがし<small>いまの ちず</small>';
+  const ids = Object.keys(STATIONS).filter(id => $('st-' + id).style.opacity === '1');
+  for (let i = ids.length - 1; i > 0; i--) { const j = Math.random() * (i + 1) | 0; [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  sg = { qs: ids.slice(0, SG_N), n: 0, ok: 0, miss: 0, say: '' };
+  askStation();
+}
+function askStation() {
+  document.querySelectorAll('.st').forEach(g => g.classList.remove('found', 'blink', 'miss'));
+  const id = sg.qs[sg.n], [k, y] = STATIONS[id], ls = linesAt(id);
+  const hint = ls.length ? LINES[ls[Math.random() * ls.length | 0]] : null;
+  sg.miss = 0;
+  $('ttl').textContent = `${sg.n + 1} / ${SG_N}もんめ`;
+  $('body').innerHTML = `「<b>${k === y ? k : R(k, y)}</b>」えきは どこかな？<br>ちずの ●を タッチしてね。`;
+  $('note').textContent = hint ? `ヒント：${hint.name.replace(/<rt>.*?<\/rt>|<\/?ruby>/g, '')}の えき` : '';
+  sg.say = `${y}えきは どこかな？` + (hint ? `ヒントは、${hint.sp}の えき。` : '');
+  setMsg('🔍 ' + y + 'えきを さがそう！');
+  speak(sg.say);
+}
+function sagashiAnswer(id) {
+  if (busy) return;
+  const want = sg.qs[sg.n], g = $('st-' + id);
+  if (id === want) {
+    busy = true; sfx.ok();
+    if (!sg.miss) sg.ok++;
+    g.classList.remove('blink', 'miss'); g.classList.add('found');
+    const [, y] = STATIONS[id], ls = lineSp(id);
+    setMsg(`せいかい！ ここが ${y}えき！`);
+    speak(`せいかい！ ここが ${y}えき。${ls ? ls + 'が とまるよ。' : ''}`);
+    bubble(sg.miss ? 'みつけた！' : 'すごい、いっぱつ！', 1500);
+    later(() => { busy = false; sg.n++; if (sg.n < SG_N) askStation(); else sagashiDone(); }, 2200);
+  } else {
+    sg.miss++; sfx.ng();
+    g.classList.add('miss'); later(() => g.classList.remove('miss'), 900);
+    const [, y] = STATIONS[id], [, wy] = STATIONS[want];
+    setMsg(`そこは 「${y}」えきだよ。もういちど！`, true);
+    speak(`そこは ${y}えき。${wy}えきを さがしてね`);
+    if (sg.miss >= 2) $('st-' + want).classList.add('blink');
+  }
+}
+function sagashiDone() {
+  const st = sg.ok >= 9 ? 3 : sg.ok >= 6 ? 2 : 1;
+  S.sgBest = Math.max(S.sgBest || 0, sg.ok); save();
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
+  $('doneTitle').textContent = 'えき さがし おしまい！';
+  $('doneMsg').textContent = `${SG_N}もん中 ${sg.ok}もん いっぱつで みつけたよ！` + (sg.ok === SG_N ? ' えき はかせだ！' : '');
+  $('doneSub').style.display = 'none'; $('mapBtn').style.display = 'none'; $('miraiBtn').style.display = 'none';
+  $('doneOver').classList.add('on');
+  sfx.fanfare(); confetti();
+  speak(`えき さがし おしまい！ ${sg.ok}もん いっぱつで みつけたよ！`);
 }
 
 renderHome();
