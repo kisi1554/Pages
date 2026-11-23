@@ -86,6 +86,13 @@
     #mapInfo { flex:1; }
   }
   .row .btn { font-size:18px; white-space:nowrap; }
+  .btn.grn { background:#20a288; box-shadow:0 5px 0 #13705d; }
+  .btn small { font-size:14px; font-weight:bold; opacity:.9; }
+  .lchip { display:inline-block; color:#fff; font-weight:bold; border-radius:999px; padding:3px 14px; font-size:15px; }
+  .ekimei.xlong { font-size:22px; }
+  .ltabs { display:flex; gap:6px; flex-wrap:wrap; justify-content:center; margin:0 0 6px; }
+  .ltabs button { border:3px solid #b5c9dc; background:#fff; color:#064a85; border-radius:999px; padding:6px 12px; font-size:15px; font-weight:bold; min-height:44px; }
+  .ltabs button.sel { color:#fff; }
   @media (max-width:560px) {
     #hud { flex-wrap:wrap; }
     #route { order:5; flex-basis:100%; font-size:14px; }
@@ -183,14 +190,16 @@
 <!-- タイトル -->
 <div class="ov show" id="ovTitle"><div class="panel">
   <div class="logo">🚇💨</div>
-  <h1>ブルーライン ダッシュ<small>しょうなんだい → あざみの 32えき アクション</small></h1>
-  <p>ブルーラインの でんしゃ「あおくん」に なって、<br>ちかてつの トンネルを はしりぬけよう！</p>
+  <h1>ブルーライン ダッシュ<small id="tSub">しょうなんだい → あざみの 32えき アクション</small></h1>
+  <div id="tLine"></div>
+  <p id="tDesc">ブルーラインの でんしゃ「あおくん」に なって、<br>ちかてつの トンネルを はしりぬけよう！</p>
   <p class="big" id="tProgress"></p>
   <button class="btn" id="tGo">▶ しゅっぱつ！</button>
   <div class="row">
     <button class="btn sub" id="tMap">🗺️ ろせんず</button>
     <button class="btn sub" id="tHow">❓ あそびかた</button>
   </div>
+  <button class="btn grn" id="tXfer" style="display:none">🔁 あざみので のりかえ（でんえんとしせん）</button>
   <div class="seg">むずかしさ
     <button id="dEasy">🐢 やさしい</button><button id="dNorm">🐇 ふつう</button>
   </div>
@@ -215,7 +224,8 @@
 
 <!-- ろせんず -->
 <div class="ov" id="ovMap"><div class="panel wide">
-  <h2>🗺️ ブルーライン ろせんず</h2>
+  <h2>🗺️ ろせんず</h2>
+  <div class="ltabs" id="mapTabs"></div>
   <div id="mapBody">
     <svg id="mapSvg" viewBox="-46 -16 312 318" aria-label="ブルーラインの ろせんず"></svg>
     <div id="mapInfo"></div>
@@ -244,21 +254,15 @@
   <div class="seg"><button id="pSound">🔊 おと オン</button></div>
 </div></div>
 <!-- ゴール -->
-<div class="ov" id="ovEnd"><div class="panel">
-  <div class="logo">🎉🚇🎉</div>
-  <h2>ぜんえき せいは！</h2>
-  <p class="ekimei"><ruby>湘南台<rt>しょうなんだい</rt></ruby> → <ruby>あざみ野<rt>あざみの</rt></ruby></p>
-  <p>32この えきを ぜんぶ はしりぬけたよ！<br>あおくん、おつかれさま！</p>
-  <p class="big" id="endTix"></p>
-  <button class="btn" id="eMap">🗺️ ろせんずで ★を あつめる</button>
-  <button class="btn sub" id="eTitle">🏠 タイトル</button>
-</div></div>
+<div class="ov" id="ovEnd"><div class="panel" id="endBody"></div></div>
+<!-- のりかえ -->
+<div class="ov" id="ovXfer"><div class="panel" id="xferBody"></div></div>
 
 <script>
 'use strict';
 /* ============ えき データ（B01 湘南台 〜 B32 あざみ野） ============
    [なまえ, よみ, いど, けいど, のりかえ, まめちしき, おそと(こうか)=1] */
-const ST = [
+const BLUE = [
   ['湘南台','しょうなんだい',35.3963,139.4668,'おだきゅう えのしません・そうてつ いずみのせん','ブルーラインの はじまりの えき。'],
   ['下飯田','しもいいだ',35.4090,139.4848,'',''],
   ['立場','たてば',35.4186,139.4957,'',''],
@@ -292,9 +296,49 @@ const ST = [
   ['中川','なかがわ',35.5620,139.5700,'',''],
   ['あざみ野','あざみの',35.5680,139.5530,'とうきゅう でんえんとしせん','ブルーラインの しゅうてん！'],
 ];
-const NST = ST.length, NSTAGE = NST - 1;
+/* とうきゅう でんえんとしせん（DT01 渋谷 〜 DT27 中央林間） */
+const DT = [
+  ['渋谷','しぶや',35.6590,139.7006,'JR・とうよこせん・けいおう いのかしらせん・ちかてつ','でんえんとしせんの はじっこ。とても おおきな えき！'],
+  ['池尻大橋','いけじりおおはし',35.6505,139.6843,'',''],
+  ['三軒茶屋','さんげんぢゃや',35.6437,139.6703,'せたがやせん','「さんちゃ」と よばれて いるよ。'],
+  ['駒沢大学','こまざわだいがく',35.6334,139.6614,'','ちかくに おおきな こうえんが あるよ。'],
+  ['桜新町','さくらしんまち',35.6315,139.6450,'',''],
+  ['用賀','ようが',35.6264,139.6337,'',''],
+  ['二子玉川','ふたこたまがわ',35.6117,139.6267,'おおいまちせん','たまがわの すぐ そば。ここから ちかと おそとが かわるよ。',1],
+  ['二子新地','ふたこしんち',35.6070,139.6223,'','',1],
+  ['高津','たかつ',35.6033,139.6175,'','',1],
+  ['溝の口','みぞのくち',35.6000,139.6110,'JR なんぶせん・おおいまちせん','',1],
+  ['梶が谷','かじがや',35.5945,139.6058,'','',1],
+  ['宮崎台','みやざきだい',35.5872,139.5917,'','ちかくに でんしゃと バスの はくぶつかんが あるよ。',1],
+  ['宮前平','みやまえだいら',35.5850,139.5820,'','',1],
+  ['鷺沼','さぎぬま',35.5791,139.5734,'','でんしゃの おうち（しゃりょうきち）が あるよ。',1],
+  ['たまプラーザ','たまプラーザ',35.5776,139.5590,'','なまえに カタカナが はいって いる えき。',1],
+  ['あざみ野','あざみの',35.5680,139.5530,'ブルーライン','ブルーラインに のりかえ できるよ。',1],
+  ['江田','えだ',35.5555,139.5423,'','',1],
+  ['市が尾','いちがお',35.5517,139.5310,'','',1],
+  ['藤が丘','ふじがおか',35.5455,139.5230,'','',1],
+  ['青葉台','あおばだい',35.5428,139.5170,'','',1],
+  ['田奈','たな',35.5377,139.5050,'','',1],
+  ['長津田','ながつた',35.5323,139.4950,'JR よこはません・こどものくにせん','でんしゃの おうち（しゃりょうきち）が あるよ。',1],
+  ['つくし野','つくしの',35.5280,139.4860,'','',1],
+  ['すずかけ台','すずかけだい',35.5180,139.4820,'','',1],
+  ['南町田グランベリーパーク','みなみまちだグランベリーパーク',35.5110,139.4700,'','でんえんとしせんで いちばん なまえが ながい えき！',1],
+  ['つきみ野','つきみの',35.5040,139.4560,'','',1],
+  ['中央林間','ちゅうおうりんかん',35.5078,139.4447,'おだきゅう えのしません','でんえんとしせんの はじっこ！'],
+];
+DT.forEach((r, i) => r.no = 'DT' + String(i + 1).padStart(2, '0'));
+BLUE.forEach((r, i) => r.no = 'B' + String(i + 1).padStart(2, '0'));
 /* ミン先生（ミンミンゼミ）が まっている えき: 湘南台・立場・戸塚・舞岡・上永谷・上大岡・蒔田 */
-const QUIZ_ST = { 0: 1, 2: 1, 5: 1, 6: 1, 8: 1, 10: 1, 12: 1 };
+const LINES = {
+  blue: { id: 'blue', name: 'ブルーライン', st: BLUE, color: '#0a6fc2', train: 'あおくん', boss: { 18: 1, 30: 1 },
+          quiz: { 0: 1, 2: 1, 5: 1, 6: 1, 8: 1, 10: 1, 12: 1 }, keys: { 0: 'l', 5: 'b', 10: 'r', 16: 'r', 19: 'l', 24: 'l', 28: 'r', 31: 'r' } },
+  dts:  { id: 'dts', name: 'でんえんとしせん しぶや ほうめん', st: DT.slice(0, 16).reverse(), color: '#20a288', train: 'みどりくん',
+          boss: { 8: 1, 14: 1 }, quiz: {}, keys: { 0: 'l', 9: 'r', 15: 'l' } },
+  dtc:  { id: 'dtc', name: 'でんえんとしせん ちゅうおうりんかん ほうめん', st: DT.slice(15), color: '#20a288', train: 'みどりくん',
+          boss: { 10: 1 }, quiz: {}, keys: { 0: 'r', 6: 'r', 11: 'b' } },
+};
+let LN = LINES.blue, ST = BLUE, NST = ST.length, NSTAGE = NST - 1, LC = LN.color;
+function setLine(id) { LN = LINES[id] || LINES.blue; ST = LN.st; NST = ST.length; NSTAGE = NST - 1; LC = LN.color; }
 /* むしクイズ [もんだい, [こたえ（さいしょが せいかい）, ...], せつめい] */
 const BUGQ = [
   ['こんちゅうの あしは なんぼん？', ['6ぽん', '8ぽん', '4ほん'], 'こんちゅうの あしは 6ぽん。むねから はえて いるよ。'],
@@ -318,23 +362,33 @@ const BUGQ = [
   ['こんちゅうの はねは なんまい？（トンボの ばあい）', ['4まい', '2まい', '6まい'], 'トンボは 4まいの はねで すいすい とぶよ。'],
   ['アリの おうちは どこに ある ことが おおい？', ['つちの なか', 'くもの うえ', 'うみの なか'], 'つちの なかに トンネルの へやを たくさん つくるよ。'],
 ];
-const BOSS = { 18:1, 30:1 };           // 横浜・あざみ野の てまえ
-const bno = i => 'B' + String(i + 1).padStart(2, '0');
+const bno = i => ST[i].no;
 const rb = i => `<ruby>${ST[i][0]}<rt>${ST[i][1]}</rt></ruby>`;
 const $ = id => document.getElementById(id);
 
 /* ============ ほぞん ============ */
 const KEY = 'blueline-dash.v1';
-function defSave() { return { cleared: Array(NSTAGE).fill(false), best: {}, all: {}, easy: true, sound: true }; }
+function defSave() { return { cleared: Array(BLUE.length - 1).fill(false), best: {}, all: {}, easy: true, sound: true, line: 'blue', lines: {} }; }
 function loadSave() {
   try { const s = JSON.parse(localStorage.getItem(KEY));
     if (s && Array.isArray(s.cleared)) { const d = defSave(); Object.assign(d, s);
-      d.cleared = Array.from({ length: NSTAGE }, (_, i) => !!s.cleared[i]); return d; } } catch (e) {}
+      d.cleared = Array.from({ length: BLUE.length - 1 }, (_, i) => !!s.cleared[i]);
+      if (!d.lines || typeof d.lines !== 'object') d.lines = {};
+      return d; } } catch (e) {}
   return defSave();
 }
 const save = loadSave();
 function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
-const arrived = i => i === 0 || save.cleared[i - 1];
+// いまの ろせんの きろく（ブルーラインは まえからの ばしょ、でんえんとしせんは save.lines）
+function SV(id = LN.id) {
+  if (id === 'blue') return save;
+  const n = LINES[id].st.length - 1, r = save.lines[id] || (save.lines[id] = { cleared: [], best: {}, all: {} });
+  r.cleared = Array.from({ length: n }, (_, i) => !!(r.cleared || [])[i]); r.best = r.best || {}; r.all = r.all || {};
+  return r;
+}
+const arrived = i => i === 0 || SV().cleared[i - 1];
+const dtOpen = () => !!save.cleared[BLUE.length - 2];   // あざみ野に ついたら でんえんとしせんに のりかえ できる
+if (save.line !== 'blue' && dtOpen() && LINES[save.line]) setLine(save.line); else save.line = 'blue';
 
 /* ============ おと（WebAudio の ごうせいおん だけ） ============ */
 let ac = null;
@@ -495,10 +549,11 @@ function drawPerson(p) {
 }
 
 function buildStage(k) {
-  const easy = save.easy, speed = easy ? 165 : 215, lv = k / NSTAGE;
-  const rnd = rng(k * 7919 + (easy ? 11 : 23));
-  const boss = !!BOSS[k];
-  const L = 2500 + k * 60 + (boss ? 700 : 0);
+  const dk = LN.id === 'blue' ? k : Math.round(14 + k * 16 / NSTAGE);   // むずかしさの めやす（0〜30）
+  const easy = save.easy, speed = easy ? 165 : 215, lv = dk / 30;
+  const rnd = rng(k * 7919 + (easy ? 11 : 23) + (LN.id === 'blue' ? 0 : LN.id === 'dts' ? 50021 : 90107));
+  const boss = !!LN.boss[k];
+  const L = 2500 + dk * 60 + (boss ? 700 : 0);
   const S = { k, L, speed, easy, lv, grounds: [], plats: [], cones: [], tix: [], items: [], en: [], waves: [], parts: [],
     boss: null, arrive: false, arriveT: 0, t: 0, got: 0, msg: null,
     aboveFrom: !!ST[k][6], aboveTo: !!ST[k + 1][6] };
@@ -513,9 +568,9 @@ function buildStage(k) {
   let prev = '';
   while (x < end) {
     const opts = ['flat', 'gap', 'gap', 'cone', 'walker', 'plat'];
-    if (k >= 2) opts.push('flyer', 'walker');
-    if (k >= 5) opts.push('gapPlat', 'gap');
-    if (k >= 10) opts.push('combo', 'flyer', 'gapPlat');
+    if (dk >= 2) opts.push('flyer', 'walker');
+    if (dk >= 5) opts.push('gapPlat', 'gap');
+    if (dk >= 10) opts.push('combo', 'flyer', 'gapPlat');
     let t = opts[Math.floor(rnd() * opts.length)];
     if (t === prev) t = 'flat';
     prev = t;
@@ -553,7 +608,7 @@ function buildStage(k) {
       S.en.push(walker(x + 400)); tk(x + 122, GY - 100); x += w; }
   }
   g(x, L + 1500 - x);
-  setupPeople(S, rng(k * 131 + 7));
+  setupPeople(S, rng(k * 131 + 7 + (LN.id === 'blue' ? 0 : LN.id === 'dts' ? 3001 : 6007)));
   if (boss) S.boss = { trigger: L - 1150, x: 0, y: GY - 96, w: 96, h: 96, vy: 0, hp: easy ? 3 : 5, max: easy ? 3 : 5,
     active: false, dead: false, t: 0, throwT: 1.4, hurt: 0, n: 0 };
   return S;
@@ -569,7 +624,7 @@ function newPlayer() {
 function startStage(k, demo = false, retry = false) {
   G = buildStage(k); G.demo = demo; P = newPlayer(); camX = P.x - viewW * .42; camY = 0; acc = 0;
   if (demo) return;
-  if (k === 0 && !retry && QUIZ_ST[0]) { G.t = 0; showQuiz(0, '出発', beginPlay); return; }
+  if (k === 0 && !retry && LN.quiz[0]) { G.t = 0; showQuiz(0, '出発', beginPlay); return; }
   beginPlay();
 }
 function beginPlay() {
@@ -581,8 +636,8 @@ function beginPlay() {
 function setMode(m) {
   mode = m;
   document.body.classList.toggle('playing', m === 'play');
-  ['ovTitle', 'ovQuiz', 'ovHow', 'ovMap', 'ovClear', 'ovOver', 'ovPause', 'ovEnd'].forEach(id => $(id).classList.remove('show'));
-  const map = { quiz: 'ovQuiz', title: 'ovTitle', map: 'ovMap', clear: 'ovClear', over: 'ovOver', pause: 'ovPause', end: 'ovEnd' };
+  ['ovTitle', 'ovXfer', 'ovQuiz', 'ovHow', 'ovMap', 'ovClear', 'ovOver', 'ovPause', 'ovEnd'].forEach(id => $(id).classList.remove('show'));
+  const map = { xfer: 'ovXfer', quiz: 'ovQuiz', title: 'ovTitle', map: 'ovMap', clear: 'ovClear', over: 'ovOver', pause: 'ovPause', end: 'ovEnd' };
   if (map[m]) $(map[m]).classList.add('show');
   if (m !== 'play') bgmStop();
 }
@@ -757,7 +812,7 @@ function fallStep(dt) {
       for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 260;
         S.parts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 160, life: .7 + Math.random() * .6, color: ['#ff922b', '#ffd43b', '#fa5252', '#fff3bf'][i % 4], r: 3 + Math.random() * 4 }); }
       for (let i = 0; i < 10; i++) S.parts.push({ x: bx + (Math.random() - .5) * 30, y: by, vx: (Math.random() - .5) * 60, vy: -40 - Math.random() * 60, life: 1.1 + Math.random() * .5, color: 'rgba(90,90,100,.8)', r: 8 + Math.random() * 6, smoke: 1 });
-      for (let i = 0; i < 6; i++) S.parts.push({ x: bx, y: by, vx: (Math.random() - .5) * 300, vy: -250 - Math.random() * 200, life: 1.2, color: ['#f3f6f9', '#0a6fc2', '#333'][i % 3], r: 3, bolt: 1 });
+      for (let i = 0; i < 6; i++) S.parts.push({ x: bx, y: by, vx: (Math.random() - .5) * 300, vy: -250 - Math.random() * 200, life: 1.2, color: ['#f3f6f9', LC, '#333'][i % 3], r: 3, bolt: 1 });
       shake = .6; S.msg = { text: 'ドカーン！', t: 1.2 };
       if (!S.demo) sfx.boom();
       hurt(true);
@@ -839,7 +894,7 @@ function drawBG(above) {
       }
     }
     // うしろの かべの あおい ライン（ブルーライン！）
-    ctx.fillStyle = 'rgba(10,111,194,.55)'; ctx.fillRect(0, 214, viewW, 6);
+    ctx.globalAlpha = .55; ctx.fillStyle = LC; ctx.fillRect(0, 214, viewW, 6); ctx.globalAlpha = 1;
     ctx.fillStyle = '#0d0f15'; ctx.fillRect(0, GY, viewW, bot - GY);
   } else {
     const gr = ctx.createLinearGradient(0, top, 0, GY);
@@ -898,13 +953,13 @@ function drawDoors(x0, w, o) { // ホームドア（o: 0=しまる 1=ひらく�
       ctx.fillRect(dx, top + h - 14, pw, 14);
       ctx.fillStyle = 'rgba(190,225,250,.45)'; ctx.fillRect(dx + 3, top + 10, pw - 6, h - 24);
       ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(dx + 5, top + 12, 2, h - 30);
-      ctx.fillStyle = '#0a6fc2'; ctx.fillRect(dx, top + h - 13, pw, 4);
+      ctx.fillStyle = LC; ctx.fillRect(dx, top + h - 13, pw, 4);
       ctx.strokeStyle = '#8a96a3'; ctx.lineWidth = 1; ctx.strokeRect(dx + .5, top + 6.5, pw - 1, h - 7);
     }
     // とぶくろ（はしら）
     for (const bx of [px, px + 14 + ow]) {
       ctx.fillStyle = '#e9edf1'; ctx.fillRect(bx, top, 14, h);
-      ctx.fillStyle = '#0a6fc2'; ctx.fillRect(bx, top + h - 13, 14, 4);
+      ctx.fillStyle = LC; ctx.fillRect(bx, top + h - 13, 14, 4);
       ctx.fillStyle = '#5c6470'; ctx.fillRect(bx, top, 14, 4);
       ctx.strokeStyle = '#8a96a3'; ctx.lineWidth = 1; ctx.strokeRect(bx + .5, top + .5, 13, h - 1);
     }
@@ -918,7 +973,7 @@ function drawDoors(x0, w, o) { // ホームドア（o: 0=しまる 1=ひらく�
 }
 function drawHome(x0, w, i, o = 0) { // えきの ホーム（でんしゃの むこうがわ）
   ctx.fillStyle = '#dfe6ee'; ctx.fillRect(x0, 150, w, GY - 150);           // かべ
-  ctx.fillStyle = '#0a6fc2'; ctx.fillRect(x0, 196, w, 10);                 // ブルーの ライン
+  ctx.fillStyle = LC; ctx.fillRect(x0, 196, w, 10);                 // ブルーの ライン
   ctx.fillStyle = '#c3ccd6'; for (let px = x0 + 40; px < x0 + w; px += 150) ctx.fillRect(px, 150, 16, GY - 150);
   ctx.fillStyle = '#b8c1cc'; ctx.fillRect(x0, 140, w, 12);                  // てんじょう
   ctx.fillStyle = '#e8d9a8'; ctx.fillRect(x0, GY - 16, w, 16);               // ホームの はし
@@ -929,14 +984,14 @@ function drawHome(x0, w, i, o = 0) { // えきの ホーム（でんしゃの �
   const sx = x0 + w / 2 - 100, sy = 58;
   ctx.fillStyle = '#7d8793'; ctx.fillRect(sx + 30, sy + 64, 6, 20); ctx.fillRect(sx + 164, sy + 64, 6, 20);
   ctx.fillStyle = '#fff'; rr(sx, sy, 200, 66, 8); ctx.fill();
-  ctx.strokeStyle = '#0a6fc2'; ctx.lineWidth = 3; ctx.stroke();
-  ctx.fillStyle = '#0a6fc2'; ctx.fillRect(sx + 2, sy + 50, 196, 14);
+  ctx.strokeStyle = LC; ctx.lineWidth = 3; ctx.stroke();
+  ctx.fillStyle = LC; ctx.fillRect(sx + 2, sy + 50, 196, 14);
   ctx.beginPath(); ctx.arc(sx + 24, sy + 26, 15, 0, 7); ctx.fill();
   ctx.fillStyle = '#fff'; ctx.font = `bold 12px ${FONT}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.fillText(bno(i), sx + 24, sy + 27);
+  ctx.font = `bold ${bno(i).length > 3 ? 9.5 : 12}px ${FONT}`; ctx.fillText(bno(i), sx + 24, sy + 27);
   const nm = ST[i][0];
-  ctx.fillStyle = '#123'; ctx.font = `bold ${nm.length > 5 ? 18 : 24}px ${FONT}`; ctx.fillText(nm, sx + 112, sy + 22);
-  ctx.fillStyle = '#345'; ctx.font = `bold 11px ${FONT}`; ctx.fillText(ST[i][1], sx + 112, sy + 42);
+  ctx.fillStyle = '#123'; ctx.font = `bold ${nm.length > 9 ? 12 : nm.length > 5 ? 18 : 24}px ${FONT}`; ctx.fillText(nm, sx + 112, sy + 22, 160);
+  ctx.fillStyle = '#345'; ctx.font = `bold 11px ${FONT}`; ctx.fillText(ST[i][1], sx + 112, sy + 42, 160);
   ctx.fillStyle = '#fff'; ctx.font = `bold 10px ${FONT}`;
   ctx.fillText(i > 0 ? '← ' + ST[i - 1][1] : '', sx + 50, sy + 57);
   ctx.fillText(i < NST - 1 ? ST[i + 1][1] + ' →' : 'しゅうてん', sx + 150, sy + 57);
@@ -1041,8 +1096,8 @@ function drawTrain(time) {
   ctx.shadowBlur = 0;
   ctx.strokeStyle = '#7d8a99'; ctx.lineWidth = 1.5; ctx.stroke();
   // あおい おび
-  ctx.fillStyle = '#0a6fc2'; ctx.fillRect(0, 17, w, 5);
-  ctx.fillStyle = '#4dabf7'; ctx.fillRect(0, 22, w, 1.5);
+  ctx.fillStyle = LC; ctx.fillRect(0, 17, w, 5);
+  ctx.fillStyle = LN.id === 'blue' ? '#4dabf7' : '#8ce0c4'; ctx.fillRect(0, 22, w, 1.5);
   // まど
   ctx.fillStyle = '#26476b'; rr(4, 4, 9, 9, 2); ctx.fill(); rr(16, 4, 9, 9, 2); ctx.fill();
   ctx.fillStyle = '#1b2f4a'; ctx.beginPath(); ctx.moveTo(29, 3); ctx.lineTo(w - 12, 3); ctx.quadraticCurveTo(w - 2, 4, w - 1.5, 14); ctx.lineTo(29, 14); ctx.fill();
@@ -1144,7 +1199,8 @@ function draw() {
 let lastHp = -1, lastGot = -1;
 function hudStatic() {
   const k = G.k;
-  $('hLine').innerHTML = `<span class="no">${bno(k)}</span>${ST[k][1]} ▶ <span class="no">${bno(k + 1)}</span>${ST[k + 1][1]}`;
+  $('hLine').innerHTML = `<span class="no" style="background:${LC}">${bno(k)}</span>${ST[k][1]} ▶ <span class="no" style="background:${LC}">${bno(k + 1)}</span>${ST[k + 1][1]}`;
+  $('barFill').style.background = LC;
 }
 function hudDyn(force) {
   if (!G || G.demo) return;
@@ -1157,24 +1213,24 @@ function hudDyn(force) {
 
 /* ============ がめんの きりかえ ============ */
 function stageClear() {
-  if (QUIZ_ST[G.k + 1]) { sfx.clear(); showQuiz(G.k + 1, '到着', finishClear); return; }
+  if (LN.quiz[G.k + 1]) { sfx.clear(); showQuiz(G.k + 1, '到着', finishClear); return; }
   finishClear(true);
 }
 function finishClear(fanfare) {
   const k = G.k, total = G.tix.length, got = G.got;
   setMode('clear'); if (fanfare === true) sfx.clear();
-  save.cleared[k] = true; save.best[k] = Math.max(save.best[k] || 0, got);
-  const all = got >= total; if (all) save.all[k] = true; persist();
+  const sv = SV(); sv.cleared[k] = true; sv.best[k] = Math.max(sv.best[k] || 0, got);
+  const all = got >= total; if (all) sv.all[k] = true; persist();
   const i = k + 1, s = ST[i];
   setTimeout(() => say(`${s[1]}、${s[1]}です`), 500);
   if (k === NSTAGE - 1) {
-    setTimeout(() => { setMode('end'); $('endTix').textContent = `★ ${Object.keys(save.all).length} / ${NSTAGE} くかん`; startStage(0, true); }, 2600);
+    setTimeout(showEnd, 2600);
   }
   $('clearBody').innerHTML = `
     <div class="logo">🚉</div>
     <h2>とうちゃく！</h2>
-    <span class="bnum">${bno(i)}</span>
-    <div class="ekimei${s[0].length > 5 ? ' long' : ''}">${rb(i)}</div>
+    <span class="bnum" style="background:${LC}">${bno(i)}</span>
+    <div class="ekimei${s[0].length > 9 ? ' xlong' : s[0].length > 5 ? ' long' : ''}">${rb(i)}</div>
     <p class="big">🎫 ${got} / ${total} ${all ? '<br>★ きっぷ コンプリート！' : ''}</p>
     ${s[4] ? `<div class="info">🔁 のりかえ: ${s[4]}</div>` : ''}
     ${s[5] ? `<div class="info">💡 ${s[5]}</div>` : ''}
@@ -1184,19 +1240,59 @@ function finishClear(fanfare) {
   $('cRetry').onclick = () => startStage(k, false, true);
   $('cMap').onclick = () => openMap(Math.min(i, NSTAGE - 1));
 }
+function showEnd() {
+  setMode('end'); const sv = SV();
+  $('endBody').innerHTML = `
+    <div class="logo">🎉🚇🎉</div>
+    <h2>${LN.id === 'blue' ? 'ぜんえき せいは！' : 'しゅうてん とうちゃく！'}</h2>
+    <p class="ekimei${ST[NST - 1][0].length > 5 ? ' long' : ''}">${rb(0)} → ${rb(NST - 1)}</p>
+    <p>${NST}この えきを ぜんぶ はしりぬけたよ！<br>${LN.train}、おつかれさま！</p>
+    <p class="big">★ ${Object.keys(sv.all).length} / ${NSTAGE} くかん</p>
+    ${LN.id === 'blue' ? '<button class="btn grn" id="eXfer">🔁 あざみので でんえんとしせんに のりかえる</button>'
+      : '<button class="btn" id="eXfer">🔁 ほかの せんに のりかえる</button>'}
+    <button class="btn sub" id="eMap">🗺️ ろせんずで ★を あつめる</button>
+    <button class="btn sub" id="eTitle">🏠 タイトル</button>`;
+  $('eXfer').onclick = openXfer;
+  $('eMap').onclick = () => openMap(0);
+  $('eTitle').onclick = () => { G = null; title(); };
+  startStage(0, true);
+}
+function openXfer() { // あざみのえきで のりかえ
+  setMode('xfer');
+  const row = id => { const L = LINES[id], sv = SV(id), n = sv.cleared.filter(Boolean).length;
+    return `<button class="btn${id === 'blue' ? '' : ' grn'}" data-line="${id}">${id === 'blue' ? '🔵' : '🟢'} ${L.name}<br>
+      <small>${L.st[0][1]} → ${L.st[L.st.length - 1][1]}（${L.st.length}えき）${n ? ` ・ とうちゃく ${n + 1}えき` : ''}</small></button>`; };
+  $('xferBody').innerHTML = `
+    <div class="logo">🔁</div>
+    <h2>あざみのえきで のりかえ！</h2>
+    <p><ruby>あざみ野<rt>あざみの</rt></ruby>えきは ブルーラインと <b>とうきゅう でんえんとしせん</b>の のりかええき。<br>どっちへ いく？</p>
+    ${row('dts')}${row('dtc')}${row('blue')}
+    <button class="btn sub" id="xBack">もどる</button>`;
+  $('xferBody').querySelectorAll('[data-line]').forEach(b => b.onclick = () => {
+    audio(); setLine(b.dataset.line); save.line = LN.id; persist();
+    if (LN.id !== 'blue') { sfx.depart(); say(`でんえんとしせん、${ST[NST - 1][1]} ほうめんに のりかえです`); }
+    G = null; title();
+  });
+  $('xBack').onclick = () => { G = null; title(); };
+}
 function gameOver() {
   if (mode !== 'play') return;
   setMode('over');
   $('overTxt').innerHTML = `${rb(G.k)} → ${rb(G.k + 1)} の とちゅう。<br>あと ${Math.max(0, Math.round((1 - P.x / G.L) * 100))}% だったよ！`;
 }
 function pause() { if (mode === 'play') { setMode('pause'); soundLabel(); } }
-function nextStart() { const i = save.cleared.findIndex(c => !c); return i < 0 ? 0 : i; }
+function nextStart() { const i = SV().cleared.findIndex(c => !c); return i < 0 ? 0 : i; }
 function title() {
   setMode('title');
-  const n = save.cleared.filter(Boolean).length, nx = nextStart();
-  $('tProgress').innerHTML = n === 0 ? '🚉 とうちゃくした えき: 1 / 32'
-    : `🚉 とうちゃくした えき: ${n + 1} / 32<br><span class="note">つぎは ${ST[nx][1]} → ${ST[nx + 1][1]}</span>`;
-  $('tGo').textContent = n === 0 ? '▶ しゅっぱつ！' : n >= NSTAGE ? '▶ もういちど しょうなんだい から' : '▶ つづきから';
+  const n = SV().cleared.filter(Boolean).length, nx = nextStart();
+  $('tLine').innerHTML = `<span class="lchip" style="background:${LC}">${LN.name}</span>`;
+  $('tProgress').innerHTML = (n === 0 ? `🚉 とうちゃくした えき: 1 / ${NST}`
+    : `🚉 とうちゃくした えき: ${n + 1} / ${NST}<br><span class="note">つぎは ${ST[nx][1]} → ${ST[nx + 1][1]}</span>`);
+  $('tGo').textContent = n === 0 ? '▶ しゅっぱつ！' : n >= NSTAGE ? `▶ もういちど ${ST[0][1]} から` : '▶ つづきから';
+  $('tXfer').style.display = dtOpen() ? '' : 'none';
+  $('tXfer').textContent = LN.id === 'blue' ? '🔁 あざみので のりかえ（でんえんとしせん）' : '🔁 あざみので のりかえ（ほかの せん）';
+  $('tSub').textContent = `${ST[0][1]} → ${ST[NST - 1][1]} ${NST}えき アクション`;
+  $('tDesc').innerHTML = `${LN.id === 'blue' ? 'ブルーライン' : 'でんえんとしせん'}の でんしゃ「${LN.train}」に なって、<br>${ST[0][1]} から ${ST[NST - 1][1]} まで はしりぬけよう！`;
   diffLabel(); soundLabel();
   if (!G || !G.demo) startStage(nextStart(), true);
 }
@@ -1248,7 +1344,7 @@ function showQuiz(i, kind, done) {
   const [q, ans, exp] = nextQ();
   const order = ans.map((_, j) => j); for (let j = order.length - 1; j > 0; j--) { const r = Math.floor(Math.random() * (j + 1)); [order[j], order[r]] = [order[r], order[j]]; }
   $('quizBody').innerHTML = `
-    <span class="bnum">${bno(i)}</span> <b style="font-size:20px">${rb(i)}${kind === '出発' ? ' を でる まえに…' : ' に とうちゃく！'}</b>
+    <span class="bnum" style="background:${LC}">${bno(i)}</span> <b style="font-size:20px">${rb(i)}${kind === '出発' ? ' を でる まえに…' : ' に とうちゃく！'}</b>
     ${MIN_SVG}
     <div class="qwho">ミンミンゼミの ミンせんせい</div>
     <div class="bubble">ミーン！ むしクイズだよ。<br>${q}</div>
@@ -1279,43 +1375,58 @@ let mapSel = 0;
 const proj = (lat, lon) => [(lon - 139.46) * Math.cos(35.48 * Math.PI / 180) * 1500, (35.58 - lat) * 1500];
 function openMap(sel) { mapSel = sel != null ? sel : nextStart(); setMode('map'); drawMap(); }
 function drawMap() {
+  const svg = $('mapSvg');
+  $('mapTabs').innerHTML = dtOpen() ? ['blue', 'dts', 'dtc'].map(id => `<button data-line="${id}" class="${id === LN.id ? 'sel' : ''}" style="${id === LN.id ? `background:${LINES[id].color};border-color:${LINES[id].color}` : ''}">${id === 'blue' ? '🔵 ブルーライン' : id === 'dts' ? '🟢 しぶや ほうめん' : '🟢 ちゅうおうりんかん ほうめん'}</button>`).join('') : '';
+  $('mapTabs').querySelectorAll('[data-line]').forEach(b => b.onclick = () => { setLine(b.dataset.line); save.line = LN.id; persist(); mapSel = nextStart(); G = null; startStage(nextStart(), true); drawMap(); });
   const pts = ST.map(s => proj(s[2], s[3]));
-  const sea = [[35.425, 139.648], [35.452, 139.645], [35.462, 139.638], [35.472, 139.646], [35.49, 139.672], [35.49, 139.7], [35.4, 139.7], [35.4, 139.655]]
+  const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+  let minX = Math.min(...xs) - 46, maxX = Math.max(...xs) + 46, minY = Math.min(...ys) - 22, maxY = Math.max(...ys) + 30;
+  const grow = (a, b, m) => { const d = m - (b - a); return d > 0 ? [a - d / 2, b + d / 2] : [a, b]; };
+  [minX, maxX] = grow(minX, maxX, 220); [minY, maxY] = grow(minY, maxY, 200);
+  svg.setAttribute('viewBox', `${minX} ${minY} ${maxX - minX} ${maxY - minY}`);
+  const midX = (Math.min(...xs) + Math.max(...xs)) / 2, lowY = Math.max(...ys) - 20;
+  const sea = [[35.425, 139.648], [35.452, 139.645], [35.462, 139.638], [35.472, 139.646], [35.49, 139.672], [35.49, 139.75], [35.4, 139.75], [35.4, 139.655]]
     .map(([a, b]) => proj(a, b).join(',')).join(' ');
   let h = `<polygon points="${sea}" fill="#d0ebff"/><text x="${proj(35.42, 139.666)[0]}" y="${proj(35.42, 139.666)[1]}" font-size="11" fill="#4a90c2" text-anchor="middle">うみ</text>`;
+  const poly = (arr, col, op) => `<polyline points="${arr.map(r => proj(r[2], r[3]).join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="${op}"/>`;
+  h += poly(BLUE, '#0a6fc2', .3) + poly(DT, '#20a288', .3);
+  const sv = SV(), light = LN.id === 'blue' ? '#a9cdef' : '#a6dccd';
   for (let i = 0; i < NST - 1; i++) {
     const [a, b] = [pts[i], pts[i + 1]];
-    h += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${save.cleared[i] ? '#0a6fc2' : '#a9cdef'}" stroke-width="7" stroke-linecap="round"/>`;
+    h += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${sv.cleared[i] ? LC : light}" stroke-width="7" stroke-linecap="round"/>`;
   }
-  const keyIdx = { 0: 'l', 5: 'b', 10: 'r', 16: 'r', 19: 'l', 24: 'l', 28: 'r', 31: 'r' };
+  const keyIdx = LN.keys;
   const roomy = pts.map((p, i) => [i - 1, i + 1].every(j => j < 0 || j >= NST || Math.hypot(pts[j][0] - p[0], pts[j][1] - p[1]) >= 12.5));
   for (let i = 0; i < NST; i++) {
-    const [x, y] = pts[i], ar = arrived(i), sel = i === mapSel;
+    const [x, y] = pts[i], ar = arrived(i), sel = i === mapSel, num = parseInt(ST[i].no.replace(/\D/g, ''), 10);
     h += `<g class="st" data-i="${i}">`;
     h += `<circle cx="${x}" cy="${y}" r="13" fill="transparent"/>`;
     const r = sel ? 9.5 : roomy[i] ? 7 : 4.6;
-    h += `<circle cx="${x}" cy="${y}" r="${r}" fill="${ar ? '#0a6fc2' : '#fff'}" stroke="${sel ? '#f08c00' : ar ? '#fff' : '#9aa5b1'}" stroke-width="${sel ? 3.5 : 2}"/>`;
-    if (sel || roomy[i]) h += `<text x="${x}" y="${y + 2.6}" font-size="${sel ? 7.5 : 6.5}" font-weight="bold" text-anchor="middle" fill="${ar ? '#fff' : '#6c7a89'}">${i + 1}</text>`;
-    if (i < NSTAGE && save.all[i]) h += `<text x="${x + 7}" y="${y - 6}" font-size="9" fill="#f5b800">★</text>`;
+    h += `<circle cx="${x}" cy="${y}" r="${r}" fill="${ar ? LC : '#fff'}" stroke="${sel ? '#f08c00' : ar ? '#fff' : '#9aa5b1'}" stroke-width="${sel ? 3.5 : 2}"/>`;
+    if (sel || roomy[i]) h += `<text x="${x}" y="${y + 2.6}" font-size="${sel ? 7.5 : 6.5}" font-weight="bold" text-anchor="middle" fill="${ar ? '#fff' : '#6c7a89'}">${num}</text>`;
+    if (i < NSTAGE && sv.all[i]) h += `<text x="${x + 7}" y="${y - 6}" font-size="9" fill="#f5b800">★</text>`;
     if (keyIdx[i] || sel) {
-      const side = keyIdx[i] && !sel ? keyIdx[i] : i === 0 ? 'l' : y > 250 ? 'b' : x > 150 ? 'l' : 'r';
+      const side = keyIdx[i] && !sel ? keyIdx[i] : i === 0 && LN.id === 'blue' ? 'l' : y > lowY ? 'b' : x > midX ? 'l' : 'r';
       let tx = x + 11, ty = y + 4, an = 'start';
       if (side === 'b') { tx = x; ty = y + 21; an = 'middle'; } else if (side === 'l') { tx = x - 12; an = 'end'; }
       h += `<text x="${tx}" y="${ty}" font-size="${sel ? 13 : 10.5}" font-weight="bold" text-anchor="${an}" fill="${sel ? '#d9480f' : '#123'}" stroke="#fff" stroke-width="3" paint-order="stroke">${ST[i][0]}</text>`;
     }
     h += `</g>`;
   }
-  const svg = $('mapSvg'); svg.innerHTML = h;
+  svg.innerHTML = h;
   svg.querySelectorAll('.st').forEach(g => g.addEventListener('click', () => { mapSel = +g.dataset.i; drawMap(); }));
   const i = mapSel, s = ST[i], ok = arrived(i) && i < NSTAGE;
+  const xfer = s[0] === 'あざみ野' && arrived(i) && (LN.id !== 'blue' || dtOpen());
   $('mapInfo').innerHTML = `
-    <span class="bnum">${bno(i)}</span>
-    <div class="ekimei${s[0].length > 5 ? ' long' : ''}">${rb(i)}</div>
+    <span class="bnum" style="background:${LC}">${bno(i)}</span>
+    <div class="ekimei${s[0].length > 9 ? ' xlong' : s[0].length > 5 ? ' long' : ''}">${rb(i)}</div>
     ${s[4] ? `<div class="info">🔁 のりかえ: ${s[4]}</div>` : ''}
     ${s[5] ? `<div class="info">💡 ${s[5]}</div>` : ''}
-    ${i < NSTAGE ? `<p>${ST[i][1]} → ${ST[i + 1][1]}${BOSS[i] ? ' 👾' : ''}${save.best[i] != null ? `<br>🎫 さいこう ${save.best[i]} まい${save.all[i] ? ' ★' : ''}` : ''}</p>` : '<p>ブルーラインの しゅうてん</p>'}
-    <button class="btn" id="mGo" ${ok ? '' : 'disabled'}>${i >= NSTAGE ? 'しゅうてん だよ' : ok ? '▶ ここから しゅっぱつ！' : '🔒 まだ いけないよ'}</button>`;
+    ${i < NSTAGE ? `<p>${ST[i][1]} → ${ST[i + 1][1]}${LN.boss[i] ? ' 👾' : ''}${sv.best[i] != null ? `<br>🎫 さいこう ${sv.best[i]} まい${sv.all[i] ? ' ★' : ''}` : ''}</p>` : `<p>${LN.name}の しゅうてん</p>`}
+    ${i < NSTAGE || !xfer ? `<button class="btn" id="mGo" ${ok ? '' : 'disabled'}>${i >= NSTAGE ? 'しゅうてん だよ' : ok ? '▶ ここから しゅっぱつ！' : '🔒 まだ いけないよ'}</button>` : ''}
+    ${xfer ? `<button class="btn grn" id="mXfer">🔁 ${LN.id === 'blue' ? 'でんえんとしせんに' : 'ほかの せんに'} のりかえる</button>` : ''}`;
   if (ok) $('mGo').onclick = () => startStage(i);
+  if (xfer) $('mXfer').onclick = openXfer;
 }
 
 /* ============ そうさ ============ */
@@ -1343,6 +1454,7 @@ $('pSound').onclick = toggleSound;
 $('tSound').onclick = toggleSound;
 $('tGo').onclick = () => { audio(); startStage(nextStart()); };
 $('tMap').onclick = () => openMap();
+$('tXfer').onclick = () => openXfer();
 $('tHow').onclick = () => $('ovHow').classList.add('show');
 document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dataset.close).classList.remove('show'));
 $('dEasy').onclick = () => { save.easy = true; persist(); diffLabel(); };
@@ -1351,8 +1463,6 @@ $('mBack').onclick = () => { G = null; title(); };
 $('oRetry').onclick = () => startStage(G.k, false, true);
 $('oMap').onclick = () => openMap(G.k);
 $('oTitle').onclick = () => { G = null; title(); };
-$('eMap').onclick = () => openMap(0);
-$('eTitle').onclick = () => { G = null; title(); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); });
 addEventListener('blur', pause);
 
@@ -1370,7 +1480,7 @@ function frame(ts) {
 }
 title();
 requestAnimationFrame(frame);
-if (location.hash === '#debug') window.__dash = { get G() { return G; }, get P() { return P; }, save, startStage, update, bot, buildStage, ST, get mode() { return mode; } };
+if (location.hash === '#debug') window.__dash = { get G() { return G; }, get P() { return P; }, save, startStage, update, bot, buildStage, setLine, openXfer, showEnd, get ST() { return ST; }, get LN() { return LN; }, get mode() { return mode; } };
 </script>
 </body>
 </html>
