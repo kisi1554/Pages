@@ -93,6 +93,24 @@
     .cbtn { width:96px; height:96px; font-size:16px; }
     #bJump { width:112px; height:112px; }
   }
+  /* ミン先生の むしクイズ */
+  .min { width:150px; height:150px; display:block; margin:-4px auto 0; animation:bob 1.6s ease-in-out infinite; }
+  .min .wing { transform-origin:80px 70px; animation:flap .25s ease-in-out infinite alternate; }
+  .min .wing.r { animation-delay:.12s; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes flap { from{transform:rotate(-3deg)} to{transform:rotate(3deg)} }
+  .bubble { position:relative; background:#ecf8e8; border:3px solid #5aa14a; border-radius:18px; padding:10px 14px; margin:6px 0 10px;
+    font-size:21px; font-weight:bold; line-height:1.55; color:#1f3d17; }
+  .bubble::before { content:""; position:absolute; top:-14px; left:50%; margin-left:-12px; border:12px solid transparent; border-top:0; border-bottom:14px solid #5aa14a; }
+  .qwho { font-size:15px; color:#4a7a3d; font-weight:bold; }
+  .qbtn { display:block; width:100%; margin:9px 0; padding:13px 10px; font-size:22px; font-weight:bold; border-radius:16px;
+    border:3px solid #b5c9dc; background:#fff; color:var(--deep); box-shadow:0 4px 0 #b5c9dc; }
+  .qbtn.ng { background:#f1f3f5; color:#adb5bd; border-color:#dee2e6; box-shadow:none; text-decoration:line-through; }
+  .qbtn.ok { background:#2f9e44; border-color:#2f9e44; color:#fff; box-shadow:0 4px 0 #1b6e2c; }
+  .qmsg { min-height:1.6em; font-size:20px; font-weight:bold; margin:4px 0; }
+  .qmsg.ng { color:#e8590c; } .qmsg.ok { color:#2f9e44; }
+  @keyframes shakeX { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  .shake { animation:shakeX .3s; }
   @keyframes pop { 0%{transform:scale(.6);opacity:0} 70%{transform:scale(1.08)} 100%{transform:scale(1);opacity:1} }
   .ov.show .panel { animation:pop .28s ease-out; }
 </style>
@@ -189,6 +207,7 @@
   <div><span>📣</span><span><b>ファーン</b>で おとの なみを とばす！ コウモリや カラスも やっつけられる。</span></div>
   <div><span>🎫</span><span><b>きっぷ</b>を あつめよう。ぜんぶ とると ろせんずに ★が つくよ。</span></div>
   <div><span>⭐</span><span>ほしで むてき！ ❤️ で げんき かいふく。</span></div>
+  <div><span>🦗</span><span><b>ミンせんせい</b>（ミンミンゼミ）が いる えきでは <b>むしクイズ</b>！ せいかい すると さきに すすめるよ。</span></div>
   <div><span>👾</span><span>よこはま と あざみの の てまえには <b>でっかい おじゃまムシ</b>！ ファーンで やっつけよう。</span></div>
   <p class="note">キーボード: スペース／↑ = ジャンプ、X／→ = ファーン、P = とめる</p>
   <button class="btn" data-close="ovHow">わかった！</button>
@@ -204,6 +223,8 @@
   <button class="btn sub" id="mBack">もどる</button>
 </div></div>
 
+<!-- ミン先生の むしクイズ -->
+<div class="ov" id="ovQuiz"><div class="panel" id="quizBody"></div></div>
 <!-- とうちゃく -->
 <div class="ov" id="ovClear"><div class="panel" id="clearBody"></div></div>
 <!-- ざんねん -->
@@ -272,6 +293,31 @@ const ST = [
   ['あざみ野','あざみの',35.5680,139.5530,'とうきゅう でんえんとしせん','ブルーラインの しゅうてん！'],
 ];
 const NST = ST.length, NSTAGE = NST - 1;
+/* ミン先生（ミンミンゼミ）が まっている えき: 湘南台・立場・戸塚・舞岡・上永谷・上大岡・蒔田 */
+const QUIZ_ST = { 0: 1, 2: 1, 5: 1, 6: 1, 8: 1, 10: 1, 12: 1 };
+/* むしクイズ [もんだい, [こたえ（さいしょが せいかい）, ...], せつめい] */
+const BUGQ = [
+  ['こんちゅうの あしは なんぼん？', ['6ぽん', '8ぽん', '4ほん'], 'こんちゅうの あしは 6ぽん。むねから はえて いるよ。'],
+  ['こんちゅうの からだは いくつに わかれて いる？', ['3つ', '2つ', '5つ'], 'あたま・むね・おなかの 3つだよ。'],
+  ['クモは こんちゅう？', ['こんちゅうじゃ ない', 'こんちゅう'], 'クモの あしは 8ほん。だから こんちゅうじゃ ないんだ。'],
+  ['ダンゴムシは こんちゅう？', ['こんちゅうじゃ ない', 'こんちゅう'], 'ダンゴムシは あしが 14ほん。エビや カニの なかまだよ。'],
+  ['ミンミンゼミの なきごえは どれ？', ['ミーン ミンミン', 'カナカナカナ', 'ジージージー'], 'わたしの こえだね！ ミーン ミンミン ミー。'],
+  ['「カナカナカナ」と なく セミは？', ['ヒグラシ', 'アブラゼミ', 'クマゼミ'], 'ヒグラシは あさや ゆうがたに なくよ。'],
+  ['セミの こどもは どこで くらして いる？', ['つちの なか', 'みずの なか', 'くもの うえ'], 'つちの なかで きの ねっこの しるを すって おおきく なるよ。'],
+  ['セミが すう ものは どれ？', ['きの しる', 'はなの みつ', 'ほかの むし'], 'ストローみたいな くちを きに さして しるを すうんだ。'],
+  ['なく セミは オス？ メス？', ['オス', 'メス'], 'なくのは オスだけ。おなかで おとを だして メスを よぶよ。'],
+  ['トンボの こどもの なまえは？', ['ヤゴ', 'ボウフラ', 'オタマジャクシ'], 'ヤゴは みずの なかで くらして いるよ。'],
+  ['ボウフラは なんの こども？', ['カ', 'ハエ', 'トンボ'], 'ボウフラは カの こども。みずたまりに いるよ。'],
+  ['ホタルの おしりは どうなる？', ['ひかる', 'のびる', 'いい においが する'], 'ホタルは おしりを ひからせて なかまと おはなし するよ。'],
+  ['ナナホシテントウの ほしは いくつ？', ['7こ', '5こ', '10こ'], 'なまえの とおり 7こ（ナナ）だよ。'],
+  ['ミツバチが はなから あつめる ものは？', ['みつと かふん', 'はっぱ', 'どろ'], 'みつと かふんを すに はこんで ごはんに するよ。'],
+  ['カマキリの まえあしは どんな かたち？', ['かま', 'はさみ', 'ひれ'], 'かまの かたちの あしで えものを つかまえるよ。'],
+  ['チョウは なにを つかって みつを すう？', ['ストローみたいな くち', 'は', 'まえあし'], 'ふだんは くるくる まいて しまって いるよ。'],
+  ['カブトムシの ようちゅうが いる ところは？', ['つちの なか（ふようど）', 'みずの なか', 'はっぱの うら'], 'くさった はっぱの つちを たべて おおきく なるよ。'],
+  ['アゲハチョウの あおむしが たべる はっぱは？', ['ミカンの はっぱ', 'イネの はっぱ', 'マツの はっぱ'], 'ミカンや サンショウの なかまの はっぱが だいすき。'],
+  ['こんちゅうの はねは なんまい？（トンボの ばあい）', ['4まい', '2まい', '6まい'], 'トンボは 4まいの はねで すいすい とぶよ。'],
+  ['アリの おうちは どこに ある ことが おおい？', ['つちの なか', 'くもの うえ', 'うみの なか'], 'つちの なかに トンネルの へやを たくさん つくるよ。'],
+];
 const BOSS = { 18:1, 30:1 };           // 横浜・あざみ野の てまえ
 const bno = i => 'B' + String(i + 1).padStart(2, '0');
 const rb = i => `<ruby>${ST[i][0]}<rt>${ST[i][1]}</rt></ruby>`;
@@ -320,6 +366,22 @@ const sfx = {
   heal() { [784, 988, 1175].forEach((f, i) => note(f, .14, 'triangle', .09, 0, i * .08)); },
   depart() { [72, 76, 79, 84].forEach((m, i) => note(mf(m), .18, 'triangle', .1, 0, i * .12)); },
   clear() { [[72,0],[76,.14],[79,.28],[84,.42],[79,.62],[84,.76]].forEach(([m, w]) => { note(mf(m), .3, 'triangle', .11, 0, w); note(mf(m - 12), .3, 'square', .03, 0, w); }); },
+  fall() { // ヒューン
+    const a = audio(); if (!a) return; const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(1500, t); o.frequency.exponentialRampToValueAtTime(160, t + .95);
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.13, t + .05); g.gain.setValueAtTime(.13, t + .8); g.gain.linearRampToValueAtTime(.0001, t + 1);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 1.05);
+  },
+  boom() { // ドカーン（ノイズ＋ひくい おと）
+    const a = audio(); if (!a) return; const t = a.currentTime, n = Math.floor(a.sampleRate * 1.2);
+    const buf = a.createBuffer(1, n, a.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+    src.buffer = buf; f.type = 'lowpass'; f.frequency.setValueAtTime(2500, t); f.frequency.exponentialRampToValueAtTime(120, t + 1.1);
+    g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + 1.2);
+    src.connect(f); f.connect(g); g.connect(a.destination); src.start(t);
+    note(110, .7, 'sine', .35, -70);
+  },
   boss() { [0, .25, .5].forEach(w => note(196, .2, 'sawtooth', .07, -60, w)); },
   bossHit() { note(150, .3, 'square', .1, -90); note(600, .15, 'triangle', .08, -300); },
   win() { [60, 64, 67, 72, 76, 79, 84].forEach((m, i) => note(mf(m), .25, 'triangle', .1, 0, i * .1)); },
@@ -354,7 +416,7 @@ function say(text) {
 
 /* ============ がめん ============ */
 const cv = $('cv'), ctx = cv.getContext('2d');
-let W, H, dpr, scale, viewW, viewH, offY, camX = 0, shake = 0;
+let W, H, dpr, scale, viewW, viewH, offY, camX = 0, camY = 0, oy = 0, shake = 0;
 function resize() {
   dpr = Math.min(window.devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
   cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
@@ -439,9 +501,13 @@ function newPlayer() {
   return { x: 0, y: GY - 30, w: 46, h: 30, vx: 0, vy: 0, onGround: true, coyote: 0, buf: 0, jumps: 0,
     inv: 0, star: 0, hp: max, max, safeX: 0, cd: 0, anim: 0, sq: 0 };
 }
-function startStage(k, demo = false) {
-  G = buildStage(k); G.demo = demo; P = newPlayer(); camX = P.x - viewW * .28; acc = 0;
+function startStage(k, demo = false, retry = false) {
+  G = buildStage(k); G.demo = demo; P = newPlayer(); camX = P.x - viewW * .28; camY = 0; acc = 0;
   if (demo) return;
+  if (k === 0 && !retry && QUIZ_ST[0]) { G.t = 0; showQuiz(0, '出発', beginPlay); return; }
+  beginPlay();
+}
+function beginPlay() {
   setMode('play');
   G.msg = { text: 'しゅっぱつ しんこう！', t: 2 };
   hudStatic(); hudDyn(true);
@@ -450,8 +516,8 @@ function startStage(k, demo = false) {
 function setMode(m) {
   mode = m;
   document.body.classList.toggle('playing', m === 'play');
-  ['ovTitle', 'ovHow', 'ovMap', 'ovClear', 'ovOver', 'ovPause', 'ovEnd'].forEach(id => $(id).classList.remove('show'));
-  const map = { title: 'ovTitle', map: 'ovMap', clear: 'ovClear', over: 'ovOver', pause: 'ovPause', end: 'ovEnd' };
+  ['ovTitle', 'ovQuiz', 'ovHow', 'ovMap', 'ovClear', 'ovOver', 'ovPause', 'ovEnd'].forEach(id => $(id).classList.remove('show'));
+  const map = { quiz: 'ovQuiz', title: 'ovTitle', map: 'ovMap', clear: 'ovClear', over: 'ovOver', pause: 'ovPause', end: 'ovEnd' };
   if (map[m]) $(map[m]).classList.add('show');
   if (m !== 'play') bgmStop();
 }
@@ -473,7 +539,7 @@ function hurt(pit) {
   if (!pit && (P.inv > 0 || P.star > 0)) return;
   P.hp--; P.inv = 1.6; shake = .35; sfx.hurt();
   burst(P.x + 23, P.y + 15, '#ff6b6b', 10);
-  if (P.hp <= 0) { setTimeout(gameOver, 450); P.dead = true; }
+  if (P.hp <= 0) { setTimeout(gameOver, pit ? 1300 : 450); P.dead = true; }
 }
 function kill(e, how) {
   e.dead = true;
@@ -487,6 +553,7 @@ function burst(x, y, color, n) {
 
 function update(dt) {
   const S = G; S.t += dt;
+  if (P.fall) { fallStep(dt); return; }
   if (S.demo) bot();
   const B = S.boss;
   if (B && !B.active && !B.dead && P.x >= B.trigger) {
@@ -522,11 +589,12 @@ function update(dt) {
   }
   P.sq *= Math.pow(.0005, dt);
   P.anim += P.vx * dt;
-  // あなに おちた
-  if (P.y > GY + 160) {
-    hurt(true);
-    const nx = S.grounds.find(s => s.x > P.safeX + 10) || S.grounds[S.grounds.length - 1];
-    P.x = Math.max(nx.x + 12, P.x); P.y = GY - P.h - 90; P.vy = 0; P.inv = Math.max(P.inv, 1.6);
+  // あなに おちた → ヒューン … ドカーン！
+  if (!P.onGround && P.y > GY + 4 && !P.dead) {
+    P.fall = { t: 0, boom: false, boomY: GY + 190 };
+    P.vx *= .35; P.vy = Math.max(P.vy, 120); P.buf = 0;
+    if (!S.demo) { sfx.fall(); bgmStop(); }
+    S.msg = { text: 'ヒューン…', t: 1.2 };
   }
   if (!S.arrive && P.x >= S.L) { S.arrive = true; if (!S.demo) bgmStop(); }
   if (S.arrive && P.vx === 0 && P.onGround) { S.arriveT += dt; if (S.arriveT > .6) { if (S.demo) startStage((S.k + 1) % NSTAGE, true); else stageClear(); return; } }
@@ -597,7 +665,37 @@ function update(dt) {
   S.en = S.en.filter(e => !e.dead || false);
   if (S.msg) { S.msg.t -= dt; if (S.msg.t <= 0) S.msg = null; }
   shake = Math.max(0, shake - dt);
-  camX = P.x - viewW * .28;
+  camX = P.x - viewW * .28; camY *= Math.pow(.002, dt);
+}
+function fallStep(dt) {
+  const S = G, F = P.fall; F.t += dt;
+  if (!F.boom) {
+    P.vy = Math.min(P.vy + GRAV * .8 * dt, 700); P.y += P.vy * dt; P.x += P.vx * dt; P.spin = (P.spin || 0) + dt * 9;
+    if (P.y + P.h >= F.boomY) {
+      F.boom = true; F.bt = F.t;
+      const bx = P.x + P.w / 2, by = P.y + P.h / 2;
+      S.blast = { x: bx, y: by, t: 0 };
+      for (let i = 0; i < 26; i++) { const a = Math.random() * Math.PI * 2, sp = 120 + Math.random() * 260;
+        S.parts.push({ x: bx, y: by, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 160, life: .7 + Math.random() * .6, color: ['#ff922b', '#ffd43b', '#fa5252', '#fff3bf'][i % 4], r: 3 + Math.random() * 4 }); }
+      for (let i = 0; i < 10; i++) S.parts.push({ x: bx + (Math.random() - .5) * 30, y: by, vx: (Math.random() - .5) * 60, vy: -40 - Math.random() * 60, life: 1.1 + Math.random() * .5, color: 'rgba(90,90,100,.8)', r: 8 + Math.random() * 6, smoke: 1 });
+      for (let i = 0; i < 6; i++) S.parts.push({ x: bx, y: by, vx: (Math.random() - .5) * 300, vy: -250 - Math.random() * 200, life: 1.2, color: ['#f3f6f9', '#0a6fc2', '#333'][i % 3], r: 3, bolt: 1 });
+      shake = .6; S.msg = { text: 'ドカーン！', t: 1.2 };
+      if (!S.demo) sfx.boom();
+      hurt(true);
+    }
+  } else if (F.t - F.bt > 1.25 && !P.dead) {
+    const nx = S.grounds.find(s => s.x > P.safeX + 10) || S.grounds[S.grounds.length - 1];
+    P.x = Math.max(nx.x + 12, P.x); P.y = GY - P.h - 90; P.vy = 0; P.vx = 0; P.spin = 0; camY = Math.min(camY, 60);
+    P.inv = 1.8; P.fall = null; S.blast = null;
+    if (!S.demo) { S.msg = { text: 'ふっかつ！ がんばれ！', t: 1.3 }; if (mode === 'play') bgmStart(); }
+  }
+  const ty = Math.max(0, Math.min(P.y, F.boomY) + P.h + 70 - (viewH - offY));
+  camY += (ty - camY) * Math.min(1, dt * 7);
+  if (S.blast) S.blast.t += dt;
+  for (const p of S.parts) { p.x += p.vx * dt; p.y += p.vy * dt; if (p.smoke) { p.vx *= .97; p.r += dt * 10; } else if (!p.ring) p.vy += 600 * dt; p.life -= dt; }
+  S.parts = S.parts.filter(p => p.life > 0);
+  if (S.msg) { S.msg.t -= dt; if (S.msg.t <= 0) S.msg = null; }
+  shake = Math.max(0, shake - dt);
 }
 function bossHit() {
   const B = G.boss; B.hp--; B.hurt = .5; shake = .2;
@@ -638,7 +736,7 @@ function rr(x, y, w, h, r) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x 
   ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); }
 
 function drawBG(above) {
-  const top = -offY, bot = viewH - offY;
+  const top = -oy, bot = viewH - oy;
   if (!above) {
     const gr = ctx.createLinearGradient(0, top, 0, GY);
     gr.addColorStop(0, '#11151f'); gr.addColorStop(.5, '#2b3243'); gr.addColorStop(1, '#3b4458');
@@ -705,7 +803,7 @@ function drawBG(above) {
   }
 }
 function drawPortal(x) { // トンネルの でいりぐち
-  ctx.fillStyle = '#8d939c'; ctx.fillRect(x - 20, -offY, 40, GY + offY);
+  ctx.fillStyle = '#8d939c'; ctx.fillRect(x - 20, -oy, 40, GY + oy);
   ctx.fillStyle = '#6c727b'; ctx.fillRect(x - 20, 150, 40, 8);
   ctx.fillStyle = '#a9aeb5'; ctx.fillRect(x - 26, 140, 52, 10);
 }
@@ -739,7 +837,7 @@ function drawHome(x0, w, i) { // えきの ホーム（でんしゃの むこう
 }
 
 function drawGround(s, above) {
-  const bot = viewH - offY;
+  const bot = viewH - oy;
   if (!above) { ctx.fillStyle = '#3d424c'; ctx.fillRect(s.x, GY + 8, s.w, bot - GY); ctx.fillStyle = '#4a505b'; ctx.fillRect(s.x, GY + 8, s.w, 10); }
   else {
     ctx.fillStyle = '#a8aeb7'; ctx.fillRect(s.x, GY + 8, s.w, 26);
@@ -824,10 +922,13 @@ function drawBoss(B, time) {
   for (let i = 0; i < B.max; i++) { ctx.fillStyle = i < B.hp ? '#e03131' : 'rgba(0,0,0,.3)'; rr(x + 48 - B.max * 9 + i * 18, y - 30, 14, 10, 4); ctx.fill(); }
 }
 function drawTrain(time) {
-  if (P.inv > 0 && P.star <= 0 && Math.floor(time * 16) % 2) return;
+  if (P.fall && P.fall.boom) return;
+  if (!P.fall && P.inv > 0 && P.star <= 0 && Math.floor(time * 16) % 2) return;
   const x = P.x, y = P.y, w = P.w, h = P.h;
   const sq = P.sq, sx = 1 + sq * .08, sy = 1 - sq * .1;
-  ctx.save(); ctx.translate(x + w / 2, y + h); ctx.scale(sx, sy); ctx.translate(-w / 2, -h);
+  ctx.save(); ctx.translate(x + w / 2, y + h); ctx.scale(sx, sy);
+  if (P.fall) { ctx.translate(0, -h / 2); ctx.rotate(P.spin || 0); ctx.translate(0, h / 2); }
+  ctx.translate(-w / 2, -h);
   if (P.star > 0) { ctx.shadowColor = `hsl(${time * 600 % 360},90%,60%)`; ctx.shadowBlur = 16; }
   // からだ
   ctx.fillStyle = '#f3f6f9'; ctx.beginPath(); ctx.moveTo(4, 0); ctx.lineTo(w - 12, 0); ctx.quadraticCurveTo(w, 2, w, 14); ctx.lineTo(w, h - 4); ctx.lineTo(0, h - 4); ctx.lineTo(0, 4); ctx.quadraticCurveTo(0, 0, 4, 0); ctx.fill();
@@ -869,15 +970,16 @@ function draw() {
   const k = dpr * scale, sh = shake > 0 ? (Math.random() - .5) * 8 * shake / .35 : 0;
   const time = G.t;
   // はいけい（トンネル と おそと の きりかえ）
-  ctx.setTransform(k, 0, 0, k, sh * k, offY * k);
+  oy = offY - camY;
+  ctx.setTransform(k, 0, 0, k, sh * k, oy * k);
   const above = x => G.portal == null ? G.aboveFrom : (x < G.portal ? G.aboveFrom : G.aboveTo);
   if (G.portal == null) drawBG(G.aboveFrom);
   else {
     const px = G.portal - camX;
-    ctx.save(); ctx.beginPath(); ctx.rect(-10, -offY - 10, Math.max(-10, px + 10), viewH + 20); ctx.clip(); drawBG(G.aboveFrom); ctx.restore();
-    ctx.save(); ctx.beginPath(); ctx.rect(px, -offY - 10, viewW - px + 20, viewH + 20); ctx.clip(); drawBG(G.aboveTo); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(-10, -oy - 10, Math.max(-10, px + 10), viewH + 20); ctx.clip(); drawBG(G.aboveFrom); ctx.restore();
+    ctx.save(); ctx.beginPath(); ctx.rect(px, -oy - 10, viewW - px + 20, viewH + 20); ctx.clip(); drawBG(G.aboveTo); ctx.restore();
   }
-  ctx.setTransform(k, 0, 0, k, (-camX + sh) * k, offY * k);
+  ctx.setTransform(k, 0, 0, k, (-camX + sh) * k, oy * k);
   const vis = (x, w) => x + w > camX - 40 && x < camX + viewW + 40;
   if (vis(-520, 720)) drawHome(-520, 720, G.k);
   if (vis(G.L - 300, 760)) drawHome(G.L - 300, 760, G.k + 1);
@@ -890,16 +992,32 @@ function draw() {
   for (const e of G.en) if (!e.dead && vis(e.x, e.w)) drawEnemy(e, above(e.x));
   if (G.boss && G.boss.active) drawBoss(G.boss, time);
   // ヘッドライトの ひかり
-  if (!above(P.x)) {
+  if (!above(P.x) && !P.fall) {
     const lg = ctx.createRadialGradient(P.x + P.w, P.y + 16, 4, P.x + P.w + 60, P.y + 16, 90);
     lg.addColorStop(0, 'rgba(255,250,200,.35)'); lg.addColorStop(1, 'rgba(255,250,200,0)');
     ctx.fillStyle = lg; ctx.beginPath(); ctx.moveTo(P.x + P.w, P.y + 16); ctx.lineTo(P.x + P.w + 150, P.y - 30); ctx.lineTo(P.x + P.w + 150, P.y + 60); ctx.fill();
   }
+  if (P.fall && !P.fall.boom) { // ヒューンの せん
+    ctx.strokeStyle = 'rgba(255,255,255,.6)'; ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i++) { const lx = P.x + 6 + i * 12; ctx.beginPath(); ctx.moveTo(lx, P.y - 8 - (i % 2) * 8); ctx.lineTo(lx, P.y - 34 - (i % 2) * 10); ctx.stroke(); }
+  }
   drawTrain(time);
+  if (G.blast) {
+    const b = G.blast, r = 20 + b.t * 160, a = Math.max(0, 1 - b.t * 1.6);
+    ctx.globalAlpha = a;
+    const bg = ctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, r);
+    bg.addColorStop(0, '#fffbe6'); bg.addColorStop(.35, '#ffd43b'); bg.addColorStop(.7, '#ff7a1a'); bg.addColorStop(1, 'rgba(250,82,82,0)');
+    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath();
+    for (let i = 0; i < 16; i++) { const ang = i * Math.PI / 8, rr2 = i % 2 ? r * .45 : r * .9; ctx.lineTo(b.x + Math.cos(ang) * rr2, b.y + Math.sin(ang) * rr2); }
+    ctx.globalAlpha = a * .5; ctx.fill(); ctx.globalAlpha = 1;
+    if (b.t < .12) { ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = `rgba(255,255,255,${.7 - b.t * 5})`; ctx.fillRect(0, 0, cv.width, cv.height); ctx.restore(); }
+  }
   for (const w of G.waves) drawWave(w);
   for (const p of G.parts) {
     ctx.globalAlpha = Math.min(1, p.life * 2);
     if (p.ring) { ctx.strokeStyle = p.color; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(p.x, p.y, 14 - p.life * 14, 0, 7); ctx.stroke(); }
+    else if (p.bolt) { ctx.fillStyle = p.color; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.life * 12); ctx.fillRect(-5, -2, 10, 4); ctx.restore(); }
     else { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
@@ -933,8 +1051,12 @@ function hudDyn(force) {
 
 /* ============ がめんの きりかえ ============ */
 function stageClear() {
+  if (QUIZ_ST[G.k + 1]) { sfx.clear(); showQuiz(G.k + 1, '到着', finishClear); return; }
+  finishClear(true);
+}
+function finishClear(fanfare) {
   const k = G.k, total = G.tix.length, got = G.got;
-  setMode('clear'); sfx.clear();
+  setMode('clear'); if (fanfare === true) sfx.clear();
   save.cleared[k] = true; save.best[k] = Math.max(save.best[k] || 0, got);
   const all = got >= total; if (all) save.all[k] = true; persist();
   const i = k + 1, s = ST[i];
@@ -953,7 +1075,7 @@ function stageClear() {
     ${k < NSTAGE - 1 ? `<button class="btn" id="cNext">▶ つぎの えき（${ST[i + 1][1]}）へ</button>` : '<p class="big">🎉 しゅうてんに ついたよ！</p>'}
     <div class="row"><button class="btn sub" id="cRetry">🔁 もういちど</button><button class="btn sub" id="cMap">🗺️ ろせんず</button></div>`;
   if ($('cNext')) $('cNext').onclick = () => startStage(k + 1);
-  $('cRetry').onclick = () => startStage(k);
+  $('cRetry').onclick = () => startStage(k, false, true);
   $('cMap').onclick = () => openMap(Math.min(i, NSTAGE - 1));
 }
 function gameOver() {
@@ -977,6 +1099,73 @@ function soundLabel() { const t = save.sound ? '🔊 おと オン' : '🔇 お�
 function toggleSound() {
   save.sound = !save.sound; persist(); soundLabel();
   if (!save.sound) { bgmStop(); try { speechSynthesis.cancel(); } catch (e) {} } else audio();
+}
+
+/* ============ ミン先生の むしクイズ ============ */
+const MIN_SVG = `<svg class="min" viewBox="0 0 160 160" aria-label="ミンせんせい">
+  <g class="wing"><path d="M70 74 C30 40 6 70 14 104 C20 124 52 116 72 92 Z" fill="rgba(205,235,255,.75)" stroke="#5f87a3" stroke-width="2.5"/>
+    <path d="M68 80 L24 92 M64 86 L30 110 M66 78 L28 66" stroke="#7aa0bb" stroke-width="1.5" fill="none"/></g>
+  <g class="wing r"><path d="M90 74 C130 40 154 70 146 104 C140 124 108 116 88 92 Z" fill="rgba(205,235,255,.75)" stroke="#5f87a3" stroke-width="2.5"/>
+    <path d="M92 80 L136 92 M96 86 L130 110 M94 78 L132 66" stroke="#7aa0bb" stroke-width="1.5" fill="none"/></g>
+  <ellipse cx="80" cy="104" rx="26" ry="38" fill="#2e4a28"/>
+  <path d="M60 96 Q80 106 100 96 M58 110 Q80 120 102 110 M62 124 Q80 132 98 124" stroke="#78c25f" stroke-width="3" fill="none"/>
+  <path d="M58 116 l-16 14 M102 116 l16 14 M60 102 l-18 4 M100 102 l18 4" stroke="#2e4a28" stroke-width="4" stroke-linecap="round"/>
+  <ellipse cx="80" cy="62" rx="40" ry="24" fill="#3d6234"/>
+  <path d="M56 50 Q80 40 104 50" stroke="#8fd36f" stroke-width="4" fill="none"/>
+  <circle cx="48" cy="62" r="13" fill="#fff"/><circle cx="112" cy="62" r="13" fill="#fff"/>
+  <circle cx="50" cy="64" r="6.5" fill="#222"/><circle cx="110" cy="64" r="6.5" fill="#222"/>
+  <circle cx="52" cy="61" r="2" fill="#fff"/><circle cx="112" cy="61" r="2" fill="#fff"/>
+  <circle cx="48" cy="62" r="17" fill="none" stroke="#c08a2c" stroke-width="3.5"/><circle cx="112" cy="62" r="17" fill="none" stroke="#c08a2c" stroke-width="3.5"/>
+  <path d="M65 60 Q80 54 95 60" stroke="#c08a2c" stroke-width="3.5" fill="none"/>
+  <path d="M70 74 Q80 82 90 74" stroke="#1d2e19" stroke-width="3" fill="none" stroke-linecap="round"/>
+  <circle cx="66" cy="76" r="4" fill="rgba(255,140,150,.6)"/><circle cx="94" cy="76" r="4" fill="rgba(255,140,150,.6)"/>
+  <path d="M46 34 L80 22 L114 34 L80 46 Z" fill="#222"/><rect x="66" y="36" width="28" height="10" fill="#222"/>
+  <path d="M80 34 L110 36 L112 54" stroke="#f5c400" stroke-width="3" fill="none"/><circle cx="112" cy="56" r="4" fill="#f5c400"/>
+</svg>`;
+let qBag = [];
+function nextQ() {
+  if (!qBag.length) { qBag = BUGQ.map((_, i) => i); for (let i = qBag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [qBag[i], qBag[j]] = [qBag[j], qBag[i]]; } }
+  return BUGQ[qBag.pop()];
+}
+function minCall() { // ミーン ミンミン ミー
+  const a = audio(); if (!a) return;
+  [[0, .5, 1], [.55, .16, .9], [.75, .16, .9], [.95, .5, 1.05]].forEach(([w, d, r]) => {
+    const t = a.currentTime + w, o = a.createOscillator(), lfo = a.createOscillator(), lg = a.createGain(), g = a.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(1900 * r, t); o.frequency.linearRampToValueAtTime(2300 * r, t + d * .4); o.frequency.linearRampToValueAtTime(1700 * r, t + d);
+    lfo.frequency.value = 38; lg.gain.value = .035; lfo.connect(lg); lg.connect(g.gain);
+    g.gain.setValueAtTime(.0001, t); g.gain.linearRampToValueAtTime(.04, t + .04); g.gain.linearRampToValueAtTime(.0001, t + d);
+    o.connect(g); g.connect(a.destination); o.start(t); lfo.start(t); o.stop(t + d + .02); lfo.stop(t + d + .02);
+  });
+}
+function showQuiz(i, kind, done) {
+  setMode('quiz');
+  const [q, ans, exp] = nextQ();
+  const order = ans.map((_, j) => j); for (let j = order.length - 1; j > 0; j--) { const r = Math.floor(Math.random() * (j + 1)); [order[j], order[r]] = [order[r], order[j]]; }
+  $('quizBody').innerHTML = `
+    <span class="bnum">${bno(i)}</span> <b style="font-size:20px">${rb(i)}${kind === '出発' ? ' を でる まえに…' : ' に とうちゃく！'}</b>
+    ${MIN_SVG}
+    <div class="qwho">ミンミンゼミの ミンせんせい</div>
+    <div class="bubble">ミーン！ むしクイズだよ。<br>${q}</div>
+    <div id="qChoices">${order.map(j => `<button class="qbtn" data-j="${j}">${ans[j]}</button>`).join('')}</div>
+    <div class="qmsg" id="qMsg"></div>
+    <div id="qAfter"></div>`;
+  setTimeout(minCall, 150); setTimeout(() => say('ミーン！ むしクイズだよ。' + q), 1500);
+  $('quizBody').querySelectorAll('.qbtn').forEach(b => b.addEventListener('click', () => {
+    if (b.classList.contains('ng') || $('qAfter').innerHTML) return;
+    audio();
+    if (+b.dataset.j === 0) {
+      b.classList.add('ok'); $('quizBody').querySelectorAll('.qbtn').forEach(x => x.disabled = true);
+      $('qMsg').className = 'qmsg ok'; $('qMsg').textContent = '⭕ せいかい！ すすんで いいよ！';
+      $('qAfter').innerHTML = `<div class="info">🦗 ${exp}</div><button class="btn" id="qGo">▶ さきに すすむ</button>`;
+      sfx.heal(); setTimeout(minCall, 350); say('せいかい！ ' + exp);
+      $('qGo').onclick = () => { try { speechSynthesis.cancel(); } catch (e) {} done(); };
+    } else {
+      b.classList.add('ng'); b.disabled = true;
+      $('qMsg').className = 'qmsg ng'; $('qMsg').textContent = '❌ おしい！ もういちど かんがえてね';
+      $('quizBody').classList.remove('shake'); void $('quizBody').offsetWidth; $('quizBody').classList.add('shake');
+      sfx.hurt(); say('おしい！ もういちど');
+    }
+  }));
 }
 
 /* ============ ろせんず ============ */
@@ -1041,7 +1230,7 @@ addEventListener('keydown', e => {
 });
 $('bPause').onclick = pause;
 $('pResume').onclick = () => { setMode('play'); bgmStart(); };
-$('pRetry').onclick = () => startStage(G.k);
+$('pRetry').onclick = () => startStage(G.k, false, true);
 $('pMap').onclick = () => openMap(G.k);
 $('pTitle').onclick = () => { G = null; title(); };
 $('pSound').onclick = toggleSound;
@@ -1053,7 +1242,7 @@ document.querySelectorAll('[data-close]').forEach(b => b.onclick = () => $(b.dat
 $('dEasy').onclick = () => { save.easy = true; persist(); diffLabel(); };
 $('dNorm').onclick = () => { save.easy = false; persist(); diffLabel(); };
 $('mBack').onclick = () => { G = null; title(); };
-$('oRetry').onclick = () => startStage(G.k);
+$('oRetry').onclick = () => startStage(G.k, false, true);
 $('oMap').onclick = () => openMap(G.k);
 $('oTitle').onclick = () => { G = null; title(); };
 $('eMap').onclick = () => openMap(0);
