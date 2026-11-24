@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>にほん タイムマシン</title>
+<style>
+  :root {
+    --ink: #2b2a33; --navy: #3b2a1e; --gold: #ffc93c; --paper: #fff8e7; --line: #d8c9a3;
+    --ok: #2f9e44; --ng: #e8590c; --sea: #9cc9e0; --land: #e9d6aa; --old: #c9b48a;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: "Hiragino Maru Gothic ProN", "BIZ UDPGothic", "Yu Gothic", "Meiryo", sans-serif;
+    color: var(--ink); background: var(--navy); overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; }
+  ruby rt { font-size: .55em; font-weight: normal; }
+  .screen { display: none; height: 100vh; height: 100dvh; flex-direction: column; }
+  .screen.on { display: flex; }
+
+  .bar {
+    flex: none; display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top));
+    background: var(--navy); color: #fff;
+  }
+  .bar h2 { flex: 1; margin: 0; font-size: 20px; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ibtn { flex: none; min-width: 52px; height: 48px; padding: 0 10px; border-radius: 14px; background: #6b4a33; color: #fff; font-size: 16px; font-weight: bold; }
+  .ibtn.off { background: #6d6660; opacity: .75; }
+
+  /* ---- ホーム ---- */
+  #home { background: linear-gradient(#3b2a1e, #6b4a33 55%, #2f6f7a); }
+  .scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 12px 16px 28px; }
+  .hero { text-align: center; color: #fff; margin: 4px auto 12px; max-width: 620px; }
+  .hero .mc { font-size: 56px; line-height: 1; display: inline-block; animation: bob 2.4s ease-in-out infinite; }
+  .hero h1 { margin: 6px 0 6px; font-size: 30px; letter-spacing: .04em; }
+  .hero p { margin: 4px 0; font-size: 18px; line-height: 1.7; word-break: keep-all; overflow-wrap: anywhere; }
+  @keyframes bob { 50% { transform: translateY(-6px) rotate(-4deg); } }
+  .rec { text-align: center; color: #ffe8a3; font-size: 17px; font-weight: bold; margin: 6px 0; line-height: 1.6; }
+  .big {
+    display: block; width: 100%; max-width: 420px; margin: 14px auto 0; min-height: 64px; border-radius: 18px;
+    background: var(--gold); color: var(--ink); font-size: 22px; font-weight: bold; box-shadow: 0 5px 0 #b98a00;
+  }
+  .big:active { transform: translateY(3px); box-shadow: 0 2px 0 #b98a00; }
+  .big.sub { background: #fff; box-shadow: 0 5px 0 #b9b2a0; }
+  .pnote { color: #f0e2cf; font-size: 13px; line-height: 1.6; max-width: 620px; margin: 18px auto 0; }
+  .courses { display: grid; gap: 12px; max-width: 620px; margin: 10px auto 0; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .course { text-align: left; background: #fff8e7; border-radius: 20px; border: 4px solid #fff; box-shadow: 0 5px 0 rgba(0,0,0,.25); padding: 10px 14px; min-height: 96px; }
+  .course:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.25); }
+  .course b { display: block; font-size: 22px; }
+  .course span { display: block; font-size: 15px; color: #6b5d3a; line-height: 1.5; margin-top: 2px; }
+  .course.c-chikyu { background: #e6fcf5; } .course.c-all { background: #fff3bf; }
+  .course.c-mukashi { background: #fff0f6; } .course.c-atarashii { background: #e7f5ff; }
+
+  /* ---- あそぶ ---- */
+  #play { background: #4a3527; }
+  .pmain { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; padding: 6px 10px max(8px, env(safe-area-inset-bottom)); }
+  .mapwrap { position: relative; flex: 1 1 0; min-height: 0; border-radius: 22px; border: 5px solid #d9c7a8; background: var(--sea); overflow: hidden; }
+  .mapbox { position: absolute; inset: 0; }
+  #map { width: 100%; height: 100%; display: block; }
+  #sea { transition: fill 1.5s; }
+  .jp, .cont { transition: fill 1.6s, stroke 1.6s, stroke-width 1.6s; stroke-linejoin: round; }
+  .jp { fill: var(--land); stroke: var(--land); stroke-width: 1.2; }
+  .cont { fill: var(--old); stroke: var(--old); stroke-width: 1.2; }
+  .grp { transition: transform 2.6s cubic-bezier(.45,0,.3,1); transform-box: view-box; }
+  #oldland, #ice { transition: opacity 1.8s; opacity: 0; }
+  #map.stA .jp { fill: var(--old); stroke: var(--old); }
+  #map.stA #oldland { opacity: 1; }
+  #map.stA #sw { transform: rotate(-42deg); }
+  #map.stA #ne { transform: rotate(34deg); }
+  #map.stB .jp { fill: #d8c79a; stroke: #d8c79a; }
+  #map.stC #ice { opacity: 1; }
+  #map.stC .jp, #map.stC .cont { stroke-width: 6; }
+  #map.stC #sea { fill: #b9d7e6; }
+  #map.stC .jp { fill: #f3efe2; stroke: #f3efe2; }
+  #ice path { fill: #f3efe2; }
+  .inset rect { fill: #b3d6e8; stroke: #fff; stroke-width: 2; }
+  .lbl { font-size: 11px; font-weight: bold; fill: #4a5a6a; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; }
+  .pin { cursor: pointer; transition: opacity .5s; }
+  .pin circle { stroke: #fff; stroke-width: 2.5; }
+  .pin text { pointer-events: none; }
+  .pin.cur { animation: pinpop .6s ease-out; transform-box: fill-box; transform-origin: 50% 100%; }
+  @keyframes pinpop { 0% { transform: scale(0) translateY(-20px); } 60% { transform: scale(1.25); } 100% { transform: scale(1); } }
+  .pin.cur circle.ring { fill: none; stroke: #ffd43b; stroke-width: 4; animation: ring 1.2s ease-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes ring { from { transform: scale(.7); opacity: 1; } to { transform: scale(1.8); opacity: 0; } }
+  .pin.shine circle:first-child { animation: shine 1s ease-in-out infinite; }
+  @keyframes shine { 50% { fill: #ffd43b; } }
+  .pin.ok circle:first-child { fill: #ffd43b !important; stroke: #e67700; stroke-width: 4; }
+  .pin.miss { opacity: .35; }
+  .pin.blink circle:first-child { animation: shine .6s ease-in-out infinite; }
+  #cap { transition: transform 1.6s ease-in-out, opacity .8s; }
+  #cap text { font-size: 10px; font-weight: bold; paint-order: stroke; stroke: #fff; stroke-width: 3px; stroke-linejoin: round; fill: #c92a2a; }
+  .spark { font-size: 18px; animation: tw 1s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes tw { 50% { opacity: .2; transform: scale(.6); } }
+  .ybadge {
+    position: absolute; left: 10px; top: 10px; background: #2b1d12; color: var(--gold); border: 3px solid var(--gold);
+    border-radius: 12px; padding: 4px 10px; font-size: 16px; font-weight: bold; line-height: 1.3; pointer-events: none; max-width: 72%;
+  }
+  .ybadge small { display: block; color: #f0e2cf; font-size: 13px; font-weight: normal; font-variant-numeric: tabular-nums; }
+  .warp { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .3s;
+    background: repeating-linear-gradient(100deg, transparent 0 40px, rgba(255,201,60,.35) 40px 46px, transparent 46px 90px); background-size: 240px 100%; }
+  .mapwrap.warping .warp { opacity: 1; animation: warp .25s linear infinite; }
+  @keyframes warp { to { background-position: -240px 0; } }
+  .popup { position: absolute; left: 12px; bottom: 8px; display: flex; align-items: flex-end; gap: 4px; pointer-events: none; opacity: 0; }
+  .popup i { font-style: normal; font-size: 54px; line-height: 1; }
+  .popup b { background: #fff; border: 3px solid var(--ink); border-radius: 14px; padding: 2px 8px; font-size: 15px; margin-bottom: 30px; }
+  .popup.on { animation: popup 2.6s ease-out forwards; }
+  @keyframes popup { 0% { opacity: 1; transform: translateY(80px); } 18% { transform: translateY(-10px); } 30% { transform: none; } 85% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(60px); } }
+
+  /* はかせ */
+  .hakase { position: absolute; right: 6px; bottom: 6px; width: 70px; height: 88px; pointer-events: none; }
+  .hakase svg { width: 100%; height: 100%; overflow: visible; }
+  .hakase.jump svg { animation: jump .7s ease-out; }
+  @keyframes jump { 35% { transform: translateY(-14px); } }
+  .hakase.dizzy svg { animation: wob .5s ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes wob { 50% { transform: rotate(8deg); } }
+  .bub {
+    position: absolute; right: 70px; bottom: 56px; background: #fff; border: 3px solid var(--ink); border-radius: 16px;
+    padding: 4px 10px; font-size: 16px; font-weight: bold; max-width: calc(100% - 90px); line-height: 1.35; opacity: 0; transform: scale(.5); transition: .25s; pointer-events: none;
+  }
+  .bub.on { opacity: 1; transform: none; }
+
+  .panel {
+    flex: none; display: flex; flex-direction: column; gap: 6px; background: var(--paper); border-radius: 20px; padding: 8px 12px;
+    max-height: 54%; min-height: 0;
+  }
+  .ptext { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
+  .era { display: inline-block; border-radius: 999px; padding: 2px 12px; font-size: 15px; font-weight: bold; color: #fff; background: var(--navy); }
+  .yr { display: inline-block; margin-left: 6px; font-size: 15px; font-weight: bold; color: #7a5a2a; }
+  .ttl { font-size: 22px; font-weight: bold; margin: 4px 0 2px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+  .body { font-size: 18px; line-height: 1.9; margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+  .note { font-size: 12px; color: #7a6a48; margin: 4px 0 0; line-height: 1.5; }
+  .ctrl { flex: none; display: flex; align-items: center; gap: 10px; }
+  .msg { flex: 1; min-width: 0; background: #2b1d12; color: #9ff7c1; border-radius: 12px; padding: 8px 10px; font-size: 17px; font-weight: bold; line-height: 1.4; min-height: 60px; display: flex; align-items: center; }
+  .msg.ng { color: #ffd0a8; }
+  .lever {
+    flex: none; position: relative; width: 96px; height: 76px; border-radius: 18px; background: linear-gradient(#a7938b, #77645d);
+    border: 4px solid #ddcfc9; color: #fff; font-size: 13px; font-weight: bold; padding: 0;
+  }
+  .lever .arm { position: absolute; left: 50%; bottom: 22px; width: 8px; height: 40px; margin-left: -4px; background: #2b2220; border-radius: 4px; transform-origin: 50% 100%; transform: rotate(-35deg); transition: transform .3s; }
+  .lever .arm::before { content: ""; position: absolute; left: 50%; top: -12px; width: 26px; height: 26px; margin-left: -13px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9a9a, #e03131 60%, #a51111); border: 2px solid #fff; }
+  .lever.pulled .arm { transform: rotate(35deg); }
+  .lever .lb { position: absolute; left: 0; right: 0; bottom: 3px; }
+  .lever.glow { animation: glow 1.2s infinite; }
+  .lever:disabled { opacity: .5; animation: none; }
+  @keyframes glow { 50% { box-shadow: 0 0 0 6px rgba(255,201,60,.65); } }
+  .choices { flex: none; display: none; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .choices.on { display: grid; }
+  .ch {
+    min-height: 92px; border-radius: 16px; background: #fff; border: 4px solid #d8c9a3; box-shadow: 0 4px 0 #b9b2a0;
+    font-size: 16px; font-weight: bold; line-height: 1.25; padding: 4px; word-break: keep-all; overflow-wrap: anywhere;
+  }
+  .ch i { display: block; font-style: normal; font-size: 34px; line-height: 1.2; }
+  .ch:active { transform: translateY(3px); box-shadow: 0 1px 0 #b9b2a0; }
+  .ch.no { opacity: .4; background: #eee; }
+  .ch.yes { border-color: var(--ok); background: #ebfbee; }
+  .shake { animation: shake .45s; }
+  @keyframes shake { 20% { transform: translateX(-8px); } 40% { transform: translateX(8px); } 60% { transform: translateX(-5px); } 80% { transform: translateX(5px); } }
+  /* じだいの おび */
+  .band { flex: none; display: flex; gap: 1px; align-items: flex-end; }
+  .band span { flex: 1 1 0; min-width: 0; text-align: center; font-size: 10px; color: #9a8f70; line-height: 1.1; white-space: nowrap; overflow: hidden; }
+  .band span i { display: block; height: 9px; margin: 0 1px 2px; border-radius: 4px; background: #e2d6b5; }
+  .band span.done i { opacity: .55; }
+  .band span.now { flex-grow: 2.4; color: var(--ink); font-weight: bold; font-size: 12px; overflow: visible; }
+  .band span.now i { height: 14px; box-shadow: 0 0 0 2px #e03131; }
+
+  @media (orientation: landscape) {
+    .pmain { flex-direction: row; gap: 10px; }
+    .mapwrap { flex: 1.25 1 0; }
+    .panel { flex: 1 1 0; max-height: none; max-width: 480px; }
+    .ctrl { flex-direction: column; align-items: stretch; }
+    .lever { width: 100%; height: 84px; }
+  }
+  @media (orientation: landscape) and (max-height: 480px) {
+    .bar { padding-top: 4px; padding-bottom: 4px; } .ibtn { height: 40px; }
+    .ttl { font-size: 18px; } .body { font-size: 15px; line-height: 1.75; } .msg { font-size: 14px; min-height: 0; padding: 6px; }
+    .lever { height: 60px; } .lever .arm { height: 26px; bottom: 18px; }
+    .ch { min-height: 64px; font-size: 13px; } .ch i { font-size: 24px; }
+    .hakase { width: 52px; height: 66px; } .bub { right: 52px; bottom: 40px; font-size: 14px; }
+  }
+  @media (orientation: portrait) and (max-height: 700px) {
+    .body { font-size: 16px; line-height: 1.8; } .ttl { font-size: 19px; } .ch { min-height: 78px; font-size: 14px; } .ch i { font-size: 26px; }
+    .msg { min-height: 50px; font-size: 15px; }
+  }
+
+  /* ---- できた！・ずかん ---- */
+  .over { position: fixed; inset: 0; z-index: 50; display: none; align-items: center; justify-content: center; padding: 14px; background: rgba(43,29,18,.82); }
+  .over.on { display: flex; }
+  .dpanel { width: 100%; max-width: 560px; max-height: 100%; overflow-y: auto; background: var(--paper); border-radius: 26px; border: 6px solid var(--gold); padding: 16px; text-align: center; }
+  .dpanel h2 { margin: 0 0 4px; font-size: 28px; line-height: 1.5; }
+  .dpanel p { margin: 6px 0; font-size: 18px; line-height: 1.7; }
+  .stars { font-size: 44px; letter-spacing: 6px; }
+  .stars span { display: inline-block; animation: pop .5s backwards; }
+  .stars span:nth-child(2) { animation-delay: .2s; } .stars span:nth-child(3) { animation-delay: .4s; }
+  @keyframes pop { from { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.3); } }
+  .pbtns { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 12px; }
+  .pbtns .big { margin: 0; max-width: none; font-size: 19px; }
+  .confetti { position: fixed; top: -20px; width: 12px; height: 18px; z-index: 60; pointer-events: none; animation: fall linear forwards; }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); } }
+  #zukan, #badge { background: #efe6cf; }
+  .ztotal { text-align: center; font-size: 18px; font-weight: bold; margin: 0 0 10px; }
+  .zgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-width: 900px; margin: 0 auto; }
+  .zsec { grid-column: 1 / -1; margin: 10px 0 0; font-size: 19px; display: flex; align-items: center; gap: 8px; }
+  .zsec i { display: inline-block; width: 18px; height: 18px; border-radius: 50%; }
+  .zl { display: flex; flex-direction: column; justify-content: flex-start; text-align: left; background: #fff; border: 3px solid var(--line); border-radius: 16px; padding: 8px 10px 10px; min-height: 96px; }
+  .zl em { font-style: normal; font-size: 30px; line-height: 1.2; }
+  .zl b { display: block; font-size: 16px; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+  .zl small { display: block; font-size: 13px; color: #7a6a48; }
+  .zl.lock { background: #e9e2cf; color: #9a8f70; }
+  .zl.lock em { filter: grayscale(1); opacity: .3; }
+  .epanel { text-align: left; }
+  .epanel .emo { font-size: 56px; line-height: 1.1; text-align: center; }
+  .epanel .kid { font-size: 19px; line-height: 1.95; margin: 8px 0; word-break: keep-all; overflow-wrap: anywhere; }
+  .epanel .pl { font-size: 16px; font-weight: bold; color: #6b4a33; }
+  .applink { display: block; margin: 10px 0 0; padding: 12px; border-radius: 16px; background: #e7f5ff; border: 3px solid #74c0fc; color: #1c5d99; font-size: 17px; font-weight: bold; text-decoration: none; text-align: center; }
+  .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-width: 900px; margin: 0 auto; }
+  .bd { background: #fff; border: 3px solid var(--gold); border-radius: 18px; padding: 10px 8px; text-align: center; }
+  .bd i { display: block; font-style: normal; font-size: 44px; line-height: 1.2; }
+  .bd b { display: block; font-size: 16px; line-height: 1.4; margin-top: 4px; }
+  .bd small { display: block; font-size: 13px; color: #7a6a48; margin-top: 2px; line-height: 1.4; }
+  .bd.lock { background: #e9e2cf; border-color: #d8c9a3; }
+  .bd.lock i { filter: grayscale(1); opacity: .35; }
+  .newbd { display: block; margin-top: 6px; color: #e67700; font-weight: bold; }
+  /* どっちが さき？ */
+  #dochi { background: linear-gradient(#3b2a1e, #5a3b6b); }
+  .dq { text-align: center; color: #fff; font-size: 22px; font-weight: bold; margin: 6px 0 4px; }
+  .dn { text-align: center; color: #ffe8a3; font-size: 16px; margin: 0 0 10px; }
+  .dcards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 720px; margin: 0 auto; }
+  .dcard { background: #fff8e7; border: 5px solid #fff; border-radius: 22px; box-shadow: 0 5px 0 rgba(0,0,0,.3); padding: 12px 8px; min-height: 180px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .dcard em { font-style: normal; font-size: 50px; line-height: 1.1; }
+  .dcard b { font-size: 20px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }
+  .dcard .dy { display: none; font-size: 16px; font-weight: bold; color: #6b4a33; line-height: 1.4; }
+  .dcards.open .dy { display: block; }
+  .dcard.ok { border-color: var(--ok); background: #ebfbee; }
+  .dcard.ng { border-color: #ff8787; background: #fff5f5; }
+  .dcard:active { transform: translateY(3px); }
+  .dres { text-align: center; color: #9ff7c1; font-size: 19px; font-weight: bold; min-height: 56px; margin: 12px auto 0; max-width: 720px; line-height: 1.6; }
+  .dres.ng { color: #ffd0a8; }
+  #dNext { display: none; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ホーム -->
+<section class="screen on" id="home">
+  <div class="bar">
+    <h2>⏳ にほん タイムマシン</h2>
+    <button class="ibtn" id="sndBtn" aria-label="おとの オン オフ">🔊 おと</button>
+    <button class="ibtn" id="voiceBtn" aria-label="こえの オン オフ">🗣 こえ</button>
+  </div>
+  <div class="scroll">
+    <div class="hero">
+      <span class="mc">⏳🗾</span>
+      <h1>にほん タイムマシン</h1>
+      <p>レバーを うごかすと、<ruby>時<rt>とき</rt></ruby>が びゅーんと すすむ！<br>
+      <ruby>日本列島<rt>にほんれっとう</rt></ruby>が できた ころから いままで、<br>
+      <ruby>大<rt>おお</rt></ruby>きな できごとを じゅんばんに みに いこう。</p>
+    </div>
+    <div class="rec" id="rec"></div>
+    <div class="courses">
+      <button class="course" data-course="short"><b>⏩ みじかい たび</b><span id="cd-short"></span></button>
+      <button class="course c-chikyu" data-course="chikyu"><b>🌋 れっとうが できるまで</b><span id="cd-chikyu"></span></button>
+      <button class="course c-mukashi" data-course="mukashi"><b>🏯 むかしの たび</b><span id="cd-mukashi"></span></button>
+      <button class="course c-atarashii" data-course="atarashii"><b>🚂 えどから いまへ</b><span id="cd-atarashii"></span></button>
+      <button class="course c-all" data-course="all"><b>📜 ぜんぶの たび</b><span id="cd-all"></span></button>
+    </div>
+    <button class="big" id="dochiBtn">⚖️ どっちが さき？</button>
+    <button class="big" id="dokoBtn">📍 どこで おきた？</button>
+    <button class="big sub" id="toZukan">📖 できごと ずかん</button>
+    <button class="big sub" id="badgeBtn">🏅 バッジ</button>
+    <p class="pnote">ちずは わかりやすく した もようの ず（もしき ず）です。とても むかしの ねんだいは、けんきゅうに よって ちがいが あります（「やく」「せつが いろいろ」と かいて います）。
+      ずかんの ちいさい もじに、おとなむけの せつめいが あります。</p>
+  </div>
+</section>
+
+<!-- あそぶ -->
+<section class="screen" id="play">
+  <div class="bar">
+    <button class="ibtn" id="homeBtn" aria-label="さいしょに もどる">🏠</button>
+    <h2 id="playTitle">にほん タイムマシン</h2>
+    <button class="ibtn" id="sndBtn2" aria-label="おとの オン オフ">🔊</button>
+    <button class="ibtn" id="sayBtn" aria-label="もういちど よむ">🗣 よむ</button>
+  </div>
+  <div class="pmain">
+    <div class="mapwrap" id="mapwrap">
+      <div class="mapbox">
+        <svg id="map" viewBox="0 0 400 400" preserveAspectRatio="xMidYMid meet" aria-label="にほんの ちず"></svg>
+      </div>
+      <div class="warp"></div>
+      <div class="ybadge" id="ybadge"></div>
+      <div class="popup" id="popup"><i id="popE"></i><b id="popT"></b></div>
+      <div class="bub" id="bub"></div>
+      <div class="hakase" id="hakase">
+        <svg viewBox="0 0 70 88" aria-hidden="true">
+          <ellipse cx="35" cy="84" rx="20" ry="4" fill="rgba(0,0,0,.2)"/>
+          <rect x="20" y="46" width="30" height="34" rx="10" fill="#fff" stroke="#2b2a33" stroke-width="2.5"/>
+          <path d="M35 48 V80" stroke="#cfd4da" stroke-width="2"/>
+          <circle cx="35" cy="30" r="17" fill="#ffd8a8" stroke="#2b2a33" stroke-width="2.5"/>
+          <path d="M18 26 Q20 8 35 9 Q50 8 52 26 Q46 18 35 19 Q24 18 18 26 Z" fill="#dee2e6" stroke="#2b2a33" stroke-width="2"/>
+          <circle cx="28" cy="31" r="6" fill="#e7f5ff" stroke="#2b2a33" stroke-width="2"/>
+          <circle cx="42" cy="31" r="6" fill="#e7f5ff" stroke="#2b2a33" stroke-width="2"/>
+          <path d="M34 31 H36" stroke="#2b2a33" stroke-width="2"/>
+          <circle cx="28" cy="31" r="1.8" fill="#2b2a33"/><circle cx="42" cy="31" r="1.8" fill="#2b2a33"/>
+          <path d="M30 41 Q35 45 40 41" fill="none" stroke="#2b2a33" stroke-width="2" stroke-linecap="round"/>
+          <text x="35" y="70" font-size="14" text-anchor="middle">⏳</text>
+        </svg>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="ptext" id="ptext">
+        <span class="era" id="era"></span><span class="yr" id="yr"></span>
+        <div class="ttl" id="ttl"></div>
+        <p class="body" id="body"></p>
+        <p class="note" id="note"></p>
+      </div>
+      <div class="choices" id="choices"></div>
+      <div class="ctrl">
+        <div class="msg" id="msg"></div>
+        <button class="lever" id="lever" aria-label="レバーを うごかす"><span class="arm"></span><span class="lb">レバー</span></button>
+      </div>
+      <div class="band" id="band"></div>
+    </div>
+  </div>
+</section>
+
+<!-- どっちが さき？ -->
+<section class="screen" id="dochi">
+  <div class="bar">
+    <button class="ibtn" id="dHome" aria-label="さいしょに もどる">🏠</button>
+    <h2>⚖️ どっちが さき？</h2>
+    <button class="ibtn" id="dSay" aria-label="もういちど よむ">🗣 よむ</button>
+  </div>
+  <div class="scroll">
+    <p class="dq">さきに おきたのは どっち？</p>
+    <p class="dn" id="dNum"></p>
+    <div class="dcards" id="dCards"></div>
+    <p class="dres" id="dRes"></p>
+    <button class="big" id="dNext">つぎへ ▶</button>
+  </div>
+</section>
+
+<!-- ずかん -->
+<section class="screen" id="zukan">
+  <div class="bar">
+    <button class="ibtn" id="zHome" aria-label="さいしょに もどる">🏠</button>
+    <h2>📖 できごと ずかん</h2>
+  </div>
+  <div class="scroll">
+    <p class="ztotal" id="ztotal"></p>
+    <div class="zgrid" id="zgrid"></div>
+  </div>
+</section>
+
+<!-- バッジ -->
+<section class="screen" id="badge">
+  <div class="bar">
+    <button class="ibtn" id="bHome" aria-label="さいしょに もどる">🏠</button>
+    <h2>🏅 バッジ</h2>
+  </div>
+  <div class="scroll">
+    <p class="ztotal" id="btotal"></p>
+    <div class="bgrid" id="bgrid"></div>
+  </div>
+</section>
+
+<div class="over" id="doneOver">
+  <div class="dpanel">
+    <div class="stars" id="stars"></div>
+    <h2 id="doneTitle">いまに ついた！</h2>
+    <p id="doneMsg"></p>
+    <p id="doneSub"></p>
+    <div id="doneBd"></div>
+    <div class="pbtns">
+      <button class="big" id="mapBtn">🗾 ちずを みる</button>
+      <button class="big" id="againBtn">🔁 もういちど</button>
+      <button class="big sub" id="zBtn">📖 ずかん</button>
+      <button class="big sub" id="backBtn">🏠 おしまい</button>
+    </div>
+  </div>
+</div>
+
+<div class="over" id="evOver">
+  <div class="dpanel epanel" id="evBox"></div>
+</div>
+
+<script>
+'use strict';
+/* ========== じだい ========== */
+const ERAS = [
+  ['chikyu', 'ちきゅう', 'ちきゅうの むかし', '#868e96'],
+  ['kyuseki', '旧石器', 'きゅうせっき', '#a07850'],
+  ['jomon', '縄文', 'じょうもん', '#c2703d'],
+  ['yayoi', '弥生', 'やよい', '#d9a62e'],
+  ['kofun', '古墳', 'こふん', '#8a9a3b'],
+  ['asuka', '飛鳥', 'あすか', '#3f9e6b'],
+  ['nara', '奈良', 'なら', '#2f8f9e'],
+  ['heian', '平安', 'へいあん', '#d6548a'],
+  ['kamakura', '鎌倉', 'かまくら', '#3b6fb6'],
+  ['muromachi', '室町', 'むろまち', '#6a55b5'],
+  ['azuchi', '安土桃山', 'あづちももやま', '#c9a227'],
+  ['edo', '江戸', 'えど', '#2b7a4b'],
+  ['meiji', '明治', 'めいじ', '#8f3b2e'],
+  ['taisho', '大正', 'たいしょう', '#b0577a'],
+  ['showa', '昭和', 'しょうわ', '#e07a1f'],
+  ['heisei', '平成', 'へいせい', '#2f88c8'],
+  ['reiwa', '令和', 'れいわ', '#d63384'],
+].map(([k, n, r, c], i) => ({ k, n, r, c, i }));
+const ERA = Object.fromEntries(ERAS.map(e => [e.k, e]));
+const eraName = k => k === 'chikyu' ? 'ちきゅうの むかし' : k === 'kyuseki' ? `<ruby>旧石器<rt>きゅうせっき</rt></ruby><ruby>時代<rt>じだい</rt></ruby>` : `<ruby>${ERA[k].n}<rt>${ERA[k].r}</rt></ruby><ruby>時代<rt>じだい</rt></ruby>`;
+const eraSp = k => k === 'chikyu' ? 'ちきゅうの むかし' : ERA[k].r + 'じだい';
+
+/* ========== できごと ========== */
+// y: ならべる ための 年（西暦。まえは マイナス）、at: [経度, 緯度]（'oki' は おきなわの わく）
+// {漢字|よみ} は ふりがなに なる。こえは よみの ほうを よむ。
+const EVENTS = [
+  { id: 'tairiku', y: -20000000, yr: 'やく 2000まんねん まえ', era: 'chikyu', emo: '🌏', opt: 'たいりくの はし',
+    ttl: '{日本|にほん}は {大陸|たいりく}の はしっこ',
+    body: 'ずっと ずっと むかし、{日本列島|にほんれっとう}は まだ ありません。いまの {日本|にほん}の {陸|りく}は、ユーラシア{大陸|たいりく}の はしっこに くっついて いました。{日本海|にほんかい}も まだ ありません。',
+    note: 'プレートの動きで、大陸の東のはしが割れはじめた。年代は研究によってちがう（約2500万〜2000万年前ごろから）。地図の形は説明のための模式図。',
+    kobi: 'ここ ほんとに にほん？', pop: ['🌋', 'ゴゴゴゴ…'] },
+  { id: 'hanareru', y: -15000000, yr: 'やく 1500まんねん まえ', era: 'chikyu', emo: '🌊', opt: 'にほんかいが できる',
+    ttl: '{日本海|にほんかい}が できて はなれた！',
+    body: '{大陸|たいりく}の はしが さけて、あいだに {海|うみ}が できました。これが {日本海|にほんかい}です。{日本|にほん}の {陸|りく}は、とびらが ひらくように くるっと まわって、{大陸|たいりく}から はなれて いきました。',
+    note: '西南日本は時計まわり、東北日本は反時計まわりに回転したとする「観音開き」モデル（約1500万年前ごろ）。このころは まだ海の下の部分も多く、いまの形に近づくのは もっと後。',
+    kobi: 'とびらが ひらいた みたい！' },
+  { id: 'fuji', y: -98000, yr: 'やく 10まんねん まえ', era: 'chikyu', emo: '🗻', opt: 'ふじさんの もと', at: [138.73, 35.36], pl: '{富士山|ふじさん}（しずおか・やまなし）',
+    ttl: '{富士山|ふじさん}が そだちはじめる',
+    body: '{火山|かざん}の ふんかが なんども くりかえされ、いまの {富士山|ふじさん}の もとに なる {山|やま}（{古富士|こふじ}）が できはじめました。いまの すがたに なったのは、もっと ずっと あとの ことです。',
+    note: '古富士火山は約10万年前から、いまの新富士火山は約1万年前から（山梨県富士山科学研究所などの解説）。その下に もっと古い小御岳火山などがある。',
+    kobi: 'ふじさん、まだ あかちゃん！', app: 'fujisan-dekikata' },
+  { id: 'hito', y: -36000, yr: 'やく 3まん8せんねん まえ', era: 'kyuseki', emo: '🚶', opt: 'ひとが くる', at: [139.28, 36.4], pl: '{岩宿|いわじゅく}（ぐんま）',
+    ttl: 'ひとが やってきた！',
+    body: 'とても さむい「{氷河時代|ひょうがじだい}」。{海|うみ}が いまより ひくく、{北海道|ほっかいどう}は {大陸|たいりく}と つながって いました。ひとびとが {日本|にほん}に やってきて、{石|いし}の {道具|どうぐ}で ナウマンゾウなどを かりました。',
+    note: '日本列島で人の確かな跡が増えるのは約3万8千年前から（旧石器時代）。いちばん寒かった約2万年前は、海面が今より約120m低かった。本州・四国・九州は陸つづき、津軽海峡などは海のまま（模式図）。岩宿遺跡（群馬）は1949年の発掘で日本にも旧石器時代があったことを示した。',
+    kobi: 'さむ〜い！ こおりの じだい', pop: ['🐘', 'ナウマンゾウ だ！'] },
+  { id: 'doki', y: -14000, yr: 'やく 1まん6せんねん まえ', era: 'jomon', emo: '🏺', opt: 'どきが できる', at: [140.6, 41.05], pl: '{大平山元遺跡|おおだいやまもといせき}（あおもり）',
+    ttl: '{土器|どき}を つくりはじめた',
+    body: 'ねんどを こねて やいた {土器|どき}で、たべものを にて たべる ように なりました。{縄文時代|じょうもんじだい}の はじまりです。なわ（{縄|なわ}）を ころがした もようが あるので「{縄文|じょうもん}」と いいます。',
+    note: '大平山元遺跡（青森県外ヶ浜町）の土器は約1万6千年前とされ、世界でも古い土器のひとつ。縄文時代のはじまりの年代には諸説ある。',
+    kobi: 'なべ ができた！ ぐつぐつ', pop: ['🍲', 'ぐつぐつ…'], app: 'jomon-cooking' },
+  { id: 'katachi', y: -8000, yr: 'やく 1まんねん まえ', era: 'jomon', emo: '🏝️', opt: 'いまの かたちに',
+    ttl: 'あたたかく なって、いまの かたちに',
+    body: '{氷河時代|ひょうがじだい}が おわって あたたかく なると、{氷|こおり}が とけて {海|うみ}が ふえ、ひくい ところが {海|うみ}に しずみました。{日本|にほん}は {海|うみ}に かこまれた {島|しま}に なり、いまに ちかい かたちに なりました。',
+    note: '約1万年前ごろ。約7000〜6000年前は今より海面が高く、海が内陸まで入りこんだ（縄文海進）。',
+    kobi: 'しまに なっちゃった！', pop: ['🐟', 'うみが ひろがった！'] },
+  { id: 'sannai', y: -3900, yr: 'やく 5900〜4200ねん まえ', era: 'jomon', emo: '🏘️', opt: 'おおきな むら', at: [140.7, 40.81], pl: '{三内丸山遺跡|さんないまるやまいせき}（あおもり）',
+    ttl: '{三内丸山|さんないまるやま}の {大|おお}きな むら',
+    body: '{青森|あおもり}に、たくさんの ひとが ながい あいだ くらした むらが ありました。クリの {木|き}を そだて、ふとい {柱|はしら}の {大|おお}きな たてものを たてました。とおくの むらとも ものを とりかえて いました。',
+    note: '特別史跡 三内丸山遺跡（青森市）。約5900〜4200年前。2021年「北海道・北東北の縄文遺跡群」として世界遺産。',
+    kobi: 'クリ ひろい したい！', app: 'jomon-mura' },
+  { id: 'kome', y: -500, yr: 'やく 2500ねん まえ（せつが いろいろ）', era: 'yayoi', emo: '🌾', opt: 'おこめづくり', at: [130.38, 33.33], pl: '{吉野ヶ里遺跡|よしのがりいせき}（さが）',
+    ttl: 'おこめづくりが ひろがる',
+    body: '{海|うみ}の むこうから {米|こめ}づくりが つたわり、{田|た}んぼが ひろがりました。{弥生時代|やよいじだい}です。たくわえた おこめを めぐって むらどうしの あらそいも おき、むらは ほりや さくで かこまれました。',
+    note: '水田稲作のはじまりは紀元前10世紀ごろ（国立歴史民俗博物館の年代測定）〜紀元前4世紀ごろまで諸説ある。吉野ヶ里遺跡（佐賀）は大きな環濠集落。',
+    kobi: 'ごはん、いただきまーす！', pop: ['🐸', 'たんぼ だいすき'], app: 'yayoi-rhythm' },
+  { id: 'himiko', y: 239, yr: '239ねん', era: 'yayoi', emo: '👑', opt: 'ひみこ', at: [[130.6, 33.35], [135.84, 34.54]], pl: '{九州|きゅうしゅう}？ {奈良|なら}？（わかって いない）', q2: true,
+    ttl: '{卑弥呼|ひみこ}が つかいを おくる',
+    body: '{邪馬台国|やまたいこく}の {女王|じょおう}・{卑弥呼|ひみこ}が、{中国|ちゅうごく}（{魏|ぎ}）に つかいを おくりました。{邪馬台国|やまたいこく}が どこに あったのかは、いまも わかって いません。',
+    note: '中国の歴史書『魏志』倭人伝による。九州説・近畿説などがある（地図は2か所に？をつけた）。',
+    kobi: 'どっちに あったんだろう？', app: 'rekishi-talk' },
+  { id: 'kofun', y: 450, yr: '400ねんだい（5せいき）', era: 'kofun', emo: '🗝️', opt: 'おおきな こふん', at: [135.49, 34.56], pl: '{大仙古墳|だいせんこふん}（おおさか）',
+    ttl: '{大|おお}きな {古墳|こふん}が つくられる',
+    body: 'ちからの つよい {王|おう}の おはか「{古墳|こふん}」が、あちこちに つくられました。{大阪|おおさか}の {大仙古墳|だいせんこふん}は、{日本|にほん}で いちばん {大|おお}きな おはかです。まわりには {埴輪|はにわ}が ならびました。',
+    note: '大仙古墳（仁徳天皇陵古墳）は5世紀中ごろ、全長約486m。2019年に百舌鳥・古市古墳群として世界遺産。古墳時代は3世紀中ごろ〜7世紀ごろ。',
+    kobi: 'うえから みると かぎあな！', app: 'kofun-zukuri' },
+  { id: 'taishi', y: 593, yr: '593ねん', era: 'asuka', emo: '👂', opt: 'しょうとくたいし', at: [135.73, 34.61], pl: '{法隆寺|ほうりゅうじ}（なら）',
+    ttl: '{聖徳太子|しょうとくたいし}の せいじ',
+    body: '{聖徳太子|しょうとくたいし}は {推古天皇|すいこてんのう}を たすけて、やくにんの こころえ（{十七条|じゅうしちじょう}の{憲法|けんぽう}）を つくり、{中国|ちゅうごく}（{隋|ずい}）に つかいを おくりました。{仏教|ぶっきょう}を たいせつに して、{法隆寺|ほうりゅうじ}も たてました。',
+    note: '593年 推古天皇の摂政になったとされる。604年 十七条の憲法、607年 遣隋使（小野妹子）・法隆寺。仏教が伝わったのは538年（552年説も）。',
+    kobi: '10にんの はなしを いっぺんに？！', app: 'asuka-kikiwake' },
+  { id: 'taika', y: 645, yr: '645ねん', era: 'asuka', emo: '🗡️', opt: 'たいかの かいしん', at: [135.82, 34.47], pl: '{飛鳥|あすか}（なら）',
+    ttl: '{大化|たいか}の{改新|かいしん}',
+    body: '{中大兄皇子|なかのおおえのおうじ}と {中臣鎌足|なかとみのかまたり}が、ちからを もちすぎた {蘇我|そが}{氏|し}を たおしました。そして、{天皇|てんのう}を ちゅうしんに した {国|くに}づくりを はじめました。',
+    note: '645年 乙巳の変から始まる政治改革。土地と人を国のものにする方針などが示された。',
+    kobi: 'むしごろし？ ちがうよ 645！' },
+  { id: 'heijo', y: 710, yr: '710ねん', era: 'nara', emo: '🏛️', opt: 'へいじょうきょう', at: [135.8, 34.69], pl: '{平城京|へいじょうきょう}（なら）',
+    ttl: '{奈良|なら}に {平城京|へいじょうきょう}',
+    body: '{中国|ちゅうごく}の {都|みやこ}を まねて、{奈良|なら}に {道|みち}が ごばんの {目|め}のように まっすぐ ならぶ {都|みやこ}が つくられました。{奈良時代|ならじだい}の はじまりです。',
+    note: '710年 藤原京から遷都。唐の長安を手本にした。',
+    kobi: 'みちが まっすぐ！ まいごに ならない？', app: 'nara-ganjin-sugoroku' },
+  { id: 'daibutsu', y: 752, yr: '752ねん', era: 'nara', emo: '🙏', opt: 'ならの だいぶつ', at: [135.84, 34.69], pl: '{東大寺|とうだいじ}（なら）',
+    ttl: '{東大寺|とうだいじ}の {大仏|だいぶつ}',
+    body: '{聖武天皇|しょうむてんのう}は、{仏教|ぶっきょう}の ちからで {国|くに}を まもろうと、{大|おお}きな {大仏|だいぶつ}を つくらせました。たかさ やく15メートル！ すこし あとには、{中国|ちゅうごく}から {鑑真|がんじん}も やってきました。',
+    note: '752年 開眼供養。いまの大仏は、のちの時代に作り直された部分が多い。鑑真は753年に日本に着き、754年に奈良へ。',
+    kobi: 'おおきすぎて かおが みえない〜' },
+  { id: 'heian', y: 794, yr: '794ねん', era: 'heian', emo: '🌸', opt: 'へいあんきょう', at: [135.76, 35.01], pl: '{平安京|へいあんきょう}（きょうと）',
+    ttl: '{京都|きょうと}に {平安京|へいあんきょう}',
+    body: '{桓武天皇|かんむてんのう}が、{都|みやこ}を {京都|きょうと}に うつしました。ここから やく400{年|ねん}、{平安時代|へいあんじだい}が つづきます。{京都|きょうと}は このあと 1000{年|ねん}いじょう、{天皇|てんのう}の いる {都|みやこ}でした。',
+    note: '794年 遷都。1869年に天皇が東京へ移るまで都だった。',
+    kobi: 'なくよ うぐいす へいあんきょう♪' },
+  { id: 'kana', y: 1008, yr: '1000ねん ごろ', era: 'heian', emo: '🖌️', opt: 'ひらがな・げんじものがたり', at: [135.7, 35.06], pl: '{京都|きょうと}',
+    ttl: 'ひらがなと『{源氏物語|げんじものがたり}』',
+    body: '{漢字|かんじ}を くずして ひらがなが うまれ、きもちを そのまま かけるように なりました。{紫式部|むらさきしきぶ}は『{源氏物語|げんじものがたり}』、{清少納言|せいしょうなごん}は『{枕草子|まくらのそうし}』を かきました。',
+    note: 'ひらがなは9世紀ごろから広まった。源氏物語は1008年ごろには読まれていた（紫式部日記）。',
+    kobi: 'この ひらがなも ここから！', app: 'heian-kana-henshin' },
+  { id: 'hiraizumi', y: 1124, yr: '1124ねん', era: 'heian', emo: '✨', opt: 'こんじきどう', at: [141.1, 38.99], pl: '{平泉|ひらいずみ}（いわて）',
+    ttl: '{平泉|ひらいずみ}の {金色堂|こんじきどう}',
+    body: '{東北|とうほく}の {奥州藤原氏|おうしゅうふじわらし}が、{岩手|いわて}の {平泉|ひらいずみ}に きんぴかの {中尊寺金色堂|ちゅうそんじこんじきどう}を たてました。{都|みやこ}から とおい {東北|とうほく}にも、さかえた まちが ありました。',
+    note: '1124年 上棟。2011年「平泉」として世界遺産。',
+    kobi: 'まぶしい〜！ ぴかぴか' },
+  { id: 'kamakura', y: 1185, yr: '1185ねん', era: 'kamakura', emo: '🏹', opt: 'かまくら ばくふ', at: [139.55, 35.32], pl: '{鎌倉|かまくら}（かながわ）',
+    ttl: '{鎌倉幕府|かまくらばくふ}が できる',
+    body: '{源氏|げんじ}と {平氏|へいし}の たたかいは、{壇ノ浦|だんのうら}で {源氏|げんじ}の かち。{源頼朝|みなもとのよりとも}は {鎌倉|かまくら}で、さむらい（{武士|ぶし}）が せいじを する「{幕府|ばくふ}」を はじめました。',
+    note: '1185年 壇ノ浦の戦い・守護地頭の設置。1192年 頼朝が征夷大将軍に。幕府のはじまりの年は諸説ある。',
+    kobi: 'さむらいの じだいだ！', app: 'kamakura-hassotobi' },
+  { id: 'genko', y: 1274, yr: '1274ねん・1281ねん', era: 'kamakura', emo: '⛵', opt: 'げんこう', at: [130.4, 33.6], pl: '{博多|はかた}（ふくおか）',
+    ttl: 'モンゴルが せめてきた（{元寇|げんこう}）',
+    body: '{大陸|たいりく}の {大|おお}きな {国|くに}・{元|げん}（モンゴル）が、2かいも {九州|きゅうしゅう}に せめてきました。{武士|ぶし}たちは ひっしに たたかい、{元|げん}の ぐんは ひきあげました。',
+    note: '1274年 文永の役、1281年 弘安の役。博多湾ぞいに石の防塁（元寇防塁）が築かれた。',
+    kobi: 'ひゃ〜 2かいも きた！' },
+  { id: 'muromachi', y: 1338, yr: '1338ねん', era: 'muromachi', emo: '⛩️', opt: 'むろまち ばくふ', at: [135.73, 35.04], pl: '{金閣|きんかく}（きょうと）',
+    ttl: '{室町幕府|むろまちばくふ}と {金閣|きんかく}',
+    body: '{足利尊氏|あしかがたかうじ}が {京都|きょうと}で {幕府|ばくふ}を ひらきました。3だいめの {足利義満|あしかがよしみつ}は、きんぴかの {金閣|きんかく}を たてました。のうや すみえなど、いまに つづく {文化|ぶんか}も そだちました。',
+    note: '1338年 尊氏が征夷大将軍に（室町時代のはじまりを1336年とすることも）。1397年 金閣。',
+    kobi: 'また きんぴか！', app: 'muromachi-sumie' },
+  { id: 'ryukyu', y: 1429, yr: '1429ねん', era: 'muromachi', emo: '🌺', opt: 'りゅうきゅう おうこく', at: 'oki', pl: '{首里|しゅり}（おきなわ）',
+    ttl: '{琉球王国|りゅうきゅうおうこく}が できる',
+    body: '{沖縄|おきなわ}では、{尚巴志|しょうはし}が 3つの {国|くに}を ひとつに まとめ、{琉球王国|りゅうきゅうおうこく}が うまれました。{首里城|しゅりじょう}を ちゅうしんに、{中国|ちゅうごく}や {東南|とうなん}アジアとの ぼうえきで さかえました。',
+    note: '1429年 三山統一。1879年に沖縄県となるまで約450年つづいた。',
+    kobi: 'うみの むこうと なかよし！' },
+  { id: 'onin', y: 1467, yr: '1467ねん', era: 'muromachi', emo: '🔥', opt: 'おうにんの らん', at: [135.77, 35.0], pl: '{京都|きょうと}',
+    ttl: '{応仁|おうにん}の{乱|らん}、{戦国時代|せんごくじだい}へ',
+    body: '{将軍|しょうぐん}の あとつぎ などを めぐって、{京都|きょうと}で 11{年|ねん}も たたかいが つづき、まちは やけて しまいました。{幕府|ばくふ}の ちからは よわまり、{各地|かくち}の {戦国大名|せんごくだいみょう}が あらそう {時代|じだい}に なりました。',
+    note: '1467〜1477年。このあとの約100年を戦国時代とよぶ。',
+    kobi: 'けんかは やめて〜' },
+  { id: 'teppo', y: 1543, yr: '1543ねん', era: 'muromachi', emo: '💥', opt: 'てっぽう', at: [130.98, 30.6], pl: '{種子島|たねがしま}（かごしま）',
+    ttl: '{鉄砲|てっぽう}が つたわる',
+    body: '{種子島|たねがしま}に ながれついた ふねに のって いた ポルトガル{人|じん}が、{鉄砲|てっぽう}を つたえました。{鉄砲|てっぽう}は すぐに {日本|にほん}でも つくられ、たたかいかたが かわりました。',
+    note: '1543年（1542年説も）。',
+    kobi: 'ドーン！ びっくりした' },
+  { id: 'xavier', y: 1549, yr: '1549ねん', era: 'muromachi', emo: '⛪', opt: 'キリストきょう', at: [130.55, 31.6], pl: '{鹿児島|かごしま}',
+    ttl: 'ザビエルが キリスト{教|きょう}を つたえる',
+    body: 'スペイン{人|じん}の せんきょうし、フランシスコ・ザビエルが {鹿児島|かごしま}に きて、キリスト{教|きょう}を つたえました。ヨーロッパの めずらしい ものも つぎつぎ やってきました。',
+    note: '1549年。カステラ・ボタンなど、ポルトガル語から来た言葉もこのころ。',
+    kobi: 'カステラ たべたい！' },
+  { id: 'nobunaga', y: 1575, yr: '1575ねん ごろ', era: 'azuchi', emo: '🐦', opt: 'のぶなが', at: [136.14, 35.16], pl: '{安土城|あづちじょう}（しが）',
+    ttl: '{織田信長|おだのぶなが}の てんかとり',
+    body: '{織田信長|おだのぶなが}は {鉄砲|てっぽう}を つかって {長篠|ながしの}の たたかいに かち、{安土城|あづちじょう}を たてました。でも 1582{年|ねん}、{本能寺|ほんのうじ}で {明智光秀|あけちみつひで}に せめられ、なくなりました。',
+    note: '1573年 室町幕府がほろぶ（安土桃山時代のはじまり）。1575年 長篠の戦い、1576年 安土城の築城開始、1582年 本能寺の変。',
+    kobi: 'なかぬなら ころしてしまえ…こわっ', app: 'sengoku-jintori' },
+  { id: 'hideyoshi', y: 1590, yr: '1590ねん', era: 'azuchi', emo: '🏯', opt: 'ひでよしの てんかとういつ', at: [135.53, 34.69], pl: '{大阪城|おおさかじょう}',
+    ttl: '{豊臣秀吉|とよとみひでよし}が {天下統一|てんかとういつ}',
+    body: '{信長|のぶなが}の あとを ついだ {豊臣秀吉|とよとみひでよし}は、{大阪城|おおさかじょう}を きずき、1590{年|ねん}に {全国|ぜんこく}を ひとつに まとめました。{田|た}んぼの ひろさを しらべる {検地|けんち}も しました。',
+    note: '1583年 大坂城の築城開始、1588年 刀狩、1590年 小田原の北条氏をくだして全国統一。',
+    kobi: 'ぜんぶ まとめた！' },
+  { id: 'sekigahara', y: 1600, yr: '1600ねん', era: 'azuchi', emo: '⚔️', opt: 'せきがはら', at: [136.47, 35.37], pl: '{関ヶ原|せきがはら}（ぎふ）',
+    ttl: '{関ヶ原|せきがはら}の たたかい',
+    body: '{日本|にほん}じゅうの {大名|だいみょう}が {東|ひがし}と {西|にし}に わかれて たたかいました。かったのは {東軍|とうぐん}の {徳川家康|とくがわいえやす}。たった 1にちで かちまけが きまりました。',
+    note: '1600年9月15日（旧暦）。「天下分け目の戦い」。',
+    kobi: 'てんか わけめ！', app: 'samurai-ninja' },
+  { id: 'edo', y: 1603, yr: '1603ねん', era: 'edo', emo: '🏮', opt: 'えど ばくふ', at: [139.75, 35.69], pl: '{江戸|えど}（いまの とうきょう）',
+    ttl: '{江戸幕府|えどばくふ}が できる',
+    body: '{徳川家康|とくがわいえやす}が {将軍|しょうぐん}に なり、{江戸|えど}（いまの {東京|とうきょう}）で {幕府|ばくふ}を ひらきました。ここから やく260{年|ねん}、{大|おお}きな いくさの ない {江戸時代|えどじだい}が つづきます。',
+    note: '1603年 家康が征夷大将軍に。大名は江戸と領地を行き来した（参勤交代、1635年に制度化）。',
+    kobi: 'へいわが ながーく つづくよ', app: 'edo-gyoretsu' },
+  { id: 'sakoku', y: 1641, yr: '1641ねん', era: 'edo', emo: '⚓', opt: 'でじま', at: [129.87, 32.74], pl: '{出島|でじま}（ながさき）',
+    ttl: '{出島|でじま}と「{鎖国|さこく}」',
+    body: '{幕府|ばくふ}は {外国|がいこく}との つきあいを きびしく きめました。ヨーロッパの {国|くに}では オランダだけが、{長崎|ながさき}の {出島|でじま}で ぼうえきを しました。',
+    note: '1641年 オランダ商館を平戸から出島へ。中国・朝鮮・琉球・アイヌとの交流はつづいた。「鎖国」はのちの時代の言葉。',
+    kobi: 'まどは ちいさく あけとこう' },
+  { id: 'tadataka', y: 1800, yr: '1800ねん', era: 'edo', emo: '🗾', opt: 'いのうただたかの ちず', at: [140.73, 41.77], pl: '{函館|はこだて}（ほっかいどう）',
+    ttl: '{伊能忠敬|いのうただたか}が {日本|にほん}を あるく',
+    body: '{伊能忠敬|いのうただたか}は 55さいで {蝦夷地|えぞち}（いまの {北海道|ほっかいどう}）から はかりはじめ、17{年|ねん}も かけて {日本|にほん}じゅうを あるいて はかり、とても せいかくな {地図|ちず}を つくりました。',
+    note: '1800年 蝦夷地の測量。1821年『大日本沿海輿地全図』完成（忠敬の死後、弟子たちが仕上げた）。',
+    kobi: 'この ちずも あるいて はかったの？', app: 'tadataka-talk' },
+  { id: 'perry', y: 1853, yr: '1853ねん', era: 'edo', emo: '🚢', opt: 'くろふね', at: [139.72, 35.24], pl: '{浦賀|うらが}（かながわ）',
+    ttl: 'ペリーの {黒船|くろふね}が くる',
+    body: 'アメリカの ペリーが、まっくろな じょうきせん（{黒船|くろふね}）で {浦賀|うらが}に やってきて、「{国|くに}を ひらいて ほしい」と もとめました。{日本|にほん}は おおさわぎ！',
+    note: '1853年 浦賀に来航。1854年 日米和親条約。',
+    kobi: 'けむりが もくもく〜！', pop: ['🚢', 'ぼーーっ！'] },
+  { id: 'meiji', y: 1868, yr: '1868ねん', era: 'meiji', emo: '🎩', opt: 'めいじいしん', at: [139.76, 35.68], pl: '{東京|とうきょう}',
+    ttl: '{明治維新|めいじいしん}',
+    body: '{江戸幕府|えどばくふ}が おわり、{天皇|てんのう}を ちゅうしんに した あたらしい {政府|せいふ}が できました。{江戸|えど}は「{東京|とうきょう}」に なまえが かわり、ちょんまげを やめたり ようふくを きたり、くらしが どんどん かわりました。',
+    note: '1867年 大政奉還、1868年 明治に改元・江戸を東京に。',
+    kobi: 'ちょんまげ、さようなら〜', app: 'meiji-henshin' },
+  { id: 'hokkaido', y: 1869, yr: '1869ねん', era: 'meiji', emo: '🐻', opt: 'ほっかいどうの なまえ', at: [141.35, 43.06], pl: '{札幌|さっぽろ}（ほっかいどう）',
+    ttl: '{蝦夷地|えぞち}が「{北海道|ほっかいどう}」に',
+    body: '{蝦夷地|えぞち}は「{北海道|ほっかいどう}」と なまえが かわり、{本州|ほんしゅう}から おおくの ひとが うつりすんで、あれちを ひらいて いきました。もとから くらして いた アイヌの ひとたちの くらしは、{大|おお}きく かわって しまいました。',
+    note: '1869年 命名（松浦武四郎の案がもと）。2019年の法律でアイヌを先住民族と明記。',
+    kobi: 'ひろ〜い！' },
+  { id: 'tetsudo', y: 1872, yr: '1872ねん', era: 'meiji', emo: '🚂', opt: 'てつどう', at: [139.64, 35.45], pl: '{新橋|しんばし}〜{横浜|よこはま}',
+    ttl: '{新橋|しんばし}〜{横浜|よこはま}に {鉄道|てつどう}',
+    body: '{日本|にほん}で はじめての {鉄道|てつどう}が、{新橋|しんばし}〜{横浜|よこはま}に はしりました。あるいて 1にち かかった みちのりが、1じかん かからなく なりました。',
+    note: '1872年10月14日（旧暦9月12日）開業。所要53分。当時の横浜駅は いまの桜木町駅。',
+    kobi: 'はやーい！', pop: ['🚂', 'ぽっぽー！'], app: 'rosenzu-timemachine' },
+  { id: 'kenpo1', y: 1889, yr: '1889ねん', era: 'meiji', emo: '📜', opt: 'はじめての けんぽう', at: [139.74, 35.7], pl: '{東京|とうきょう}',
+    ttl: 'はじめての {憲法|けんぽう}',
+    body: '{国|くに}の いちばん もとに なる きまり、{大日本帝国憲法|だいにっぽんていこくけんぽう}が できました。つぎの {年|とし}には、えらばれた ひとが はなしあう {国会|こっかい}（{帝国議会|ていこくぎかい}）も ひらかれました。',
+    note: '1889年2月11日 発布、1890年 第1回帝国議会。',
+    kobi: 'きまりは だいじ！' },
+  { id: 'shinsai', y: 1923, yr: '1923ねん', era: 'taisho', emo: '🏚️', opt: 'かんとう だいしんさい', at: [139.4, 35.3], pl: '{関東|かんとう}（とうきょう・かながわ など）',
+    ttl: '{関東大震災|かんとうだいしんさい}',
+    body: '{大正時代|たいしょうじだい}の 9{月|がつ}1{日|ついたち}、{関東|かんとう}で {大|おお}きな じしんが おき、かじで たくさんの いえが もえました。この {日|ひ}は いま「{防災|ぼうさい}の{日|ひ}」に なって います。',
+    note: '1923年9月1日。死者・行方不明者 約10万5千人（内閣府）。',
+    kobi: 'ぼうさいの じゅんび、しよう' },
+  { id: 'sensou', y: 1945, yr: '1945ねん', era: 'showa', emo: '🕊️', opt: 'せんそうが おわる', at: [[132.46, 34.39], [129.87, 32.75]], pl: '{広島|ひろしま}・{長崎|ながさき}', q2: true,
+    ttl: '{戦争|せんそう}が おわる',
+    body: '{日本|にほん}は ながい あいだ {戦争|せんそう}を して いました。1945{年|ねん}、{広島|ひろしま}と {長崎|ながさき}に {原子爆弾|げんしばくだん}が おとされ、たくさんの ひとが なくなりました。8{月|がつ}15{日|にち}、{戦争|せんそう}は おわりました。',
+    note: '1937年 日中戦争、1941年 太平洋戦争。1945年8月6日 広島、8月9日 長崎に原爆。8月15日 終戦を伝える放送。',
+    kobi: 'せんそうは もう しないでね' },
+  { id: 'kenpo2', y: 1947, yr: '1947ねん', era: 'showa', emo: '📘', opt: 'にほんこく けんぽう', at: [139.75, 35.67], pl: '{東京|とうきょう}',
+    ttl: '{日本国憲法|にほんこくけんぽう}',
+    body: 'あたらしい {憲法|けんぽう}が はじまりました。{国|くに}の ことを きめるのは {国民|こくみん}、ひとりひとりを たいせつに する、{戦争|せんそう}を しない — という やくそくが かかれて います。',
+    note: '1946年11月3日 公布（いまの文化の日）、1947年5月3日 施行（憲法記念日）。',
+    kobi: 'みんなが だいじ！' },
+  { id: 'olympic', y: 1964, yr: '1964ねん', era: 'showa', emo: '🏅', opt: 'とうきょう オリンピック', at: [139.72, 35.68], pl: '{東京|とうきょう}',
+    ttl: '{東京|とうきょう}オリンピックと {新幹線|しんかんせん}',
+    body: 'アジアで はじめての オリンピックが {東京|とうきょう}で ひらかれました。その すこし まえに {東海道新幹線|とうかいどうしんかんせん}も はしりはじめました。テレビや れいぞうこも、いえいえに やってきました。',
+    note: '1964年10月1日 東海道新幹線 開業、10月10日 開会式。',
+    kobi: 'テレビで おうえん！', app: 'showa-chanoma' },
+  { id: 'okinawa', y: 1972, yr: '1972ねん', era: 'showa', emo: '🤝', opt: 'おきなわが もどる', at: 'oki', pl: '{沖縄|おきなわ}',
+    ttl: '{沖縄|おきなわ}が {日本|にほん}に もどる',
+    body: '{戦争|せんそう}の あと、{沖縄|おきなわ}は アメリカが おさめて いましたが、1972{年|ねん}5{月|がつ}15{日|にち}、{日本|にほん}に もどりました。いまも アメリカぐんの きちが おおく のこって います。',
+    note: '1972年5月15日 本土復帰。',
+    kobi: 'おかえりなさい！' },
+  { id: 'heisei', y: 1989, yr: '1989ねん', era: 'heisei', emo: '📱', opt: 'へいせい',
+    ttl: '{平成|へいせい}が はじまる',
+    body: '{元号|げんごう}が「{平成|へいせい}」に かわりました。けいたいでんわや インターネットが ひろがり、くらしが どんどん べんりに なりました。',
+    note: '1989年1月8日 改元。',
+    kobi: 'ポケットで でんわ！', app: 'heisei-gattai' },
+  { id: 'hanshin', y: 1995, yr: '1995ねん', era: 'heisei', emo: '🏚️', opt: 'はんしん・あわじ だいしんさい', at: [135.17, 34.68], pl: '{神戸|こうべ}（ひょうご）',
+    ttl: '{阪神|はんしん}・{淡路大震災|あわじだいしんさい}',
+    body: '1{月|がつ}17{日|にち}、{兵庫県|ひょうごけん}で {大|おお}きな じしんが おきました。{全国|ぜんこく}から おおくの ひとが ボランティアで たすけに かけつけました。',
+    note: '1995年1月17日。死者6434人。「ボランティア元年」とよばれた。',
+    kobi: 'たすけあいの ちから！' },
+  { id: 'tohoku', y: 2011, yr: '2011ねん', era: 'heisei', emo: '🌊', opt: 'ひがしにほん だいしんさい', at: [141.6, 38.3], pl: '{東北|とうほく}の うみ',
+    ttl: '{東日本大震災|ひがしにほんだいしんさい}',
+    body: '3{月|がつ}11{日|にち}、{東北|とうほく}の {海|うみ}で とても {大|おお}きな じしんが おき、{大|おお}きな {津波|つなみ}が きました。いまも みんなで まちを たてなおして います。じしんの ときは、たかい ところへ にげよう。',
+    note: '2011年3月11日。マグニチュード9.0。',
+    kobi: 'つなみの ときは たかい ところへ！' },
+  { id: 'reiwa', y: 2019, yr: '2019ねん', era: 'reiwa', emo: '🌸', opt: 'れいわ',
+    ttl: '{令和|れいわ}が はじまる',
+    body: '{元号|げんごう}が「{令和|れいわ}」に かわりました。{令和|れいわ}は、{日本|にほん}で いちばん ふるい うたの {本|ほん}『{万葉集|まんようしゅう}』の ことばから えらばれました。',
+    note: '2019年5月1日 改元。2021年 東京オリンピック・パラリンピック（2020年大会を1年延期）。',
+    kobi: 'いまの じだいだ！' },
+  { id: 'now', y: 2026, yr: 'いま', era: 'reiwa', emo: '✨', opt: 'いま',
+    ttl: 'いま！ そして みらいへ',
+    body: '{大陸|たいりく}の はしっこ だった ところが {島|しま}に なり、ひとが やってきて、むらが でき、{国|くに}が でき、たくさんの できごとが あって… いま、きみが ここに います。つぎの れきしを つくるのは、きみたちです！',
+    note: '地図の★は、そのとき政治の中心だった場所（飛鳥→平城京→平安京→鎌倉→京都→江戸→東京）。',
+    kobi: '' },
+];
+const EV = Object.fromEntries(EVENTS.map((e, i) => [e.id, Object.assign(e, { i })]));
+const ZUKAN = EVENTS.filter(e => e.id !== 'now');
+
+const COURSES = {
+  short: { name: '⏩ みじかい たび', q: 3, ids: ['hanareru', 'hito', 'doki', 'kome', 'kofun', 'heijo', 'heian', 'kamakura', 'nobunaga', 'edo', 'meiji', 'sensou', 'now'] },
+  chikyu: { name: '🌋 れっとうが できるまで', q: 2, ids: ['tairiku', 'hanareru', 'fuji', 'hito', 'doki', 'katachi', 'sannai', 'now'] },
+  mukashi: { name: '🏯 むかしの たび', q: 5, ids: ['doki', 'sannai', 'kome', 'himiko', 'kofun', 'taishi', 'taika', 'heijo', 'daibutsu', 'heian', 'kana', 'kamakura', 'genko', 'muromachi', 'ryukyu', 'onin', 'teppo', 'nobunaga', 'hideyoshi', 'sekigahara', 'edo', 'now'] },
+  atarashii: { name: '🚂 えどから いまへ', q: 4, ids: ['edo', 'sakoku', 'tadataka', 'perry', 'meiji', 'tetsudo', 'kenpo1', 'shinsai', 'sensou', 'kenpo2', 'olympic', 'okinawa', 'heisei', 'tohoku', 'reiwa', 'now'] },
+  all: { name: '📜 ぜんぶの たび', q: 10, ids: EVENTS.map(e => e.id) },
+};
+// クイズを だす ばしょ（2ばんめ いこう、さいご「いま」の まえまで、まんべんなく）
+Object.values(COURSES).forEach(c => {
+  const n = c.ids.length, qs = new Set();
+  for (let k = 1; k <= c.q; k++) qs.add(Math.max(2, Math.min(n - 2, Math.round(k * (n - 1) / (c.q + 1)))));
+  c.qs = qs;
+});
+
+// せいじの ちゅうしん（★）
+const CAPS = [[593, '飛鳥', 'あすか', [135.82, 34.47]], [710, '平城京', 'へいじょうきょう', [135.8, 34.69]], [794, '平安京', 'へいあんきょう', [135.76, 35.01]],
+  [1185, '鎌倉', 'かまくら', [139.55, 35.32]], [1338, '京都', 'きょうと', [135.76, 35.01]], [1603, '江戸', 'えど', [139.75, 35.69]], [1868, '東京', 'とうきょう', [139.75, 35.69]]];
+
+// あそべる アプリの なまえ
+const APPS = {
+  'fujisan-dekikata': 'ふじさんが できるまで', 'jomon-cooking': 'じょうもん クッキング', 'jomon-mura': 'じょうもん むらの くらし',
+  'yayoi-rhythm': 'やよい こめづくり リズム', 'rekishi-talk': 'れきし じんぶつ トーク', 'kofun-zukuri': 'こふん どっこいしょ',
+  'asuka-kikiwake': 'しょうとくたいしの ききわけ', 'nara-ganjin-sugoroku': 'がんじんの ふなたび すごろく', 'heian-kana-henshin': 'ひらがな たんじょう',
+  'kamakura-hassotobi': 'よしつね はっそうとび', 'muromachi-sumie': 'せっしゅうの すみえ きょうしつ', 'sengoku-jintori': 'なかぬなら てんか とり',
+  'samurai-ninja': 'さむらい vs にんじゃ', 'edo-gyoretsu': 'だいみょう ぎょうれつ', 'tadataka-talk': 'ちりはかせ ただたか',
+  'meiji-henshin': 'ぶんめいかいか へんしん タップ', 'rosenzu-timemachine': 'ろせんず タイムマシン', 'showa-chanoma': 'しょうわの おちゃのま',
+  'heisei-gattai': 'へいせい がったい パズル',
+};
+
+const ru = s => s.replace(/\{([^|}]+)\|([^}]+)\}/g, '<ruby>$1<rt>$2</rt></ruby>');
+const yomi = s => s.replace(/\{([^|}]+)\|([^}]+)\}/g, '$2').replace(/<[^>]+>/g, '').replace(/[『』]/g, '');
+const yrSp = e => e.yr.replace(/（.*?）/g, '');
+const spOf = e => `${eraSp(e.era)}。${yrSp(e)}。${yomi(e.ttl)}。${yomi(e.body)}`;
+
+/* ========== きろく ========== */
+const KEY = 'nihon-timemachine-v1';
+const S = { snd: true, voice: true, clears: 0, best: 0, cc: {}, seen: {}, bd: {}, dcBest: 0, dkBest: 0 };
+try {
+  const o = JSON.parse(localStorage.getItem(KEY) || 'null');
+  if (o && typeof o === 'object') {
+    if (typeof o.snd === 'boolean') S.snd = o.snd;
+    if (typeof o.voice === 'boolean') S.voice = o.voice;
+    if (Number.isInteger(o.clears) && o.clears >= 0) S.clears = o.clears;
+    if (Number.isInteger(o.best) && o.best >= 0 && o.best <= 3) S.best = o.best;
+    if (o.cc && typeof o.cc === 'object') Object.keys(COURSES).forEach(k => { if (Number.isInteger(o.cc[k]) && o.cc[k] > 0) S.cc[k] = o.cc[k]; });
+    if (o.seen && typeof o.seen === 'object') Object.keys(o.seen).forEach(k => { if (EV[k] && k !== 'now') S.seen[k] = 1; });
+    if (o.bd && typeof o.bd === 'object') Object.keys(o.bd).forEach(k => { S.bd[k] = 1; });
+    if (o.perfect === 1) S.perfect = 1;
+    if (Number.isInteger(o.dcBest) && o.dcBest >= 0 && o.dcBest <= 8) S.dcBest = o.dcBest;
+    if (Number.isInteger(o.dkBest) && o.dkBest >= 0 && o.dkBest <= 8) S.dkBest = o.dkBest;
+  }
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+const seenN = () => Object.keys(S.seen).length;
+
+/* ========== おと（WebAudio の ごうせいおん） ========== */
+let ac = null;
+const audio = () => {
+  if (!S.snd) return null;
+  try {
+    if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch (e) { ac = null; }
+  return ac;
+};
+const tone = (f, t0, d, type = 'sine', v = 0.18, f2 = null) => {
+  const a = audio(); if (!a) return;
+  try {
+    const o = a.createOscillator(), g = a.createGain(), t = a.currentTime + t0;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g).connect(a.destination); o.start(t); o.stop(t + d + 0.05);
+  } catch (e) {}
+};
+const sfx = {
+  pick: () => tone(520, 0, 0.08, 'triangle'),
+  tick: () => tone(900, 0, 0.03, 'triangle', 0.08),
+  lever: () => { tone(160, 0, 0.18, 'square', 0.12, 80); tone(90, 0.12, 0.2, 'sawtooth', 0.1); },
+  ng: () => { tone(220, 0, 0.18, 'sawtooth', 0.1, 170); tone(170, 0.2, 0.28, 'sawtooth', 0.1, 130); },
+  ok: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, i * 0.1, 0.25, 'triangle')),
+  warp: () => { tone(200, 0, 0.9, 'sawtooth', 0.06, 1400); tone(300, 0.05, 0.9, 'sine', 0.08, 2000); },
+  pin: () => { tone(880, 0, 0.12, 'triangle', 0.12); tone(1320, 0.1, 0.25, 'triangle', 0.1); },
+  rumble: () => { tone(70, 0, 1.6, 'sawtooth', 0.09, 40); tone(110, 0.3, 1.4, 'square', 0.04, 60); },
+  pop: () => { tone(400, 0, 0.12, 'square', 0.08, 900); tone(1200, 0.15, 0.12, 'sine', 0.12); },
+  jump: () => { tone(300, 0, 0.2, 'sine', 0.1, 900); },
+  guru: () => [0, 1, 2, 3, 4, 5].forEach(i => tone(i % 2 ? 500 : 700, i * 0.12, 0.1, 'triangle', 0.08)),
+  fanfare: () => [[523, 0], [523, 0.15], [523, 0.3], [698, 0.45], [659, 0.75], [698, 0.9], [784, 1.05], [1047, 1.3]]
+    .forEach(([f, t]) => tone(f, t, t > 1.2 ? 0.7 : 0.22, 'square', 0.1)),
+};
+const speak = text => {
+  if (!S.snd || !S.voice || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'ja-JP'; u.rate = 0.95;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+};
+const hush = () => { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {} };
+
+/* ========== ちず ========== */
+const $ = id => document.getElementById(id);
+const map = $('map');
+const P = (lon, lat) => [(lon - 126) * 20, (46.3 - lat) * 24.4];
+const PI = (lon, lat) => [334 + (lon - 127.0) * 40, 211 + (27.0 - lat) * 40]; // おきなわの わく
+const OKI = PI(127.72, 26.22);
+const ptsOf = e => !e.at ? [] : e.at === 'oki' ? [OKI] : (Array.isArray(e.at[0]) ? e.at : [e.at]).map(a => P(a[0], a[1]));
+const SHAPE = {
+  hok: 'M318.8 19 L332 36.6 L348 50 L366 56.1 L386 47.6 L380 63.4 L392 72 L368 81.7 L352 93.9 L345 106.9 L328 98.8 L313 90.3 L299.6 97.1 L291 91.5 L288 98.8 L303 109.8 L295 111 L282 119.6 L281 107.4 L276 90.3 L287 83 L288 72 L300 75.6 L308 65.9 L313 48.8 L315 29.3 Z',
+  honE: 'M298 116.4 L309 119.6 L308 140.3 L319 162.3 L312 179.3 L310 195.2 L299 198.9 L300 217.2 L298 229.4 L292 244 L297 257.4 L288 272.1 L277 277.7 L277 267.2 L273 269.6 L264 269.6 L262 273.3 L257 285.5 L255 275.7 L251 274.5 L246 284.3 L240 275.7 L240 226.9 L245 222.8 L261 203.7 L270 191.5 L277 178.1 L281 163.5 L274 154.9 L280 139.1 L286 124.4 L293 133 L303 125.7 Z',
+  honW: 'M246 284.3 L226 284.3 L220 285.5 L217 292.8 L200 306.2 L195.2 314 L182 302.6 L182 294 L189 285.5 L180 283.5 L164 282.6 L146 289.1 L128 292.8 L114 300.1 L98 301.3 L98 292.8 L108 289.1 L122 275.7 L133 264.7 L142 261.1 L164 262.3 L184 257.4 L198 259.9 L201 246.4 L213 235.5 L215 224.5 L227 214.7 L220 229.4 L224 233 L240 226.9 L240 275.7 Z',
+  shi: 'M172 294 L174 303.8 L163.6 318.4 L151 312.3 L139 330.6 L130 318.4 L120.4 316.2 L134 303.8 L150 298.9 L161 291.6 Z',
+  kyu: 'M98 301.3 L114 309.9 L112 319.6 L118 328.2 L109 351.4 L102 363.6 L93 373.3 L92 358.7 L84 367.2 L83 361.1 L87 346.5 L92 330.6 L84 329.4 L77 331.8 L72 318.4 L78 311.1 L88 308.7 Z',
+  sado: 'M245 195.2 L251 195.2 L250 206.2 L245 203.7 Z',
+  tane: 'M99 378.2 L101 379.4 L99 389.2 L97 386.7 Z',
+  cont: 'M0 -4.9 L258 -4.9 L224 29.3 L188 58.6 L144 86.6 L118 79.3 L94 96.4 L74 126.9 L54 144 L32 159.8 L48 187.9 L68 226.9 L69 251.3 L62 273.3 L40 280.6 L12 292.8 L0 292.8 Z',
+  sak: 'M312 -7.3 L319 8.5 L330 -2.4 L346 4.9 L352 -7.3 Z',
+  seto: 'M97 301.3 L114 298.9 L146 287.9 L180 283 L183 294 L182 302.6 L174 303.8 L172 294 L161 291.6 L150 298.9 L134 303.8 L120.4 316.2 L112 314.8 L114 309.9 L98 302.6 Z',
+  soya: 'M312 24.4 L312 -9.8 L342 -9.8 L332 35.4 L318.8 22 Z',
+  old: 'M0 -10 L352 -10 L320 20 L272 50 L246 60 L240 95 L212 112 L165 132 L142 150 L116 192 L100 230 L94 275 L91 305 L92 322 L60 318 L30 300 L0 300 Z',
+};
+const okiPath = 'M' + [[128.33, 26.87], [128.25, 26.65], [127.95, 26.42], [127.85, 26.2], [127.65, 26.08], [127.68, 26.25], [127.72, 26.45], [127.9, 26.55], [127.95, 26.7], [128.2, 26.86]].map(p => PI(...p).map(v => v.toFixed(1)).join(' ')).join(' L') + ' Z';
+
+function buildMap() {
+  const jp = k => `<path class="jp" d="${SHAPE[k]}"/>`;
+  map.innerHTML = `<rect id="sea" x="-50" y="-50" width="500" height="500" fill="#9cc9e0"/>
+    <path id="oldland" class="cont" d="${SHAPE.old}"/>
+    <path class="cont" d="${SHAPE.cont}"/><path class="cont" d="${SHAPE.sak}"/>
+    <g id="ice"><path d="${SHAPE.seto}"/><path d="${SHAPE.soya}"/></g>
+    <g id="sw" class="grp" style="transform-origin:72px 294px">${jp('honW')}${jp('shi')}${jp('kyu')}${jp('tane')}</g>
+    <g id="ne" class="grp" style="transform-origin:315px 25px">${jp('honE')}${jp('hok')}${jp('sado')}</g>
+    <text class="lbl" x="8" y="215" id="lblCont">たいりく</text>
+    <text class="lbl" x="150" y="190" id="lblSea">にほんかい</text>
+    <text class="lbl" x="300" y="300" id="lblPac">たいへいよう</text>
+    <g class="inset" id="inset"><rect x="334" y="204" width="62" height="58" rx="8"/><path class="jp" d="${okiPath}"/><text class="lbl" x="365" y="258" text-anchor="middle">おきなわ</text></g>
+    <g id="cap" opacity="0"><text x="0" y="4" text-anchor="middle" font-size="16" style="fill:#e03131;stroke-width:2px">★</text><text id="capTx" x="10" y="-6">せいじの ちゅうしん</text></g>
+    <g id="pins"></g><g id="sparks"></g>`;
+}
+function stageOf(y) { return y < -16000000 ? 'A' : y < -50000 ? 'B' : y < -10000 ? 'C' : 'D'; }
+function setStage(y) {
+  const st = stageOf(y);
+  map.classList.remove('stA', 'stB', 'stC', 'stD'); map.classList.add('st' + st);
+  $('lblSea').style.opacity = st === 'A' ? 0 : 1;
+  $('inset').style.opacity = st === 'A' || st === 'B' ? 0 : 1;
+}
+function setCap(y) {
+  const c = CAPS.filter(c => c[0] <= y).pop(), g = $('cap');
+  if (!c) { g.setAttribute('opacity', 0); return; }
+  const [x, yy] = P(...c[3]);
+  g.setAttribute('opacity', 1);
+  g.style.transform = `translate(${x}px, ${yy}px)`;
+  $('capTx').textContent = `せいじの ちゅうしん（${c[2]}）`;
+  // みぎに はみでない ように
+  $('capTx').setAttribute('x', x > 250 ? -10 : 10); $('capTx').setAttribute('text-anchor', x > 250 ? 'end' : 'start');
+  $('capTx').setAttribute('y', c[1] === '東京' || c[1] === '江戸' ? -8 : 14);
+}
+function pinSvg(e, x, y, big, extra = '') {
+  const c = ERA[e.era].c, r = big ? 15 : 9;
+  return `<g class="pin${big ? ' cur' : ''}${extra}" data-ev="${e.id}" transform="translate(${x.toFixed(1)} ${y.toFixed(1)})">
+    ${big ? `<circle class="ring" r="${r}"/>` : ''}<circle r="${r}" fill="${c}"/>
+    <text y="${big ? 6 : 4}" text-anchor="middle" font-size="${big ? 16 : 10}">${e.q2 && !big ? '？' : e.emo}</text>
+    <circle r="${big ? 20 : 14}" fill="transparent"/></g>`;
+}
+function drawPins(curId, ids) {
+  let h = '';
+  ids.forEach(id => {
+    const e = EV[id]; if (id === curId) return;
+    ptsOf(e).forEach(([x, y]) => { h += pinSvg(e, x, y, false); });
+  });
+  const c = EV[curId];
+  if (c) ptsOf(c).forEach(([x, y]) => { h += pinSvg(c, x, y, true); });
+  $('pins').innerHTML = h;
+}
+$('map').addEventListener('click', ev => {
+  const g = ev.target.closest('.pin'); if (!g) return;
+  if (mode === 'doko') { dokoAnswer(g); return; }
+  if (busy && mode === 'trip' && !$('doneOver').classList.contains('on') && quiz == null && step < path.length - 1) return;
+  openEvent(g.dataset.ev);
+});
+
+/* ========== がめんの きりかえ ========== */
+const SCREENS = ['home', 'play', 'dochi', 'zukan', 'badge'];
+function show(id) { SCREENS.forEach(s => $(s).classList.toggle('on', s === id)); $('doneOver').classList.remove('on'); $('evOver').classList.remove('on'); }
+function renderToggles() {
+  ['sndBtn', 'sndBtn2'].forEach(id => { $(id).classList.toggle('off', !S.snd); });
+  $('sndBtn').textContent = S.snd ? '🔊 おと' : '🔇 おと'; $('sndBtn2').textContent = S.snd ? '🔊' : '🔇';
+  $('voiceBtn').classList.toggle('off', !S.voice || !S.snd); $('voiceBtn').textContent = S.voice ? '🗣 こえ' : '🤐 こえ';
+}
+const toggleSnd = () => { S.snd = !S.snd; if (!S.snd) hush(); save(); renderToggles(); sfx.pick(); };
+$('sndBtn').addEventListener('click', toggleSnd); $('sndBtn2').addEventListener('click', toggleSnd);
+$('voiceBtn').addEventListener('click', () => { S.voice = !S.voice; if (!S.voice) hush(); save(); renderToggles(); sfx.pick(); });
+
+function renderHome() {
+  renderToggles();
+  const r = [];
+  if (S.clears) r.push(`いままでに ${S.clears}かい いまに ついたよ　${'⭐'.repeat(S.best)}`);
+  const cc = Object.keys(COURSES).filter(k => S.cc[k]).map(k => `${COURSES[k].name.split(' ')[0]}×${S.cc[k]}`);
+  if (cc.length) r.push('クリア：' + cc.join('　'));
+  if (S.dcBest) r.push(`どっちが さき？ さいこう ${S.dcBest} / 8`);
+  if (S.dkBest) r.push(`どこで おきた？ さいこう ${S.dkBest} / 8`);
+  $('rec').innerHTML = r.join('<br>');
+  Object.keys(COURSES).forEach(k => {
+    const c = COURSES[k], n = c.ids.length - 1;
+    const a = EV[c.ids[0]], b = EV[c.ids[n - 1]];
+    $('cd-' + k).innerHTML = `${ERA[a.era].k === 'chikyu' ? 'ちきゅうの むかし' : eraName(a.era)}〜${eraName(b.era === 'reiwa' ? 'reiwa' : b.era)}<br>できごと ${n}こ・クイズ ${c.q}もん・${Math.max(2, Math.round(n * 0.3))}ぷん くらい`;
+  });
+  $('toZukan').textContent = `📖 できごと ずかん（${seenN()} / ${ZUKAN.length}）`;
+  $('badgeBtn').textContent = `🏅 バッジ（${BADGES.filter(b => b.test()).length} / ${BADGES.length}）`;
+}
+
+/* ========== たび ========== */
+let mode = 'trip', course = 'short', path = [], step = 0, quiz = null, busy = false, misses = {}, timers = [];
+const later = (fn, ms) => { timers.push(setTimeout(fn, ms)); };
+let raf = 0;
+function clearTimers() {
+  timers.forEach(clearTimeout); timers = []; cancelAnimationFrame(raf);
+  $('mapwrap').classList.remove('warping'); $('popup').classList.remove('on'); $('bub').classList.remove('on');
+}
+const lever = $('lever');
+const curEv = () => EV[path[step]];
+function setMsg(t, ng) { $('msg').textContent = t; $('msg').classList.toggle('ng', !!ng); }
+function setLever(on) { lever.disabled = !on; lever.classList.toggle('glow', on); }
+const fmtY = y => {
+  if (y >= 1) return Math.round(y) + 'ねん';
+  const bp = 2026 - y;
+  if (bp >= 1e4) { const m = bp / 1e4; return `やく ${m >= 100 ? Math.round(m / 100) * 100 : m >= 10 ? Math.round(m) : Math.round(m * 10) / 10}まんねん まえ`; }
+  return `やく ${Math.round(bp / 100) * 100}ねん まえ`;
+};
+
+function renderBand(e) {
+  const k = ERA[e.era].i;
+  $('band').innerHTML = ERAS.map(a => `<span class="${a.i < k ? 'done' : a.i === k ? 'now' : ''}"><i style="background:${a.c}"></i>${a.k === 'chikyu' ? '🌏' : a.n}</span>`).join('');
+}
+function renderText() {
+  const e = curEv();
+  const era = $('era'); era.innerHTML = eraName(e.era); era.style.background = ERA[e.era].c;
+  $('yr').textContent = e.yr;
+  $('ttl').innerHTML = `${e.emo} ${ru(e.ttl)}`; $('body').innerHTML = ru(e.body); $('note').textContent = e.note;
+  $('ybadge').innerHTML = `${eraName(e.era)}<small>${e.yr}</small>`;
+  $('ptext').scrollTop = 0;
+  renderBand(e);
+}
+function showStep(first) {
+  const e = curEv();
+  setStage(e.y); setCap(e.y);
+  drawPins(e.id, path.slice(0, step + 1));
+  if (e.id !== 'now') { S.seen[e.id] = 1; save(); }
+  if (ptsOf(e).length) sfx.pin();
+  if (!first && e.id === 'hanareru') sfx.rumble();
+}
+
+function startGame(c) {
+  clearTimers(); hush();
+  mode = 'trip'; course = c; path = COURSES[c].ids; step = 0; quiz = null; busy = true; misses = {};
+  show('play'); $('playTitle').textContent = COURSES[c].name;
+  lever.style.display = ''; $('band').style.display = ''; $('choices').classList.remove('on');
+  buildMap();
+  // さいしょは ちきゅうの すがたを いっしゅん まえの じょうたいに して から うごかす
+  setStage(path[0] === 'hanareru' ? -2e7 : EV[path[0]].y);
+  $('hakase').className = 'hakase'; $('bub').classList.remove('on');
+  renderText();
+  setLever(false); setMsg('タイムマシン、しゅっぱつ！');
+  later(() => { showStep(true); if (path[0] === 'hanareru') sfx.rumble(); speak(spOf(curEv())); }, 500);
+  later(() => { busy = false; setLever(true); setMsg('レバーを うごかすと、とき が すすむよ！'); }, 2600);
+}
+const hasQ = i => COURSES[course].qs.has(i);
+
+lever.addEventListener('click', () => {
+  if (busy || quiz != null || step >= path.length - 1) return;
+  lever.classList.add('pulled'); sfx.lever();
+  setTimeout(() => lever.classList.remove('pulled'), 450);
+  if (hasQ(step + 1)) askQuiz(step + 1); else travel();
+});
+
+function askQuiz(i) {
+  const t = path[i];
+  quiz = t; setLever(false); misses[t] = 0;
+  const before = path.slice(Math.max(0, i - 4), i), after = path.slice(i + 1, i + 6).filter(id => id !== 'now');
+  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const opts = [t];
+  if (before.length) opts.push(pick(before));
+  const rest = after.length ? after : path.slice(0, i).filter(id => !opts.includes(id));
+  while (opts.length < 3 && rest.length) { const x = pick(rest); if (!opts.includes(x)) opts.push(x); else rest.splice(rest.indexOf(x), 1); }
+  const ask = 'つぎに おきるのは どれ？';
+  setMsg('ストップ！ ' + ask); speak('ストップ！ ' + ask + '。' + opts.map(id => EV[id].opt).sort(() => Math.random() - 0.5).join('、'));
+  const box = $('choices');
+  box.innerHTML = opts.sort(() => Math.random() - 0.5).map(id => `<button class="ch" data-id="${id}"><i>${EV[id].emo}</i>${EV[id].opt}</button>`).join('');
+  box.classList.add('on');
+  box.querySelectorAll('.ch').forEach(b => b.addEventListener('click', () => answer(b)));
+}
+function answer(b) {
+  if (busy || quiz == null || b.classList.contains('no')) return;
+  const id = b.dataset.id;
+  if (id === quiz) {
+    b.classList.add('yes'); sfx.ok(); busy = true;
+    setMsg(misses[quiz] ? 'せいかい！ よく がんばったね！' : 'せいかい！ すごい！');
+    speak('せいかい！');
+    later(() => { quiz = null; $('choices').classList.remove('on'); travel(); }, 1100);
+  } else {
+    misses[quiz]++;
+    const e = EV[id], ng = e.y < EV[quiz].y ? `それは もう おきたよ（${eraSp(e.era)}）。` : 'それは もっと あとで おきるよ。';
+    b.classList.add('no'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); sfx.ng();
+    setMsg('ざんねん！ ' + ng + ' もういちど えらんでね。', true);
+    speak('ざんねん。' + ng + ' もういちど えらんでね');
+  }
+}
+
+function travel() {
+  busy = true; setLever(false);
+  const from = curEv().y, to = EV[path[step + 1]].y, last = step + 1 === path.length - 1;
+  const wrap = $('mapwrap');
+  wrap.classList.add('warping'); sfx.warp();
+  setMsg('びゅーん… ときが すすむよ！');
+  // とても むかしは「なんねん まえ」の たいすうで すすめる
+  const bp0 = 2027 - from, bp1 = 2027 - to, t0 = performance.now(), dur = 1200;
+  const tick = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    const y = 2027 - Math.exp(Math.log(bp0) + (Math.log(bp1) - Math.log(bp0)) * k);
+    $('ybadge').innerHTML = `びゅーん…<small>${last && k === 1 ? 'いま' : fmtY(y)}</small>`;
+    if (k < 1) { if (Math.random() < 0.35) sfx.tick(); raf = requestAnimationFrame(tick); }
+  };
+  raf = requestAnimationFrame(tick);
+  later(() => {
+    wrap.classList.remove('warping');
+    step++; renderText(); showStep(false);
+    speak(spOf(curEv()));
+    setMsg(last ? 'いまに ついた！' : 'ちずの ピンを タッチすると、くわしく みられるよ。');
+    if (last) later(finale, 1500);
+    else later(laugh, 1700);
+  }, dur + 100);
+}
+
+function bubble(text, ms = 2000) {
+  const b = $('bub'); b.textContent = text; b.classList.add('on');
+  later(() => b.classList.remove('on'), ms);
+}
+function laugh() {
+  const e = curEv(), h = $('hakase');
+  const done = () => {
+    busy = false; setLever(true);
+    setMsg(hasQ(step + 1) ? 'レバーを うごかそう。つぎは なにが おきるかな？' : 'よめたら、レバーを うごかして つぎへ！');
+  };
+  const talk = () => { h.classList.remove('jump'); void h.offsetWidth; h.classList.add('jump'); sfx.jump(); if (e.kobi) bubble(e.kobi); };
+  if (e.pop) {
+    $('popE').textContent = e.pop[0]; $('popT').textContent = e.pop[1];
+    const p = $('popup'); p.classList.remove('on'); void p.offsetWidth; p.classList.add('on'); sfx.pop();
+    later(talk, 1500); later(done, 2900); return;
+  }
+  talk(); later(done, 1400);
+}
+
+function finale() {
+  const pins = $('pins').querySelectorAll('.pin');
+  pins.forEach((p, i) => setTimeout(() => p.classList.add('shine'), i * 60));
+  $('sparks').innerHTML = [[120, 300], [200, 270], [280, 240], [330, 80]].map(([x, y], i) =>
+    `<text class="spark" x="${x}" y="${y}" style="animation-delay:${i * 0.25}s">✨</text>`).join('');
+  sfx.ok();
+  setMsg(`${pins.length}この できごとが、いまに つながって いるんだね。`);
+  later(() => { $('hakase').classList.add('dizzy'); sfx.guru(); bubble('れきし いっぱい〜 あたまが ぐるぐる〜', 2600); }, 1500);
+  later(finish, 4300);
+}
+function finish() {
+  const qs = Object.keys(misses), first = qs.filter(k => misses[k] === 0).length;
+  const st = 1 + (first * 2 >= qs.length ? 1 : 0) + (first === qs.length ? 1 : 0);
+  S.clears++; S.cc[course] = (S.cc[course] || 0) + 1; S.best = Math.max(S.best, st);
+  if (qs.length >= 3 && first === qs.length) S.perfect = 1;
+  save();
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
+  $('doneTitle').textContent = 'いまに ついた！';
+  $('doneMsg').textContent = (first === qs.length ? 'クイズ ぜんぶ いっかいで せいかい！ れきし はかせだ！' : 'さいごまで いけたね！ すごい！') + `　ずかん ${seenN()} / ${ZUKAN.length}`;
+  const a = EV[path[0]];
+  $('doneSub').innerHTML = `さいしょは <b>${a.yr}</b>の「${ru(a.ttl)}」。<br>それが ずっと つながって、いまに なったんだね。`;
+  $('mapBtn').style.display = '';
+  showNewBadges();
+  $('doneOver').classList.add('on');
+  sfx.fanfare(); confetti();
+  speak('いまに ついた！ むかしの できごとが ずっと つながって、いまに なったんだね。');
+  busy = false;
+}
+function confetti() {
+  const cols = ['#ffc93c', '#40c057', '#e03131', '#1c7ed6', '#f59f00', '#e64980'];
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('div'); c.className = 'confetti';
+    c.style.left = Math.random() * 100 + 'vw'; c.style.background = cols[i % cols.length];
+    c.style.animationDuration = 2 + Math.random() * 2 + 's'; c.style.animationDelay = Math.random() * 0.6 + 's';
+    document.body.appendChild(c); setTimeout(() => c.remove(), 5000);
+  }
+}
+
+/* ========== できごとの くわしい ページ ========== */
+function openEvent(id) {
+  const e = EV[id]; if (!e) return;
+  sfx.pick();
+  $('evBox').innerHTML = `<div class="emo">${e.emo}</div>
+    <span class="era" style="background:${ERA[e.era].c}">${eraName(e.era)}</span><span class="yr">${e.yr}</span>
+    <h2>${ru(e.ttl)}</h2>
+    ${e.pl ? `<div class="pl">📍 ${ru(e.pl)}</div>` : ''}
+    <p class="kid">${ru(e.body)}</p>
+    <p class="note">${e.note}</p>
+    ${e.app ? `<a class="applink" href="../${e.app}/">🎮 この じだいで あそぶ：${APPS[e.app]}</a>` : ''}
+    <div class="pbtns"><button class="big" id="evClose">とじる</button></div>`;
+  $('evOver').classList.add('on');
+  $('evClose').addEventListener('click', closeEvent);
+  speak(spOf(e));
+}
+const closeEvent = () => { hush(); $('evOver').classList.remove('on'); };
+$('evOver').addEventListener('click', e => { if (e.target.id === 'evOver') closeEvent(); });
+
+/* ========== ずかん ========== */
+function openZukan() {
+  hush(); clearTimers(); renderToggles(); show('zukan');
+  $('ztotal').textContent = `みた できごと ${seenN()} / ${ZUKAN.length}`;
+  let h = '';
+  ERAS.forEach(a => {
+    const list = ZUKAN.filter(e => e.era === a.k);
+    if (!list.length) return;
+    h += `<h3 class="zsec"><i style="background:${a.c}"></i>${eraName(a.k)}</h3>` + list.map(e => S.seen[e.id]
+      ? `<button class="zl" data-ev="${e.id}"><em>${e.emo}</em><b>${e.opt}</b><small>${e.yr}</small></button>`
+      : `<button class="zl lock" data-ev="${e.id}"><em>${e.emo}</em><b>？？？</b><small>${e.yr}</small></button>`).join('');
+  });
+  $('zgrid').innerHTML = h;
+  $('zgrid').querySelectorAll('.zl').forEach(b => b.addEventListener('click', () => {
+    if (S.seen[b.dataset.ev]) openEvent(b.dataset.ev);
+    else { sfx.ng(); speak('タイムマシンで みに いこう！'); b.classList.remove('shake'); void b.offsetWidth; b.classList.add('shake'); }
+  }));
+}
+
+/* ========== どっちが さき？ ========== */
+let dc = null;
+function startDochi() {
+  hush(); clearTimers(); mode = 'dochi'; show('dochi');
+  const pool = ZUKAN.slice(), qs = [], used = new Set();
+  let guard = 0;
+  while (qs.length < 8 && guard++ < 500) {
+    const a = pool[Math.floor(Math.random() * pool.length)], b = pool[Math.floor(Math.random() * pool.length)];
+    if (a === b || used.has(a.id) || used.has(b.id)) continue;
+    if (Math.abs(ERA[a.era].i - ERA[b.era].i) < 1 || Math.abs(a.y - b.y) < 60) continue; // ちがう じだいで、はなれた もの
+    used.add(a.id); used.add(b.id); qs.push([a, b]);
+  }
+  dc = { qs, n: 0, ok: 0, say: '' };
+  askDochi();
+}
+function askDochi() {
+  const [a, b] = dc.qs[dc.n];
+  $('dNum').textContent = `${dc.n + 1} / ${dc.qs.length}もんめ　せいかい ${dc.ok}`;
+  $('dRes').textContent = ''; $('dRes').className = 'dres'; $('dNext').style.display = 'none';
+  const box = $('dCards'); box.className = 'dcards';
+  box.innerHTML = [a, b].map(e => `<button class="dcard" data-ev="${e.id}"><em>${e.emo}</em><b>${e.opt}</b><span class="dy">${e.yr}<br>${eraName(e.era)}</span></button>`).join('');
+  dc.say = `さきに おきたのは どっち？ ${a.opt}。それとも、${b.opt}。`;
+  speak(dc.say); dc.lock = false;
+  box.querySelectorAll('.dcard').forEach(c => c.addEventListener('click', () => dochiAnswer(c)));
+}
+function dochiAnswer(c) {
+  if (dc.lock) return; dc.lock = true;
+  const [a, b] = dc.qs[dc.n], first = a.y < b.y ? a : b, other = first === a ? b : a;
+  const ok = c.dataset.ev === first.id;
+  $('dCards').classList.add('open');
+  $('dCards').querySelector(`[data-ev="${first.id}"]`).classList.add('ok');
+  if (!ok) c.classList.add('ng');
+  const gap = other.y - first.y;
+  const gapT = first.y < -9000 ? 'ずーっと むかし' : `${gap >= 1000 ? 'やく ' + Math.round(gap / 100) * 100 : gap >= 100 ? 'やく ' + Math.round(gap / 10) * 10 : gap}ねん はやい`;
+  if (ok) { dc.ok++; sfx.ok(); } else sfx.ng();
+  const t = `${ok ? 'せいかい！' : 'ざんねん！'} さきなのは「${first.opt}」（${gapT}）。`;
+  $('dRes').textContent = t; $('dRes').className = 'dres' + (ok ? '' : ' ng');
+  speak(t);
+  $('dNext').style.display = 'block';
+  $('dNum').textContent = `${dc.n + 1} / ${dc.qs.length}もんめ　せいかい ${dc.ok}`;
+}
+function dochiDone() {
+  S.dcBest = Math.max(S.dcBest, dc.ok); save();
+  endOver(dc.ok, dc.qs.length, 'どっちが さき？ おしまい！', `${dc.qs.length}もん中 ${dc.ok}もん せいかい！`);
+}
+function endOver(ok, n, title, msg) {
+  const st = ok === n ? 3 : ok >= n * 0.6 ? 2 : 1;
+  $('stars').innerHTML = [0, 1, 2].map(i => `<span${i < st ? '' : ' style="filter:grayscale(1);opacity:.3"'}>⭐</span>`).join('');
+  $('doneTitle').textContent = title; $('doneMsg').textContent = msg;
+  $('doneSub').textContent = ok === n ? 'ぜんもん せいかい！ れきしの じゅんばん はかせ！' : 'ずかんで じだいの じゅんばんを みてみよう。';
+  $('mapBtn').style.display = 'none';
+  showNewBadges();
+  $('doneOver').classList.add('on'); sfx.fanfare(); if (ok === n) confetti();
+  speak(title + ' ' + msg);
+}
+
+/* ========== どこで おきた？ ========== */
+let dk = null;
+const dist = (p, q) => Math.hypot(p[0] - q[0], p[1] - q[1]);
+const PLACES = ZUKAN.filter(e => e.at && !e.q2);
+function startDoko() {
+  clearTimers(); hush(); mode = 'doko'; quiz = null;
+  show('play'); $('playTitle').textContent = '📍 どこで おきた？';
+  buildMap(); setStage(2026); setCap(0);
+  lever.style.display = 'none'; $('band').style.display = 'none'; $('choices').classList.remove('on');
+  $('hakase').className = 'hakase'; $('bub').classList.remove('on');
+  const qs = PLACES.slice().sort(() => Math.random() - 0.5).filter((e, i, a) => a.findIndex(x => x.pl === e.pl) === i).slice(0, 8);
+  dk = { qs, n: 0, ok: 0, miss: 0, say: '' };
+  askDoko();
+}
+function askDoko() {
+  const e = dk.qs[dk.n], p0 = ptsOf(e)[0];
+  const cand = [e];
+  PLACES.slice().sort(() => Math.random() - 0.5).forEach(o => {
+    if (cand.length >= 4) return;
+    const q = ptsOf(o)[0];
+    if (cand.every(c => dist(ptsOf(c)[0], q) > 42)) cand.push(o);
+  });
+  dk.cand = cand; dk.miss = 0; dk.lock = false;
+  $('pins').innerHTML = cand.map(c => { const [x, y] = ptsOf(c)[0]; return pinSvg({ ...c, emo: '？', q2: false }, x, y, false); }).join('');
+  $('sparks').innerHTML = '';
+  const era = $('era'); era.innerHTML = eraName(e.era); era.style.background = ERA[e.era].c;
+  $('yr').textContent = e.yr;
+  $('ttl').innerHTML = `${e.emo} ${ru(e.ttl)}`;
+  $('body').innerHTML = `この できごとが おきたのは どこ？ ちずの <b>？</b> を タッチしてね。`;
+  $('note').textContent = '';
+  $('ybadge').innerHTML = `📍 ${dk.n + 1} / ${dk.qs.length}もんめ<small>せいかい ${dk.ok}</small>`;
+  setMsg('どこで おきたかな？');
+  dk.say = `${yomi(e.ttl)}。これは どこで おきたかな？`;
+  speak(dk.say);
+}
+function dokoAnswer(g) {
+  if (dk.lock || g.classList.contains('miss')) return;
+  const e = dk.qs[dk.n], id = g.dataset.ev;
+  if (id === e.id) {
+    dk.lock = true; g.classList.add('ok'); sfx.ok();
+    if (!dk.miss) dk.ok++;
+    g.querySelector('text').textContent = e.emo;
+    const t = `せいかい！ ${yomi(e.pl)}。`;
+    setMsg(t); $('body').innerHTML = `📍 ${ru(e.pl)}<br>${ru(e.body)}`; speak(t);
+    $('ybadge').innerHTML = `📍 ${dk.n + 1} / ${dk.qs.length}もんめ<small>せいかい ${dk.ok}</small>`;
+    later(() => { dk.n++; if (dk.n < dk.qs.length) askDoko(); else dokoDone(); }, 3200);
+  } else {
+    dk.miss++; g.classList.add('miss'); sfx.ng();
+    const o = EV[id], t = `そこは ${yomi(o.pl)}。${dk.miss >= 2 ? 'ひかって いる ところだよ。' : 'もういちど！'}`;
+    setMsg(t, true); speak(t);
+    if (dk.miss >= 2) $('pins').querySelector(`[data-ev="${e.id}"]`).classList.add('blink');
+  }
+}
+function dokoDone() {
+  S.dkBest = Math.max(S.dkBest, dk.ok); save();
+  endOver(dk.ok, dk.qs.length, 'どこで おきた？ おしまい！', `${dk.qs.length}もん中 ${dk.ok}もん いっぱつで せいかい！`);
+}
+
+/* ========== バッジ ========== */
+const BADGES = [
+  { id: 'short', i: '⏩', n: 'みじかい たび', d: 'みじかい たびで いまに つく', test: () => !!S.cc.short },
+  { id: 'chikyu', i: '🌋', n: 'れっとう はかせ', d: 'れっとうが できるまで を クリア', test: () => !!S.cc.chikyu },
+  { id: 'mukashi', i: '🏯', n: 'むかし はかせ', d: 'むかしの たびを クリア', test: () => !!S.cc.mukashi },
+  { id: 'atarashii', i: '🚂', n: 'きんだい はかせ', d: 'えどから いまへ を クリア', test: () => !!S.cc.atarashii },
+  { id: 'all', i: '📜', n: 'れきし はかせ', d: 'ぜんぶの たびを クリア', test: () => !!S.cc.all },
+  { id: 'perfect', i: '⭐', n: 'いっぱつ せいかい', d: 'クイズ 3もん いじょうを ぜんぶ いっかいで', test: () => !!S.perfect },
+  { id: 'dochi', i: '⚖️', n: 'じゅんばん めいじん', d: 'どっちが さき？ で 8もん ぜんぶ', test: () => S.dcBest >= 8 },
+  { id: 'doko', i: '📍', n: 'ちず めいじん', d: 'どこで おきた？ で 8もん ぜんぶ いっぱつ', test: () => S.dkBest >= 8 },
+  { id: 'zhalf', i: '📖', n: 'ずかん はんぶん', d: `できごとを ${Math.ceil(ZUKAN.length / 2)}こ みる`, test: () => seenN() >= Math.ceil(ZUKAN.length / 2) },
+  { id: 'zall', i: '👑', n: 'ずかん コンプリート', d: `できごとを ${ZUKAN.length}こ ぜんぶ みる`, test: () => seenN() >= ZUKAN.length },
+];
+function showNewBadges() {
+  const nb = BADGES.filter(b => b.test() && !S.bd[b.id]);
+  nb.forEach(b => { S.bd[b.id] = 1; }); save();
+  $('doneBd').innerHTML = nb.map(b => `<span class="newbd">🏅 あたらしい バッジ：${b.i} ${b.n}</span>`).join('');
+}
+function openBadges() {
+  hush(); clearTimers(); show('badge');
+  const n = BADGES.filter(b => b.test()).length;
+  $('btotal').textContent = `あつめた バッジ ${n} / ${BADGES.length}`;
+  $('bgrid').innerHTML = BADGES.map(b => `<div class="bd${b.test() ? '' : ' lock'}"><i>${b.i}</i><b>${b.n}</b><small>${b.d}</small></div>`).join('');
+}
+
+/* ========== ボタン ========== */
+const goHome = () => { hush(); clearTimers(); renderHome(); show('home'); };
+['homeBtn', 'backBtn', 'zHome', 'bHome', 'dHome'].forEach(id => $(id).addEventListener('click', goHome));
+document.querySelectorAll('[data-course]').forEach(b => b.addEventListener('click', () => { sfx.pick(); startGame(b.dataset.course); }));
+$('againBtn').addEventListener('click', () => { sfx.pick(); if (mode === 'dochi') startDochi(); else if (mode === 'doko') startDoko(); else startGame(course); });
+$('dochiBtn').addEventListener('click', () => { sfx.pick(); startDochi(); });
+$('dokoBtn').addEventListener('click', () => { sfx.pick(); startDoko(); });
+$('dSay').addEventListener('click', () => speak(dc ? dc.say : ''));
+$('dNext').addEventListener('click', () => { sfx.pick(); dc.n++; if (dc.n < dc.qs.length) askDochi(); else dochiDone(); });
+$('mapBtn').addEventListener('click', () => { sfx.pick(); $('doneOver').classList.remove('on'); setMsg('ピンを タッチすると、くわしく みられるよ！'); });
+$('zBtn').addEventListener('click', () => { sfx.pick(); openZukan(); });
+$('toZukan').addEventListener('click', () => { sfx.pick(); openZukan(); });
+$('badgeBtn').addEventListener('click', () => { sfx.pick(); openBadges(); });
+$('sayBtn').addEventListener('click', () => {
+  if (mode === 'doko') speak(dk ? dk.say : '');
+  else if (quiz != null) speak('つぎに おきるのは どれ？');
+  else speak(spOf(curEv()));
+});
+
+renderHome();
+</script>
+</body>
+</html>
