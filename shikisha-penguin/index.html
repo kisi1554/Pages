@@ -1,0 +1,901 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>しきしゃ ペンギン</title>
+<style>
+:root{
+  --bg:#f4efff; --ink:#2b2350; --sub:#6a5f92; --card:#fff; --shadow:#d8cdf3;
+  --accent:#7b4fd6; --pink:#ff7fb0; --ok:#2fb36b; --warn:#ff9f1a;
+  --curtain:#8a2b4d; --curtain2:#b8406a; --floor:#c98a4b;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; height:100%; -webkit-text-size-adjust:100%; text-size-adjust:100%;}
+body{
+  background:var(--bg); color:var(--ink);
+  font-family:"Hiragino Maru Gothic ProN","BIZ UDPGothic","Rounded Mplus 1c","Meiryo",system-ui,sans-serif;
+  overflow:hidden; user-select:none; -webkit-user-select:none;
+}
+button{font:inherit; color:inherit; cursor:pointer;}
+rt{font-size:.55em;}
+.screen{position:fixed; inset:0; display:none;}
+.screen.on{display:block;}
+
+/* ---------- タイトル ---------- */
+#title{overflow-y:auto; -webkit-overflow-scrolling:touch; background:linear-gradient(#e6dcff, var(--bg) 45%);}
+.wrap{max-width:900px; margin:0 auto; padding:12px 16px 40px; padding-bottom:max(40px, env(safe-area-inset-bottom));}
+.top{display:flex; justify-content:space-between; align-items:center; gap:8px; padding-top:env(safe-area-inset-top);}
+.pill{border:0; background:#fff; color:var(--ink); text-decoration:none; font-weight:800; padding:12px 16px;
+  border-radius:16px; box-shadow:0 3px 0 var(--shadow); min-height:48px; display:inline-flex; align-items:center; gap:6px;}
+h1{margin:14px 0 4px; text-align:center; font-size:clamp(30px, 8.5vw, 52px); letter-spacing:.04em; color:#5b2fb8;
+  text-shadow:3px 3px 0 #fff, 5px 5px 0 #c9b4ff;}
+.hero{font-size:64px; text-align:center; line-height:1;}
+.lead{text-align:center; margin:4px 0 12px; font-weight:700; line-height:1.7;}
+h2{font-size:21px; margin:22px 0 10px;}
+.howto{background:#fff; border-radius:18px; padding:12px 16px; box-shadow:0 4px 0 var(--shadow); line-height:1.8; font-weight:700;}
+.howto b{color:#c2185b;}
+.grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(240px, 1fr)); gap:12px;}
+.mcard{border:0; background:#fff; border-radius:20px; padding:14px; text-align:left; box-shadow:0 5px 0 var(--shadow);
+  display:flex; gap:12px; align-items:center; min-height:92px;}
+.mcard:active{transform:translateY(3px); box-shadow:0 2px 0 var(--shadow);}
+.mcard .em{font-size:44px; line-height:1;}
+.mcard .t{font-weight:900; font-size:18px;}
+.mcard .d{font-size:14px; color:var(--sub); font-weight:700; margin-top:3px; line-height:1.5;}
+.mcard .st{font-size:16px; margin-top:4px; letter-spacing:2px; color:#f5a700;}
+.songs{display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:10px;}
+.sbtn{border:0; background:#fff; border-radius:18px; padding:14px 10px; box-shadow:0 5px 0 var(--shadow);
+  font-weight:900; font-size:17px; min-height:76px;}
+.sbtn span{display:block; font-size:32px;}
+.bookbtn{width:100%; justify-content:center; font-size:19px; padding:16px; background:#fff6d6; box-shadow:0 4px 0 #f0d98a;}
+
+/* ---------- あそぶ画面 ---------- */
+#play.on{display:grid; height:100%;
+  grid-template-columns:100%;
+  grid-template-rows:auto auto minmax(190px,1fr) auto auto; overflow-y:auto;
+  grid-template-areas:"top" "mis" "stage" "meters" "pad";
+  padding:0 0 env(safe-area-inset-bottom);
+}
+#play .bar{grid-area:top; display:flex; justify-content:space-between; align-items:center; gap:8px; padding:8px 12px 4px;
+  padding-top:max(8px, env(safe-area-inset-top));}
+#play .bar .pill{min-height:44px; padding:8px 14px;}
+#ptitle{font-weight:900; font-size:17px; text-align:center; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+#mis{grid-area:mis; margin:4px 12px; background:#fff; border-radius:16px; padding:8px 12px; box-shadow:0 3px 0 var(--shadow);}
+#mtext{font-weight:900; font-size:16px; line-height:1.5; display:flex; gap:8px; align-items:center;}
+#mtext .em{font-size:30px;}
+.prog{height:16px; background:#eee8fb; border-radius:9px; margin-top:6px; overflow:hidden; position:relative;}
+.prog i{position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,#8ce99a,#2fb36b); border-radius:9px; transition:width .2s;}
+#hint{margin-top:6px; font-weight:800; font-size:15px; min-height:1.5em; color:#8a3d00;}
+#hint.good{color:var(--ok);}
+#songsw{display:flex; gap:6px; margin-top:6px; flex-wrap:wrap;}
+#songsw button{border:2px solid #e2d8fb; background:#faf7ff; border-radius:12px; padding:6px 10px; font-weight:800; min-height:44px;}
+#songsw button.on{background:var(--accent); color:#fff; border-color:var(--accent);}
+
+#stage{grid-area:stage; position:relative; margin:6px 12px; border-radius:20px; overflow:hidden; min-height:200px;
+  background:
+    linear-gradient(90deg, var(--curtain) 0 6%, transparent 6% 94%, var(--curtain) 94%),
+    radial-gradient(ellipse at 50% 0%, #ffe9a8 0%, #f7c870 30%, #6b3a8a 75%);
+  box-shadow:inset 0 -46px 0 var(--floor);
+}
+#stage::before{content:""; position:absolute; left:0; right:0; top:0; height:16px;
+  background:repeating-linear-gradient(90deg, var(--curtain2) 0 22px, var(--curtain) 22px 44px); border-radius:0 0 50% 50%/0 0 100% 100%;}
+.orch{position:absolute; left:6%; right:6%; top:18px; display:flex; justify-content:space-around; align-items:flex-start;}
+.grp{border:0; background:rgba(255,255,255,.88); border-radius:18px; width:22%; max-width:150px; min-width:62px; min-height:92px;
+  padding:6px 2px 4px; display:flex; flex-direction:column; align-items:center; position:relative;
+  box-shadow:0 4px 0 rgba(0,0,0,.18); transition:opacity .2s, filter .2s;}
+.grp:nth-child(2),.grp:nth-child(3){margin-top:0;}
+.grp:nth-child(1),.grp:nth-child(4){margin-top:22px;}
+.grp .ani{font-size:clamp(30px, min(8vw, 7vh), 64px); line-height:1.05; display:inline-block; transition:transform .08s;}
+.grp .ins{height:24px; font-size:20px; line-height:24px;}
+.grp .ins svg{height:22px; width:46px; vertical-align:middle;}
+.grp .lb{font-size:12px; font-weight:900; white-space:nowrap;}
+.grp .fx{position:absolute; top:-6px; right:-4px; font-size:22px;}
+.grp.bump .ani{transform:translateY(-6px) scale(1.08);}
+.grp.rest{opacity:.5; filter:grayscale(.8);}
+.grp.rest .lb::after{content:" (やすみ)";}
+.grp.dizzy .ani{animation:wob .5s linear infinite;}
+.grp.sleep .ani{transform:rotate(-12deg) translateY(4px);}
+@keyframes wob{0%{transform:rotate(-14deg)}50%{transform:rotate(14deg)}100%{transform:rotate(-14deg)}}
+.bubble{position:absolute; background:#fff; border-radius:14px; padding:6px 10px; font-weight:900; font-size:14px;
+  box-shadow:0 3px 0 rgba(0,0,0,.15); white-space:nowrap; z-index:5; pointer-events:none; opacity:0; transition:opacity .25s;}
+.bubble.show{opacity:1;}
+#gbub{top:calc(100% + 4px); left:50%; transform:translateX(-50%);}
+#aud{position:absolute; left:7%; bottom:8px; text-align:center; font-size:38px; line-height:1;}
+#aud .bubble{left:calc(100% + 4px); bottom:4px; white-space:normal; width:max-content; max-width:min(120px, 24vw); font-size:12px; text-align:left;}
+#aud.happy{animation:hop .5s ease-in-out infinite alternate;}
+@keyframes hop{to{transform:translateY(-6px)}}
+.cond{position:absolute; left:50%; bottom:10px; transform:translateX(-50%); width:110px; height:110px; pointer-events:none;}
+.peng{position:absolute; left:50%; bottom:22px; transform:translateX(-50%); font-size:62px; line-height:1; transition:transform .15s;}
+.peng.bob{transform:translateX(-50%) translateY(-6px);}
+.peng.spin{animation:spin .45s linear infinite;}
+.peng.fall{transform:translateX(-50%) translateY(14px) rotate(95deg); transition:transform .6s cubic-bezier(.5,-0.5,.6,1.4);}
+.peng.bow{animation:bow 1.6s ease-in-out forwards;}
+@keyframes spin{from{transform:translateX(-50%) rotate(0)}to{transform:translateX(-50%) rotate(360deg)}}
+.baton{position:absolute; left:calc(50% + 22px); bottom:56px; width:5px; height:56px; border-radius:3px; background:linear-gradient(#fff,#ddd 80%,#7a4b2a 80%);
+  transform-origin:50% 100%; transform:rotate(var(--ang, 20deg)); box-shadow:0 0 6px rgba(255,255,255,.8);}
+.baton.flash{box-shadow:0 0 14px 4px #fff59d;}
+.podium{position:absolute; left:50%; bottom:0; transform:translateX(-50%); width:84px; height:26px; background:#7a4b2a; border-radius:8px 8px 0 0;}
+#notes{position:absolute; inset:0; pointer-events:none; overflow:hidden;}
+#notes span{position:absolute; font-size:22px; animation:fly 1.2s ease-out forwards;}
+@keyframes fly{from{opacity:1; transform:translateY(0)}to{opacity:0; transform:translateY(-70px) rotate(20deg)}}
+#say{position:absolute; left:50%; top:46%; transform:translate(-50%,-50%); background:rgba(255,255,255,.95); border-radius:16px;
+  padding:8px 14px; font-weight:900; font-size:16px; text-align:center; max-width:86%; pointer-events:none; opacity:0; transition:opacity .25s; z-index:6;}
+#say.show{opacity:1;}
+
+#meters{grid-area:meters; margin:2px 12px; display:grid; gap:6px;}
+.meter{background:#fff; border-radius:14px; padding:6px 10px; box-shadow:0 3px 0 var(--shadow); display:grid;
+  grid-template-columns:4.2em 1fr 6.4em; align-items:center; gap:8px; font-weight:900; font-size:14px;}
+.track{position:relative; height:22px; background:#eee8fb; border-radius:11px;}
+.track .zone{position:absolute; top:0; bottom:0; background:rgba(47,179,107,.35); border:2px dashed var(--ok); border-radius:11px; display:none;}
+.track .needle{position:absolute; top:-5px; width:8px; height:32px; margin-left:-4px; border-radius:4px; background:var(--accent); transition:left .25s; left:0; display:none;}
+.track .l,.track .r{position:absolute; top:50%; transform:translateY(-50%); font-size:15px;}
+.track .l{left:4px}.track .r{right:4px}
+.mval{text-align:center; font-size:13px; line-height:1.25;}
+
+#pad{grid-area:pad; margin:6px 12px 10px; height:clamp(120px, 22vh, 210px); border-radius:22px; position:relative; overflow:hidden;
+  background:repeating-linear-gradient(90deg, #ffe0ee 0 40px, #ffd2e6 40px 80px); border:4px dashed var(--pink);
+  touch-action:none; display:flex; align-items:center; justify-content:center; text-align:center; font-weight:900; color:#b0336a;}
+#pad *{touch-action:none;}
+#pad .msg{font-size:18px; line-height:1.6; pointer-events:none;}
+#pad .msg b{font-size:28px; display:block;}
+#dot{position:absolute; width:46px; height:46px; margin:-23px 0 0 -23px; border-radius:50%; background:radial-gradient(#fff, #ffb3d1);
+  box-shadow:0 0 0 4px rgba(255,127,176,.4); display:none; pointer-events:none; font-size:26px; line-height:46px; text-align:center;}
+
+@media (orientation:landscape) and (min-aspect-ratio:5/4){
+  #play.on{grid-template-columns:58% 42%;
+    grid-template-rows:auto auto auto minmax(0,1fr);
+    grid-template-areas:"top top" "stage mis" "stage meters" "stage pad";}
+  #stage{margin:6px 6px 12px 12px;}
+  #mis,#meters{margin-left:6px;}
+  #pad{height:auto; min-height:120px; margin-left:6px;}
+}
+@media (max-height:740px) and (orientation:portrait){
+  #mis{padding:6px 10px;}
+  #mtext{font-size:14px;} #mtext .em{font-size:22px;}
+  #hint{font-size:13px; margin-top:4px;}
+  .prog{height:12px; margin-top:4px;}
+  .meter{padding:3px 8px;} .track{height:18px;}
+  #pad{height:clamp(96px, 18vh, 160px);}
+  .grp{min-height:78px;} .grp .ani{font-size:30px;}
+}
+@media (max-height:500px) and (orientation:landscape){
+  #play .bar{padding-top:4px; padding-bottom:0;}
+  #play .bar .pill{min-height:40px; padding:6px 12px;}
+  #mis{padding:6px 10px; margin-top:2px;}
+  #mtext{font-size:13px;} #mtext .em{font-size:20px;}
+  #hint{font-size:12px; margin-top:3px;}
+  #songsw{flex-wrap:nowrap; overflow-x:auto;}
+  #songsw button{min-height:38px; padding:4px 8px; font-size:13px; white-space:nowrap;}
+  .meter{padding:3px 8px; font-size:12px;} .track{height:16px;} .track .needle{height:24px; top:-4px;}
+  .mval small{display:none;}
+  #meters{gap:4px;}
+  #pad{min-height:80px; margin-top:4px; margin-bottom:6px;}
+  #pad .msg{font-size:14px;} #pad .msg b{font-size:20px;}
+  .grp{min-height:80px;}
+}
+
+/* ---------- オーバーレイ ---------- */
+#ov{position:fixed; inset:0; background:rgba(40,20,80,.55); display:none; align-items:center; justify-content:center; z-index:50; padding:16px;}
+#ov.on{display:flex;}
+.box{background:#fff; border-radius:24px; padding:18px 18px 16px; width:min(560px, 100%); max-height:100%; overflow-y:auto; text-align:center;
+  box-shadow:0 8px 0 #b9a6ea; -webkit-overflow-scrolling:touch;}
+.box .big{font-size:64px; line-height:1.1;}
+.box h3{margin:6px 0; font-size:23px;}
+.box p{font-weight:700; line-height:1.8; margin:8px 0;}
+.chips{display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:10px 0;}
+.chip{background:#f1ebff; border-radius:12px; padding:8px 12px; font-weight:900; font-size:15px;}
+.btns{display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:12px;}
+.btn{border:0; border-radius:16px; padding:14px 20px; font-weight:900; font-size:18px; background:var(--accent); color:#fff; box-shadow:0 4px 0 #4e2c9a; min-height:56px;}
+.btn.sub{background:#efe9ff; color:var(--ink); box-shadow:0 4px 0 #cfc2f0;}
+.stars{font-size:40px; letter-spacing:4px; color:#f5a700;}
+.stars .off{color:#ddd;}
+.lcard{border-radius:18px; padding:12px 14px; margin:10px 0; text-align:left; background:#fff9e6; border:3px solid #f5d77a;}
+.lcard.lock{background:#f3f3f3; border-color:#ddd; color:#999;}
+.lcard .h{font-weight:900; font-size:18px; display:flex; gap:8px; align-items:center;}
+.lcard .h .e{font-size:30px;}
+.lcard .b{font-weight:700; line-height:1.8; margin-top:4px; font-size:15px;}
+.newc{display:inline-block; background:#ff5c8a; color:#fff; border-radius:8px; padding:1px 8px; font-size:13px; margin-left:4px;}
+.mini{position:relative; height:90px; margin:6px auto;}
+.mini .peng{font-size:56px; bottom:6px;}
+@keyframes bow{
+  0%{transform:translateX(-50%) rotate(0)} 25%{transform:translateX(-50%) rotate(35deg)}
+  45%{transform:translateX(-50%) rotate(0)} 70%{transform:translateX(-50%) rotate(60deg)}
+  100%{transform:translateX(-50%) translateY(10px) rotate(100deg)}}
+.confetti{position:fixed; top:-20px; font-size:22px; z-index:60; pointer-events:none; animation:fall 2.2s linear forwards;}
+@keyframes fall{to{transform:translateY(110vh) rotate(540deg)}}
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ===== タイトル ===== -->
+<section id="title" class="screen on">
+  <div class="wrap">
+    <div class="top">
+      <a class="pill" href="../">← メニュー</a>
+      <button class="pill snd" type="button">🔊 おと オン</button>
+    </div>
+    <div class="hero" aria-hidden="true">🐧🎼</div>
+    <h1>しきしゃ ペンギン</h1>
+    <p class="lead">どうぶつの オーケストラを しきしよう！<br>タクトを ふる はやさで おんがくの はやさが かわるよ</p>
+    <div class="howto">
+      👉 したの <b>ピンクの ところ</b>を ゆびで <b>よこに ふる</b>と タクトに なるよ。<br>
+      🐢 ゆっくり ふると ゆっくり、🐇 はやく ふると はやく。<br>
+      🐜 ちいさく ふると よわい おと、🐘 おおきく ふると つよい おと。<br>
+      🎻 がっきの どうぶつを タップすると「おやすみ」と「もどる」が できるよ。
+    </div>
+    <h2>🎴 おだい</h2>
+    <div class="grid" id="mlist"></div>
+    <h2>🎶 じゆうに しきする</h2>
+    <div class="songs" id="slist"></div>
+    <h2>📚 まなび カード</h2>
+    <button class="pill bookbtn" type="button" id="bookBtn">📚 カードを みる</button>
+  </div>
+</section>
+
+<!-- ===== あそぶ ===== -->
+<section id="play" class="screen">
+  <div class="bar">
+    <button class="pill" type="button" id="quit">← もどる</button>
+    <div id="ptitle"></div>
+    <button class="pill snd" type="button">🔊</button>
+  </div>
+  <div id="mis">
+    <div id="mtext"></div>
+    <div class="prog" id="progWrap"><i id="prog"></i></div>
+    <div id="songsw"></div>
+    <div id="hint"></div>
+  </div>
+  <div id="stage">
+    <div class="orch" id="orch"></div>
+    <div id="aud"><span class="bubble" id="abub"></span><span id="aem"></span></div>
+    <div class="cond"><div class="podium"></div><div class="peng" id="peng">🐧</div><div class="baton" id="baton"></div></div>
+    <div id="notes"></div>
+    <div id="say"></div>
+  </div>
+  <div id="meters">
+    <div class="meter"><span>はやさ</span>
+      <div class="track" id="tTrack"><span class="l">🐢</span><span class="r">🐇</span><div class="zone"></div><div class="needle"></div></div>
+      <span class="mval" id="tVal">－</span></div>
+    <div class="meter"><span>つよさ</span>
+      <div class="track" id="dTrack"><span class="l">🐜</span><span class="r">🐘</span><div class="zone"></div><div class="needle"></div></div>
+      <span class="mval" id="dVal">－</span></div>
+  </div>
+  <div id="pad" aria-label="タクトを ふる ところ">
+    <div class="msg" id="padMsg"><b>⇆</b>ここを よこに ふってね</div>
+    <div id="dot">🪄</div>
+  </div>
+</section>
+
+<div id="ov"><div class="box" id="ovBox"></div></div>
+
+<script>
+(function(){
+'use strict';
+var $ = function(s){ return document.querySelector(s); };
+
+/* ================= データ ================= */
+var FLUTE_SVG = '<svg viewBox="0 0 60 20" aria-hidden="true"><rect x="2" y="7" width="56" height="7" rx="3" fill="#c0c7d2" stroke="#6b7684" stroke-width="1.5"/>' +
+  '<circle cx="14" cy="10.5" r="1.6" fill="#333"/><circle cx="26" cy="10.5" r="1.6" fill="#333"/><circle cx="33" cy="10.5" r="1.6" fill="#333"/><circle cx="40" cy="10.5" r="1.6" fill="#333"/><circle cx="47" cy="10.5" r="1.6" fill="#333"/></svg>';
+var GROUPS = [
+  {id:'vn', ani:'🐰', ins:'🎻', name:'バイオリン', who:'うさぎ'},
+  {id:'tp', ani:'🐘', ins:'🎺', name:'ラッパ',     who:'ぞう'},
+  {id:'dr', ani:'🦍', ins:'🥁', name:'たいこ',     who:'ゴリラ'},
+  {id:'fl', ani:'🐦', ins:FLUTE_SVG, name:'ふえ',  who:'ことり'}
+];
+var F=[53,57,60], C=[48,52,55], C7=[48,52,58], Bb=[46,50,53], Dm=[50,53,57], G=[43,47,50], G7=[43,47,53];
+// すべて この アプリの ための オリジナル曲
+var SONGS = {
+  lullaby:{name:'こもりうた', em:'🌙', meter:3, style:'lullaby', chords:[F,C,Bb,F,Dm,Bb,C7,F],
+    mel:[[69,2],[72,1],[67,3],[65,2],[74,1],[72,3],[74,1],[72,1],[69,1],[70,2],[67,1],[64,1],[67,1],[70,1],[65,3]]},
+  march:{name:'マーチ', em:'👑', meter:4, style:'march', chords:[C,C,G,C,F,C,G7,C],
+    mel:[[67,1],[72,1],[76,1],[72,1],[79,2],[76,2],[74,1],[71,1],[67,1],[71,1],[72,2],[67,2],
+         [69,1],[72,1],[77,1],[81,1],[79,1],[76,1],[72,2],[74,1],[77,1],[71,1],[74,1],[72,3],[0,1]]},
+  waltz:{name:'ワルツ', em:'🦋', meter:3, style:'waltz', chords:[C,G7,G7,C,F,C,G7,C],
+    mel:[[76,1],[79,1],[79,1],[77,2],[74,1],[71,1],[74,1],[77,1],[76,3],[77,1],[81,1],[84,1],[79,2],[76,1],[74,1],[77,1],[71,1],[72,3]]},
+  undokai:{name:'うんどうかい', em:'🏃', meter:4, style:'undokai', chords:[F,F,C,F,Bb,F,C7,F],
+    mel:[[72,.5],[69,.5],[72,.5],[77,.5],[81,1],[77,1],[81,.5],[79,.5],[77,.5],[79,.5],[81,2],
+         [79,.5],[76,.5],[72,.5],[76,.5],[79,1],[76,1],[77,1],[72,1],[77,2],
+         [74,.5],[77,.5],[82,.5],[77,.5],[74,1],[77,1],[72,.5],[77,.5],[81,.5],[77,.5],[72,1],[69,1],
+         [70,.5],[72,.5],[74,.5],[76,.5],[79,1],[76,1],[77,2],[72,1],[77,1]]}
+};
+var MISSIONS = [
+  {id:'m1', em:'🐻', title:'ねむい くまさん', text:'ねむい くまさんの ために、ゆっくり しずかに ならそう', song:'lullaby',
+   tempo:[46,80], dyn:'p', parts:{dr:false}, cards:['piano'],
+   okSay:'ふわぁ… ねむく なってきた', ngSay:'ねむれないよ〜', done:'くまさん ぐっすり ねむったよ 💤'},
+  {id:'m2', em:'🏃', title:'うんどうかい', text:'きょうは うんどうかい！ はやく げんきに ならそう', song:'undokai',
+   tempo:[125,172], dyn:'f', parts:{}, cards:['tempo'],
+   okSay:'はしるの たのしい！', ngSay:'もっと はやく！ げんきに！', done:'みんな いっとうしょう みたいに はしったよ 🏅'},
+  {id:'m3', em:'👑', title:'おうさまの パレード', text:'おうさまの パレード。ふつうの はやさで どうどうと つよく', song:'march',
+   tempo:[86,124], dyn:'f', parts:{}, cards:['forte','da'],
+   okSay:'うむ、りっぱじゃ！', ngSay:'もっと どうどうと たのむぞ', done:'おうさま にっこり。パレード だいせいこう 🎉'},
+  {id:'m4', em:'🦋', title:'ちょうちょの ワルツ', text:'ちょうちょと ワルツ。ふつうの はやさ、ふつうの つよさで', song:'waltz',
+   tempo:[78,120], dyn:'mf', parts:{}, cards:['gen','pianofun'],
+   okSay:'ひらひら〜 おどれるよ', ngSay:'ちょうどいい かんじで おねがい', done:'ちょうちょが くるくる おどったよ 🦋'},
+  {id:'m5', em:'🐦', title:'ことりの ソロ', text:'ことりさんが ひとりで うたいたいって。ふえ だけ のこして、ほかは おやすみ', song:'waltz',
+   tempo:[50,170], dyn:'any', parts:{vn:false, tp:false, dr:false, fl:true}, cards:['kan'],
+   okSay:'ぴぴぴ〜♪ じょうずでしょ', ngSay:'ほかの おとが まざってるよ', done:'ことりの ソロ、すてきだったね 🐦'}
+];
+var CARDS = [
+  {id:'tempo', e:'🐢🐇', h:'はやさ ＝ テンポ',
+   b:'おんがくの はやさを「テンポ」と いうよ。がくふには イタリアの ことばで かくんだ。<br>ゆっくりは「アダージョ」、はやく げんきには「アレグロ」。しきしゃは タクトで みんなの テンポを そろえるよ。'},
+  {id:'piano', e:'🐜', h:'ピアノ（p）＝ よわく',
+   b:'がくふの「<b>p</b>」は「ピアノ」と よむよ。イタリアの ことばで「よわく・しずかに」と いう いみ。<br>「<b>pp</b>」は ピアニッシモ。もっと もっと よわく。'},
+  {id:'forte', e:'🐘', h:'フォルテ（f）＝ つよく',
+   b:'がくふの「<b>f</b>」は「フォルテ」。「つよく」と いう いみだよ。<br>「<b>ff</b>」は フォルティッシモ。もっと もっと つよく。まんなかの「<b>mf</b>」は メゾフォルテで「すこし つよく」。'},
+  {id:'pianofun', e:'🎹', h:'がっきの ピアノの なまえ',
+   b:'がっきの ピアノは、むかし「ピアノフォルテ」と よばれていたよ。<br>よわい おと（ピアノ）も つよい おと（フォルテ）も、けんばんを おす つよさで だしわけられるから なんだ。'},
+  {id:'gen', e:'🎻', h:'げんがっき（<ruby>弦楽器<rt>げんがっき</rt></ruby>）',
+   b:'ピンと はった「げん（いと）」を ゆみで こすったり、ゆびで はじいたり して ならすよ。<br>なかま: バイオリン・ビオラ・チェロ・コントラバス。おおきい ほど ひくい おとが でるよ。'},
+  {id:'kan', e:'🎺', h:'かんがっき（<ruby>管楽器<rt>かんがっき</rt></ruby>）',
+   b:'くだに いきを ふきこんで ならすよ。<br>ラッパ（トランペット）は くちびるを ぶるぶる ふるわせる「きんかんがっき」。<br>フルートは きんぞくで できているけど「もっかんがっき」の なかま なんだって。'},
+  {id:'da', e:'🥁', h:'だがっき（<ruby>打楽器<rt>だがっき</rt></ruby>）',
+   b:'たたいたり ふったり して ならすよ。<br>オーケストラの おおきな たいこ「ティンパニ」は、おとの たかさを かえられる ふしぎな たいこ なんだ。'}
+];
+
+/* ================= 保存 ================= */
+var KEY = 'shikisha-penguin-v1';
+var save = {stars:{}, cards:{}, sound:true};
+try { var raw = localStorage.getItem(KEY); if (raw) { var o = JSON.parse(raw); if (o && typeof o === 'object') { save.stars = o.stars || {}; save.cards = o.cards || {}; save.sound = o.sound !== false; } } } catch(e) {}
+function store(){ try { localStorage.setItem(KEY, JSON.stringify(save)); } catch(e) {} }
+
+/* ================= おと ================= */
+var ac = null, master = null, pg = {}, noiseBuf = null;
+function ensureAudio(){
+  if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
+  try {
+    var AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    ac = new AC();
+    var comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = save.sound ? 0.9 : 0; master.connect(comp);
+    GROUPS.forEach(function(g){ pg[g.id] = ac.createGain(); pg[g.id].gain.value = st.parts[g.id] ? 1 : 0; pg[g.id].connect(master); });
+    pg.sfx = ac.createGain(); pg.sfx.connect(master);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate, ac.sampleRate);
+    var d = noiseBuf.getChannelData(0); for (var i = 0; i < d.length; i++) d[i] = Math.random()*2 - 1;
+  } catch(e) { ac = null; }
+}
+function now(){ return ac ? ac.currentTime : performance.now()/1000; }
+function mtof(m){ return 440 * Math.pow(2, (m-69)/12); }
+function osc(type, f, t, end, dest, det){ var o = ac.createOscillator(); o.type = type; o.frequency.setValueAtTime(f, t); if (det) o.detune.setValueAtTime(det, t); o.connect(dest); o.start(t); o.stop(end); return o; }
+function gainEnv(dest, t, a, peak, hold, rel){
+  var g = ac.createGain(); g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(peak, t + a);
+  g.gain.setValueAtTime(peak*0.85, t + Math.max(a, hold));
+  g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(a, hold) + rel);
+  g.connect(dest); return g;
+}
+function vibrato(o, t, f, depth){ var l = ac.createOscillator(); l.frequency.value = f; var lg = ac.createGain(); lg.gain.setValueAtTime(0, t); lg.gain.linearRampToValueAtTime(depth, t + 0.25); l.connect(lg); lg.connect(o.frequency); l.start(t); return l; }
+function noise(t, dur, dest){ var s = ac.createBufferSource(); s.buffer = noiseBuf; s.connect(dest); s.start(t, Math.random()*0.5, dur + 0.05); return s; }
+
+function synth(ev, t, vel, det){
+  if (!ac) return;
+  var f = mtof(ev.m || 60), dur = ev.d || 0.5, end, g, flt, o;
+  if (ev.p === 'vn') {
+    var low = ev.m < 55; end = t + dur + 0.3;
+    flt = ac.createBiquadFilter(); flt.type = 'lowpass'; flt.frequency.value = low ? 700 : 1400 + vel*2200;
+    g = gainEnv(pg.vn, t, low ? 0.05 : 0.08, (low ? 0.08 : 0.055) * vel, dur, 0.2); flt.connect(g);
+    o = osc('sawtooth', f, t, end, flt, det); var o2 = osc('sawtooth', f, t, end, flt, det + 9);
+    if (!low) { vibrato(o, t, 5.6, f*0.006).stop(end); vibrato(o2, t, 5.6, f*0.006).stop(end); }
+  } else if (ev.p === 'tp') {
+    end = t + dur + 0.2;
+    flt = ac.createBiquadFilter(); flt.type = 'lowpass';
+    flt.frequency.setValueAtTime(500, t); flt.frequency.linearRampToValueAtTime(1100 + vel*2800, t + 0.04);
+    flt.frequency.linearRampToValueAtTime(800 + vel*1800, t + 0.25);
+    g = gainEnv(pg.tp, t, 0.025, 0.045 * vel * (ev.v || 1), dur, 0.12); flt.connect(g);
+    osc('sawtooth', f, t, end, flt, det);
+  } else if (ev.p === 'fl') {
+    end = t + dur + 0.25;
+    g = gainEnv(pg.fl, t, 0.05, 0.075 * vel, dur, 0.15);
+    o = osc('sine', f, t, end, g, det); vibrato(o, t, 5, f*0.008).stop(end);
+    var g2 = ac.createGain(); g2.gain.value = 0.18; g2.connect(g); osc('triangle', f*2, t, end, g2, det);
+    var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = f*2; bp.Q.value = 3;
+    var gn = gainEnv(g, t, 0.02, 0.25, 0.05, 0.1); bp.connect(gn); noise(t, 0.2, bp);
+  } else if (ev.p === 'dr') {
+    drum(ev.k, t, vel, pg.dr, ev.m);
+  }
+}
+function drum(k, t, vel, dest, m){
+  var g, o, flt;
+  if (k === 'kick' || k === 'boom') {
+    var big = k === 'boom';
+    g = ac.createGain(); g.gain.setValueAtTime((big ? 0.95 : 0.55) * vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.7 : 0.32)); g.connect(dest);
+    o = ac.createOscillator(); o.frequency.setValueAtTime(big ? 120 : 140, t); o.frequency.exponentialRampToValueAtTime(big ? 38 : 46, t + (big ? 0.35 : 0.13));
+    o.connect(g); o.start(t); o.stop(t + 0.8);
+    if (big) drum('snare', t, vel, dest);
+  } else if (k === 'snare') {
+    flt = ac.createBiquadFilter(); flt.type = 'highpass'; flt.frequency.value = 1300;
+    g = ac.createGain(); g.gain.setValueAtTime(0.26*vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); flt.connect(g); g.connect(dest); noise(t, 0.18, flt);
+    var g2 = ac.createGain(); g2.gain.setValueAtTime(0.14*vel, t); g2.gain.exponentialRampToValueAtTime(0.001, t + 0.08); g2.connect(dest);
+    osc('triangle', 185, t, t + 0.1, g2);
+  } else if (k === 'hat') {
+    flt = ac.createBiquadFilter(); flt.type = 'highpass'; flt.frequency.value = 7000;
+    g = ac.createGain(); g.gain.setValueAtTime(0.07*vel, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.05); flt.connect(g); g.connect(dest); noise(t, 0.06, flt);
+  } else if (k === 'timp') {
+    g = ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.34*vel, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 1.1); g.connect(dest);
+    o = ac.createOscillator(); var f0 = mtof(m || 41); o.frequency.setValueAtTime(f0*1.04, t); o.frequency.exponentialRampToValueAtTime(f0, t + 0.15); o.connect(g); o.start(t); o.stop(t + 1.2);
+  }
+}
+function sfx(name){
+  if (!ac || !save.sound) return;
+  var t = ac.currentTime + 0.02, i, g;
+  if (name === 'tap') {
+    g = gainEnv(pg.sfx, t, 0.005, 0.15, 0.03, 0.08); osc('sine', 880, t, t + 0.15, g);
+  } else if (name === 'rest') {
+    g = gainEnv(pg.sfx, t, 0.005, 0.12, 0.05, 0.12); var o = osc('sine', 660, t, t + 0.25, g); o.frequency.exponentialRampToValueAtTime(330, t + 0.18);
+  } else if (name === 'clap') {
+    for (i = 0; i < 40; i++) { var tt = t + Math.random()*1.6; var bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1200 + Math.random()*1200;
+      g = ac.createGain(); g.gain.setValueAtTime(0.25, tt); g.gain.exponentialRampToValueAtTime(0.001, tt + 0.06); bp.connect(g); g.connect(pg.sfx); noise(tt, 0.07, bp); }
+  } else if (name === 'fanfare') {
+    [60,64,67,72,67,72].forEach(function(m, j){ var tt = t + [0,.12,.24,.36,.6,.72][j]; synth({p:'tp', m:m, d: j === 5 ? 0.8 : 0.1, v:1.6}, tt, 1, 0); });
+  } else if (name === 'slide') {
+    g = gainEnv(pg.sfx, t, 0.02, 0.16, 0.5, 0.15); var s = osc('sine', 1000, t, t + 0.8, g); s.frequency.exponentialRampToValueAtTime(160, t + 0.6);
+    drum('kick', t + 0.62, 0.8, pg.sfx);
+  } else if (name === 'yawn') {
+    g = gainEnv(pg.sfx, t, 0.2, 0.06, 0.6, 0.4); var y = osc('triangle', 420, t, t + 1.3, g); y.frequency.linearRampToValueAtTime(260, t + 1.1);
+  } else if (name === 'card') {
+    [84,88,91,96].forEach(function(m, j){ var tt = t + j*0.09; var gg = gainEnv(pg.sfx, tt, 0.005, 0.1, 0.05, 0.3); osc('sine', mtof(m), tt, tt + 0.5, gg); });
+  } else if (name === 'solo') {
+    var pat = [0,.15,.3,.45,.6,.68,.76,.84,1.0,1.3];
+    pat.forEach(function(x, j){ drum(j % 3 === 0 || j === pat.length-1 ? 'boom' : 'snare', t + x, 0.7, pg.sfx); });
+  } else if (name === 'boom') {
+    drum('boom', t, 1, pg.sfx);
+  }
+}
+
+/* ================= きょく → イベント ================= */
+function buildEvents(song){
+  var ev = [], b = 0, M = song.meter;
+  song.mel.forEach(function(n){ if (n[0]) ev.push({b:b, p:'vn', m:n[0], d:n[1]*0.92}); b += n[1]; });
+  song.chords.forEach(function(ch, i){
+    var s = i*M, r = ch[0], k;
+    for (k = 0; k < M; k++) ev.push({b:s + k, p:'beat', down:k === 0});
+    function tp(at, d, v){ ev.push({b:s+at, p:'tp', m:ch[1]+12, d:d, v:v}); ev.push({b:s+at, p:'tp', m:ch[2]+12, d:d, v:v}); }
+    function dr(at, kind, v){ ev.push({b:s+at, p:'dr', k:kind, m:r-12, v:v||1}); }
+    function fl(at, m, d){ ev.push({b:s+at, p:'fl', m:m, d:d}); }
+    switch (song.style) {
+      case 'lullaby':
+        ev.push({b:s, p:'vn', m:r-12, d:2.9});
+        ev.push({b:s, p:'tp', m:ch[1]+12, d:2.8, v:0.7});
+        fl(1, ch[2]+24, 0.9); fl(2, ch[1]+24, 0.9);
+        dr(0, 'timp', 0.7);
+        break;
+      case 'waltz':
+        ev.push({b:s, p:'vn', m:r-12, d:0.9});
+        tp(1, 0.45); tp(2, 0.45);
+        [ch[0],ch[1],ch[2],ch[0]+12,ch[2],ch[1]].forEach(function(m, j){ fl(j*0.5, m+24, 0.4); });
+        dr(0, 'kick', 0.8); dr(1, 'hat'); dr(2, 'hat');
+        break;
+      case 'march':
+        ev.push({b:s, p:'vn', m:r-12, d:0.9}); ev.push({b:s+2, p:'vn', m:ch[2]-12, d:0.9});
+        tp(0, 0.7); tp(2, 0.4); tp(2.5, 0.4); tp(3, 0.8);
+        fl(1, ch[1]+24, 0.4); fl(1.5, ch[2]+24, 0.4); fl(3, ch[1]+24, 0.4); fl(3.5, ch[2]+24, 0.4);
+        dr(0, 'kick'); dr(2, 'kick'); dr(1, 'snare', 0.8);
+        if (i % 4 === 3) { dr(3, 'snare', 0.6); dr(3.25, 'snare', 0.7); dr(3.5, 'snare', 0.8); dr(3.75, 'snare', 0.9); } else dr(3, 'snare', 0.8);
+        break;
+      case 'undokai':
+        for (k = 0; k < 4; k++) ev.push({b:s+k, p:'vn', m:(k % 2 ? ch[2] : r) - 12, d:0.45});
+        tp(0.5, 0.25); tp(1.5, 0.25); tp(2.5, 0.25); tp(3.5, 0.25);
+        for (k = 0; k < 8; k++) fl(k*0.5, ch[[0,1,2,1][k % 4]] + 24, 0.3);
+        dr(0, 'kick'); dr(2, 'kick'); dr(1, 'snare'); dr(3, 'snare');
+        for (k = 0; k < 8; k++) dr(k*0.5, 'hat', 0.8);
+        break;
+    }
+  });
+  ev.sort(function(a, c){ return a.b - c.b; });
+  return {ev:ev, len:song.chords.length*M};
+}
+
+/* ================= じょうたい ================= */
+var st = {
+  mode:'free', mission:null, songId:'march', song:null, evs:null,
+  bpm:0, dyn:0.5, beats:0, lastBeat:0, playing:false,
+  parts:{vn:true, tp:true, dr:true, fl:true},
+  progress:0, elapsed:0, started:false, fast:0, dizzy:false, sleepy:false, fallen:false, idle:0, gor:0, done:false
+};
+var NEED = 10; // おだい: この びょうすう だけ ぴったりで ならせたら クリア
+var sched = {pos:0, t:0, upTo:0};
+var sw = {active:null, dir:0, ext:0, lastX:null, lastT:0, left:0, w:300};
+
+function dynLevel(d){ return d < 0.36 ? 'p' : d < 0.62 ? 'mf' : 'f'; }
+function tempoWord(b){ return b < 42 ? 'ねむねむ…' : b < 80 ? 'ゆっくり' : b < 125 ? 'ふつう' : b <= 175 ? 'はやい' : 'はやすぎ！'; }
+var DYNWORD = {p:'よわく<br><small>p ピアノ</small>', mf:'ふつう<br><small>mf メゾフォルテ</small>', f:'つよく<br><small>f フォルテ</small>'};
+var DYNSHORT = {p:'よわく（p）', mf:'ふつうの つよさ（mf）', f:'つよく（f）', any:'どんな つよさでも OK'};
+
+/* ================= スケジューラ ================= */
+function startMusic(){
+  ensureAudio();
+  st.playing = true; st.started = true; st.idle = 0;
+  sched.t = now() + 0.06; sched.upTo = sched.pos;
+  setSay('');
+  $('#padMsg').style.opacity = 0.25;
+}
+function stopMusic(){ st.playing = false; }
+function tick(){
+  if (!st.playing || !st.evs) return;
+  var n = now(); if (sched.t < n) sched.t = n;
+  var end = n + 0.15; if (end <= sched.t) return;
+  var bpm = Math.max(30, Math.min(230, st.bpm || 90)), spb = 60/bpm;
+  var horizon = sched.pos + (end - sched.t)/spb, len = st.evs.len, list = st.evs.ev;
+  for (var L = Math.floor(sched.upTo/len); L*len < horizon; L++) {
+    for (var i = 0; i < list.length; i++) {
+      var b = L*len + list[i].b; if (b < sched.upTo) continue; if (b >= horizon) break;
+      fire(list[i], sched.t + (b - sched.pos)*spb);
+    }
+  }
+  sched.pos = horizon; sched.upTo = horizon; sched.t = end;
+}
+function fire(ev, t){
+  var vel = 0.15 + 0.85*st.dyn, det = 0;
+  if (st.dizzy) { det = (Math.random()*2 - 1)*90; t += Math.random()*0.07; }
+  if (st.sleepy) { det -= 25; vel *= 0.7; }
+  var delay = Math.max(0, (t - now())*1000);
+  if (ev.p === 'beat') { setTimeout(function(){ bob(ev.down); }, delay); return; }
+  if (ev.p === 'dr') vel = Math.max(vel, 0.62); // ゴリラは いつも おおきい おとで たたきたい
+  if (ev.p === 'vn' && ev.m < 55) vel = Math.min(1, vel + 0.1);
+  if (!st.parts[ev.p]) return;
+  if (save.sound) synth(ev, t, vel * (ev.p === 'dr' ? (ev.v || 1) : 1), det);
+  if (ev.p !== 'tp' || ev.m === undefined || Math.random() < 0.6) setTimeout(function(){ bump(ev.p); }, delay);
+}
+
+/* ================= 画面 ================= */
+function showScreen(id){ ['title','play'].forEach(function(s){ $('#'+s).classList.toggle('on', s === id); }); }
+function setSnd(){ document.querySelectorAll('.snd').forEach(function(b){ b.textContent = save.sound ? (b.closest('#play') ? '🔊' : '🔊 おと オン') : (b.closest('#play') ? '🔇' : '🔇 おと オフ'); }); if (master) master.gain.value = save.sound ? 0.9 : 0; }
+document.querySelectorAll('.snd').forEach(function(b){ b.addEventListener('click', function(){ save.sound = !save.sound; store(); ensureAudio(); setSnd(); }); });
+
+function renderTitle(){
+  var h = '';
+  MISSIONS.forEach(function(m, i){
+    var s = save.stars[m.id] || 0, stars = '';
+    for (var k = 0; k < 3; k++) stars += k < s ? '★' : '☆';
+    h += '<button class="mcard" type="button" data-m="' + i + '"><span class="em">' + m.em + '</span><span><div class="t">' + (i+1) + '. ' + m.title + '</div>' +
+      '<div class="d">' + m.text + '</div><div class="st">' + stars + '</div></span></button>';
+  });
+  $('#mlist').innerHTML = h;
+  h = '';
+  Object.keys(SONGS).forEach(function(k){ h += '<button class="sbtn" type="button" data-s="' + k + '"><span>' + SONGS[k].em + '</span>' + SONGS[k].name + '</button>'; });
+  $('#slist').innerHTML = h;
+  var n = CARDS.filter(function(c){ return save.cards[c.id]; }).length;
+  $('#bookBtn').textContent = '📚 カードを みる（' + n + ' / ' + CARDS.length + '）';
+}
+$('#mlist').addEventListener('click', function(e){ var b = e.target.closest('[data-m]'); if (b) { ensureAudio(); sfx('tap'); missionIntro(+b.dataset.m); } });
+$('#slist').addEventListener('click', function(e){ var b = e.target.closest('[data-s]'); if (b) { ensureAudio(); sfx('tap'); startPlay('free', null, b.dataset.s); } });
+$('#bookBtn').addEventListener('click', function(){ ensureAudio(); sfx('tap'); showBook(); });
+
+function renderOrch(){
+  var h = '';
+  GROUPS.forEach(function(g){
+    h += '<button class="grp" type="button" data-g="' + g.id + '" aria-label="' + g.who + 'の ' + g.name + '"><span class="fx"></span><span class="ani">' + g.ani + '</span>' +
+      '<span class="ins">' + g.ins + '</span><span class="lb">' + g.name + '</span>' + (g.id === 'dr' ? '<span class="bubble" id="gbub"></span>' : '') + '</button>';
+  });
+  $('#orch').innerHTML = h;
+}
+$('#orch').addEventListener('click', function(e){
+  var b = e.target.closest('[data-g]'); if (!b) return;
+  ensureAudio();
+  var id = b.dataset.g; st.parts[id] = !st.parts[id];
+  if (pg[id]) { pg[id].gain.cancelScheduledValues(ac.currentTime); pg[id].gain.setTargetAtTime(st.parts[id] ? 1 : 0, ac.currentTime, 0.03); }
+  sfx(st.parts[id] ? 'tap' : 'rest');
+  if (id === 'dr') gorillaSay(st.parts[id] ? 'まかせて！ ドンドン！' : 'え〜、もっと たたきたい…（しーっ）', 1800);
+  else flashSay(GROUPS.filter(function(g){ return g.id === id; })[0].who + ' ' + (st.parts[id] ? 'もどったよ' : 'おやすみ'), 900);
+  updateGroups();
+});
+function updateGroups(){
+  document.querySelectorAll('.grp').forEach(function(b){
+    var id = b.dataset.g, on = st.parts[id];
+    b.classList.toggle('rest', !on);
+    b.classList.toggle('dizzy', on && st.dizzy);
+    b.classList.toggle('sleep', on && (st.sleepy || st.idle > 3));
+    b.querySelector('.fx').textContent = !on ? '🤫' : st.dizzy ? '💫' : (st.sleepy || st.idle > 3) ? '💤' : '';
+  });
+}
+var bumpT = {};
+function bump(p){
+  var b = document.querySelector('.grp[data-g="' + p + '"]'); if (!b) return;
+  b.classList.add('bump'); clearTimeout(bumpT[p]); bumpT[p] = setTimeout(function(){ b.classList.remove('bump'); }, 110);
+  if (Math.random() < 0.18) {
+    var r = b.getBoundingClientRect(), sr = $('#stage').getBoundingClientRect(), s = document.createElement('span');
+    s.textContent = ['♪','♫','♩'][Math.floor(Math.random()*3)];
+    s.style.left = (r.left - sr.left + r.width*0.6) + 'px'; s.style.top = (r.top - sr.top + 10) + 'px';
+    s.style.color = ['#fff','#ffe066','#ffc9de'][Math.floor(Math.random()*3)];
+    $('#notes').appendChild(s); setTimeout(function(){ s.remove(); }, 1200);
+  }
+}
+var bobT;
+function bob(){ var p = $('#peng'); if (st.fallen || st.dizzy || p.classList.contains('bow')) return; p.classList.add('bob'); clearTimeout(bobT); bobT = setTimeout(function(){ p.classList.remove('bob'); }, 120); }
+var sayT;
+function setSay(t){ var s = $('#say'); s.innerHTML = t; s.classList.toggle('show', !!t); clearTimeout(sayT); }
+function flashSay(t, ms){ setSay(t); sayT = setTimeout(function(){ setSay(''); }, ms || 1500); }
+var gbT;
+function gorillaSay(t, ms){ var b = $('#gbub'); if (!b) return; b.textContent = t; b.classList.add('show'); clearTimeout(gbT); gbT = setTimeout(function(){ b.classList.remove('show'); }, ms || 2000); }
+
+function setTrack(sel, lo, hi, val, min, max){
+  var tr = $(sel), z = tr.querySelector('.zone'), n = tr.querySelector('.needle');
+  function pct(v){ return Math.max(0, Math.min(100, (v - min)/(max - min)*100)); }
+  if (lo === null) z.style.display = 'none'; else { z.style.display = 'block'; z.style.left = pct(lo) + '%'; z.style.width = (pct(hi) - pct(lo)) + '%'; }
+  if (val === null) n.style.display = 'none'; else { n.style.display = 'block'; n.style.left = pct(val) + '%'; }
+}
+var DYNRANGE = {p:[0, 0.36], mf:[0.36, 0.62], f:[0.62, 1]};
+function renderMeters(){
+  var m = st.mission, has = st.beats > 0;
+  setTrack('#tTrack', m ? m.tempo[0] : null, m ? m.tempo[1] : null, has ? st.bpm : null, 30, 200);
+  var dr = m && m.dyn !== 'any' ? DYNRANGE[m.dyn] : null;
+  setTrack('#dTrack', dr ? dr[0] : null, dr ? dr[1] : null, has ? st.dyn : null, 0, 1);
+  $('#tVal').textContent = has ? tempoWord(st.bpm) : '－';
+  $('#dVal').innerHTML = has ? DYNWORD[dynLevel(st.dyn)] : '－';
+}
+
+/* ================= あそぶ ================= */
+function missionIntro(i){
+  var m = MISSIONS[i], parts = '';
+  if (m.parts.dr === false && Object.keys(m.parts).length === 1) parts = '<span class="chip">🦍 たいこは おやすみ</span>';
+  if (m.parts.fl) parts = '<span class="chip">🐦 ふえ だけ</span>';
+  var lo = m.tempo[0], hi = m.tempo[1];
+  var tw = hi <= 80 ? '🐢 ゆっくり' : lo >= 125 ? '🐇 はやく' : lo < 60 && hi > 150 ? '🎵 はやさは じゆう' : '🚶 ふつうの はやさ';
+  openOv('<div class="big">' + m.em + '</div><h3>' + m.title + '</h3><p>' + m.text + '</p>' +
+    '<div class="chips"><span class="chip">' + tw + '</span><span class="chip">' + (m.dyn === 'p' ? '🐜 ' : m.dyn === 'f' ? '🐘 ' : '') + DYNSHORT[m.dyn] + '</span>' + parts + '</div>' +
+    '<p style="font-size:14px;color:#6a5f92">みどりの ところに はりを あわせて ふってね</p>' +
+    '<div class="btns"><button class="btn sub" type="button" data-a="close">やめる</button><button class="btn" type="button" data-a="go" data-m="' + i + '">はじめる ▶</button></div>');
+}
+function startPlay(mode, mi, songId){
+  closeOv();
+  st.mode = mode; st.mission = mi === null ? null : MISSIONS[mi]; st.missionIndex = mi;
+  st.songId = st.mission ? st.mission.song : songId;
+  setSong(st.songId);
+  st.bpm = 0; st.dyn = 0.5; st.beats = 0; st.playing = false; st.progress = 0; st.elapsed = 0; st.started = false;
+  st.fast = 0; st.dizzy = false; st.sleepy = false; st.fallen = false; st.idle = 0; st.gor = 0; st.done = false;
+  st.parts = {vn:true, tp:true, dr:true, fl:true};
+  GROUPS.forEach(function(g){ if (pg[g.id]) pg[g.id].gain.value = 1; });
+  sw.lastX = null; sw.lastT = 0;
+  var p = $('#peng'); p.className = 'peng';
+  renderOrch(); updateGroups();
+  var m = st.mission;
+  $('#ptitle').textContent = m ? m.em + ' ' + m.title : '🎶 じゆうに しきする';
+  if (m) {
+    $('#mtext').innerHTML = '<span class="em">' + m.em + '</span><span>' + m.text + '</span>';
+    $('#progWrap').style.display = ''; $('#songsw').style.display = 'none';
+    $('#aem').textContent = m.em; $('#aud').style.display = '';
+  } else {
+    $('#mtext').innerHTML = '<span class="em">🎼</span><span>すきな きょくを えらんで じゆうに ふってみよう</span>';
+    $('#progWrap').style.display = 'none'; $('#songsw').style.display = '';
+    var h = ''; Object.keys(SONGS).forEach(function(k){ h += '<button type="button" data-s="' + k + '"' + (k === st.songId ? ' class="on"' : '') + '>' + SONGS[k].em + ' ' + SONGS[k].name + '</button>'; });
+    $('#songsw').innerHTML = h; $('#aud').style.display = 'none';
+  }
+  $('#prog').style.width = '0%';
+  $('#hint').textContent = 'したの ピンクの ところを よこに ふって はじめよう'; $('#hint').className = '';
+  $('#abub').classList.remove('show'); $('#aud').classList.remove('happy');
+  $('#padMsg').style.opacity = 1; $('#padMsg').innerHTML = '<b>⇆</b>ここを よこに ふってね<br><small>3かい ふると はじまるよ</small>';
+  setSay(''); renderMeters();
+  showScreen('play');
+}
+function setSong(id){ st.songId = id; st.song = SONGS[id]; st.evs = buildEvents(st.song); sched.pos = 0; sched.upTo = 0; }
+$('#songsw').addEventListener('click', function(e){
+  var b = e.target.closest('[data-s]'); if (!b) return; sfx('tap'); setSong(b.dataset.s); sched.t = now() + 0.05;
+  document.querySelectorAll('#songsw button').forEach(function(x){ x.classList.toggle('on', x === b); });
+});
+$('#quit').addEventListener('click', function(){ stopMusic(); sfx('tap'); renderTitle(); showScreen('title'); });
+
+/* ---- タクトを ふる ---- */
+var pad = $('#pad');
+function padX(e){ var r = pad.getBoundingClientRect(); sw.left = r.left; sw.w = r.width; return e.clientX - r.left; }
+pad.addEventListener('pointerdown', function(e){
+  ensureAudio(); e.preventDefault();
+  if (sw.active !== null) return;
+  sw.active = e.pointerId; try { pad.setPointerCapture(e.pointerId); } catch(_) {}
+  var x = padX(e); sw.dir = 0; sw.ext = x; sw.start = x; if (sw.lastX === null) sw.lastX = x;
+  moveDot(x, e.clientY);
+});
+pad.addEventListener('pointermove', function(e){
+  if (e.pointerId !== sw.active) return; e.preventDefault();
+  var x = padX(e); moveDot(x, e.clientY);
+  if (st.fallen || st.done) return;
+  var H = Math.max(10, sw.w*0.03);
+  if (sw.dir === 0) { if (Math.abs(x - sw.start) > H) { sw.dir = x > sw.start ? 1 : -1; sw.ext = x; } }
+  else if (sw.dir === 1) { if (x > sw.ext) sw.ext = x; else if (sw.ext - x > H) { turn(sw.ext); sw.dir = -1; sw.ext = x; } }
+  else { if (x < sw.ext) sw.ext = x; else if (x - sw.ext > H) { turn(sw.ext); sw.dir = 1; sw.ext = x; } }
+});
+function endPtr(e){ if (e.pointerId !== sw.active) return; sw.active = null; $('#dot').style.display = 'none'; }
+pad.addEventListener('pointerup', endPtr); pad.addEventListener('pointercancel', endPtr);
+function moveDot(x, y){
+  var d = $('#dot'), r = pad.getBoundingClientRect(); d.style.display = 'block'; d.style.left = x + 'px'; d.style.top = (y - r.top) + 'px';
+  if (!st.fallen) $('#baton').style.setProperty('--ang', ((x/sw.w - 0.5)*90).toFixed(1) + 'deg');
+}
+function turn(ex){
+  var t = performance.now(), amp = Math.abs(ex - sw.lastX), iv = t - sw.lastT;
+  sw.lastX = ex;
+  if (sw.lastT && iv > 140 && iv < 2600) beat(iv, amp);
+  sw.lastT = t;
+}
+function beat(iv, amp){
+  var inst = 60000/iv;
+  st.bpm = st.beats ? st.bpm*0.45 + inst*0.55 : inst;
+  var di = Math.max(0, Math.min(1, amp/(sw.w*0.6)));
+  st.dyn = st.beats ? st.dyn*0.4 + di*0.6 : di;
+  st.beats++; st.lastBeat = performance.now(); st.idle = 0;
+  var bt = $('#baton'); bt.classList.add('flash'); setTimeout(function(){ bt.classList.remove('flash'); }, 120);
+  if (!st.playing && !st.fallen) {
+    if (st.beats >= 2) startMusic();
+    else $('#padMsg').innerHTML = '<b>⇆</b>そう！ その ちょうし';
+  }
+}
+
+/* ---- まいフレーム ---- */
+var lastLoop = performance.now();
+setInterval(function(){
+  var t = performance.now(), dt = Math.min(0.2, (t - lastLoop)/1000); lastLoop = t;
+  if (!$('#play').classList.contains('on')) return;
+  tick();
+  if (st.done) return;
+  var since = t - st.lastBeat;
+  if (st.playing) {
+    var limit = Math.max(2300, 2.4*60000/Math.max(30, st.bpm));
+    if (since > limit) { stopMusic(); setSay('タクトが とまったよ。<br>ふると また はじまるよ'); $('#padMsg').style.opacity = 1; st.beats = 1; }
+  } else if (st.started && !st.fallen) {
+    var was = st.idle; st.idle += dt;
+    if (was <= 3 && st.idle > 3) { setSay('みんな ねちゃった… 💤<br>ふって おこそう'); sfx('yawn'); }
+  }
+  // はやすぎ → めが まわる → ころぶ
+  if (st.playing && st.bpm > 175) st.fast += dt; else st.fast = Math.max(0, st.fast - dt*1.5);
+  var dz = st.fast > 1.0;
+  if (dz !== st.dizzy) { st.dizzy = dz; $('#peng').classList.toggle('spin', dz); if (dz) setSay('はやすぎて めが まわる〜 💫'); else if (!st.fallen) setSay(''); }
+  if (st.fast > 3.2) fall();
+  // ゆっくりすぎ → いねむり
+  var sl = st.playing && st.bpm < 42;
+  if (sl !== st.sleepy) { st.sleepy = sl; if (sl) { setSay('ゆっくり すぎて ねむく なっちゃう… 💤'); sfx('yawn'); } else if (!st.dizzy) setSay(''); }
+  // ゴリラは よわい おとが にがて
+  if (st.playing && st.parts.dr && dynLevel(st.dyn) === 'p') { st.gor += dt; if (st.gor > 5) { st.gor = 0; gorillaSay('もっと おおきく たたきたい〜！ ドーン！', 2200); sfx('boom'); bump('dr'); } } else st.gor = Math.max(0, st.gor - dt);
+  updateGroups(); renderMeters();
+  if (st.mission) missionStep(dt);
+  else if (st.playing && !st.dizzy && !st.sleepy) { $('#hint').textContent = 'いまは「' + tempoWord(st.bpm) + '・' + DYNSHORT[dynLevel(st.dyn)] + '」'; $('#hint').className = 'good'; }
+}, 50);
+
+function fall(){
+  st.fallen = true; st.fast = 0; st.dizzy = false; stopMusic(); sfx('slide');
+  var p = $('#peng'); p.classList.remove('spin'); p.classList.add('fall');
+  setSay('くるくる… ころん！<br>はやすぎて めが まわっちゃった');
+  setTimeout(function(){
+    p.classList.remove('fall'); st.fallen = false; st.bpm = 0; st.beats = 0; sw.lastT = 0; st.lastBeat = performance.now();
+    setSay('よいしょ！ こんどは もうすこし ゆっくりね'); sayT = setTimeout(function(){ setSay(''); }, 2200);
+    $('#padMsg').style.opacity = 1;
+  }, 2400);
+}
+
+function missionStep(dt){
+  var m = st.mission, h = $('#hint'), msg = '', ok = false;
+  if (st.started) st.elapsed += dt;
+  var partsBad = null;
+  Object.keys(m.parts).forEach(function(k){ if (!partsBad && st.parts[k] !== m.parts[k]) partsBad = k; });
+  if (!st.playing) msg = st.fallen ? 'だいじょうぶ？ おきあがるのを まってね' : 'ピンクの ところを よこに ふってね';
+  else if (st.dizzy) msg = 'はやすぎ！ もっと ゆっくり 🐢';
+  else if (partsBad) {
+    var g = GROUPS.filter(function(x){ return x.id === partsBad; })[0];
+    msg = m.parts[partsBad] ? g.who + '（' + g.name + '）を タップして もどしてね' : g.who + '（' + g.name + '）を タップして おやすみ させてね';
+  }
+  else if (st.bpm < m.tempo[0]) msg = 'もうすこし はやく ふってね 🐇';
+  else if (st.bpm > m.tempo[1]) msg = 'もうすこし ゆっくり ふってね 🐢';
+  else if (m.dyn !== 'any' && dynLevel(st.dyn) !== m.dyn) {
+    var want = ['p','mf','f'].indexOf(m.dyn), cur = ['p','mf','f'].indexOf(dynLevel(st.dyn));
+    msg = cur > want ? 'もっと ちいさく ふってね 🐜' : 'もっと おおきく ふってね 🐘';
+  }
+  else { ok = true; msg = 'いい かんじ！ その ちょうし ✨'; }
+  h.textContent = msg; h.className = ok ? 'good' : '';
+  var ab = $('#abub');
+  if (st.playing) { ab.textContent = ok ? m.okSay : m.ngSay; ab.classList.add('show'); } else ab.classList.remove('show');
+  $('#aud').classList.toggle('happy', ok);
+  if (ok) st.progress += dt;
+  $('#prog').style.width = Math.min(100, st.progress/NEED*100) + '%';
+  if (st.progress >= NEED) complete();
+}
+
+function complete(){
+  var m = st.mission; st.done = true; stopMusic();
+  var stars = st.elapsed <= 35 ? 3 : st.elapsed <= 70 ? 2 : 1;
+  var prev = save.stars[m.id] || 0; if (stars > prev) save.stars[m.id] = stars;
+  var fresh = m.cards.filter(function(c){ return !save.cards[c]; });
+  m.cards.forEach(function(c){ save.cards[c] = true; }); store();
+  sfx('fanfare'); setTimeout(function(){ sfx('clap'); }, 500);
+  confetti();
+  $('#hint').textContent = 'できたね！'; $('#hint').className = 'good';
+  setTimeout(function(){
+    var s = ''; for (var k = 0; k < 3; k++) s += k < stars ? '★' : '<span class="off">★</span>';
+    var cards = m.cards.map(function(id){ var c = CARDS.filter(function(x){ return x.id === id; })[0];
+      return '<div class="lcard"><div class="h"><span class="e">' + c.e + '</span>' + c.h + (fresh.indexOf(id) >= 0 ? '<span class="newc">NEW</span>' : '') + '</div><div class="b">' + c.b + '</div></div>'; }).join('');
+    var next = st.missionIndex + 1 < MISSIONS.length;
+    openOv('<div class="big">🎉</div><h3>できたね！ すごい しきしゃ！</h3><div class="stars">' + s + '</div><p>' + m.done + '</p>' +
+      '<div class="mini"><div class="peng bow" id="bowp">🐧</div></div><p id="joke" style="min-height:1.8em"></p>' +
+      (fresh.length ? '<p>📚 まなび カードを もらったよ！</p>' : '') + cards +
+      '<div class="btns"><button class="btn sub" type="button" data-a="retry">🔁 もういちど</button>' +
+      (next ? '<button class="btn" type="button" data-a="next">つぎの おだい ▶</button>' : '') +
+      '<button class="btn sub" type="button" data-a="menu">🏠 おだい いちらん</button></div>');
+    if (fresh.length) setTimeout(function(){ sfx('card'); }, 300);
+    setTimeout(function(){ var j = $('#joke'); if (j) j.textContent = 'ペコリ… おじぎ しすぎて ころん！ 🦍「ドンドコ ドーン！」'; sfx('solo'); }, 1500);
+  }, 900);
+}
+function confetti(){
+  for (var i = 0; i < 26; i++) (function(i){
+    var c = document.createElement('div'); c.className = 'confetti'; c.textContent = ['🎵','🎶','⭐','🎉','✨'][i % 5];
+    c.style.left = Math.random()*100 + 'vw'; c.style.animationDelay = Math.random()*0.8 + 's';
+    document.body.appendChild(c); setTimeout(function(){ c.remove(); }, 3200);
+  })(i);
+}
+
+/* ================= オーバーレイ ================= */
+function openOv(html){ $('#ovBox').innerHTML = html; $('#ov').classList.add('on'); $('#ovBox').scrollTop = 0; }
+function closeOv(){ $('#ov').classList.remove('on'); }
+$('#ov').addEventListener('click', function(e){
+  var b = e.target.closest('[data-a]');
+  if (!b) { if (e.target === $('#ov') && !st.done) closeOv(); return; }
+  sfx('tap');
+  var a = b.dataset.a;
+  if (a === 'close') closeOv();
+  else if (a === 'go') startPlay('mission', +b.dataset.m);
+  else if (a === 'retry') startPlay('mission', st.missionIndex);
+  else if (a === 'next') missionIntro(st.missionIndex + 1);
+  else if (a === 'menu') { closeOv(); st.done = false; renderTitle(); showScreen('title'); }
+});
+function showBook(){
+  var h = '<div class="big">📚</div><h3>まなび カード</h3>';
+  CARDS.forEach(function(c){
+    if (save.cards[c.id]) h += '<div class="lcard"><div class="h"><span class="e">' + c.e + '</span>' + c.h + '</div><div class="b">' + c.b + '</div></div>';
+    else h += '<div class="lcard lock"><div class="h"><span class="e">❓</span>まだ ひみつ</div><div class="b">おだいを クリアすると もらえるよ</div></div>';
+  });
+  h += '<div class="btns"><button class="btn" type="button" data-a="close">とじる</button></div>';
+  openOv(h);
+}
+
+/* ================= はじめ ================= */
+renderTitle(); setSnd();
+window.__sp = {st:st, sw:sw, MISSIONS:MISSIONS};
+})();
+</script>
+</body>
+</html>
