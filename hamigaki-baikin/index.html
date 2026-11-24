@@ -384,6 +384,8 @@ const SFX = {
   sparkle() { [1319, 1760, 2093, 2637].forEach((f, i) => tone(f, 0.18, 'sine', 0.07, i * 0.06)); },
   appear() { tone(300, 0.12, 'square', 0.05, 0, 600); },
   gum() { tone(260, 0.18, 'square', 0.07, 0, 110); },
+  wobble() { for (let i = 0; i < 3; i++) tone(240 + (i % 2) * 60, 0.1, 'triangle', 0.07, i * 0.09); },
+  poro() { tone(900, 0.25, 'sine', 0.15, 0, 1800); [1047, 1319, 1568, 2093].forEach((f, i) => tone(f, 0.25, 'triangle', 0.06, 0.25 + i * 0.09)); },
   fan() { [523, 659, 784, 1047, 784, 1047].forEach((f, i) => tone(f, i === 5 ? 0.5 : 0.16, 'square', 0.06, i * 0.13)); },
   gurgle() { for (let i = 0; i < 10; i++) noise(0.12, 0.12, 300 + Math.random() * 400, 3, 'bandpass', i * 0.15); },
   splash() { noise(0.9, 0.18, 1200, 0.6, 'lowpass'); },
@@ -462,6 +464,12 @@ function mkStage(i) {
     });
     bounds = { x0: 115, y0: 125, x1: 525, y1: 370 };
     if (hk) tags.push({ x: 320, y: 404, text: '↑ おとなの まえば（はえたて）' });
+    // ぐらぐらの こどもの は（はえかわりは うえの まえば、こどもの はは ときどき したの まえば）
+    const li = hk ? 2 : (M === 'kodomo' && (window.__hbLoose || R() < 0.34)) ? 9 : -1;
+    if (li >= 0) {
+      const t = teeth[li]; Object.assign(t, { loose: true, ang: 0, av: 0, hits: 0, sayT: 0, say: '' });
+      tags.push({ x: t.x + t.w / 2, y: t.kind === 'up' ? t.y - 8 : t.y + t.h + 18, text: 'ぐらぐら', tooth: t });
+    }
   } else if (i === 1 || i === 2) {
     const y = i === 1 ? 200 : 190;
     const defs = M === 'kodomo' ? [{ w: 150 }, { w: 172 }]
@@ -516,7 +524,7 @@ const G = {
 function areaDur() { return SV.len === 'short' ? 12 : 30; }
 function startRun(areas, mode) {
   ac();
-  G.mode = mode; G.areas = areas; G.area = 0; G.caught = []; G.results = [];
+  G.mode = mode; G.areas = areas; G.area = 0; G.caught = []; G.results = []; G.lost = 0;
   hideOv(); $('hud').hidden = false; $('tipBar').hidden = false; $('trayN').textContent = '0';
   resize();
   beginArea();
@@ -548,6 +556,7 @@ function setTip(t, warn) { const b = $('tipBar'); b.textContent = t; b.classList
 
 function stageTip(si) {
   const M = SV.teeth, boss = si === 2 ? ' ボスも いるかも…' : '';
+  if (si === 0 && G.st && G.st.i === 0 && G.st.teeth.some(t => t.loose && !t.popped)) return 'ぐらぐらの こどもの はが あるよ！ むりに ぬかないで、やさしく こちょこちょ みがこう';
   if (si === 0 && M === 'haekawari') return 'はえたての おとなの まえばは ふちが ぎざぎざ。よこに やさしく こちょこちょ';
   if (si === 1 || si === 2) {
     if (M === 'kodomo') return 'こどもの おくばは かたがわ 2ほん。みぞに ばいきんが かくれてるよ。' + boss;
@@ -569,8 +578,8 @@ function pickType(si) {
 function spawnGerm(initial) {
   if (G.spawned >= G.plan.total) return false;
   const st = G.st;
-  const free = st.spots.filter(s => !G.germs.some(g => g.st === 'stuck' && Math.hypot(g.x - s.x, g.y - s.y) < 62));
-  if (!free.length) free.push(...st.spots);
+  const free = st.spots.filter(s => !s.dead && !G.germs.some(g => g.st === 'stuck' && Math.hypot(g.x - s.x, g.y - s.y) < 62));
+  if (!free.length) free.push(...st.spots.filter(s => !s.dead));
   free.sort((a, b) => b.a - a.a + (Math.random() - 0.5) * 0.6);
   const s = free[0];
   const g = mkGerm(pickType(st.i), s.x, s.y);
@@ -620,6 +629,11 @@ function scrub(a, b) {
   let touching = false;
   const near = (x, y, rad) => S.tool === 'floss' ? (Math.abs(x - hx) < 30 && Math.abs(y - hy) < rad + 26) : Math.hypot(x - hx, y - hy) < rad + 44;
   st.spots.forEach(s => { if (s.a > 0 && near(s.x, s.y, s.r)) { s.a = Math.max(0, s.a - amt * 0.0042); touching = true; } });
+  if (S.tool === 'brush') st.teeth.forEach(t => {
+    if (!t.loose || t.popped || hx < t.x - 30 || hx > t.x + t.w + 30 || hy < t.y - 30 || hy > t.y + t.h + 30) return;
+    t.av += -dx * 0.035 * (t.kind === 'up' ? 1 : -1); t.hits += amt;
+    if (t.sayT <= 0) { t.say = ['ぐらぐら〜', 'ゆれる〜 くすぐったい', 'おっとっと〜', 'やさしく してね〜'][Math.floor(Math.random() * 4)]; t.sayT = 1.4; SFX.wobble(); }
+  });
   G.gums.forEach(m => { if (m.hp > 0 && near(m.x, m.y, m.r)) { m.hp -= amt * 0.7; touching = true; if (m.hp <= 0) { SFX.pop(); burst(m.x, m.y, 10); } } });
   G.germs.forEach(g => {
     if (g.st !== 'stuck' || g.hide) return;
@@ -652,6 +666,16 @@ function addFoam(x, y) {
   G.foam.push({ x, y, r: 4 + Math.random() * 8, life: 2.2 + Math.random() * 1.2, age: 0, vx: (Math.random() - 0.5) * 10, vy: (Math.random() - 0.5) * 10 });
 }
 function burst(x, y, n) { for (let i = 0; i < n; i++) addFoam(x + (Math.random() - 0.5) * 40, y + (Math.random() - 0.5) * 40); }
+function popTooth(t) {
+  t.popped = true; t.clean = true; t.fly = 0; t.peekSay = 3; t.sayT = 0;
+  G.lost++; SV.lost = (SV.lost || 0) + 1; save();
+  G.st.spots.forEach(s => { if (G.st.teeth[s.ti] === t) { s.a = 0; s.dead = true; } });
+  G.germs.forEach(g => { if (g.st === 'stuck' && !g.hide && inTooth(t, g)) { catchGerm(g); g.say = 'いっしょに とんでく〜'; } });
+  G.floats.push({ x: t.x + t.w / 2, y: t.kind === 'up' ? t.y + t.h + 20 : t.y - 10, age: 0, text: 'ぽろっ！' });
+  SFX.poro();
+  setTip('ぽろっ！ しぜんに ぬけたよ。うえの はは えんの したへ、したの はは やねの うえへ なげる という むかしからの いいつたえが あるよ');
+  tipLock = 6;
+}
 function catchGerm(g) {
   g.st = 'pop'; g.rise = 0; g.say = g.boss ? 'まいった〜 あわあわ〜' : ['つかまっちゃった〜', 'あわあわ〜', 'ふわふわ〜'][Math.floor(Math.random() * 3)]; g.sayT = 1.4;
   SFX.pop(); burst(g.x, g.y, 14);
@@ -708,6 +732,14 @@ function update(dt) {
     }
   });
   G.st.teeth.forEach(t => { if (t.shine > 0) t.shine = Math.max(0, t.shine - dt * 0.8); });
+  // ぐらぐらの は
+  G.st.teeth.forEach(t => {
+    if (!t.loose) return;
+    if (t.sayT > 0) t.sayT -= dt;
+    if (t.popped) { t.fly += dt; if (t.peekSay > 0) t.peekSay -= dt; return; }
+    t.av += -t.ang * 70 * dt; t.av *= Math.pow(0.08, dt); t.ang = Math.max(-0.3, Math.min(0.3, t.ang + t.av * dt));
+    if (t.hits > (SV.len === 'short' ? 420 : 850) && G.time > 3) popTooth(t);
+  });
   // ぜんぶ きれい？
   if (!G.cleared && G.spawned >= G.plan.total && !G.germs.some(g => g.st === 'stuck') &&
       !G.gums.some(m => m.hp > 0) && G.st.spots.every(s => s.a < 0.08)) {
@@ -861,7 +893,8 @@ function finish() {
   const stars = Math.max(1, Math.round(avg));
   $('resStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3 - stars);
   $('resMsg').textContent = ['がんばったね！ つぎは もっと ぴかぴかに しよう', 'よく みがけたね！ ぴかぴか！', 'ぴかぴか だいせいこう！ すごい！'][stars - 1];
-  $('resList').innerHTML = rs.map(r => '<li><span>' + STAGES[r.si].no + ' ' + STAGES[r.si].name + '</span><span>🫧' + r.caught + ' ' + '⭐'.repeat(r.stars) + '</span></li>').join('');
+  $('resList').innerHTML = rs.map(r => '<li><span>' + STAGES[r.si].no + ' ' + STAGES[r.si].name + '</span><span>🫧' + r.caught + ' ' + '⭐'.repeat(r.stars) + '</span></li>').join('') +
+    (G.lost ? '<li><span>🦷 ぐらぐらの はが ぬけた！</span><span>おめでとう 🎉</span></li>' : '');
   $('unlockBox').hidden = true;
   $('mame').textContent = '🦷 まめちしき: ' + MAME[Math.floor(Math.random() * MAME.length)];
   stampSlot = null;
@@ -930,6 +963,50 @@ function drawTooth(c, t) {
     c.fillStyle = 'rgba(255,255,220,' + (t.shine * 0.7) + ')'; c.fillRect(t.x, t.y, t.w, t.h); c.restore();
   }
 }
+function drawTeeth(c, st) {
+  st.teeth.forEach(t => {
+    if (t.popped) { drawPeek(c, t); return; }
+    if (t.loose && t.ang) {
+      const px = t.x + t.w / 2, py = t.kind === 'up' ? t.y : t.y + t.h;
+      c.save(); c.translate(px, py); c.rotate(t.ang); c.translate(-px, -py); drawTooth(c, t);
+      if (Math.abs(t.ang) > 0.03 || t.sayT > 0) drawToothFace(c, t);
+      c.restore();
+    } else drawTooth(c, t);
+  });
+  st.teeth.forEach(t => { // とんでいく は
+    if (!t.popped || t.fly > 1.5) return;
+    const k = t.fly / 1.5, cx = t.x + t.w / 2, cy = t.y + t.h / 2;
+    c.save(); c.globalAlpha = 1 - k * 0.7;
+    c.translate(cx + k * 170, cy - Math.sin(k * Math.PI) * 150 - (t.kind === 'up' ? -k * 60 : k * 20)); c.rotate(k * 7); c.scale(0.8, 0.8); c.translate(-cx, -cy);
+    drawTooth(c, Object.assign({}, t, { shine: 0 })); drawToothFace(c, t, true);
+    c.restore();
+    star(c, cx + k * 170 + 30, cy - Math.sin(k * Math.PI) * 150 - 30, 10, '#fff59d');
+  });
+}
+function drawToothFace(c, t, happy) {
+  const cx = t.x + t.w / 2, cy = t.y + t.h * 0.55;
+  c.strokeStyle = '#495057'; c.fillStyle = '#495057'; c.lineWidth = 2.5; c.lineCap = 'round';
+  if (happy) { c.beginPath(); c.arc(cx - 10, cy, 4, Math.PI, 0); c.arc(cx + 10, cy, 4, Math.PI, 0); c.stroke(); }
+  else { c.beginPath(); c.arc(cx - 10, cy, 3, 0, 7); c.arc(cx + 10, cy, 3, 0, 7); c.fill(); }
+  c.beginPath(); c.moveTo(cx - 10, cy + 14);
+  for (let i = 1; i <= 4; i++) c.quadraticCurveTo(cx - 10 + i * 5 - 2.5, cy + 14 + (i % 2 ? -4 : 4), cx - 10 + i * 5, cy + 14);
+  c.stroke();
+  c.fillStyle = 'rgba(255,135,160,.45)'; c.beginPath(); c.arc(cx - 17, cy + 8, 4, 0, 7); c.arc(cx + 17, cy + 8, 4, 0, 7); c.fill();
+}
+function drawPeek(c, t) { // ぬけた あとから おとなの はが こんにちは
+  const k = Math.min(1, t.fly / 1.2), h = 30 * k, up = t.kind === 'up';
+  const x = t.x + 3, w = t.w - 6, y0 = up ? t.y : t.y + t.h - h;
+  c.fillStyle = '#fff8e1'; c.strokeStyle = '#d8c79a'; c.lineWidth = 2;
+  c.beginPath();
+  if (up) { c.moveTo(x, y0); c.lineTo(x + w, y0); c.lineTo(x + w, y0 + h - 4); for (let j = 3; j > 0; j--) c.quadraticCurveTo(x + w * (j - 0.5) / 3, y0 + h + 6, x + w * (j - 1) / 3, y0 + h - 4); }
+  else { c.moveTo(x, t.y + t.h); c.lineTo(x, y0 + 4); for (let j = 0; j < 3; j++) c.quadraticCurveTo(x + w * (j + 0.5) / 3, y0 - 6, x + w * (j + 1) / 3, y0 + 4); c.lineTo(x + w, t.y + t.h); }
+  c.closePath(); c.fill(); c.stroke();
+  if (k >= 1) {
+    const ey = up ? y0 + 12 : y0 + 16;
+    c.strokeStyle = '#7a5c00'; c.lineWidth = 2;
+    c.beginPath(); c.arc(t.x + t.w / 2 - 8, ey, 3, Math.PI, 0); c.arc(t.x + t.w / 2 + 8, ey, 3, Math.PI, 0); c.stroke();
+  }
+}
 function star(c, x, y, r, col) {
   c.fillStyle = col; c.beginPath();
   for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4, rad = i % 2 ? r * 0.3 : r; c.lineTo(x + Math.cos(a) * rad, y + Math.sin(a) * rad); }
@@ -972,7 +1049,7 @@ function drawMouthBg(c, si, st) {
 function drawStage(c) {
   const st = G.st; if (!st) return;
   drawMouthBg(c, st.i, st);
-  st.teeth.forEach(t => drawTooth(c, t));
+  drawTeeth(c, st);
   // はこう（よごれ）
   st.spots.forEach(s => {
     if (s.a <= 0.02) return;
@@ -1003,6 +1080,7 @@ function drawStage(c) {
     const b = G.boss; c.save(); c.globalAlpha = 0.9; drawGermBody(c, 'boss', st.hideX, 250 + Math.sin(G.t * 2) * 6, 22, 'smug', G.t); c.restore();
   }
   st.tags.forEach(tg => {
+    if (tg.tooth && tg.tooth.popped) return;
     c.font = 'bold 16px "Hiragino Maru Gothic ProN", sans-serif'; const w = c.measureText(tg.text).width + 18;
     c.fillStyle = 'rgba(255,212,59,.95)'; rr(c, tg.x - w / 2, tg.y - 14, w, 26, 12); c.fill();
     c.fillStyle = '#5c3d00'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(tg.text, tg.x, tg.y); c.textBaseline = 'alphabetic';
@@ -1010,6 +1088,12 @@ function drawStage(c) {
   drawFoam(c);
   G.sparks.forEach(s => { const k = s.age; for (let i = 0; i < 6; i++) { const a = i / 6 * 6.28 + k; star(c, s.x + Math.cos(a) * 50 * k, s.y + Math.sin(a) * 50 * k, 10 * (1 - k), '#fff59d'); } });
   G.germs.forEach(g => { if (g.st !== 'gone' && !g.hide && g.sayT > 0 && g.say) bubbleText(c, g.x, g.y - g.r - 16, g.say); });
+  st.teeth.forEach(t => {
+    if (!t.loose) return;
+    const up = t.kind === 'up', bx = t.x + t.w / 2;
+    if (!t.popped && t.sayT > 0) bubbleText(c, bx, up ? t.y + t.h + 40 : t.y - 8, t.say);
+    if (t.popped && t.peekSay > 0 && t.fly > 1.1) bubbleText(c, bx, up ? t.y + 76 : t.y + t.h - 40, 'こんにちは！ おとなの はだよ');
+  });
   G.floats.forEach(f => {
     c.save(); c.globalAlpha = Math.max(0, 1 - f.age / 1.4); c.font = 'bold ' + (f.big ? 56 : 24) + 'px sans-serif'; c.textAlign = 'center';
     c.lineWidth = 8; c.strokeStyle = '#1c7ed6'; c.strokeText(f.text, f.x, f.y - f.age * 30); c.fillStyle = '#fff59d'; c.fillText(f.text, f.x, f.y - f.age * 30); c.restore();
@@ -1193,7 +1277,7 @@ function refreshTitle() {
   $('sndT').textContent = SV.sound ? '🔊 オン' : '🔇 オフ';
   $('sndB').textContent = SV.sound ? '🔊' : '🔇'; $('sndB').classList.toggle('off', !SV.sound);
   const n = streak(), s = SV.stamps[dayKey(new Date())] || {};
-  $('titleInfo').textContent = 'きょう: ' + (s.am ? '☀️' : '・') + ' ' + (s.pm ? '🌙' : '・') + '　れんぞく ' + n + 'にち　ずかん ' + zukanCount() + '/' + TYPE_KEYS.length;
+  $('titleInfo').textContent = 'きょう: ' + (s.am ? '☀️' : '・') + ' ' + (s.pm ? '🌙' : '・') + '　れんぞく ' + n + 'にち　ずかん ' + zukanCount() + '/' + TYPE_KEYS.length + (SV.lost ? '　ぬけた は ' + SV.lost + 'ほん' : '');
 }
 function zukanCount() { return TYPE_KEYS.filter(k => SV.seen[k] || (TYPES[k].rare && TYPES[k].rare <= SV.rare)).length; }
 document.querySelectorAll('#lenSeg button').forEach(b => b.addEventListener('click', () => { SV.len = b.dataset.len; save(); refreshTitle(); }));
