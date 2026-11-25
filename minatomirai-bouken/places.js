@@ -558,6 +558,103 @@
     });
     return kb;
   }
+  // ================= 🔤 イーオン よこはま ほんこう（エキニア よこはま 8かい）・5さいじ の えいご =================
+  // どようび の レッスン。テーマ は しゅう ごと に かわる。せんせい と あいさつ → うた → ことば → ききとり ゲーム → アルファベット → さようなら
+  const ETHEME = [
+    { t: 'Colors（いろ）', w: [['🔴', 'red', 'あか'], ['🔵', 'blue', 'あお'], ['🟡', 'yellow', 'きいろ'], ['🟢', 'green', 'みどり'], ['🟣', 'purple', 'むらさき'], ['🟠', 'orange', 'オレンジ']], q: 'What color is it?' },
+    { t: 'Animals（どうぶつ）', w: [['🐶', 'dog', 'いぬ'], ['🐱', 'cat', 'ねこ'], ['🐘', 'elephant', 'ぞう'], ['🦁', 'lion', 'ライオン'], ['🐒', 'monkey', 'さる'], ['🐰', 'rabbit', 'うさぎ']], q: 'What animal is it?' },
+    { t: 'Fruits（くだもの）', w: [['🍎', 'apple', 'りんご'], ['🍌', 'banana', 'バナナ'], ['🍇', 'grapes', 'ぶどう'], ['🍓', 'strawberry', 'いちご'], ['🍊', 'orange', 'みかん'], ['🍉', 'watermelon', 'すいか']], q: 'What fruit is it?' },
+    { t: 'Numbers（かず）', w: [['1️⃣', 'one', 'いち'], ['2️⃣', 'two', 'に'], ['3️⃣', 'three', 'さん'], ['4️⃣', 'four', 'よん'], ['5️⃣', 'five', 'ご'], ['6️⃣', 'six', 'ろく']], q: 'How many?' },
+    { t: 'My body（からだ）', w: [['👃', 'nose', 'はな'], ['👂', 'ear', 'みみ'], ['👀', 'eyes', 'め'], ['👄', 'mouth', 'くち'], ['✋', 'hand', 'て'], ['🦶', 'foot', 'あし']], q: 'Touch your ...!' },
+    { t: 'Vehicles（のりもの）', w: [['🚗', 'car', 'くるま'], ['🚌', 'bus', 'バス'], ['🚃', 'train', 'でんしゃ'], ['✈️', 'airplane', 'ひこうき'], ['🚢', 'ship', 'ふね'], ['🚲', 'bike', 'じてんしゃ']], q: 'What is it?' },
+    { t: 'Weather（てんき）', w: [['☀️', 'sunny', 'はれ'], ['☁️', 'cloudy', 'くもり'], ['☔', 'rainy', 'あめ'], ['⛄', 'snowy', 'ゆき'], ['🌬️', 'windy', 'かぜ'], ['🌈', 'rainbow', 'にじ']], q: "How's the weather?" },
+    { t: 'Feelings（きもち）', w: [['😊', 'happy', 'うれしい'], ['😢', 'sad', 'かなしい'], ['😠', 'angry', 'おこってる'], ['😴', 'sleepy', 'ねむい'], ['🤒', 'sick', 'ぐあい わるい'], ['😋', 'hungry', 'おなか すいた']], q: 'How are you?' },
+  ];
+  const ABC = [['A', 'apple', '🍎'], ['B', 'bear', '🐻'], ['C', 'cat', '🐱'], ['D', 'dog', '🐶'], ['E', 'egg', '🥚'], ['F', 'fish', '🐟'], ['G', 'gorilla', '🦍'], ['H', 'hat', '🎩'], ['I', 'ink', '🖋️'], ['J', 'juice', '🧃'], ['K', 'king', '🤴'], ['L', 'lion', '🦁'], ['M', 'moon', '🌙'],
+    ['N', 'nose', '👃'], ['O', 'octopus', '🐙'], ['P', 'pig', '🐷'], ['Q', 'queen', '👸'], ['R', 'rabbit', '🐰'], ['S', 'sun', '☀️'], ['T', 'train', '🚃'], ['U', 'umbrella', '☂️'], ['V', 'violin', '🎻'], ['W', 'watch', '⌚'], ['X', 'fox', '🦊'], ['Y', 'yo-yo', '🪀'], ['Z', 'zebra', '🦓']];
+  const en = (t) => { if (window.Voice) window.Voice.say(t, 'teacher'); };
+  function aeon() {
+    const wk = api.weekNo || 0, TH = ETHEME[wk % ETHEME.length], LT = ABC[wk % ABC.length];
+    const head = (sub) => clear('🔤 イーオン よこはま ほんこう', sub, 'aeon');
+    head('エキニア よこはま 8かい ・ 5さいじ コース（どようび）');
+    root.appendChild(el('div', 'room', '<span>🪟</span><span>🔤</span><span>🧸</span><span>📚</span><span>🌏</span>'));
+    say('👩', 'ママ「ママ は ロビー で まってるね。 たのしんで おいで！」'); vsay('ママは ロビーで まってるね', 'mama');
+    root.appendChild(el('div', 'aeplan', `<b>きょう の レッスン</b><br>🌈 テーマ： ${TH.t}<br>🔠 アルファベット： ${LT[0]}<br>⏱ 50ぷん（ゲーム では すぐ おわる よ）`));
+    root.appendChild(btn('🚪 きょうしつ に はいる', 'sbig', hello));
+    root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
+    const T = '🧑‍🏫', TN = 'エミリー せんせい';
+    // 1. あいさつ
+    function hello() {
+      head('1. Hello!（あいさつ）');
+      say(T, `${TN}「Hello, Ao! How are you today?」`); en('Hello, Ao! How are you today?');
+      const g = el('div', 'kchoice');
+      [["I'm fine, thank you!", 'げんき だよ', 'Great!'], ["I'm happy!", 'うれしい', "Yay! I'm happy too!"], ["I'm sleepy.", 'ねむい', "Oh, sleepy? Let's wake up! Stand up, jump, jump!"]].forEach(([a, j, r]) => g.appendChild(btn(`${a}<small>（${j}）</small>`, 'kch2', () => {
+        en(a); sfx('pick'); g.remove(); say('🧢', `あおちゃん「${a}」`);
+        setTimeout(() => { say(T, `${TN}「${r}」`); en(r); root.appendChild(btn('▶ つぎ： うた', 'sbig', song)); }, 1300);
+      })));
+      root.appendChild(g);
+    }
+    // 2. うた（オリジナル の メロディ）
+    function song() {
+      head('2. Song time 🎵');
+      const lines = ['Hello, hello, how are you?', "I'm fine, I'm fine, and how are you?", 'Clap, clap, clap your hands!', "Let's have fun in English!"];
+      const lyr = el('div', 'lyrics'); lines.forEach((l) => lyr.appendChild(el('p', '', l))); root.appendChild(lyr);
+      const N = [523, 587, 659, 523, 659, 698, 784, 784, 880, 784, 698, 659, 587, 523, 587, 659, 523, 523, 784, 698, 659, 587, 523];
+      let t = 0; N.forEach((f, i) => { api.tone && api.tone(f, 0.3, 'triangle', 0.06, null, t); t += 0.32; void i; });
+      lines.forEach((l, i) => setTimeout(() => { lyr.querySelectorAll('p').forEach((p, k) => p.classList.toggle('on', k === i)); en(l); }, i * 1900));
+      setTimeout(() => { say(T, `${TN}「Good singing! 👏」`); root.appendChild(btn(`▶ つぎ： きょう の ことば（${TH.t}）`, 'sbig', words)); }, lines.length * 1900 + 300);
+    }
+    // 3. ことば（カード を タップ して きく）
+    function words() {
+      head(`3. New words： ${TH.t}`);
+      say(T, `${TN}「Listen and repeat! カード を タップ してね」`); en('Listen and repeat!');
+      const g = el('div', 'aecards'); let left = TH.w.length;
+      TH.w.forEach(([e, w, j]) => { const c = el('button', 'aecard', `<i>${e}</i><b>${w}</b><small>${j}</small>`); c.addEventListener('click', () => { en(w); if (!c.classList.contains('done')) { c.classList.add('done'); sfx('pick'); if (!--left) root.appendChild(btn('▶ つぎ： ききとり ゲーム', 'sbig', game)); } }); g.appendChild(c); });
+      root.appendChild(g);
+    }
+    // 4. ききとり ゲーム（せんせい が いった もの を タッチ）
+    function game() {
+      let round = 0, ok = 0;
+      const next = () => {
+        if (round >= 4) { say(T, `${TN}「Excellent! ${ok}/4 👍」`); en('Excellent!'); root.appendChild(btn('▶ つぎ： アルファベット', 'sbig', phonics)); return; }
+        head(`4. Touch game！（${round + 1}/4）`);
+        const ans = TH.w[(round * 5 + wk) % TH.w.length], opts = [ans].concat(TH.w.filter((x) => x !== ans).sort(() => Math.random() - 0.5).slice(0, 3)).sort(() => Math.random() - 0.5);
+        say(T, `${TN}「Touch the <b>?</b>！ よく きいてね」`); setTimeout(() => en(`Touch the ${ans[1]}!`), 300);
+        root.appendChild(btn('🔊 もう いちど きく', 'sbig sub', () => en(`Touch the ${ans[1]}!`)));
+        const g = el('div', 'aecards'); let miss = false;
+        opts.forEach((o) => { const c = el('button', 'aecard', `<i>${o[0]}</i>`); c.addEventListener('click', () => {
+          if (c.disabled) return;
+          if (o === ans) { c.classList.add('done'); sfx('star'); en(`Yes! ${ans[1]}!`); if (!miss) ok++; round++; g.querySelectorAll('button').forEach((x) => { x.disabled = true; }); setTimeout(next, 1400); }
+          else { c.classList.add('ng'); c.disabled = true; miss = true; sfx('tap'); en('Try again!'); }
+        }); g.appendChild(c); });
+        root.appendChild(g);
+      };
+      next();
+    }
+    // 5. アルファベット
+    function phonics() {
+      head(`5. ABC： きょう の もじ は 「${LT[0]}」`);
+      root.appendChild(el('div', 'aeletter', `<b>${LT[0]}${LT[0].toLowerCase()}</b><i>${LT[2]}</i><span>${LT[0]} is for ${LT[1]}</span>`));
+      say(T, `${TN}「${LT[0]} is for ${LT[1]}! もじ を 3かい タップ して いっしょに いおう」`); en(`${LT[0]} is for ${LT[1]}.`);
+      let n = 0; const b = btn(`🔤 「${LT[0]}」 を いう（0/3）`, 'sbig', () => { n++; en(n < 3 ? LT[0] : `${LT[0]}, ${LT[1]}!`); sfx('pick'); b.innerHTML = `🔤 「${LT[0]}」 を いう（${n}/3）`; if (n === 3) { b.remove(); root.appendChild(btn('▶ つぎ： さようなら', 'sbig', bye)); } });
+      root.appendChild(b);
+    }
+    // 6. さようなら
+    function bye() {
+      head('6. Goodbye!');
+      say(T, `${TN}「Great job today, Ao! See you next Saturday!」`); en('Great job today, Ao! See you next Saturday!');
+      const g = el('div', 'kchoice');
+      ['See you!', 'Bye-bye!', 'Thank you!'].forEach((a) => g.appendChild(btn(a, 'kch2', () => {
+        en(a); g.remove(); sfx('big'); api.confetti && api.confetti();
+        Y.aeon = (Y.aeon || 0) + 1; Y.stickers = (Y.stickers || 0) + 1; store();
+        root.appendChild(el('div', 'prize', `<i>🌟</i><b>レッスン ${Y.aeon}かいめ おわり！</b><span>シール を 1まい もらった ・ きょう の ことば： ${TH.w.map((w) => w[1]).join(', ')}</span>`));
+        if (window.Toys) window.Toys.levelUp('えいご の レッスン', { tone: api.tone, confetti: api.confetti });
+        say('👩', 'ママ「おかえり！ えいご で なんて いったの？ おしえて！」'); vsay('おかえり！ えいごで なんて いったの？', 'mama');
+        root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose({ eigo: true })));
+      })));
+      root.appendChild(g);
+    }
+  }
   function piano() {
     clear('🎹 しまむら がっき', 'マークイズ みなとみらい 3かい ・ ピアノ きょうしつ', 'pn');
     say('👩‍🏫', api.lessonDay ? 'ピアノの せんせい「あおちゃん、こんにちは！ きょうは レッスンの ひ。いっしょに ひこうね」' : 'ピアノの せんせい「レッスンは もくようび。きょうは じゆうに れんしゅう しようね」');
@@ -604,7 +701,8 @@
     root.appendChild(btn('🚶 どうぶつを みに いく', 'sbig', () => api.onClose()));
   }
   window.Places = {
-    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else if (kind === 'piano') piano(); else if (kind === 'album') album(false); else yochien(); },
+    bdayDone: (y) => !!(Y.bdays && Y.bdays[y]),
+    open(kind, a) { api = a; root = document.getElementById('placeRoot'); if (kind === 'home' && api.event === 'bday' && !(Y.bdays && Y.bdays[api.year])) birthday(); else if (kind === 'home') home(); else if (kind === 'zukan') zukan(); else if (kind === 'piano') piano(); else if (kind === 'aeon') aeon(); else if (kind === 'album') album(false); else yochien(); },
     again(kind) { if (kind === 'yochien') yochien(); else home(); },
   };
 })();

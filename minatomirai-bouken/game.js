@@ -1072,9 +1072,9 @@ void main(){
   // ================= 1しゅうかんの よてい =================
   // ようちえん: へいじつ。くもん: かようび・きんようび（みなとみらい・かきん きょうしつ 14:00〜19:00）。
   // ピアノ: もくようび（しまむら がっき よこはま みなとみらいてん、マークイズ 3かい）。どにち は おやすみ。
-  const SCHED = { 0: ['yochien'], 1: ['yochien', 'kumon'], 2: ['yochien'], 3: ['yochien', 'piano'], 4: ['yochien', 'kumon'], 5: [], 6: [] };
-  const SCHED_IC = { yochien: '🎒', kumon: '✏️', piano: '🎹' };
-  const SCHED_NM = { yochien: 'ようちえん', kumon: 'くもん', piano: 'ピアノ' };
+  const SCHED = { 0: ['yochien'], 1: ['yochien', 'kumon'], 2: ['yochien'], 3: ['yochien', 'piano'], 4: ['yochien', 'kumon'], 5: ['eigo'], 6: [] };
+  const SCHED_IC = { yochien: '🎒', kumon: '✏️', piano: '🎹', eigo: '🔤' };
+  const SCHED_NM = { yochien: 'ようちえん', kumon: 'くもん', piano: 'ピアノ', eigo: 'えいご（イーオン）' };
   function calToday() { save.cal = save.cal || {}; return (save.cal[save.clock.day] = save.cal[save.clock.day] || {}); }
   function calDone(what) {
     const today = schedOf(save.clock.day);
@@ -1096,12 +1096,14 @@ void main(){
     if (h >= 7.5 && h < 8 && t.includes('yochien') && !c.yochien) say2('y', 'ようちえんの じかん！ いわかめどおり から さくらごう 🌸');
     if (h >= 14.5 && h < 15 && t.includes('kumon') && !c.kumon) say2('k', 'きょうは くもんの ひ ✏️ ミッドスクエアの 3かい へ いこう');
     if (h >= 14.5 && h < 15 && t.includes('piano') && !c.piano) say2('p', 'きょうは ピアノの レッスン 🎹 マークイズの 3かい、しまむら がっき だよ');
+    if (h >= 9 && h < 9.5 && t.includes('eigo') && !c.eigo) say2('e', 'きょうは イーオン の えいご レッスン 🔤 よこはまえき の エキニア よこはま 8かい だよ');
     if (h >= 8 && h < 8.5 && !t.length) say2('o', 'きょうは おやすみ！ どこに おでかけ しようか？ 🎈');
     void key;
   }
   function yochienOpen() { const h = CLK.h; return CLK.wd < 5 && !yochienHoliday(save.clock.day) && h >= 8.5 && h < 15; }
   function busRuns() { const h = CLK.h; return CLK.wd < 5 && !yochienHoliday(save.clock.day) && h >= 7 && h < 16; }
   function kumonOpen() { const h = CLK.h; return (CLK.wd === 1 || CLK.wd === 4) && h >= 14 && h < 19; }
+  function aeonOpen() { const h = CLK.h; return CLK.wd === 5 && h >= 9.5 && h < 18; }
   function pianoOpen() { const h = CLK.h; return h >= 10 && h < (CLK.wd >= 4 ? 21 : 20); }
 
   // ================= おてんき =================
@@ -1725,6 +1727,29 @@ void main(){
     G.cyl(X + 12, Y, Z, 1.6, 0.2, 16, hex('#9775fa'), 5);
     return { X, Z, Y, hooks, targets, balloons, rocks, crackWall, pegs, stairs, crates, webs, braziers, caveGate, bossGate, chests, rewardChests, trees, start: { x: X, z: Z + 2 }, portal: { x: X + 12, z: Z }, cave: { x0: X - 75, x1: X - 36, z0: Z - 24, z1: Z + 24 }, arena: { x: X - 55, z: Z - 55 } };
   })();
+  // ================= エキニア よこはま（イーオン よこはま ほんこう 8かい）・どようび の えいご =================
+  // ほんもの は にしく きたさいわい 1-1-8（よこはまえき きた にしぐち から あるいて 2ふん）。ちず の そと なので、えき の きた に すこし じめん を たした
+  const AEON = (() => {
+    const L = { x0: -60, z0: -436, x1: 6, z1: -376 };
+    flat(L.x0, L.z0, L.x1, L.z1, 0, C.land); addSolid({ x0: L.x0, y0: -4, z0: L.z0, x1: L.x1, y1: 0, z1: L.z1 });
+    const b = { x0: -30, z0: -432, x1: -14, z1: -418 }, H = 36, glass = hex('#a5c8e1'), frame = hex('#e9ecef'), dark = hex('#495057');
+    G.box(b.x0, 0, b.z0, b.x1, H, b.z1, glass); addSolid({ x0: b.x0, y0: 0, z0: b.z0, x1: b.x1, y1: H, z1: b.z1, climb: true });
+    for (let f = 1; f <= 11; f++) G.box(b.x0 - 0.05, f * 3.2 - 0.25, b.z0 - 0.05, b.x1 + 0.05, f * 3.2, b.z1 + 0.05, frame);   // 11かいだて
+    G.box(b.x0 - 0.5, H, b.z0 - 0.5, b.x1 + 0.5, H + 0.6, b.z1 + 0.5, dark);
+    // 8かい の きょうしつ の まど（あかるい）と かんばん
+    G.box(b.x0 - 0.08, 7 * 3.2 + 0.2, b.z1 - 0.02, b.x1 + 0.08, 8 * 3.2 - 0.4, b.z1 + 0.1, hex('#ffe066'), 5);
+    G.box(b.x0 + 2, 7 * 3.2 + 0.6, b.z1 + 0.1, b.x1 - 2, 8 * 3.2 - 0.8, b.z1 + 0.25, hex('#c2255c'), 5);
+    // 1かい の いりぐち（ひさし）
+    G.box(-26, 0, b.z1, -18, 3, b.z1 + 0.1, hex('#343a40')); G.box(-27, 3, b.z1, -17, 3.3, b.z1 + 2.2, frame);
+    G.box(-25.5, 3.3, b.z1 + 0.1, -18.5, 4.2, b.z1 + 0.3, hex('#1c7ed6'), 5);
+    // えき から の みち（ほそう）と かわ を わたる ほどうきょう
+    flat(-22.5, -418, -15.5, -378, 0.012, C.road); flat(-22.2, -418, -21.9, -378, 0.02, C.line); flat(-16.1, -418, -15.8, -378, 0.02, C.line);
+    G.box(-23, -0.35, -378.5, -15, 0.03, -361, hex('#ced4da')); addSolid({ x0: -23, y0: -4, z0: -378.5, x1: -15, y1: 0, z1: -361 });
+    [-23, -15.2].forEach((rx) => { G.box(rx, 0, -378.5, rx + 0.2, 1.1, -361, hex('#adb5bd')); addSolid({ x0: rx, y0: 0, z0: -378.5, x1: rx + 0.2, y1: 1.1, z1: -361, climb: true }); });
+    const door = { x: -22, z: b.z1 + 1.6 };
+    return { door, b, x: (b.x0 + b.x1) / 2, z: (b.z0 + b.z1) / 2 };
+  })();
+  DOORS.push({ id: 'aeon', x: AEON.door.x, z: AEON.door.z, label: '🔤<br>イーオン', color: hex('#c2255c'), run: () => openPlace('aeon') });
   const ISLDOWN = (() => { const q = POI['臨港パーク']; return q ? freeSpot(q.x - 6, q.z + 6) : null; })();
   if (ISLDOWN) { G.cyl(ISLDOWN.x, 0, ISLDOWN.z, 1.8, 0.15, 16, hex('#9775fa'), 5); DOORS.push({ id: 'island', x: ISLDOWN.x, z: ISLDOWN.z, label: '🏝️<br>ぼうけん', color: hex('#7048e8'), run: () => goIsland(true) }); }
   DOORS.push({ id: 'islandback', x: ISL.portal.x, z: ISL.portal.z, y: ISL.Y, label: '🌀<br>かえる', color: hex('#7048e8'), run: () => goIsland(false) });
@@ -1806,6 +1831,7 @@ void main(){
   const zp = (id, name, n, extra) => { const q = POI[n]; if (!q) return null; const bb = q.bb || [q.x, q.z, q.x, q.z]; return Object.assign({ id, name, x: q.x, z: q.z, r: Math.max(bb[2] - bb[0], bb[3] - bb[1]) / 2 + 6 }, extra || {}); };
   const ZONES = [
     zp('sakuragicho', 'さくらぎちょう えき', '桜木町駅'),
+    { id: 'aeon', name: 'エキニア よこはま（イーオン）', x: AEON.door.x, z: AEON.door.z, r: 6, say: 'ここの 8かい が イーオン。 どようび に えいご の レッスン だよ 🔤' },
     zp('takashimacho', 'たかしまちょう えき（ブルーライン）', '高島町（てん）', { r: 9, say: 'ブルーライン の たかしまちょう えき だよ。 よこはま まで ひとえき！ 🚇' }),
     zp('landmark', 'ランドマークタワー', '横浜ランドマークタワー'),
     { id: 'lmtop', name: 'ランドマークの てっぺん', x: LMC.x, z: LMC.z, r: 12, minY: LMH - 1 },
@@ -2297,7 +2323,7 @@ void main(){
     ground: ['あおちゃん、てを つないで いこうね 🤝', 'おなか すいてない？ 🍙', 'くるまに きを つけてね 🚗', 'ランドマークタワー、おおきいね〜', 'くもんの プリント、1まい やると 1000えん だよ ✏️',
       'つぎは どこへ いく？', 'ママ、あおちゃんと おさんぽ たのしい！', 'ほしは あと いくつ かな？ ⭐', 'ちずを みてみよう 🗺️', 'かんらんしゃ のってみたいね 🎡', 'うみの かぜが きもちいいね 🌊', 'おばけやしき、こわくないかな？ 👻'],
     climb: ['がんばれ〜！ あおちゃん！ 💪', 'しっかり つかまってね', 'みどりの わが へったら バルコニーで ひとやすみ してね'],
-    fly: ['ママも とぶよ〜 👼', 'たかいね〜！ ふわふわ', 'おりる まえに パラシュート ひらこうね 🪂', 'とおくまで みえるね！'],
+    fly: ['たかいね〜！ ふわふわ', 'おりる まえに パラシュート ひらこうね 🪂', 'とおくまで みえるね！'],
     swim: ['じょうずに およげてる！ 🏊', 'かべに むかって およぐと あがれるよ'],
   };
   const MOM_STATE = {
@@ -2310,7 +2336,7 @@ void main(){
     if (m.cup > 0) m.cup -= dt;
     // できごと に あわせて はなす
     if (P.state !== m.prev) { const L = MOM_STATE[P.state]; if (L) momSay(L, 3.5); if (m.prev === 'ghost') momSay('こわかったね〜！ よく がんばった 👏', 3.5); m.prev = P.state; }
-    if (P.farting && !m.wasFart) momSay('あおちゃんの おなら パワー！ ママも とぶよ 👼', 3); m.wasFart = P.farting;
+    m.wasFart = P.farting;
     if (P.glide && !m.wasGlide) momSay('パラシュート じょうず！ 🪂', 2.5); m.wasGlide = P.glide;
     if (save.stars.length > m.stars) momSay('すごーい！ ほしを みつけたね ⭐', 3); m.stars = save.stars.length;
     if (save.stamps.length > m.stamps) { const z = ZONES.find((q) => q.id === save.stamps[save.stamps.length - 1]); if (z) momSay(z.say || `${z.name} に ついたね！`, 3); } m.stamps = save.stamps.length;
@@ -2778,12 +2804,13 @@ void main(){
   function openPlace(kind) {
     if (!window.Places) return;
     if (kind === 'yochien' && !yochienOpen()) { banner('🌷 ようちえんは いま おやすみ<small>へいじつ 8:30〜15:00</small>', 3); return; }
+    if (kind === 'aeon' && !aeonOpen()) { banner('🔤 えいご の レッスン は どようび だよ<small>イーオン よこはま ほんこう ・ どようび 9:30〜18:00（ゲーム の じかん）</small>', 3.5); return; }
     if (kind === 'piano' && !pianoOpen()) { banner('🎹 しまむら がっき は しまってるよ<small>10:00〜20:00（きん〜にち は 21:00 まで）</small>', 3); return; }
     if (kind === 'yochien') calDone('yochien');
     SFX.door(); show('ovPlace', true); setPaused();
     if (kind === 'home' && errandDoneAtHome()) { const e2 = 100; save.wallet[100] = (save.wallet[100] || 0) + 1; store(); refreshHud(); void e2; }
     window.Places.open(kind, {
-      night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3,
+      night: isNight(), clock: clockStr(), lessonDay: CLK.wd === 3, weekNo: Math.floor(save.clock.day / 7),
       week: (() => { const d0 = save.clock.day - CLK.wd; return { today: CLK.wd, days: WEEK.map((n, i) => ({ name: n, plan: schedOf(d0 + i), done: (save.cal || {})[d0 + i] || {} })) }; })(), errand: save.errand, zoo: ZOO ? { pens: ZOO.pens, found: save.zoo || {}, open: zooOpen() } : null,
       wallet: Wallet, tone, confetti, sfx: (n) => (SFX[n] ? SFX[n]() : SFX.tap()),
       stats: () => { let o = {}; try { o = JSON.parse(localStorage.getItem('minatomirai-bouken-odekake-v1')) || {}; } catch (e) { o = {}; } return { stamps: save.stamps.length, stars: save.stars.length, passed: window.Kumon ? window.Kumon.passed.length : 0, hs: save.hs || 0, photos: photos.length, cups: (o.cups || []).length, maru: Object.keys(o.maru || {}).length >= 5, toys: save.items.filter((id) => window.Shops && window.Shops.TOYS.some((t) => t.id === id && !t.acc)).length }; }, confetti,
@@ -2800,6 +2827,7 @@ void main(){
         show('ovPlace', false); setPaused(); stepOut();
         if (res && res.bus) startBus(res.bus);
         else if (res && res.slide) startSlide();
+        if (res && res.eigo) { calDone('eigo'); momSay('Good job! えいご じょうず に なったね 🔤', 3.5); }
         if (res && res.piano) { if (!calDone('piano')) banner('🎹 れんしゅう できたね！<small>レッスンの シールは もくようび</small>', 2.5); momSay('ピアノ じょうずに なったね 🎹', 3); }
         else if (kind === 'home') momSay(res && res.rest ? 'よく ねたね！ さあ でかけよう' : 'いってきます！ ママも いっしょ', 3);
       },
@@ -3841,7 +3869,7 @@ void main(){
       if (lastSeason >= 0) banner(`${SEASONS[s].e} ${SEASONS[s].n} に なったよ！<small>${['さくらが さいたよ。きしゃみち や さくらどおり へ いこう', 'あついね！ しゅうまつ の よる は うみで はなび', 'はっぱが あかや きいろに なったよ', 'さむい！ ゆきが ふる ことも。よるは イルミネーション'][s]}</small>`, 4);
       lastSeason = s; todayHud();
     }
-    if (ev !== lastEv) { lastEv = ev || ''; todayHud(); if (ev && EV_LINE[ev]) { momSay(EV_LINE[ev], 4.5); if (ev === 'mamabd' || ev === 'papabd') banner(`🎂 きょうは ${ev === 'mamabd' ? 'ママ' : 'パパ'} の おたんじょうび！<small>🏠 おうち に かえって パーティー を しよう</small>`, 5); if (ev === 'bday') { banner(`🎂 きょうは あおちゃん の ${aoAge()}さい の おたんじょうび！<small>まちじゅう で おいわい・のりもの は むりょう・よる 7じ から おいわい はなび</small>`, 5); confetti(); } } }
+    if (ev !== lastEv) { lastEv = ev || ''; todayHud(); if (ev && EV_LINE[ev]) { momSay(EV_LINE[ev], 4.5); if (ev === 'mamabd' || ev === 'papabd') banner(`🎂 きょうは ${ev === 'mamabd' ? 'ママ' : 'パパ'} の おたんじょうび！<small>🏠 おうち に かえって パーティー を しよう</small>`, 5); if (ev === 'bday') { if (window.Places && window.Places.bdayDone && !window.Places.bdayDone(yearNow())) setTimeout(() => { if (eventToday() === 'bday' && !$('ovPlace').classList.contains('show') && !window.Places.bdayDone(yearNow())) setDest({ name: 'あおちゃん の おうち（パーティー）', x: HOMEDOOR.ox, z: HOMEDOOR.oz }); }, 5000); banner(`🎂 きょうは あおちゃん の ${aoAge()}さい の おたんじょうび！<small>🏠 おうち で だいパーティー！ みんな まってるよ ・ のりもの は むりょう ・ よる 7じ から はなび</small>`, 5); confetti(); } } }
     // はなび
     if ((ev === 'hanabi' && CLK.h >= 19.5 && CLK.h < 21) || (ev === 'bday' && CLK.h >= 19 && CLK.h < 20.5)) {
       if ((hanabiT -= dt) < 0) {
@@ -4586,7 +4614,7 @@ void main(){
   }
   // ================= 📅 カレンダー（すきな ひづけ を えらぶ）=================
   let calView = null;
-  const EV_LINE = { mamabd: 'きょうは ママ の おたんじょうび なの 💐 おうち で おいわい して くれる？', papabd: 'きょうは パパ の おたんじょうび！ 🤫 おうち で サプライズ パーティー しよう', bday: 'きょうは あおちゃん の おたんじょうび！ 🎂 まちじゅう で おいわい だよ', halloween: 'ハロウィン！ まちの ひとに「トリック オア トリート」🎃', xmas: 'メリー クリスマス！ 🎄 あかレンガ に サンタさん', hanabi: 'こんやは うみで はなび 🎆（19:30〜21:00）', shogatsu: 'あけまして おめでとう！ 🎍', setsubun: 'おにはそと、ふくはうち！ 👹', hina: 'ひなまつり 🎎', kodomo: 'こどもの ひ！ こいのぼり が およいでるね 🎏', tanabata: 'たなばた 🎋 おねがいごと なに に する？', tsukimi: 'おつきみ 🎑 おだんご たべよう' };
+  const EV_LINE = { mamabd: 'きょうは ママ の おたんじょうび なの 💐 おうち で おいわい して くれる？', papabd: 'きょうは パパ の おたんじょうび！ 🤫 おうち で サプライズ パーティー しよう', bday: 'きょうは あおちゃん の おたんじょうび！ 🎂 おうち で みんな が まってるよ。 かえろう！', halloween: 'ハロウィン！ まちの ひとに「トリック オア トリート」🎃', xmas: 'メリー クリスマス！ 🎄 あかレンガ に サンタさん', hanabi: 'こんやは うみで はなび 🎆（19:30〜21:00）', shogatsu: 'あけまして おめでとう！ 🎍', setsubun: 'おにはそと、ふくはうち！ 👹', hina: 'ひなまつり 🎎', kodomo: 'こどもの ひ！ こいのぼり が およいでるね 🎏', tanabata: 'たなばた 🎋 おねがいごと なに に する？', tsukimi: 'おつきみ 🎑 おだんご たべよう' };
   function openCal(y, m) {
     const cur = dateOf(save.clock.day); y = y || cur.y; m = m || cur.m; calView = { y, m };
     const root = $('calRoot'); root.innerHTML = '';
