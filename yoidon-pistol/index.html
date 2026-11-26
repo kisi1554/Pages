@@ -173,6 +173,7 @@
   #resultMsg { font-size: clamp(22px, 5.6vw, 34px); font-weight: bold; text-align: center; }
   #resultMsg .best { display: block; color: var(--accent); font-size: .85em; margin-top: 4px; }
   #resultMsg .stamp { display: block; font-size: clamp(64px, 18vw, 110px); line-height: 1.1; animation: stamp .6s cubic-bezier(.2, 1.8, .4, 1); }
+  #resultMsg .again { display: inline-block; margin-top: 10px; min-height: 52px; padding: 6px 18px; border-radius: 16px; border: 3px solid var(--line); background: #fff; font-size: 18px; font-weight: bold; }
   #resultMsg .praise { display: block; color: #9b2c15; font-size: clamp(22px, 6vw, 34px); line-height: 1.45; margin-top: 6px; max-width: 80vw; }
   @keyframes stamp { from { transform: scale(3) rotate(-25deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
 
@@ -921,7 +922,8 @@
     var spoke = false;
     if (st.voice && st.snd && 'speechSynthesis' in window) {
       try {
-        speechSynthesis.cancel();
+        if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+        speechSynthesis.resume();
         var u = new SpeechSynthesisUtterance(text);
         u.lang = 'ja-JP'; if (jaVoice) u.voice = jaVoice;
         u.rate = 0.95; u.pitch = 1.05; u.volume = 1;
@@ -1089,10 +1091,32 @@
     else if (fk === 'hearts') effect('emoji', { emo: ['💖', '💮', '✨'] });
     else effect(fk);
     if (best) later(function () { effect('confetti'); }, 0.6);
-    later(function () { say(pr.text.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, ''), 880); }, 1.1);
+    // ほめことばは こえで（タップの なかで すぐ よむ。iPhone は あとから だと よまないことが ある）
+    lastPraise = pr.text; speakPraise(lastPraise);
+    var again = document.createElement('button'); again.className = 'again'; again.textContent = '🔊 もういちど きく';
+    again.addEventListener('click', function () { speakPraise(lastPraise); });
+    resultMsg.appendChild(again);
   });
 
-  /* ---------- あおちゃんを ほめる（ランダム） ---------- */
+  /* ---------- あおちゃんを ほめる（ランダム・こえで） ---------- */
+  var lastPraise = '';
+  function speechText(t) {
+    return t.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, '')
+      .replace(/([\u3040-\u30ff\u4e00-\u9fff])\s+(?=[\u3040-\u30ff\u4e00-\u9fff])/g, '$1')  // わかちがきの すきまを つめる
+      .trim();
+  }
+  // 「こえ」オフでも ほめことばは よむ（おとが オフの ときだけ よまない）
+  function speakPraise(text) {
+    if (!st.snd || !('speechSynthesis' in window)) return;
+    try {
+      if (speechSynthesis.speaking || speechSynthesis.pending) speechSynthesis.cancel();
+      speechSynthesis.resume();
+      var u = new SpeechSynthesisUtterance(speechText(text));
+      u.lang = 'ja-JP'; if (jaVoice) u.voice = jaVoice;
+      u.rate = 1.0; u.pitch = 1.25; u.volume = 1;
+      speechSynthesis.speak(u);
+    } catch (e) {}
+  }
   var NAME = 'あおちゃん';
   var PRAISE = [
     '{n}、すごい！ さいごまで やりきったね！',
@@ -1189,7 +1213,7 @@
     var notes = big ? [[523, 0], [659, 0.13], [784, 0.26], [1047, 0.39], [784, 0.52], [1047, 0.65], [1319, 0.85]] : JINGLES[Math.floor(Math.random() * JINGLES.length)];
     notes.forEach(function (n, i) {
       var last = i === notes.length - 1;
-      tone(t + n[1], { type: 'triangle', f: n[0], dur: last ? 0.9 : 0.2, peak: 0.3, hold: last ? 0.3 : 0.05, rev: 0.3 });
+      tone(t + n[1], { type: 'triangle', f: n[0], dur: last ? 0.9 : 0.2, peak: 0.16, hold: last ? 0.3 : 0.05, rev: 0.3 });
       tone(t + n[1], { type: 'square', f: n[0] / 2, dur: last ? 0.6 : 0.15, peak: 0.06 });
       if (last) [1.25, 1.5].forEach(function (m) { tone(t + n[1], { type: 'triangle', f: n[0] * m / 2, dur: 0.9, peak: 0.12, hold: 0.3 }); });
     });
