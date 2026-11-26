@@ -519,8 +519,165 @@
         crackles(t, 45, 0.3, 2.6, 0.6, 0.6);
         for (var i = 0; i < 8; i++) burst(t + 0.6 + Math.random() * 1.8, { filter: 'lowpass', f: 600, dur: 0.2, peak: 0.6, rev: 0.6 });
       } },
+
+    /* ----- ふえた おと ----- */
+    { id: 'pinpon', em: '🛎️', name: 'ピンポン', lv: 1, word: 'ピンポーン！', flash: '#fff6b0', shake: 0, fx: 'notes',
+      play: function (t) {
+        [[1319, 0, 0.7], [1047, 0.32, 1.4]].forEach(function (n) {
+          tone(t + n[1], { f: n[0], dur: n[2], peak: 0.6, rev: 0.4 });
+          tone(t + n[1], { f: n[0] * 2, dur: n[2] * 0.6, peak: 0.15 });
+          tone(t + n[1], { type: 'triangle', f: n[0] / 2, dur: n[2] * 0.8, peak: 0.2 });
+        });
+      } },
+    { id: 'bell', em: '🔔', name: 'ベル', lv: 1, word: 'ジリリリリン！', flash: '#fff3c4', shake: 1, fx: 'notes',
+      play: function (t) {
+        var g = ac.createGain(); g.gain.value = 0;
+        var am = ac.createGain(); am.gain.value = 0;
+        var lfo = ac.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 24;
+        var lg = ac.createGain(); lg.gain.value = 0.5; lfo.connect(lg); lg.connect(am.gain);
+        var bias = ac.createConstantSource ? ac.createConstantSource() : null;
+        if (bias) { bias.offset.value = 0.5; bias.connect(am.gain); bias.start(t); bias.stop(t + 1.6); }
+        [2350, 3170, 4620, 6100].forEach(function (f, i) {
+          var o = ac.createOscillator(); o.frequency.value = f;
+          var og = ac.createGain(); og.gain.value = [0.5, 0.35, 0.2, 0.1][i];
+          o.connect(og); og.connect(am); o.start(t); o.stop(t + 1.6);
+        });
+        am.connect(g);
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.7, t + 0.01);
+        g.gain.setValueAtTime(0.7, t + 1.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.55);
+        outTo(g, 0.4); lfo.start(t); lfo.stop(t + 1.6);
+      } },
+    { id: 'onara', em: '💨', name: 'おなら', lv: 1, word: 'ブッ！', flash: '#e9ffd0', shake: 1, fx: 'emoji', emo: ['💨', '💨', '😆'],
+      play: function (t) {
+        var o = tone(t, { type: 'sawtooth', f: 110, f2: 62, dur: 0.55, peak: 0.0001, attack: 0.01 });
+        o.disconnect();
+        var f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 700; f.Q.value = 3;
+        var g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(1.1, t + 0.02);
+        g.gain.setValueAtTime(1.0, t + 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.55);
+        var lfo = ac.createOscillator(); lfo.frequency.value = 31; var lg = ac.createGain(); lg.gain.value = 28;
+        lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + 0.6);
+        o.connect(f); f.connect(g); outTo(g, 0.15);
+        burst(t, { filter: 'lowpass', f: 500, dur: 0.5, peak: 0.4, attack: 0.02 });
+      } },
+    { id: 'bane', em: '🪀', name: 'ばね', lv: 1, word: 'ビヨヨーン！', flash: '#e5f0ff', shake: 1, fx: 'emoji', emo: ['🌀', '〰️'],
+      play: function (t) {
+        var o = tone(t, { type: 'triangle', f: 180, f2: 620, sweep: 0.5, dur: 1.2, peak: 0.6, rev: 0.3 });
+        var lfo = ac.createOscillator(); lfo.frequency.setValueAtTime(14, t); lfo.frequency.linearRampToValueAtTime(6, t + 1.2);
+        var lg = ac.createGain(); lg.gain.setValueAtTime(90, t); lg.gain.linearRampToValueAtTime(20, t + 1.2);
+        lfo.connect(lg); lg.connect(o.frequency); lfo.start(t); lfo.stop(t + 1.25);
+      } },
+    { id: 'rappa', em: '🎺', name: 'ラッパ', lv: 2, word: 'パッパラパー！', flash: '#fff0b3', shake: 1, fx: 'confetti',
+      play: function (t) {
+        [[392, 0, 0.12], [392, 0.15, 0.12], [523, 0.3, 0.16], [659, 0.5, 0.9]].forEach(function (n) {
+          var f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2600; f.Q.value = 2;
+          var o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = n[0];
+          var g = ac.createGain(), a = t + n[1];
+          g.gain.setValueAtTime(0.0001, a); g.gain.linearRampToValueAtTime(0.45, a + 0.02);
+          g.gain.setValueAtTime(0.4, a + n[2] * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, a + n[2] + 0.1);
+          if (n[2] > 0.5) { var l = ac.createOscillator(); l.frequency.value = 6; var lg = ac.createGain(); lg.gain.value = 7; l.connect(lg); lg.connect(o.frequency); l.start(a); l.stop(a + 1.1); }
+          o.connect(f); f.connect(g); outTo(g, 0.4); o.start(a); o.stop(a + n[2] + 0.15);
+        });
+      } },
+    { id: 'densha', em: '🚃', name: 'でんしゃ', lv: 2, word: 'ファーン！', flash: '#dff5ff', shake: 1, fx: 'pass', emo: '🚃',
+      play: function (t) {
+        [440, 554, 442].forEach(function (f) {
+          var o = tone(t, { type: 'sawtooth', f: f, dur: 1.5, peak: 0.0001 }); o.disconnect();
+          var fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 1800;
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.32, t + 0.05);
+          g.gain.setValueAtTime(0.3, t + 1.1); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.5);
+          o.connect(fl); fl.connect(g); outTo(g, 0.6);
+        });
+      } },
+    { id: 'kiteki', em: '🚂', name: 'きてき', lv: 2, word: 'ポーーッ！', flash: '#f4f4f4', shake: 1, fx: 'pass', emo: '🚂',
+      play: function (t) {
+        [587, 740, 880].forEach(function (f) {
+          tone(t, { type: 'triangle', f: f * 0.96, f2: f, sweep: 0.25, dur: 1.9, peak: 0.3, attack: 0.12, hold: 1.2, rev: 0.7 });
+        });
+        burst(t, { filter: 'bandpass', f: 1500, q: 1.2, dur: 1.9, peak: 0.35, attack: 0.1, hold: 1.2, rev: 0.5 });
+      } },
+    { id: 'boxing', em: '🥊', name: 'ゴング', lv: 2, word: 'カーン！', flash: '#fff1c9', shake: 1, fx: 'ring',
+      play: function (t) {
+        [[680, 0.5, 1.8], [1390, 0.35, 1.4], [2010, 0.3, 1.1], [2730, 0.2, 0.9], [3580, 0.12, 0.6]].forEach(function (p) {
+          tone(t, { f: p[0], dur: p[2], peak: p[1], rev: 0.5 });
+        });
+        burst(t, { filter: 'highpass', f: 2500, dur: 0.05, peak: 1.0 });
+      } },
+    { id: 'otera', em: '🛕', name: 'おてらの かね', lv: 3, word: 'ゴーーン…', flash: '#e9dcc4', shake: 1, fx: 'ring',
+      play: function (t) {
+        [[98, 0.8, 6], [101, 0.5, 6], [196, 0.35, 4.5], [262, 0.28, 3.6], [331, 0.2, 2.8], [467, 0.12, 2]].forEach(function (p) {
+          tone(t, { f: p[0], dur: p[2], peak: p[1], attack: 0.02, rev: 0.7 });
+        });
+        burst(t, { filter: 'lowpass', f: 500, dur: 0.25, peak: 1.0 });
+      } },
+    { id: 'siren', em: '🚨', name: 'サイレン', lv: 3, word: 'ウーー！', flash: '#ff9b9b', shake: 1, fx: 'siren',
+      play: function (t) {
+        var o = ac.createOscillator(); o.type = 'square';
+        o.frequency.setValueAtTime(500, t);
+        for (var i = 0; i < 2; i++) { o.frequency.linearRampToValueAtTime(1150, t + i * 1.1 + 0.7); o.frequency.linearRampToValueAtTime(520, t + i * 1.1 + 1.1); }
+        var f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 2500;
+        var g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.35, t + 0.1);
+        g.gain.setValueAtTime(0.35, t + 2.0); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.3);
+        o.connect(f); f.connect(g); outTo(g, 0.5); o.start(t); o.stop(t + 2.35);
+      } },
+    { id: 'bakuchiku', em: '🎇', name: 'ばくちく', lv: 3, word: 'パパパパパン！', flash: '#fff2d1', shake: 2, fx: 'pops',
+      play: function (t) {
+        var tt = t;
+        for (var i = 0; i < 18; i++) { shot(tt, 0.45 + Math.random() * 0.5); tt += 0.04 + Math.random() * 0.11; }
+        crackles(t, 25, 0, tt - t + 0.3, 0.5, 0.4);
+      } },
+    { id: 'kaiju', em: '🦖', name: 'かいじゅう', lv: 4, word: 'ガオーーッ！', flash: '#c9ffb8', shake: 2, fx: 'big', emo: '🦖',
+      play: function (t) {
+        [82, 123, 61].forEach(function (f, i) {
+          var o = tone(t, { type: 'sawtooth', f: f, f2: f * 0.7, dur: 1.9, peak: 0.0001 }); o.disconnect();
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.7, t + 0.15);
+          g.gain.setValueAtTime(0.6, t + 1.2); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.9);
+          var tr = ac.createOscillator(); tr.frequency.value = 17 + i * 3; var tg = ac.createGain(); tg.gain.value = f * 0.25;
+          tr.connect(tg); tg.connect(o.frequency); tr.start(t); tr.stop(t + 2);
+          var fl = ac.createBiquadFilter(); fl.type = 'bandpass'; fl.frequency.setValueAtTime(500, t); fl.frequency.linearRampToValueAtTime(900, t + 0.5); fl.frequency.linearRampToValueAtTime(400, t + 1.9); fl.Q.value = 1.5;
+          o.connect(fl); fl.connect(g); outTo(g, 0, true);
+        });
+        burst(t, { filter: 'bandpass', f: 700, q: 1, dur: 1.8, peak: 0.6, attack: 0.15, hold: 1.0, rev: 0.6 });
+      } },
+    { id: 'rocket', em: '🚀', name: 'ロケット', lv: 4, word: 'はっしゃ！', flash: '#ffe2b0', shake: 2, fx: 'rocket',
+      play: function (t) {
+        burst(t, { filter: 'highpass', f: 400, dur: 0.3, peak: 1.4, rev: 0.6 });
+        burst(t, { filter: 'lowpass', f: 300, f2: 3000, sweep: 2.5, dur: 3.2, peak: 1.6, attack: 0.08, hold: 1.8, rev: 0.6 });
+        tone(t, { f: 50, f2: 90, dur: 3, peak: 1.2, attack: 0.1, hold: 1.8 });
+        crackles(t, 40, 0.1, 2.6, 0.35, 0.2);
+      } },
+    { id: 'kazan', em: '🌋', name: 'かざん', lv: 5, word: 'ドゴゴゴーン！', flash: '#ff3d00', shake: 3, fx: 'explosion',
+      play: function (t) {
+        burst(t, { filter: 'lowpass', f: 2500, f2: 120, sweep: 1.5, dur: 2.2, peak: 2.4, dist: true });
+        tone(t, { f: 45, f2: 16, dur: 3.5, peak: 2.2, dist: true });
+        var g = burst(t + 0.1, { filter: 'lowpass', f: 260, dur: 4.5, peak: 1.8, attack: 0.1, dist: true });
+        for (var i = 0; i < 18; i++) g.gain.setValueAtTime(Math.max(0.05, 1.8 * Math.pow(1 - i / 19, 1.2) * (0.3 + Math.random() * 0.7)), t + 0.3 + i * 0.22);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 4.55);
+        for (var j = 0; j < 4; j++) burst(t + 0.5 + j * 0.45, { filter: 'lowpass', f: 1200, f2: 150, dur: 1.2, peak: 1.2, rev: 0.8 });
+        crackles(t, 50, 0.3, 3.5, 0.6, 0.6);
+      } },
+    { id: 'inseki', em: '☄️', name: 'いんせき', lv: 5, word: 'ドガーーン！！', flash: '#fff2a8', shake: 3, fx: 'explosion', pre: 1.0,
+      prePlay: function (t) { // ドンの 1びょう まえから ヒューー
+        tone(t, { f: 2600, f2: 300, sweep: 1.0, dur: 1.02, peak: 0.35, attack: 0.3, hold: 0.6, rev: 0.4 });
+        burst(t, { filter: 'bandpass', f: 600, f2: 3000, sweep: 1.0, dur: 1.02, peak: 0.6, attack: 0.9, hold: 0.05 });
+      },
+      play: function (t) {
+        burst(t, { filter: 'highpass', f: 200, dur: 0.35, peak: 2.4, rev: 0.8 });
+        burst(t, { filter: 'lowpass', f: 4000, f2: 100, sweep: 2.8, dur: 3.6, peak: 2.8, dist: true });
+        tone(t, { f: 62, f2: 15, dur: 3.2, peak: 2.4, dist: true });
+        crackles(t, 60, 0.2, 3, 0.7, 0.6);
+      } },
     { id: 'random', em: '🎲', name: 'おまかせ', lv: 0, word: '', fx: '' }
   ];
+  // おとなしい → はげしい の じゅんに ならべる（おまかせは さいご）
+  (function () {
+    var rnd0 = SOUNDS.pop();
+    SOUNDS = SOUNDS.map(function (x, i) { return [x, i]; }).sort(function (a, b) { return (a[0].lv - b[0].lv) || (a[1] - b[1]); }).map(function (x) { return x[0]; });
+    SOUNDS.push(rnd0);
+  })();
   function byId(id) { for (var i = 0; i < SOUNDS.length; i++) if (SOUNDS[i].id === id) return SOUNDS[i]; return SOUNDS[0]; }
 
   /* ---------- がめん（メニュー） ---------- */
@@ -573,7 +730,9 @@
     if (s.id === 'random') return;
     if (!st.snd) { st.snd = true; save(); paintToggles(); }
     if (!ensureAudio()) return;
-    s.play(ac.currentTime + 0.03);
+    var t0 = ac.currentTime + 0.03;
+    if (s.pre && s.prePlay) { s.prePlay(t0); t0 += s.pre; }
+    s.play(t0);
   }
 
   /* ---------- こえ（ブラウザの よみあげ。なければ もじだけ） ---------- */
@@ -636,13 +795,16 @@
       say('よーい', 880);
     }, p[0]);
     var wait = p[0] + p[1] + Math.random() * (p[2] - p[1]);
+    cur = byId(st.sound);
+    if (cur.id === 'random') cur = SOUNDS[Math.floor(Math.random() * (SOUNDS.length - 1))];
+    if (cur.pre && cur.prePlay) later(function () { if (st.snd && ensureAudio()) cur.prePlay(ac.currentTime + 0.005); }, wait - cur.pre);
     later(fire, wait);
   }
+  var cur = null;
 
   function fire() {
     phase = 'go';
-    var s = byId(st.sound);
-    if (s.id === 'random') s = SOUNDS[Math.floor(Math.random() * (SOUNDS.length - 1))];
+    var s = cur || byId(st.sound);
     if (st.snd && ensureAudio()) {
       if (ac.state === 'running') s.play(ac.currentTime + 0.005);
       else {
@@ -659,7 +821,7 @@
     shaker.className = ''; void shaker.offsetWidth; if (s.shake) shaker.className = 'shake' + s.shake;
     if (s.shake >= 3 && navigator.vibrate) { try { navigator.vibrate([300, 80, 400]); } catch (e) {} }
     else if (s.shake >= 2 && navigator.vibrate) { try { navigator.vibrate(200); } catch (e) {} }
-    effect(s.fx);
+    effect(s.fx, s);
     if (st.timer) {
       later(function () { startTimer(Date.now() - 1600); }, 1.6);
     } else {
@@ -784,7 +946,7 @@
   function rnd(a, b) { return a + Math.random() * (b - a); }
   function add(p) { p.age = 0; parts.push(p); }
   var CONF = ['#ff595e', '#ffca3a', '#8ac926', '#1982c4', '#6a4c93', '#ff8fd0', '#ffffff'];
-  function effect(kind) {
+  function effect(kind, s) {
     var ox = W / 2, oy = H * 0.42, i, a, v;
     if (kind === 'smoke' || kind === 'smokeBig') {
       var n = kind === 'smokeBig' ? 46 : 16, big = kind === 'smokeBig';
@@ -816,6 +978,26 @@
       for (i = 0; i < 18; i++) add({ t: 'txt', s: ['♪', '♫', '！'][i % 3], x: ox + rnd(-120, 120), y: oy + rnd(-40, 60), vx: rnd(-2, 2), vy: rnd(-4, -1.5), r: rnd(28, 48), life: rnd(60, 90), c: '#ffffff' });
     } else if (kind === 'laser') {
       for (i = 0; i < 3; i++) add({ t: 'beam', x: -W * 0.2, y: H * (0.25 + i * 0.12), vx: W / 10, life: 22, c: ['#00e5ff', '#ff3df2', '#b6ff00'][i], delay: i * 9 });
+    } else if (kind === 'emoji') {
+      for (i = 0; i < 14; i++) add({ t: 'txt', s: s.emo[i % s.emo.length], x: ox + rnd(-130, 130), y: oy + rnd(-30, 80), vx: rnd(-3, 3), vy: rnd(-5, -1.5), r: rnd(34, 60), life: rnd(60, 100), c: '#ffffff', plain: true });
+    } else if (kind === 'pass') {
+      add({ t: 'txt', s: s.emo, x: -120, y: H * 0.62, vx: (W + 260) / 70, vy: 0, r: Math.min(140, W * 0.3), life: 75, plain: true, flip: true });
+      for (i = 0; i < 18; i++) add({ t: 'smoke', x: -60, y: H * 0.5, vx: (W + 200) / 70, vy: rnd(-1.5, -0.3), r: rnd(16, 34), life: rnd(60, 90), c: '240,240,240', delay: i * 3 });
+    } else if (kind === 'big') {
+      add({ t: 'txt', s: s.emo, x: ox, y: H * 0.75, vx: 0, vy: -1.2, r: Math.min(200, W * 0.45), life: 90, plain: true, grow: 1.006 });
+      for (i = 0; i < 3; i++) add({ t: 'ring', x: ox, y: oy, r: 30, vr: 12, life: 40, c: '120,255,120', delay: i * 10, w: 10 });
+    } else if (kind === 'rocket') {
+      add({ t: 'txt', s: '🚀', x: ox, y: H * 0.8, vx: 0, vy: -2, g: -0.35, r: Math.min(150, W * 0.32), life: 70, plain: true, rot0: -Math.PI / 4 });
+      for (i = 0; i < 50; i++) add({ t: 'smoke', x: ox + rnd(-50, 50), y: H * 0.85, vx: rnd(-5, 5), vy: rnd(-1.5, 0.5), r: rnd(25, 55), life: rnd(80, 130), c: '230,225,220', delay: i });
+      for (i = 0; i < 40; i++) add({ t: 'spark', x: ox, y: H * 0.85, vx: rnd(-3, 3), vy: rnd(2, 7), r: rnd(2, 5), life: rnd(20, 40), c: '#ff9f1c', delay: i });
+    } else if (kind === 'siren') {
+      for (i = 0; i < 6; i++) add({ t: 'glow', x: i % 2 ? W * 0.85 : W * 0.15, y: H * 0.18, r: 120, life: 14, c: i % 2 ? '60,120,255' : '255,40,40', delay: i * 12 });
+    } else if (kind === 'pops') {
+      for (var b2 = 0; b2 < 12; b2++) {
+        var px = rnd(W * 0.1, W * 0.9), py = rnd(H * 0.15, H * 0.7), c2 = CONF[b2 % 6], d2 = b2 * 7;
+        for (i = 0; i < 14; i++) { a = i / 14 * Math.PI * 2; v = rnd(2, 5);
+          add({ t: 'spark', x: px, y: py, vx: Math.cos(a) * v, vy: Math.sin(a) * v, r: rnd(2, 4), life: rnd(18, 30), c: c2, delay: d2, drag: 0.92 }); }
+      }
     } else if (kind === 'bolt') {
       for (i = 0; i < 2; i++) add({ t: 'bolt', x: W * (0.35 + i * 0.3), life: 16, delay: i * 6, pts: null });
     }
@@ -858,8 +1040,16 @@
         cx.strokeStyle = 'rgba(' + p.c + ',' + k + ')'; cx.lineWidth = (p.w || 18) * k + 1;
         cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.stroke();
       } else if (p.t === 'txt') {
-        cx.globalAlpha = k; cx.fillStyle = p.c; cx.strokeStyle = '#3b2a1e'; cx.lineWidth = 4;
-        cx.font = 'bold ' + p.r + 'px sans-serif'; cx.strokeText(p.s, p.x, p.y); cx.fillText(p.s, p.x, p.y);
+        if (p.grow) p.r *= p.grow;
+        cx.globalAlpha = Math.min(1, k * 2.5); cx.textAlign = 'center'; cx.textBaseline = 'middle';
+        cx.font = 'bold ' + p.r + 'px sans-serif';
+        cx.translate(p.x, p.y); if (p.flip) cx.scale(-1, 1); if (p.rot0) cx.rotate(p.rot0);
+        if (!p.plain) { cx.fillStyle = p.c; cx.strokeStyle = '#3b2a1e'; cx.lineWidth = 4; cx.strokeText(p.s, 0, 0); }
+        cx.fillText(p.s, 0, 0);
+      } else if (p.t === 'glow') {
+        var gg = cx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+        gg.addColorStop(0, 'rgba(' + p.c + ',' + (0.9 * k) + ')'); gg.addColorStop(1, 'rgba(' + p.c + ',0)');
+        cx.fillStyle = gg; cx.beginPath(); cx.arc(p.x, p.y, p.r, 0, 7); cx.fill();
       } else if (p.t === 'beam') {
         cx.globalAlpha = k; cx.strokeStyle = p.c; cx.shadowColor = p.c; cx.shadowBlur = 18; cx.lineWidth = 10; cx.lineCap = 'round';
         cx.beginPath(); cx.moveTo(p.x - W * 0.35, p.y); cx.lineTo(p.x, p.y); cx.stroke();
