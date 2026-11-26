@@ -317,16 +317,46 @@
 
   /* ---------- おと（WebAudio の ごうせいおん だけ） ---------- */
   var ac = null, master = null, verbIn = null, noiseBuf = null, shaper = null;
+  // iPhone は マナーモード（消音スイッチ）だと WebAudio が なりません。
+  // 「メディアの おと」として あつかって もらうため、むおんの <audio> を ながしておく ＋ audioSession を playback に。
+  var unlockEl = null;
+  function silentWavUrl() {
+    var sr = 8000, n = sr / 2, buf = new ArrayBuffer(44 + n * 2), v = new DataView(buf);
+    function w(o, str) { for (var i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)); }
+    w(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); w(8, 'WAVE'); w(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+    v.setUint32(24, sr, true); v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true);
+    w(36, 'data'); v.setUint32(40, n * 2, true);
+    return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+  }
+  function mediaMode(on) {
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+    try {
+      if (on) {
+        if (!unlockEl) {
+          unlockEl = document.createElement('audio');
+          unlockEl.setAttribute('playsinline', ''); unlockEl.setAttribute('webkit-playsinline', '');
+          unlockEl.loop = true; unlockEl.preload = 'auto'; unlockEl.src = silentWavUrl();
+        }
+        var pr = unlockEl.play(); if (pr && pr.catch) pr.catch(function () {});
+      } else if (unlockEl) unlockEl.pause();
+    } catch (e) {}
+  }
   function ensureAudio() {
+    mediaMode(true);
     if (!ac) {
       var AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return null;
       ac = new AC();
+      // おおきく: コンプで そろえて もちあげる（さいごに リミッター）
       var comp = ac.createDynamicsCompressor();
-      comp.threshold.value = -12; comp.knee.value = 6; comp.ratio.value = 6;
-      comp.attack.value = 0.002; comp.release.value = 0.25;
-      master = ac.createGain(); master.gain.value = 0.85;
-      master.connect(comp); comp.connect(ac.destination);
+      comp.threshold.value = -24; comp.knee.value = 4; comp.ratio.value = 12;
+      comp.attack.value = 0.001; comp.release.value = 0.2;
+      var makeup = ac.createGain(); makeup.gain.value = 3.4;
+      var lim = ac.createDynamicsCompressor();
+      lim.threshold.value = -1; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+      master = ac.createGain(); master.gain.value = 1.0;
+      master.connect(comp); comp.connect(makeup); makeup.connect(lim); lim.connect(ac.destination);
       // ノイズ
       var len = ac.sampleRate * 4;
       noiseBuf = ac.createBuffer(1, len, ac.sampleRate);
@@ -350,7 +380,7 @@
       var sg = ac.createGain(); sg.gain.value = 0.8;
       shaper.connect(sg); sg.connect(master); sg.connect(verbIn);
     }
-    if (ac.state === 'suspended') ac.resume();
+    if (ac.state !== 'running') { try { ac.resume(); } catch (e) {} }
     return ac;
   }
 
@@ -400,9 +430,10 @@
   }
   function shot(t, k) {
     k = k || 1;
-    burst(t, { filter: 'highpass', f: 700, dur: 0.45, peak: 1.3 * k, rev: 0.7 });
-    burst(t, { filter: 'lowpass', f: 4000, dur: 0.07, peak: 1.2 * k });
-    tone(t, { f: 190, f2: 45, dur: 0.14, peak: 0.9 * k });
+    burst(t, { filter: 'highpass', f: 500, dur: 0.6, peak: 2.0 * k, rev: 0.9 });
+    burst(t, { filter: 'bandpass', f: 1800, q: 0.6, dur: 0.12, peak: 2.0 * k });
+    burst(t, { filter: 'lowpass', f: 5000, dur: 0.08, peak: 1.6 * k });
+    tone(t, { f: 200, f2: 45, dur: 0.18, peak: 1.4 * k });
   }
 
   /* ---------- おとの しゅるい（おとなしい → はげしい） ---------- */
@@ -610,10 +641,17 @@
 
   function fire() {
     phase = 'go';
-    try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) {}
     var s = byId(st.sound);
     if (s.id === 'random') s = SOUNDS[Math.floor(Math.random() * (SOUNDS.length - 1))];
-    if (st.snd && ensureAudio()) s.play(ac.currentTime + 0.005);
+    if (st.snd && ensureAudio()) {
+      if (ac.state === 'running') s.play(ac.currentTime + 0.005);
+      else {
+        var played = false;
+        var go = function () { if (!played) { played = true; s.play(ac.currentTime + 0.005); } };
+        try { ac.resume().then(go, go); } catch (e) { go(); }
+        setTimeout(go, 250);
+      }
+    }
     showCue(s.word, true);
     runner.className = 'go';
     // ひかり
@@ -703,6 +741,7 @@
     stage.classList.remove('on'); timerBox.classList.remove('on');
     shaker.className = ''; flashEl.className = ''; parts.length = 0;
     keepAwake(false);
+    mediaMode(false);
     phase = 'idle';
   }
   stopBtn.addEventListener('click', function () {
