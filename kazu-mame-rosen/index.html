@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>かず まめ ろせんず</title>
+<meta name="description" content="ろせんずの えきを まわって、かずの まめちしきを あつめよう。でんしゃ・ろせんずの ふしぎを さんすうで たしかめる アプリ。">
+<meta name="theme-color" content="#e0483e">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔢</text></svg>">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  :root {
+    --ink: #1d2b3a;
+    --ink-soft: #55697e;
+    --paper: #ffffff;
+    --bg: #f3f7fb;
+    --line: #d8e3ee;
+    --R: #e0483e; --R-t: #fdecea;
+    --K: #2f7fd8; --K-t: #e8f1fc;
+    --C: #23a05a; --C-t: #e6f6ec;
+    --ok: #1f9d55; --ng: #d9463b; --gold: #f2b01e;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "ヒラギノ丸ゴ ProN", "Yu Gothic", "游ゴシック体", "Meiryo", system-ui, sans-serif;
+    padding: env(safe-area-inset-top) 0 calc(28px + env(safe-area-inset-bottom));
+    -webkit-tap-highlight-color: transparent;
+  }
+  ruby rt { font-size: .5em; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 16px; }
+
+  /* ---------- あたま ---------- */
+  header.top { display: flex; align-items: center; gap: 10px; padding: 14px 0 6px; }
+  .back { text-decoration: none; color: var(--ink-soft); font-size: 15px; padding: 10px 6px; }
+  .title { flex: 1; text-align: center; margin: 0; font-size: clamp(20px, 5.4vw, 32px); letter-spacing: .02em; white-space: nowrap; }
+  .title small { display: block; font-size: 13px; color: var(--ink-soft); letter-spacing: 0; margin-top: 2px; font-weight: normal; }
+  .iconbtn { min-width: 48px; height: 48px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper); font-size: 22px; }
+
+  .progress { display: flex; align-items: center; gap: 10px; margin: 8px 0 14px; font-size: 15px; color: var(--ink-soft); }
+  .bar { flex: 1; height: 12px; border-radius: 99px; background: #e2eaf2; overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--R), var(--gold), var(--C)); transition: width .4s; }
+
+  /* ---------- ろせん タブ ---------- */
+  .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .tab {
+    border: 3px solid var(--line); background: var(--paper); border-radius: 16px;
+    padding: 10px 4px 8px; min-height: 70px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    font-size: clamp(13px, 3.6vw, 16px); font-weight: bold;
+  }
+  .tab .mark { width: 30px; height: 30px; border-radius: 50%; border: 5px solid var(--c); background: #fff;
+    display: grid; place-items: center; font-size: 13px; color: var(--c); font-weight: 900; }
+  .tab .cnt { font-size: 12px; font-weight: normal; color: var(--ink-soft); }
+  .tab[aria-pressed="true"] { border-color: var(--c); background: var(--t); }
+
+  .lineinfo { margin: 0 0 10px; font-size: 15px; color: var(--ink-soft); line-height: 1.6; }
+
+  .tools { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .pill { border: 2px solid var(--line); background: var(--paper); border-radius: 99px; padding: 10px 16px; min-height: 48px; font-size: 15px; }
+
+  /* ---------- えき の ならび（たての ろせんず） ---------- */
+  .strip { position: relative; list-style: none; margin: 0; padding: 0; }
+  .strip::before {
+    content: ""; position: absolute; left: 33px; top: 30px; bottom: 30px; width: 12px; border-radius: 6px; background: var(--c);
+  }
+  .strip li { position: relative; margin: 0 0 8px; }
+  .st {
+    width: 100%; display: flex; align-items: center; gap: 12px; text-align: left;
+    background: transparent; border: 0; padding: 6px 8px 6px 8px; min-height: 64px; border-radius: 16px;
+  }
+  .st:active { background: rgba(0,0,0,.04); }
+  .st .dot {
+    flex: none; width: 62px; height: 62px; border-radius: 50%; background: #fff; border: 6px solid var(--c);
+    display: grid; place-items: center; position: relative; z-index: 1; font-weight: 900; font-size: 15px; color: var(--c);
+  }
+  .st.done .dot { background: var(--c); color: #fff; }
+  .st .nm { flex: 1; background: var(--paper); border: 2px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: clamp(15px, 4.2vw, 18px); line-height: 1.5; font-weight: bold; }
+  .st .nm small { display: block; font-weight: normal; font-size: 13px; color: var(--ink-soft); }
+  .st .stamp { flex: none; width: 34px; font-size: 26px; text-align: center; }
+
+  /* ---------- カード（まめちしき） ---------- */
+  .modal { position: fixed; inset: 0; background: rgba(20, 30, 45, .45); display: none; z-index: 20; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .modal.open { display: block; }
+  .card {
+    max-width: 640px; margin: calc(12px + env(safe-area-inset-top)) auto 40px; background: var(--paper); border-radius: 24px;
+    border-top: 14px solid var(--c); padding: 16px 16px 22px; box-shadow: 0 10px 40px rgba(0,0,0,.2);
+    width: calc(100% - 24px);
+  }
+  .card-head { display: flex; align-items: center; gap: 10px; }
+  .card-head .dot { width: 52px; height: 52px; border-radius: 50%; border: 6px solid var(--c); display: grid; place-items: center; color: var(--c); font-weight: 900; font-size: 14px; flex: none; }
+  .card-head h2 { flex: 1; margin: 0; font-size: clamp(17px, 4.6vw, 21px); line-height: 1.5; }
+  .close { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); background: #fff; font-size: 22px; flex: none; }
+  .big { font-size: 64px; text-align: center; margin: 10px 0 4px; }
+  .q { font-size: clamp(18px, 5vw, 23px); line-height: 1.8; margin: 4px 0 14px; font-weight: bold; }
+  .choices { display: grid; gap: 10px; }
+  .ch {
+    min-height: 60px; border-radius: 16px; border: 3px solid var(--line); background: #fff; font-size: clamp(17px, 4.8vw, 21px);
+    font-weight: bold; padding: 10px 14px; text-align: left; line-height: 1.5;
+  }
+  .ch.ok { border-color: var(--ok); background: #e5f6ec; }
+  .ch.ng { border-color: var(--ng); background: #fdecea; opacity: .6; }
+  .ch:disabled { cursor: default; }
+  .shake { animation: shake .4s; }
+  @keyframes shake { 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .hint { margin: 12px 0 0; padding: 10px 14px; border-radius: 14px; background: #fff7e0; font-size: 16px; line-height: 1.7; display: none; }
+  .hint.show { display: block; }
+
+  .result { display: none; margin-top: 16px; }
+  .result.show { display: block; animation: pop .35s ease-out; }
+  @keyframes pop { from { transform: scale(.94); opacity: 0; } to { transform: none; opacity: 1; } }
+  .yay { text-align: center; font-size: clamp(24px, 7vw, 32px); font-weight: 900; color: var(--ok); margin: 0 0 8px; }
+  .yay .stampmark { display: inline-block; animation: stamp .5s cubic-bezier(.2,1.8,.4,1); }
+  @keyframes stamp { from { transform: scale(2.4) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+  .ex { font-size: 17px; line-height: 1.9; margin: 0 0 12px; }
+  .ex b { color: var(--c); }
+  .math { border: 3px dashed var(--c); background: var(--t); border-radius: 16px; padding: 12px 14px; margin: 0 0 14px; }
+  .math h3 { margin: 0 0 6px; font-size: 15px; color: var(--c); }
+  .math p { margin: 0; font-size: clamp(17px, 4.8vw, 21px); line-height: 1.8; font-weight: bold; }
+  .widget { border: 2px solid var(--line); border-radius: 18px; padding: 12px; margin: 0 0 14px; background: #fbfdff; }
+  .widget h3 { margin: 0 0 8px; font-size: 16px; }
+  .widget svg { display: block; width: 100%; height: auto; max-height: 340px; touch-action: manipulation; }
+  .wrow { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 8px 0 0; }
+  .wbtn { min-width: 56px; min-height: 52px; border-radius: 14px; border: 2px solid var(--c); background: #fff; font-size: 18px; font-weight: bold; padding: 6px 12px; color: var(--c); }
+  .wbtn[aria-pressed="true"] { background: var(--c); color: #fff; }
+  .wout { text-align: center; font-size: clamp(16px, 4.6vw, 20px); font-weight: bold; line-height: 1.7; margin: 8px 0 0; min-height: 1.7em; }
+  .nav { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .navbtn { min-height: 58px; border-radius: 16px; border: 0; font-size: 18px; font-weight: bold; background: #e9eef4; }
+  .navbtn.go { background: var(--c); color: #fff; }
+
+  .toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: #1d2b3a; color: #fff; padding: 12px 20px; border-radius: 99px; font-size: 16px; z-index: 40; opacity: 0; pointer-events: none; transition: opacity .3s; white-space: nowrap; }
+  .toast.show { opacity: 1; }
+
+  @media (min-width: 700px) {
+    .choices { grid-template-columns: 1fr 1fr 1fr; }
+    .ch { text-align: center; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="../">← メニュー</a>
+    <h1 class="title">かず まめ ろせんず<small>えきを まわって かずの まめちしきを あつめよう</small></h1>
+    <button class="iconbtn" id="sndBtn" type="button" aria-label="おと オン/オフ">🔊</button>
+  </header>
+
+  <div class="progress"><span>🎫</span><div class="bar"><i id="barFill"></i></div><span id="progText">0 / 0</span></div>
+
+  <div class="tabs" id="tabs"></div>
+  <p class="lineinfo" id="lineInfo"></p>
+  <div class="tools">
+    <button class="pill" id="randBtn" type="button">🎲 どこかの えきへ</button>
+    <button class="pill" id="nextBtn" type="button">🚃 まだの えきへ</button>
+  </div>
+  <ol class="strip" id="strip"></ol>
+</div>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true">
+  <div class="card" id="card"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+"use strict";
+
+/* ========== ろせん ========== */
+var LINES = [
+  { id: "R", name: "てつどう せん", info: "でんしゃ・ろせんず・えきの かずの まめちしき。いちばん ながい ろせんだよ。" },
+  { id: "K", name: "ふしぎかず せん", info: "すうじ そのものの ふしぎ。けいさんすると びっくり！" },
+  { id: "C", name: "くらし せん", info: "カレンダー・からだ・みのまわりに かくれた かず。" }
+];
+
+/* ========== まめちしき（えき） ==========
+   choices の 1ばんめが せいかい（ひょうじは シャッフル）。
+   {漢字|かんじ} は ふりがな。{{since:1927}} は「いまの とし − 1927」。 */
+var FACTS = [
+  // ---------------- てつどう せん ----------------
+  { id: "R01", line: "R", name: "{山手線|やまのてせん}は なんえき？", big: "🟢",
+    q: "とうきょうを ぐるっと 1しゅう する {山手線|やまのてせん}。えきは ぜんぶで いくつ？",
+    choices: ["30えき", "20えき", "50えき"],
+    hint: "いちばん あたらしい えきは 2020ねんに できた「たかなわゲートウェイ」。それで ちょうど キリの いい かずに なったよ。",
+    ex: "{山手線|やまのてせん}の えきは <b>30</b>。1しゅうの ながさは やく 34.5キロ、1しゅう するのに やく <b>1じかん</b> かかるよ。",
+    math: "となりの えきまで やく 2ふん<br>2ふん × 30えき ＝ 60ぷん ＝ 1じかん",
+    widget: "loop" },
+  { id: "R02", line: "R", name: "わっかの えきばんごう", big: "🔄",
+    q: "{山手線|やまのてせん}の えきばんごうは JY01 とうきょう 〜 JY30 ゆうらくちょう。JY30 の つぎの えきは なんばん？",
+    choices: ["JY01", "JY31", "JY00"],
+    hint: "{山手線|やまのてせん}は わっか。30の つぎは……とけいの 12の つぎと おなじ かんがえかた！",
+    ex: "わっかの せんは、さいごの ばんごうの つぎが <b>さいしょに もどる</b>。とけいも 12じ の つぎは 1じ だね。こういう かぞえかたを、おとなは「あまりの さんすう」と いうよ。",
+    math: "JY28 から 5つ すすむと？<br>28 ＋ 5 ＝ 33 → 33 − 30 ＝ 3 → <b>JY03</b>",
+    widget: "loop" },
+  { id: "R03", line: "R", name: "えきの かずと あいだの かず", big: "🚉",
+    q: "まっすぐな せんに えきが 5つ。えきと えきの「あいだ」は いくつ？",
+    choices: ["4つ", "5つ", "6つ"],
+    hint: "ゆびを 5ほん だして みよう。ゆびと ゆびの すきまは いくつ？",
+    ex: "まっすぐな せんでは <b>あいだ ＝ えき − 1</b>。でも わっかの せんだと、さいごの えきと さいしょの えきも つながるから <b>あいだ ＝ えき</b> に なるよ。",
+    math: "まっすぐ：5えき → あいだ 5 − 1 ＝ 4<br>わっか：5えき → あいだ 5",
+    widget: "gaps" },
+  { id: "R04", line: "R", name: "{銀座線|ぎんざせん}は G01〜G19", big: "🟠",
+    q: "ちかてつ {銀座線|ぎんざせん}の えきばんごうは G01 しぶや 〜 G19 あさくさ。えきは ぜんぶで いくつ？",
+    choices: ["19えき", "18えき", "20えき"],
+    hint: "ばんごうが 01 から はじまって 1つずつ ふえるなら……？",
+    ex: "ばんごうが <b>1から</b> はじまる ときは、さいごの ばんごう ＝ えきの かず。だから <b>19えき</b>。えきの「あいだ」は 18 だよ。",
+    math: "G01 〜 G19 → 19 − 1 ＋ 1 ＝ <b>19えき</b><br>あいだ：19 − 1 ＝ 18" },
+  { id: "R05", line: "R", name: "はじめての ちかてつ", big: "🚇",
+    q: "にほんで はじめての ちかてつ（いまの {銀座線|ぎんざせん}）が はしったのは なんねん？",
+    choices: ["1927ねん", "1872ねん", "1964ねん"],
+    hint: "1872ねんは はじめての きしゃ、1964ねんは しんかんせん の とし だよ。",
+    ex: "1927ねん、うえの 〜 あさくさ の たった <b>2.2キロ</b> から はじまったよ。いまから <b>{{since:1927}}ねん まえ</b>。2027ねんで 100さい！",
+    math: "{{year}} − 1927 ＝ <b>{{since:1927}}</b>ねん" },
+  { id: "R06", line: "R", name: "はじめての てつどう", big: "🚂",
+    q: "1872ねん、にほんで はじめて きしゃが はしった しんばし 〜 よこはま。なんぷん かかった？",
+    choices: ["53ぷん", "5ふん", "5じかん"],
+    hint: "きょりは やく 29キロ。あるくと 6じかん くらい。きしゃは ずっと はやいよ。",
+    ex: "やく 29キロを <b>53ぷん</b>。はしりはじめた 10がつ14にちは いま「<b>てつどうの ひ</b>」に なっているよ。いまから {{since:1872}}ねん まえ の おはなし。",
+    math: "{{year}} − 1872 ＝ <b>{{since:1872}}</b>ねん まえ" },
+  { id: "R07", line: "R", name: "0キロの えき", big: "0️⃣",
+    q: "せんろの きょりは どこかの えきを「0キロ」として はかる。いろんな せんの「0キロ」の しるしが ある えきは？",
+    choices: ["とうきょうえき", "おおさかえき", "はかたえき"],
+    hint: "とうかいどうせん も とうほくせん も しんかんせん も、ここから はじまる えき。",
+    ex: "<b>とうきょうえき</b> には「0キロポスト」という しるしが ある。せんろの よこには 1キロ ごとに キロポストが たっていて、「スタートから なんキロ？」が わかるんだ。",
+    math: "キロポスト 12 と 15 の あいだは？<br>15 − 12 ＝ <b>3キロ</b>" },
+  { id: "R08", line: "R", name: "のぼりは ぐうすう", big: "🔢",
+    q: "でんしゃの「れっしゃばんごう」。とうきょうへ むかう「のぼり」の でんしゃは どっち？",
+    choices: ["ぐうすう（2・4・6…）", "きすう（1・3・5…）", "きまっていない"],
+    hint: "とうきょうから でる「のぞみ1ごう」は「くだり」だよ。",
+    ex: "JRでは <b>のぼり＝ぐうすう</b>、<b>くだり＝きすう</b> が きまり。だから ばんごうを みるだけで、どっちむきの でんしゃか わかるよ。",
+    math: "ぐうすう ＝ 2で わりきれる かず<br>のぞみ 2ごう → 2 ÷ 2 ＝ 1 あまり 0 → <b>のぼり</b>" },
+  { id: "R09", line: "R", name: "しんかんせんの ながさ", big: "🚄",
+    q: "とうかいどう しんかんせん は 16りょう。1りょうが やく 25メートル なら、ぜんぶで やく なんメートル？",
+    choices: ["400メートル", "160メートル", "1000メートル"],
+    hint: "25メートルが 4つで 100メートル だよ。",
+    ex: "やく <b>400メートル</b>！ りくじょうの トラック 1しゅう と おなじくらいの ながさだよ。ざせきは ぜんぶで 1323せき も ある。",
+    math: "25 × 4 ＝ 100<br>16りょう は 4りょう の 4つぶん → 100 × 4 ＝ <b>400</b>" },
+  { id: "R10", line: "R", name: "ざせきは 3＋2", big: "💺",
+    q: "しんかんせんの ふつうの せきは、とおろを はさんで「3せき」と「2せき」。いいことが あるのは どれ？",
+    choices: ["2〜6にん、だれでも いっしょに すわれる", "うんてんしが みやすい", "とくに いみは ない"],
+    hint: "3 と 2 を くみあわせると、どんな にんずうが つくれるかな？",
+    ex: "2にん→2せき、3にん→3せき、4にん→2＋2、5にん→3＋2、6にん→3＋3。いすを くるっと まわせば <b>むかいあわせ</b> にも なるよ。",
+    math: "4 ＝ 2 ＋ 2<br>5 ＝ 3 ＋ 2<br>6 ＝ 3 ＋ 3",
+    widget: "seats" },
+  { id: "R11", line: "R", name: "せんろの はば", big: "🛤️",
+    q: "しんかんせんの せんろの はば（レールと レールの あいだ）は？",
+    choices: ["1435ミリ", "1067ミリ", "2000ミリ"],
+    hint: "しんかんせんは ふつうの JRの せんろより ひろい。ふつうは 1067ミリ だよ。",
+    ex: "しんかんせんは <b>1435ミリ</b>、ふつうの JRの せんろは <b>1067ミリ</b>。はばが ひろいと はやく はしっても ぐらぐら しにくいんだ。",
+    math: "1435 − 1067 ＝ <b>368ミリ</b><br>30センチの ものさし 1ぽんと すこし！" },
+  { id: "R12", line: "R", name: "ガタンゴトンの かず", big: "🎵",
+    q: "ふつうの レールは 1ぽん 25メートル。1キロ はしると、レールの「つぎめ」は やく いくつ？",
+    choices: ["40こ", "25こ", "100こ"],
+    hint: "1キロは 1000メートル。25メートルが いくつ ぶん？",
+    ex: "<b>40こ</b>。つぎめを とおるたびに「ガタン ゴトン」と なるよ。いまは レールを つないで 200メートル より ながくした「ロングレール」も ふえて、しずかに なっているんだ。",
+    math: "1000 ÷ 25 ＝ <b>40</b>",
+    widget: "rail" },
+  { id: "R13", line: "R", name: "はやぶさの はやさ", big: "💨",
+    q: "しんかんせん「はやぶさ」は 1じかんに 320キロ すすむ。1ぷん では やく なんキロ？",
+    choices: ["やく 5キロ", "やく 32キロ", "やく 1キロ"],
+    hint: "1じかん ＝ 60ぷん。320を 60で わると……？",
+    ex: "1ぷんで やく <b>5キロ</b>。あるくと 1じかん いじょう かかる きょりを、たった 1ぷん！ 1びょうでも やく 89メートル すすむよ。",
+    math: "60 × 5 ＝ 300 → 320 ÷ 60 は 5 と すこし<br>→ 1ぷんで やく <b>5キロ</b>" },
+  { id: "R14", line: "R", name: "80パーミルの さか", big: "⛰️",
+    q: "はこねの やまを のぼる でんしゃの いちばん きゅうな さかは「80パーミル」。1000メートル すすむと なんメートル のぼる？",
+    choices: ["80メートル", "8メートル", "800メートル"],
+    hint: "パーミル（‰）は「1000 あたり いくつ」という いみ。",
+    ex: "<b>80メートル</b>。ふつうの でんしゃ（レールの うえを くるまで はしる）では にほんで いちばん きゅうな さかの ひとつ。だから スイッチバックで ジグザグに のぼるんだ。",
+    math: "80‰ ＝ 1000 すすんで 80 のぼる<br>100メートル すすむと → <b>8メートル</b>" },
+  { id: "R15", line: "R", name: "ろせんずの ひみつ", big: "🗺️",
+    q: "ろせんずの せんは、どんな むきで かかれる ことが おおい？",
+    choices: ["たて・よこ・ななめ（45ど）だけ", "ほんものの せんろと おなじ くねくね", "まるい せん だけ"],
+    hint: "ろせんずで だいじなのは「えきの じゅんばん」と「どこで のりかえるか」。ほんとうの かたちは あまり だいじ じゃない。",
+    ex: "1933ねん、ロンドンの ハリー・ベックさんが、ちかてつの ずを <b>たて・よこ・ななめ だけ</b> で かいた。ほんとうの きょりは かわるけど、<b>えきの じゅんばんと つながり</b> は かわらない。みやすくて せかいじゅうで まねされたよ。",
+    math: "かわらないもの：えきの じゅんばん・つながり<br>かわるもの：きょり・まがりかた",
+    widget: "beck" },
+  { id: "R16", line: "R", name: "7つの はしの なぞ", big: "🌉",
+    q: "かわに 7つの はし。どの はしも 1かいずつ ぜんぶ わたって さんぽ できる？",
+    choices: ["どうやっても できない", "できる", "はしを はしって わたれば できる"],
+    hint: "した の「やってみよう」で ためしてみてね。",
+    ex: "1736ねん、オイラーさんが しょうめいした。<b>せんが きすう ほん あつまる ばしょ</b> が 0こ か 2こ なら ひとふでがき できる。7つの はしでは それが 4こ あるから <b>できない</b>。この かんがえかたは ろせんずや みちあんないの けいさんにも つかわれているよ。",
+    math: "きすうの ばしょ 0こ → どこからでも OK<br>きすうの ばしょ 2こ → そこから スタート<br>きすうの ばしょ 4こ → できない",
+    widget: "euler" },
+  { id: "R17", line: "R", name: "すうじの かたちの せん", big: "6️⃣",
+    q: "とうきょうの ちかてつ {大江戸線|おおえどせん}。ろせんずの かたちは どの すうじに にている？",
+    choices: ["6", "8", "1"],
+    hint: "わっか と しっぽ が くっついた かたち。",
+    ex: "{大江戸線|おおえどせん}は わっかに しっぽが ついた <b>「6」の かたち</b>。わっかと しっぽの つなぎめは「とちょうまえ」えき だよ。",
+    math: "6 ＝ わっか（0みたいな まる）＋ しっぽ（1みたいな ぼう）" },
+  { id: "R18", line: "R", name: "とうきょうの ちかてつ", big: "🚇",
+    q: "とうきょうメトロは 9ろせん、とえいちかてつは 4ろせん。あわせて なんろせん？",
+    choices: ["13ろせん", "11ろせん", "94ろせん"],
+    hint: "9 と 4 を たそう。",
+    ex: "<b>13ろせん</b>！ ろせんずでは ぜんぶ ちがう いろと アルファベットで わけているよ（{銀座線|ぎんざせん}は オレンジの G、{大江戸線|おおえどせん}は ピンクの E など）。",
+    math: "9 ＋ 4 ＝ <b>13</b>" },
+  { id: "R19", line: "R", name: "せかいいち にぎやかな えき", big: "👥",
+    q: "1にちに つかう ひとが せかいで いちばん おおい として、ギネスせかいきろくに のった えきは？",
+    choices: ["しんじゅくえき", "ニューヨークの えき", "パリの えき"],
+    hint: "にほんの えき だよ。{山手線|やまのてせん}の えきでも ある。",
+    ex: "<b>しんじゅくえき</b>。1にちに 300まんにん より おおい ひとが つかっていた（コロナの まえ）。よこはま し の ひとの かず（やく 377まんにん）に ちかいくらい！",
+    math: "300まん ＝ 3000000（0が 6こ）" },
+  { id: "R20", line: "R", name: "うみの したの トンネル", big: "🌊",
+    q: "ほんしゅうと ほっかいどうを むすぶ、うみの したの「せいかんトンネル」。ながさは やく どれくらい？",
+    choices: ["やく 54キロ", "やく 5キロ", "やく 540キロ"],
+    hint: "{山手線|やまのてせん} 1しゅう（やく 34.5キロ）より ながいよ。",
+    ex: "やく <b>54キロ</b>（53.85キロ）。そのうち やく 23キロが うみの した。1988ねんに できて、しんかんせんも とおっているよ。",
+    math: "53.85 は 54 に ちかい（しょうすう を まるめる）<br>54 − 34.5 ＝ 19.5 → {山手線|やまのてせん}より やく 20キロ ながい" },
+
+  // ---------------- ふしぎかず せん ----------------
+  { id: "K01", line: "K", name: "サイコロの うら", big: "🎲",
+    q: "サイコロの むかいあう めを たすと、いつも いくつ？",
+    choices: ["7", "6", "10"],
+    hint: "1 の うらは 6 だよ。",
+    ex: "1と6、2と5、3と4。どれも たすと <b>7</b>。だから うえの めが わかれば、したの めも けいさんで わかるよ。",
+    math: "1＋6 ＝ 2＋5 ＝ 3＋4 ＝ <b>7</b><br>うえが 4 → した は 7 − 4 ＝ 3" },
+  { id: "K02", line: "K", name: "1から10まで たすと", big: "➕",
+    q: "1＋2＋3＋4＋5＋6＋7＋8＋9＋10 ＝ ？",
+    choices: ["55", "50", "100"],
+    hint: "1と10、2と9 … と ペアに すると？",
+    ex: "1＋10、2＋9、3＋8、4＋7、5＋6。どの ペアも 11 で、ペアは 5くみ。むかし ガウスという こどもが、1から100まで たすのを この やりかたで あっというまに といたんだって（こたえは 5050）。",
+    math: "11 × 5 ＝ <b>55</b>" },
+  { id: "K03", line: "K", name: "9の だんの ひみつ", big: "9️⃣",
+    q: "9 × 7 ＝ 63。こたえの 6 と 3 を たすと？",
+    choices: ["9", "8", "10"],
+    hint: "6 ＋ 3 を けいさん してみよう。",
+    ex: "9の だんの こたえは、<b>けたを たすと ぜんぶ 9</b>！ 18→1＋8、27→2＋7、36→3＋6 … ためしてみて。",
+    math: "9×2＝18 → 1＋8＝9<br>9×5＝45 → 4＋5＝9<br>9×7＝63 → 6＋3＝<b>9</b>" },
+  { id: "K04", line: "K", name: "1が ならぶ かけざん", big: "✖️",
+    q: "12345679 × 9 ＝ ？（8が ぬけているのが ポイント）",
+    choices: ["111111111", "123456789", "999999999"],
+    hint: "こたえは おなじ すうじが 9こ ならぶよ。",
+    ex: "<b>111111111</b>（1が 9こ）！ さらに ×2 にすると 222222222、×3 にすると 333333333 … と きれいに ならぶよ。",
+    math: "12345679 × 9 ＝ <b>111111111</b><br>12345679 × 18 ＝ 222222222" },
+  { id: "K05", line: "K", name: "1が ならぶ かずの 2じょう", big: "🔺",
+    q: "111 × 111 ＝ ？",
+    choices: ["12321", "11111", "33333"],
+    hint: "11 × 11 ＝ 121 だよ。",
+    ex: "<b>12321</b>。まんなかに むかって 1・2・3 と ふえて、また へっていく。1111×1111 ＝ 1234321 も おなじ かたち。",
+    math: "11 × 11 ＝ 121<br>111 × 111 ＝ <b>12321</b><br>1111 × 1111 ＝ 1234321" },
+  { id: "K06", line: "K", name: "0の はじまり", big: "⭕",
+    q: "「なにも ない」を あらわす すうじ「0」を、かずとして けいさんに つかいはじめた くには？",
+    choices: ["インド", "にほん", "アメリカ"],
+    hint: "カレーで ゆうめいな くに。",
+    ex: "<b>インド</b>。1400ねん くらい まえの ほんに、0 を つかった けいさんが かいてあるよ。0 が あるから、10・100・1000 と かんたんに かけるんだ。",
+    math: "5 ＋ 0 ＝ 5、5 × 0 ＝ 0" },
+  { id: "K07", line: "K", name: "ハチの すの かたち", big: "🐝",
+    q: "ミツバチの すの あなは なんかくけい？",
+    choices: ["6かくけい", "4かくけい", "8かくけい"],
+    hint: "かどが いくつ あるか、ハニカムを おもいだそう。",
+    ex: "<b>6かくけい</b>。すきまなく ならべられて、すくない ロウで ひろい へやが つくれる。かしこい かたち なんだ。",
+    math: "6かくけいの まわりには 6つの 6かくけいが ぴったり" },
+  { id: "K08", line: "K", name: "1ダースは なんこ", big: "✏️",
+    q: "えんぴつ 1ダースは なんぼん？",
+    choices: ["12ほん", "10ぽん", "20ぽん"],
+    hint: "1ねんの つきの かずと おなじ。",
+    ex: "<b>12ほん</b>。12は 2・3・4・6 で わりきれるから、みんなで わけやすい べんりな かず。とけいの 12も、1ねん 12かげつ も おなじ 12。",
+    math: "12 ÷ 2 ＝ 6、12 ÷ 3 ＝ 4<br>12 ÷ 4 ＝ 3、12 ÷ 6 ＝ 2" },
+  { id: "K09", line: "K", name: "1おくの 0の かず", big: "💯",
+    q: "1おく を すうじで かくと、0 は いくつ ならぶ？",
+    choices: ["8こ", "6こ", "10こ"],
+    hint: "1まん は 0が 4こ（10000）。",
+    ex: "1まん は 0が 4こ、1おく は <b>8こ</b>、1ちょう は 12こ。にほんの かずは <b>0が 4こ ふえるごとに</b> なまえが かわるよ。",
+    math: "1まん ＝ 1 0000<br>1おく ＝ 1 0000 0000" },
+
+  // ---------------- くらし せん ----------------
+  { id: "C01", line: "C", name: "1ねんは なんにち", big: "📅",
+    q: "2028ねん は ぜんぶで なんにち ある？",
+    choices: ["366にち", "365にち", "400にち"],
+    hint: "4ねんに 1かい、2がつが 29にちまで ある「うるうどし」が くるよ。",
+    ex: "2028 は 4で わりきれるから <b>うるうどし</b>。2がつ29にちが あって <b>366にち</b>。ちきゅうが たいようを 1しゅう するのは 365にちと 6じかん くらい。その 6じかんを 4ねん ためて 1にち たすんだ。",
+    math: "6じかん × 4 ＝ 24じかん ＝ 1にち<br>2028 ÷ 4 ＝ 507（あまり 0）" },
+  { id: "C02", line: "C", name: "トランプと 1ねん", big: "🃏",
+    q: "トランプ（ジョーカー なし）は なんまい？",
+    choices: ["52まい", "50まい", "48まい"],
+    hint: "4しゅるいの マークが 13まいずつ。",
+    ex: "<b>52まい</b>。じつは 1ねんの「しゅう」の かずも 52！ 52しゅう × 7にち ＝ 364にち で、1ねん（365にち）に ほぼ ぴったり。",
+    math: "13 × 4 ＝ <b>52</b><br>52 × 7 ＝ 364" },
+  { id: "C03", line: "C", name: "しんぞうの ドキドキ", big: "❤️",
+    q: "しんぞうは 1にちに なんかい くらい ドキドキ してる？",
+    choices: ["やく 10まんかい", "やく 100かい", "やく 1000かい"],
+    hint: "1ぷんに 70かい くらい。1にちは 1440ぷん。",
+    ex: "やく <b>10まんかい</b>！ ねている あいだも やすまず うごいているよ。むねに てを あてて、1ぷん かぞえて みよう。",
+    math: "70かい × 1440ぷん ＝ 100800かい<br>→ やく <b>10まんかい</b>" },
+  { id: "C04", line: "C", name: "からだの ほね", big: "🦴",
+    q: "おとなの からだの ほねは やく いくつ？",
+    choices: ["やく 200こ", "やく 20こ", "やく 2000こ"],
+    hint: "て だけで 27こ くらい あるよ。",
+    ex: "おとなは <b>やく 206こ</b>。あかちゃんは やく 300こ も あって、おおきく なると くっついて へるんだ。",
+    math: "300 − 206 ＝ やく 94こ も くっつく" },
+  { id: "C05", line: "C", name: "1じかんは 60ぷん", big: "⏰",
+    q: "1じかんは 60ぷん。どうして 100ぷん じゃなくて 60 なの？",
+    choices: ["60は いろんな かずで わりきれるから", "とけいが ちいさいから", "たまたま"],
+    hint: "60を 2・3・4・5・6 で わってみよう。",
+    ex: "60は 1・2・3・4・5・6・10・12・15・20・30・60 で <b>わりきれる</b>。はんぶん（30ぷん）も 3ぶんの1（20ぷん）も 4ぶんの1（15ふん）も ぴったり。むかしの バビロニアの ひとが つかっていた かぞえかた なんだ。",
+    math: "60 ÷ 2 ＝ 30、60 ÷ 3 ＝ 20<br>60 ÷ 4 ＝ 15、60 ÷ 5 ＝ 12" },
+  { id: "C06", line: "C", name: "にじの いろ", big: "🌈",
+    q: "にほんでは、にじの いろは いくつ と いう？",
+    choices: ["7しょく", "3しょく", "12しょく"],
+    hint: "あか・だいだい・きいろ・みどり・あお・あい・むらさき。",
+    ex: "にほんでは <b>7しょく</b>。でも くにに よって 6しょく だったり 5しょく だったり する。ほんとうは いろは なめらかに かわっているから、どこで くぎるかは ひとが きめているんだ。",
+    math: "あか だいだい きいろ みどり あお あい むらさき → <b>7</b>" }
+];
+
+/* ========== ほぞん ========== */
+var KEY = "kazu-mame-rosen";
+var state = { done: {}, sound: true, line: "R" };
+try {
+  var raw = JSON.parse(localStorage.getItem(KEY));
+  if (raw && typeof raw === "object") {
+    state.done = raw.done || {};
+    state.sound = raw.sound !== false;
+    if (raw.line) state.line = raw.line;
+  }
+} catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+/* ========== おと（WebAudio 合成音） ========== */
+var AC = null;
+function ac() {
+  if (!state.sound) return null;
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === "suspended") AC.resume();
+  } catch (e) { return null; }
+  return AC;
+}
+function tone(f, t0, dur, type, vol) {
+  var c = ac(); if (!c) return;
+  var o = c.createOscillator(), g = c.createGain(), t = c.currentTime + (t0 || 0);
+  o.type = type || "sine"; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol || 0.25, t + 0.015);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+function noise(t0, dur, vol, freq) {
+  var c = ac(); if (!c) return;
+  var len = Math.floor(c.sampleRate * dur), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+  for (var i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  var s = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime + (t0 || 0);
+  s.buffer = buf; f.type = "lowpass"; f.frequency.value = freq || 400; g.gain.value = vol || 0.5;
+  s.connect(f); f.connect(g); g.connect(c.destination); s.start(t);
+}
+var SND = {
+  tap: function () { tone(660, 0, 0.08, "triangle", 0.15); },
+  ok: function () { tone(1319, 0, 0.35, "sine", 0.28); tone(1047, 0.18, 0.5, "sine", 0.28); },
+  ng: function () { tone(180, 0, 0.35, "sawtooth", 0.12); tone(150, 0.05, 0.35, "square", 0.06); },
+  stamp: function () { noise(0, 0.12, 0.6, 300); [523, 659, 784, 1047].forEach(function (f, i) { tone(f, 0.12 + i * 0.08, 0.3, "triangle", 0.15); }); },
+  gatan: function (t) { noise(t, 0.09, 0.9, 260); noise(t + 0.16, 0.09, 0.7, 200); },
+  step: function (i) { tone(440 + (i % 8) * 60, 0, 0.1, "square", 0.06); }
+};
+
+/* ========== もじ ========== */
+var YEAR = new Date().getFullYear();
+function fmt(s) {
+  return String(s)
+    .replace(/\{\{since:(\d+)\}\}/g, function (_, y) { return String(YEAR - Number(y)); })
+    .replace(/\{\{year\}\}/g, String(YEAR))
+    .replace(/\{([^{}|]+)\|([^{}]+)\}/g, "<ruby>$1<rt>$2</rt></ruby>");
+}
+function $(id) { return document.getElementById(id); }
+function lineOf(id) { for (var i = 0; i < LINES.length; i++) if (LINES[i].id === id) return LINES[i]; }
+function cvars(el, line) {
+  el.style.setProperty("--c", "var(--" + line + ")");
+  el.style.setProperty("--t", "var(--" + line + "-t)");
+}
+function toast(msg) {
+  var t = $("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toast._t); toast._t = setTimeout(function () { t.classList.remove("show"); }, 1800);
+}
+
+/* ========== ホーム（ろせんず） ========== */
+function renderTabs() {
+  var box = $("tabs"); box.innerHTML = "";
+  LINES.forEach(function (L) {
+    var all = FACTS.filter(function (f) { return f.line === L.id; });
+    var n = all.filter(function (f) { return state.done[f.id]; }).length;
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "tab"; cvars(b, L.id);
+    b.setAttribute("aria-pressed", state.line === L.id ? "true" : "false");
+    b.innerHTML = '<span class="mark">' + L.id + '</span><span>' + L.name + '</span><span class="cnt">' + n + ' / ' + all.length + '</span>';
+    b.addEventListener("click", function () { SND.tap(); state.line = L.id; save(); renderHome(); });
+    box.appendChild(b);
+  });
+}
+function renderHome() {
+  renderTabs();
+  var total = FACTS.length, done = FACTS.filter(function (f) { return state.done[f.id]; }).length;
+  $("barFill").style.width = (done / total * 100) + "%";
+  $("progText").textContent = done + " / " + total;
+  var L = lineOf(state.line) || LINES[0];
+  $("lineInfo").textContent = L.info;
+  var strip = $("strip"); strip.innerHTML = ""; cvars(strip, L.id);
+  FACTS.filter(function (f) { return f.line === L.id; }).forEach(function (f) {
+    var li = document.createElement("li");
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "st" + (state.done[f.id] ? " done" : "");
+    b.innerHTML = '<span class="dot">' + f.id + '</span><span class="nm">' + fmt(f.name) + '</span><span class="stamp">' + (state.done[f.id] ? "💮" : "") + '</span>';
+    b.addEventListener("click", function () { SND.tap(); openFact(f.id); });
+    li.appendChild(b); strip.appendChild(li);
+  });
+}
+
+/* ========== まめちしき カード ========== */
+var cur = null, tried = 0;
+function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
+function idxOf(id) { for (var i = 0; i < FACTS.length; i++) if (FACTS[i].id === id) return i; return -1; }
+
+function openFact(id) {
+  var f = FACTS[idxOf(id)]; if (!f) return;
+  cur = f; tried = 0;
+  var card = $("card"); cvars(card, f.line);
+  card.innerHTML =
+    '<div class="card-head"><span class="dot">' + f.id + '</span><h2>' + fmt(f.name) + '</h2>' +
+    '<button class="close" type="button" id="closeBtn" aria-label="とじる">✕</button></div>' +
+    '<div class="big" aria-hidden="true">' + f.big + '</div>' +
+    '<p class="q">' + fmt(f.q) + '</p>' +
+    '<div class="choices" id="choices"></div>' +
+    '<p class="hint" id="hint">💡 ' + fmt(f.hint) + '</p>' +
+    '<div class="result" id="result">' +
+      '<p class="yay"><span class="stampmark">💮</span> せいかい！</p>' +
+      '<p class="ex">' + fmt(f.ex) + '</p>' +
+      '<div class="math"><h3>🧮 さんすうで みてみよう</h3><p>' + fmt(f.math) + '</p></div>' +
+      (f.widget ? '<div class="widget" id="widget"></div>' : '') +
+      '<div class="nav"><button class="navbtn" type="button" id="homeBtn">🗺️ ろせんずへ</button>' +
+      '<button class="navbtn go" type="button" id="goBtn">つぎの えき ▶</button></div>' +
+    '</div>';
+  var box = $("choices");
+  shuffle(f.choices.map(function (c, i) { return { c: c, ok: i === 0 }; })).forEach(function (o) {
+    var b = document.createElement("button");
+    b.type = "button"; b.className = "ch"; b.innerHTML = fmt(o.c);
+    b.addEventListener("click", function () { answer(b, o.ok); });
+    box.appendChild(b);
+  });
+  $("closeBtn").addEventListener("click", closeFact);
+  $("homeBtn").addEventListener("click", closeFact);
+  $("goBtn").addEventListener("click", function () {
+    var i = idxOf(f.id), n = FACTS[(i + 1) % FACTS.length];
+    if (n.line !== state.line) { state.line = n.line; save(); }
+    openFact(n.id);
+  });
+  $("modal").classList.add("open");
+  $("modal").scrollTop = 0;
+  document.body.style.overflow = "hidden";
+}
+function answer(btn, ok) {
+  if (ok) {
+    var all = document.querySelectorAll(".ch");
+    for (var i = 0; i < all.length; i++) all[i].disabled = true;
+    btn.classList.add("ok");
+    var first = !state.done[cur.id];
+    state.done[cur.id] = 1; save();
+    SND.ok(); setTimeout(SND.stamp, 450);
+    $("result").classList.add("show");
+    if (cur.widget && WIDGETS[cur.widget]) WIDGETS[cur.widget]($("widget"));
+    setTimeout(function () { $("result").scrollIntoView({ behavior: "smooth", block: "start" }); }, 250);
+    if (first) checkLineClear(cur.line);
+  } else {
+    tried++;
+    btn.disabled = true; btn.classList.add("ng", "shake");
+    SND.ng();
+    $("hint").classList.add("show");
+  }
+}
+function checkLineClear(line) {
+  var all = FACTS.filter(function (f) { return f.line === line; });
+  if (all.every(function (f) { return state.done[f.id]; })) {
+    setTimeout(function () { toast("🎉 " + lineOf(line).name + " ぜんえき せいは！"); }, 900);
+  }
+}
+function closeFact() {
+  $("modal").classList.remove("open");
+  document.body.style.overflow = "";
+  cur = null; renderHome();
+}
+$("modal").addEventListener("click", function (e) { if (e.target === $("modal")) closeFact(); });
+document.addEventListener("keydown", function (e) { if (e.key === "Escape" && cur) closeFact(); });
+
+/* ========== やってみよう（うごく ず） ========== */
+var NS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs, parent) {
+  var e = document.createElementNS(NS, tag);
+  for (var k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+function btn(label, onClick, parent) {
+  var b = document.createElement("button"); b.type = "button"; b.className = "wbtn"; b.innerHTML = label;
+  b.addEventListener("click", onClick); parent.appendChild(b); return b;
+}
+
+var YAMANOTE = ["とうきょう","かんだ","あきはばら","おかちまち","うえの","うぐいすだに","にっぽり","にしにっぽり","たばた","こまごめ",
+  "すがも","おおつか","いけぶくろ","めじろ","たかだのばば","しんおおくぼ","しんじゅく","よよぎ","はらじゅく","しぶや",
+  "えびす","めぐろ","ごたんだ","おおさき","しながわ","たかなわゲートウェイ","たまち","はままつちょう","しんばし","ゆうらくちょう"];
+function jy(n) { return "JY" + (n < 10 ? "0" : "") + n; }
+
+var WIDGETS = {
+  /* わっかの えきばんごう（山手線） */
+  loop: function (box) {
+    box.innerHTML = '<h3>🎮 やってみよう：{山手線|やまのてせん}を ぐるぐる</h3>'.replace(/\{([^{}|]+)\|([^{}]+)\}/g, "<ruby>$1<rt>$2</rt></ruby>");
+    var svg = svgEl("svg", { viewBox: "0 0 320 320", role: "img", "aria-label": "やまのてせんの わっか" }, box);
+    var cx = 160, cy = 160, r = 118, pos = 1, laps = 0;
+    svgEl("circle", { cx: cx, cy: cy, r: r, fill: "none", stroke: "#9acd32", "stroke-width": 12 }, svg);
+    var dots = [];
+    for (var i = 1; i <= 30; i++) {
+      var a = (i - 1) / 30 * Math.PI * 2 - Math.PI / 2;
+      var x = cx + r * Math.cos(a), y = cy + r * Math.sin(a);
+      dots[i] = svgEl("circle", { cx: x, cy: y, r: 7, fill: "#fff", stroke: "#3c8a1e", "stroke-width": 3 }, svg);
+      var t = svgEl("text", { x: cx + (r + 22) * Math.cos(a), y: cy + (r + 22) * Math.sin(a) + 4, "text-anchor": "middle", "font-size": 11, fill: "#55697e" }, svg);
+      t.textContent = i;
+    }
+    var center = svgEl("text", { x: cx, y: cy - 6, "text-anchor": "middle", "font-size": 30, "font-weight": "bold", fill: "#1d2b3a" }, svg);
+    var cname = svgEl("text", { x: cx, y: cy + 22, "text-anchor": "middle", "font-size": 15, fill: "#1d2b3a" }, svg);
+    var lapT = svgEl("text", { x: cx, y: cy + 46, "text-anchor": "middle", "font-size": 13, fill: "#e0483e" }, svg);
+    var train = svgEl("text", { "text-anchor": "middle", "font-size": 22 }, svg); train.textContent = "🚃";
+    var out = document.createElement("p"); out.className = "wout";
+    function draw() {
+      for (var i = 1; i <= 30; i++) dots[i].setAttribute("fill", i === pos ? "#9acd32" : "#fff");
+      var a = (pos - 1) / 30 * Math.PI * 2 - Math.PI / 2;
+      train.setAttribute("x", cx + (r - 26) * Math.cos(a)); train.setAttribute("y", cy + (r - 26) * Math.sin(a) + 8);
+      center.textContent = jy(pos); cname.textContent = YAMANOTE[pos - 1];
+      lapT.textContent = laps > 0 ? laps + "しゅう した！" : "";
+    }
+    function move(d) {
+      var from = pos, raw = pos + d;
+      if (raw > 30) { pos = raw - 30; laps++; out.innerHTML = from + " ＋ " + d + " ＝ " + raw + " → " + raw + " − 30 ＝ " + pos + " → <b>" + jy(pos) + "</b>"; SND.stamp(); }
+      else if (raw < 1) { pos = raw + 30; out.innerHTML = from + " − " + (-d) + " ＝ " + raw + " → " + raw + " ＋ 30 ＝ " + pos + " → <b>" + jy(pos) + "</b>"; SND.tap(); }
+      else { pos = raw; out.innerHTML = from + (d > 0 ? " ＋ " + d : " − " + (-d)) + " ＝ " + pos + " → <b>" + jy(pos) + "</b>"; SND.step(pos); }
+      draw();
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    btn("◀ 1", function () { move(-1); }, row);
+    btn("1 ▶", function () { move(1); }, row);
+    btn("5 ▶", function () { move(5); }, row);
+    btn("10 ▶", function () { move(10); }, row);
+    out.textContent = "ボタンで でんしゃを すすめよう。30の つぎは？";
+    box.appendChild(out);
+    draw();
+  },
+
+  /* えきと あいだ（うえきざん） */
+  gaps: function (box) {
+    box.innerHTML = "<h3>🎮 やってみよう：えきを ふやしたり へらしたり</h3>";
+    var n = 5, ring = false;
+    var svg = svgEl("svg", { viewBox: "0 0 320 220", role: "img", "aria-label": "えきと あいだ" }, box);
+    var out = document.createElement("p"); out.className = "wout";
+    function draw() {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      var pts = [], i;
+      if (ring) {
+        for (i = 0; i < n; i++) { var a = i / n * Math.PI * 2 - Math.PI / 2; pts.push([160 + 82 * Math.cos(a), 110 + 82 * Math.sin(a)]); }
+      } else {
+        for (i = 0; i < n; i++) pts.push([24 + (n === 1 ? 0 : i * 272 / (n - 1)), 110]);
+      }
+      var gaps = ring ? n : n - 1;
+      for (i = 0; i < gaps; i++) {
+        var p = pts[i], q = pts[(i + 1) % n];
+        svgEl("line", { x1: p[0], y1: p[1], x2: q[0], y2: q[1], stroke: "#e0483e", "stroke-width": 9, "stroke-linecap": "round" }, svg);
+        var mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+        if (ring) { mx = 160 + (mx - 160) * 0.62; my = 110 + (my - 110) * 0.62; } else { my -= 22; }
+        var t = svgEl("text", { x: mx, y: my + 5, "text-anchor": "middle", "font-size": 15, "font-weight": "bold", fill: "#e0483e" }, svg);
+        t.textContent = i + 1;
+      }
+      pts.forEach(function (p, k) {
+        svgEl("circle", { cx: p[0], cy: p[1], r: 11, fill: "#fff", stroke: "#1d2b3a", "stroke-width": 4 }, svg);
+        if (!ring) { var t2 = svgEl("text", { x: p[0], y: p[1] + 32, "text-anchor": "middle", "font-size": 13, fill: "#55697e" }, svg); t2.textContent = k + 1; }
+      });
+      out.innerHTML = "えき <b>" + n + "</b> → あいだ <b style='color:#e0483e'>" + gaps + "</b>" +
+        (ring ? "（わっか：えきと おなじ）" : "（まっすぐ：" + n + " − 1）");
+      bm.setAttribute("aria-pressed", ring ? "false" : "true");
+      bw.setAttribute("aria-pressed", ring ? "true" : "false");
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    btn("➖", function () { if (n > 2) { n--; SND.tap(); draw(); } }, row);
+    btn("➕", function () { if (n < 10) { n++; SND.tap(); draw(); } }, row);
+    var bm = btn("ー まっすぐ", function () { ring = false; SND.tap(); draw(); }, row);
+    var bw = btn("◯ わっか", function () { ring = true; SND.tap(); draw(); }, row);
+    box.appendChild(out);
+    draw();
+  },
+
+  /* しんかんせんの ざせき 3＋2 */
+  seats: function (box) {
+    box.innerHTML = "<h3>🎮 やってみよう：なんにんで のる？</h3>";
+    var svg = svgEl("svg", { viewBox: "0 0 320 190", role: "img", "aria-label": "ざせき" }, box);
+    var out = document.createElement("p"); out.className = "wout";
+    var PLAN = { 1: [[0, 1]], 2: [[0, 2]], 3: [[3, 0]], 4: [[0, 2], [0, 2]], 5: [[3, 2]], 6: [[3, 0], [3, 0]] };
+    var TXT = { 1: "1にん → 2せきの まどがわ", 2: "2にん → 2せき がわ", 3: "3にん → 3せき がわ", 4: "4にん ＝ 2 ＋ 2（まえと うしろ。まわせば むかいあわせ）", 5: "5にん ＝ 3 ＋ 2（おなじ れつ）", 6: "6にん ＝ 3 ＋ 3（まえと うしろ。まわせば むかいあわせ）" };
+    var FACE = ["🧒", "👧", "👦", "👩", "👨", "👵"];
+    function draw(k) {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      svgEl("rect", { x: 172, y: 10, width: 26, height: 170, fill: "#eef2f6" }, svg);
+      var t = svgEl("text", { x: 185, y: 100, "text-anchor": "middle", "font-size": 11, fill: "#8aa", "writing-mode": "tb" }, svg); t.textContent = "とおろ";
+      var plan = PLAN[k] || [], face = 0;
+      for (var r = 0; r < 2; r++) {
+        var y = 22 + r * 84, p = plan[r] || [0, 0];
+        for (var s = 0; s < 5; s++) {
+          var left = s < 3, x = left ? 16 + s * 52 : 210 + (s - 3) * 52;
+          var used = left ? (s >= 3 - p[0]) : (s - 3 < p[1]);
+          svgEl("rect", { x: x, y: y, width: 46, height: 62, rx: 10, fill: used ? "#fde3e1" : "#f7f9fb", stroke: used ? "#e0483e" : "#b8c6d4", "stroke-width": 3 }, svg);
+          if (used) { var e = svgEl("text", { x: x + 23, y: y + 42, "text-anchor": "middle", "font-size": 28 }, svg); e.textContent = FACE[face++ % 6]; }
+        }
+      }
+      out.innerHTML = k ? TXT[k] : "にんずうを えらんでね";
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    var bs = [];
+    [1, 2, 3, 4, 5, 6].forEach(function (k) {
+      bs.push(btn(k + "にん", function () { SND.step(k); bs.forEach(function (b, i) { b.setAttribute("aria-pressed", i + 1 === k ? "true" : "false"); }); draw(k); }, row));
+    });
+    box.appendChild(out);
+    draw(0);
+  },
+
+  /* レールの つぎめ */
+  rail: function (box) {
+    box.innerHTML = "<h3>🎮 やってみよう：なんキロ はしる？</h3>";
+    var km = 1;
+    var svg = svgEl("svg", { viewBox: "0 0 320 70", role: "img", "aria-label": "レール" }, box);
+    var out = document.createElement("p"); out.className = "wout";
+    function draw() {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      var segs = Math.min(40, 10 + km * 3), w = 300 / segs;
+      for (var i = 0; i < segs; i++) {
+        svgEl("rect", { x: 10 + i * w + 1, y: 20, width: w - 2, height: 8, rx: 2, fill: "#7b8794" }, svg);
+        svgEl("rect", { x: 10 + i * w + 1, y: 44, width: w - 2, height: 8, rx: 2, fill: "#7b8794" }, svg);
+      }
+      out.innerHTML = km + "キロ ＝ " + (km * 1000) + "メートル<br>" + (km * 1000) + " ÷ 25 ＝ <b>" + (km * 40) + "こ</b>の つぎめ";
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    btn("➖", function () { if (km > 1) { km--; SND.tap(); draw(); } }, row);
+    btn("➕", function () { if (km < 10) { km++; SND.tap(); draw(); } }, row);
+    btn("🚃 ガタンゴトン", function () { for (var i = 0; i < 4; i++) SND.gatan(i * 0.55); }, row);
+    box.appendChild(out);
+    draw();
+  },
+
+  /* ほんものの かたち ↔ ろせんず */
+  beck: function (box) {
+    box.innerHTML = "<h3>🎮 やってみよう：ほんものの かたち ⇄ ろせんず</h3>";
+    var REAL = [[30, 160], [72, 118], [98, 140], [140, 86], [196, 104], [236, 52], [290, 70]];
+    var BECK = [[30, 150], [80, 150], [130, 150], [170, 110], [210, 70], [250, 70], [290, 70]];
+    var NAME = ["あ", "い", "う", "え", "お", "か", "き"];
+    var svg = svgEl("svg", { viewBox: "0 0 320 200", role: "img", "aria-label": "ろせんずの かきかた" }, box);
+    var path = svgEl("polyline", { fill: "none", stroke: "#e0483e", "stroke-width": 9, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    var cs = [], ts = [];
+    NAME.forEach(function (nm) {
+      cs.push(svgEl("circle", { r: 9, fill: "#fff", stroke: "#1d2b3a", "stroke-width": 4 }, svg));
+      var t = svgEl("text", { "text-anchor": "middle", "font-size": 15, "font-weight": "bold", fill: "#1d2b3a" }, svg); t.textContent = nm; ts.push(t);
+    });
+    var out = document.createElement("p"); out.className = "wout";
+    var k = 0, target = 0, raf = 0;
+    function place(u) {
+      var pts = REAL.map(function (p, i) { var q = BECK[i]; return [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u]; });
+      path.setAttribute("points", pts.map(function (p) { return p.join(","); }).join(" "));
+      pts.forEach(function (p, i) { cs[i].setAttribute("cx", p[0]); cs[i].setAttribute("cy", p[1]); ts[i].setAttribute("x", p[0]); ts[i].setAttribute("y", p[1] + 30); });
+    }
+    function go(to) {
+      target = to; cancelAnimationFrame(raf);
+      var from = k, t0 = performance.now();
+      (function step(now) {
+        var u = Math.min(1, (now - t0) / 700), e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+        k = from + (target - from) * e; place(k);
+        if (u < 1) raf = requestAnimationFrame(step);
+      })(t0);
+      b1.setAttribute("aria-pressed", to === 0 ? "true" : "false");
+      b2.setAttribute("aria-pressed", to === 1 ? "true" : "false");
+      out.innerHTML = to === 0 ? "ほんものの せんろは くねくね" : "たて・よこ・ななめ だけ！ でも えきの じゅんばん「あ→き」は おなじ";
+      SND.tap();
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    var b1 = btn("〰️ ほんもの", function () { go(0); }, row);
+    var b2 = btn("📐 ろせんず", function () { go(1); }, row);
+    box.appendChild(out);
+    place(0); b1.setAttribute("aria-pressed", "true"); out.textContent = "ボタンを おして くらべてみよう";
+  },
+
+  /* ひとふでがき */
+  euler: function (box) {
+    box.innerHTML = "<h3>🎮 やってみよう：ひとふでがき</h3><p style='margin:0 0 6px;font-size:15px;line-height:1.6'>まる を じゅんばんに タップして、せんを ぜんぶ 1かいずつ なぞろう。</p>";
+    var PUZ = [
+      { name: "🏠 おうち", nodes: [[100, 150], [220, 150], [100, 250], [220, 250], [160, 70]],
+        edges: [[0, 1, 0], [0, 2, 0], [1, 3, 0], [2, 3, 0], [0, 4, 0], [1, 4, 0], [0, 3, 0], [1, 2, 0]] },
+      { name: "🎀 リボン", nodes: [[50, 90], [50, 230], [160, 160], [270, 90], [270, 230]],
+        edges: [[0, 1, 0], [0, 2, 0], [1, 2, 0], [2, 3, 0], [2, 4, 0], [3, 4, 0]] },
+      { name: "🌉 7つの はし", nodes: [[160, 50], [160, 160], [160, 270], [280, 160]],
+        edges: [[0, 1, -38], [0, 1, 38], [1, 2, -38], [1, 2, 38], [0, 3, 0], [1, 3, 0], [2, 3, 0]] }
+    ];
+    var pi = 0, used, curN, path, showDeg = false;
+    var svg = svgEl("svg", { viewBox: "0 0 320 320", role: "img", "aria-label": "ひとふでがき パズル" }, box);
+    var out = document.createElement("p"); out.className = "wout";
+    function deg(P, v) { return P.edges.filter(function (e) { return e[0] === v || e[1] === v; }).length; }
+    function reset() { used = PUZ[pi].edges.map(function () { return false; }); curN = -1; path = []; draw(); out.textContent = "すきな まるから スタート！"; }
+    function draw() {
+      var P = PUZ[pi];
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (pi === 2) {
+        svgEl("path", { d: "M0,105 C80,95 120,115 320,105 L320,215 C200,225 80,205 0,215 Z", fill: "#cfe6fb" }, svg);
+      }
+      P.edges.forEach(function (e, i) {
+        var a = P.nodes[e[0]], b = P.nodes[e[1]], mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+        var dx = b[0] - a[0], dy = b[1] - a[1], L = Math.sqrt(dx * dx + dy * dy) || 1;
+        var qx = mx + (-dy / L) * e[2] * 2, qy = my + (dx / L) * e[2] * 2;
+        svgEl("path", { d: "M" + a[0] + "," + a[1] + " Q" + qx + "," + qy + " " + b[0] + "," + b[1], fill: "none",
+          stroke: used[i] ? "#e0483e" : "#b8c6d4", "stroke-width": used[i] ? 10 : 8, "stroke-linecap": "round",
+          "stroke-dasharray": used[i] ? "" : "2 12" }, svg);
+      });
+      P.nodes.forEach(function (n, v) {
+        var g = svgEl("g", { style: "cursor:pointer" }, svg);
+        var odd = deg(P, v) % 2 === 1;
+        svgEl("circle", { cx: n[0], cy: n[1], r: 26, fill: "transparent" }, g);
+        svgEl("circle", { cx: n[0], cy: n[1], r: 17, fill: v === curN ? "#e0483e" : (showDeg && odd ? "#ffe2a8" : "#fff"),
+          stroke: showDeg && odd ? "#e08a00" : "#1d2b3a", "stroke-width": 4 }, g);
+        if (showDeg) { var t = svgEl("text", { x: n[0], y: n[1] + 6, "text-anchor": "middle", "font-size": 17, "font-weight": "bold", fill: v === curN ? "#fff" : "#1d2b3a" }, g); t.textContent = deg(P, v); }
+        g.addEventListener("click", function () { tapNode(v); });
+      });
+    }
+    function tapNode(v) {
+      var P = PUZ[pi];
+      if (curN < 0) { curN = v; SND.step(0); draw(); out.textContent = "つぎの まるを タップ"; return; }
+      var hit = -1;
+      for (var i = 0; i < P.edges.length; i++) {
+        var e = P.edges[i];
+        if (!used[i] && ((e[0] === curN && e[1] === v) || (e[1] === curN && e[0] === v))) { hit = i; break; }
+      }
+      if (hit < 0) { SND.ng(); out.textContent = "そこへの せんは もう ないよ"; return; }
+      used[hit] = true; curN = v; SND.step(used.filter(Boolean).length); draw();
+      var left = used.filter(function (u) { return !u; }).length;
+      if (left === 0) { SND.stamp(); out.innerHTML = "🎉 できた！ ひとふでがき せいこう！"; return; }
+      var canMove = P.edges.some(function (e, i) { return !used[i] && (e[0] === curN || e[1] === curN); });
+      if (!canMove) {
+        out.innerHTML = "つまっちゃった（のこり " + left + "ほん）。↺ で やりなおそう" + (pi === 2 ? "<br>じつは これは だれにも できない！ 🔍で かずを みてみよう" : "");
+      } else {
+        out.textContent = "のこり " + left + "ほん";
+      }
+    }
+    var row = document.createElement("div"); row.className = "wrow"; box.appendChild(row);
+    var pbs = PUZ.map(function (P, i) {
+      return btn(P.name, function () { pi = i; pbs.forEach(function (b, j) { b.setAttribute("aria-pressed", j === i ? "true" : "false"); }); SND.tap(); reset(); }, row);
+    });
+    pbs[0].setAttribute("aria-pressed", "true");
+    var row2 = document.createElement("div"); row2.className = "wrow"; box.appendChild(row2);
+    btn("↺ やりなおす", function () { SND.tap(); reset(); }, row2);
+    var db = btn("🔍 せんの かず", function () {
+      showDeg = !showDeg; db.setAttribute("aria-pressed", showDeg ? "true" : "false"); SND.tap(); draw();
+      if (showDeg) {
+        var P = PUZ[pi], odd = P.nodes.filter(function (_, v) { return deg(P, v) % 2; }).length;
+        out.innerHTML = "きすう（オレンジ）の まるは <b>" + odd + "こ</b> → " + (odd === 0 ? "どこからでも できる！" : odd === 2 ? "オレンジから スタートすれば できる！" : "ひとふでがきは できない！");
+      }
+    }, row2);
+    box.appendChild(out);
+    reset();
+  }
+};
+
+/* ========== ボタン ========== */
+function soundBtn() { $("sndBtn").textContent = state.sound ? "🔊" : "🔇"; }
+$("sndBtn").addEventListener("click", function () { state.sound = !state.sound; save(); soundBtn(); SND.tap(); });
+$("randBtn").addEventListener("click", function () {
+  SND.tap(); var f = FACTS[Math.floor(Math.random() * FACTS.length)]; state.line = f.line; save(); renderHome(); openFact(f.id);
+});
+$("nextBtn").addEventListener("click", function () {
+  SND.tap();
+  var rest = FACTS.filter(function (f) { return !state.done[f.id]; });
+  if (!rest.length) { toast("🎉 ぜんぶの えきを まわったよ！"); return; }
+  var mine = rest.filter(function (f) { return f.line === state.line; });
+  var f = (mine.length ? mine : rest)[0]; state.line = f.line; save(); renderHome(); openFact(f.id);
+});
+
+soundBtn();
+renderHome();
+})();
+</script>
+</body>
+</html>
