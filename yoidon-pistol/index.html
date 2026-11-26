@@ -48,12 +48,14 @@
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
   .snd {
     position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 2px; min-height: 112px; padding: 10px 6px 8px; border-radius: 20px;
+    gap: 2px; min-height: 100px; padding: 10px 6px 8px; border-radius: 20px;
     border: 3px solid var(--line); background: var(--card); box-shadow: 0 5px 0 var(--line);
     transition: transform .08s;
   }
   .snd:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--line); }
-  .snd .em { font-size: 40px; line-height: 1.1; }
+  .snd .em { font-size: 36px; line-height: 1.1; }
+  .grp { grid-column: 1 / -1; font-weight: bold; font-size: 16px; color: var(--sub); margin: 8px 4px 0; padding-bottom: 4px; border-bottom: 3px dotted var(--line); }
+  .grp:first-child { margin-top: 0; }
   .snd .nm { font-size: 17px; font-weight: bold; }
   .snd .fire { font-size: 12px; letter-spacing: -1px; min-height: 16px; }
   .snd .try {
@@ -672,6 +674,166 @@
         tone(t, { f: 62, f2: 15, dur: 3.2, peak: 2.4, dist: true });
         crackles(t, 60, 0.2, 3, 0.7, 0.6);
       } },
+    /* ----- さらに ふえた おと ----- */
+    { id: 'neko', em: '🐱', name: 'ねこ', lv: 1, word: 'ニャーー！', flash: '#fff0f6', shake: 0, fx: 'emoji', emo: ['🐾', '🐱'],
+      play: function (t) {
+        var o = ac.createOscillator(); o.type = 'sawtooth';
+        o.frequency.setValueAtTime(520, t); o.frequency.linearRampToValueAtTime(780, t + 0.25); o.frequency.linearRampToValueAtTime(430, t + 0.85);
+        var f = ac.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 4;
+        f.frequency.setValueAtTime(700, t); f.frequency.linearRampToValueAtTime(1500, t + 0.25); f.frequency.linearRampToValueAtTime(800, t + 0.85);
+        var g = ac.createGain();
+        g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.9, t + 0.06);
+        g.gain.setValueAtTime(0.8, t + 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
+        o.connect(f); f.connect(g); outTo(g, 0.3); o.start(t); o.stop(t + 0.95);
+      } },
+    { id: 'hiyoko', em: '🐤', name: 'ひよこ', lv: 1, word: 'ピヨピヨ！', flash: '#fff7b8', shake: 0, fx: 'emoji', emo: ['🐤', '🐣'],
+      play: function (t) {
+        [0, 0.16, 0.42, 0.58].forEach(function (d) {
+          tone(t + d, { f: 2400, f2: 4300, sweep: 0.07, dur: 0.1, peak: 0.45, rev: 0.3 });
+        });
+      } },
+    { id: 'kaeru', em: '🐸', name: 'カエル', lv: 1, word: 'ケロケロ！', flash: '#d9ffd0', shake: 0, fx: 'emoji', emo: ['🐸', '💧'],
+      play: function (t) {
+        [0, 0.32].forEach(function (d) {
+          var a = t + d;
+          var o = ac.createOscillator(); o.type = 'square'; o.frequency.setValueAtTime(170, a); o.frequency.linearRampToValueAtTime(140, a + 0.22);
+          var f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 2.5;
+          var g = ac.createGain(); g.gain.setValueAtTime(0.0001, a);
+          for (var i = 0; i < 8; i++) { g.gain.setValueAtTime(1.0, a + i * 0.028); g.gain.setValueAtTime(0.05, a + i * 0.028 + 0.014); }
+          g.gain.setValueAtTime(0.0001, a + 0.24);
+          o.connect(f); f.connect(g); outTo(g, 0.3); o.start(a); o.stop(a + 0.26);
+        });
+      } },
+    { id: 'coin', em: '🪙', name: 'コイン', lv: 1, word: 'チャリーン！', flash: '#fff3a0', shake: 0, fx: 'emoji', emo: ['🪙', '✨'],
+      play: function (t) {
+        tone(t, { type: 'square', f: 988, dur: 0.09, peak: 0.25, hold: 0.07 });
+        tone(t + 0.08, { type: 'square', f: 1319, dur: 0.7, peak: 0.25, rev: 0.3 });
+      } },
+    { id: 'magic', em: '🪄', name: 'まほう', lv: 1, word: 'キラリーン！', flash: '#f3e3ff', shake: 0, fx: 'emoji', emo: ['✨', '⭐', '💫'],
+      play: function (t) {
+        [523, 587, 659, 784, 880, 1047, 1175, 1319, 1568, 1760, 2093, 2349].forEach(function (f, i) {
+          tone(t + i * 0.045, { f: f, dur: 0.5, peak: 0.22, rev: 0.6 });
+          tone(t + i * 0.045, { f: f * 2.01, dur: 0.3, peak: 0.06 });
+        });
+      } },
+    { id: 'chime', em: '🏫', name: 'チャイム', lv: 1, word: 'キーンコーン！', flash: '#eef7ff', shake: 0, fx: 'notes',
+      play: function (t) {
+        [659, 523, 587, 392].forEach(function (f, i) {
+          tone(t + i * 0.55, { f: f, dur: 1.6, peak: 0.5, rev: 0.6 });
+          tone(t + i * 0.55, { f: f * 2.76, dur: 0.5, peak: 0.08 });
+          tone(t + i * 0.55, { f: f * 2, dur: 0.9, peak: 0.12 });
+        });
+      } },
+    { id: 'hyoshigi', em: '🪵', name: 'ひょうしぎ', lv: 2, word: 'カンッ！カンッ！', flash: '#fbe9cf', shake: 1, fx: 'ring',
+      play: function (t) {
+        [0, 0.36].forEach(function (d) {
+          burst(t + d, { filter: 'bandpass', f: 1900, q: 9, dur: 0.12, peak: 3.0, rev: 0.7 });
+          tone(t + d, { f: 1150, dur: 0.1, peak: 0.6 });
+          tone(t + d, { f: 2480, dur: 0.06, peak: 0.25 });
+        });
+      } },
+    { id: 'klaxon', em: '🚗', name: 'クラクション', lv: 2, word: 'プップー！', flash: '#fff2c2', shake: 1, fx: 'pass', emo: '🚗',
+      play: function (t) {
+        [[0, 0.12], [0.2, 0.6]].forEach(function (n) {
+          [415, 523].forEach(function (f) {
+            var o = tone(t + n[0], { type: 'square', f: f, dur: n[1], peak: 0.0001 }); o.disconnect();
+            var fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 2200;
+            var g = ac.createGain(), a = t + n[0];
+            g.gain.setValueAtTime(0.0001, a); g.gain.linearRampToValueAtTime(0.3, a + 0.01);
+            g.gain.setValueAtTime(0.3, a + n[1] - 0.04); g.gain.exponentialRampToValueAtTime(0.0001, a + n[1]);
+            o.connect(fl); fl.connect(g); outTo(g, 0.3);
+          });
+        });
+      } },
+    { id: 'ninja', em: '🥷', name: 'にんじゃ', lv: 2, word: 'シュシュッ！', flash: '#e6e6f5', shake: 1, fx: 'emoji', emo: ['💨', '✴️'],
+      play: function (t) {
+        [0, 0.13, 0.26].forEach(function (d) {
+          burst(t + d, { filter: 'bandpass', f: 700, f2: 5000, q: 2, dur: 0.18, peak: 1.4, attack: 0.05 });
+        });
+        tone(t + 0.42, { f: 3600, dur: 0.5, peak: 0.25, rev: 0.5 });
+        tone(t + 0.42, { f: 5100, dur: 0.3, peak: 0.12 });
+      } },
+    { id: 'niwatori', em: '🐓', name: 'ニワトリ', lv: 2, word: 'コケコッコー！', flash: '#fff1d6', shake: 1, fx: 'big', emo: '🐓',
+      play: function (t) {
+        [[0, 0.1, 620], [0.15, 0.1, 820], [0.3, 0.09, 700], [0.48, 0.85, 900]].forEach(function (n) {
+          var a = t + n[0];
+          var o = ac.createOscillator(); o.type = 'sawtooth';
+          o.frequency.setValueAtTime(n[2], a);
+          if (n[1] > 0.5) { o.frequency.linearRampToValueAtTime(1050, a + 0.3); o.frequency.linearRampToValueAtTime(700, a + n[1]); }
+          var f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 3;
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, a); g.gain.linearRampToValueAtTime(0.9, a + 0.015);
+          g.gain.setValueAtTime(0.8, a + n[1] * 0.75); g.gain.exponentialRampToValueAtTime(0.0001, a + n[1]);
+          if (n[1] > 0.5) { var l = ac.createOscillator(); l.frequency.value = 9; var lg = ac.createGain(); lg.gain.value = 25; l.connect(lg); lg.connect(o.frequency); l.start(a); l.stop(a + n[1]); }
+          o.connect(f); f.connect(g); outTo(g, 0.3); o.start(a); o.stop(a + n[1] + 0.05);
+        });
+      } },
+    { id: 'drumroll', em: '🎶', name: 'ドラムロール', lv: 3, word: 'ジャーン！', flash: '#fff4c2', shake: 2, fx: 'confetti', pre: 1.5,
+      prePlay: function (t) { // ドンの 1.5びょう まえから ドロロロ…
+        var tt = 0, i = 0;
+        while (tt < 1.47) {
+          burst(t + tt, { filter: 'bandpass', f: 1800, q: 0.8, dur: 0.06, peak: 0.25 + 0.6 * (tt / 1.5) });
+          tone(t + tt, { f: 190, f2: 150, dur: 0.05, peak: 0.15 + 0.3 * (tt / 1.5) });
+          tt += Math.max(0.035, 0.07 - i * 0.002); i++;
+        }
+      },
+      play: function (t) {
+        burst(t, { filter: 'highpass', f: 4500, dur: 2.6, peak: 1.6, rev: 0.7 });
+        burst(t, { filter: 'bandpass', f: 7500, q: 1, dur: 1.6, peak: 0.8 });
+        tone(t, { f: 90, f2: 45, dur: 0.5, peak: 1.4 });
+        [523, 659, 784].forEach(function (f) { tone(t, { type: 'sawtooth', f: f, dur: 1.4, peak: 0.08, rev: 0.4 }); });
+      } },
+    { id: 'zou', em: '🐘', name: 'ぞう', lv: 3, word: 'パオーン！', flash: '#e8e8f0', shake: 2, fx: 'big', emo: '🐘',
+      play: function (t) {
+        [1, 1.5].forEach(function (m) {
+          var o = ac.createOscillator(); o.type = 'sawtooth';
+          o.frequency.setValueAtTime(420 * m, t); o.frequency.linearRampToValueAtTime(760 * m, t + 0.25); o.frequency.linearRampToValueAtTime(560 * m, t + 1.2);
+          var l = ac.createOscillator(); l.frequency.value = 7; var lg = ac.createGain(); lg.gain.value = 35 * m; l.connect(lg); lg.connect(o.frequency);
+          var f = ac.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1300; f.Q.value = 2;
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(m === 1 ? 1.0 : 0.4, t + 0.08);
+          g.gain.setValueAtTime(m === 1 ? 0.9 : 0.35, t + 0.95); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+          o.connect(f); f.connect(g); outTo(g, 0.5, m === 1); o.start(t); o.stop(t + 1.35); l.start(t); l.stop(t + 1.35);
+        });
+        burst(t, { filter: 'bandpass', f: 1800, q: 1, dur: 1.2, peak: 0.25, attack: 0.08 });
+      } },
+    { id: 'fune', em: '🚢', name: 'ふね', lv: 3, word: 'ボーーッ！', flash: '#d8ecff', shake: 2, fx: 'pass', emo: '🚢',
+      play: function (t) {
+        [98, 147, 196, 99].forEach(function (f) {
+          var o = tone(t, { type: 'sawtooth', f: f, dur: 2.3, peak: 0.0001 }); o.disconnect();
+          var fl = ac.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = 650;
+          var g = ac.createGain();
+          g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(0.5, t + 0.18);
+          g.gain.setValueAtTime(0.5, t + 1.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 2.3);
+          o.connect(fl); fl.connect(g); outTo(g, 1.0);
+        });
+      } },
+    { id: 'hikouki', em: '✈️', name: 'ひこうき', lv: 4, word: 'ゴーーッ！', flash: '#e3f4ff', shake: 2, fx: 'pass', emo: '✈️',
+      play: function (t) {
+        burst(t, { filter: 'bandpass', f: 400, f2: 2600, sweep: 1.2, q: 0.8, dur: 3.0, peak: 2.0, attack: 0.25, hold: 1.4, rev: 0.6 });
+        burst(t, { filter: 'lowpass', f: 300, dur: 3.0, peak: 1.4, attack: 0.3, hold: 1.4 });
+        tone(t, { f: 3200, f2: 2100, sweep: 2.8, dur: 3.0, peak: 0.08, attack: 0.3, hold: 1.4 });
+      } },
+    { id: 'warp', em: '🌌', name: 'ワープ', lv: 3, word: 'ギュイーン！', flash: '#b9f6ff', shake: 2, fx: 'ring',
+      play: function (t) {
+        [1, 1.012, 0.5].forEach(function (m) {
+          tone(t, { type: 'sawtooth', f: 90 * m, f2: 3800 * m, sweep: 0.9, dur: 1.15, peak: 0.22, hold: 0.7, rev: 0.6 });
+        });
+        burst(t + 0.85, { filter: 'highpass', f: 2000, dur: 0.5, peak: 0.9, rev: 0.8 });
+      } },
+    { id: 'bigbang', em: '💫', name: 'ビッグバン', lv: 5, word: 'ズドドーーン！！', flash: '#ffffff', shake: 3, fx: 'explosion',
+      play: function (t) {
+        [0, 0.3, 0.75].forEach(function (d, i) {
+          burst(t + d, { filter: 'highpass', f: 250, dur: 0.3, peak: 2.4 - i * 0.4, rev: 0.8 });
+          burst(t + d, { filter: 'lowpass', f: 3800, f2: 90, sweep: 2.5, dur: 3.4, peak: 2.6 - i * 0.4, dist: true });
+          tone(t + d, { f: 60 - i * 8, f2: 14, dur: 3.2, peak: 2.2, dist: true });
+        });
+        var g = burst(t + 0.2, { filter: 'lowpass', f: 220, dur: 5.5, peak: 1.8, attack: 0.2, dist: true });
+        for (var i = 0; i < 20; i++) g.gain.setValueAtTime(Math.max(0.05, 1.8 * Math.pow(1 - i / 21, 1.2) * (0.35 + Math.random() * 0.65)), t + 0.5 + i * 0.24);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + 5.6);
+        crackles(t, 80, 0.2, 4, 0.7, 0.6);
+        [523, 784, 1047, 1568].forEach(function (f, k) { tone(t + 1.2 + k * 0.05, { f: f, dur: 2.5, peak: 0.07, attack: 0.5, rev: 1 }); });
+      } },
     { id: 'random', em: '🎲', name: 'おまかせ', lv: 0, word: '', fx: '' }
   ];
   // おとなしい → はげしい の じゅんに ならべる（おまかせは さいご）
@@ -684,7 +846,13 @@
 
   /* ---------- がめん（メニュー） ---------- */
   var grid = document.getElementById('grid');
+  var GROUP = { 1: '🔥 やさしい', 2: '🔥🔥 げんき', 3: '🔥🔥🔥 にぎやか', 4: '🔥🔥🔥🔥 はげしい', 5: '🔥🔥🔥🔥🔥 ものすごい', 0: '🎲 なにが でるかな' };
+  var lastLv = -1;
   SOUNDS.forEach(function (s) {
+    if (s.lv !== lastLv) {
+      lastLv = s.lv;
+      var h = document.createElement('div'); h.className = 'grp'; h.textContent = GROUP[s.lv] || ''; grid.appendChild(h);
+    }
     var b = document.createElement('div');
     b.className = 'snd'; b.setAttribute('role', 'radio'); b.tabIndex = 0; b.dataset.id = s.id;
     b.innerHTML = '<span class="em">' + s.em + '</span><span class="nm">' + s.name + '</span>' +
@@ -698,7 +866,7 @@
     grid.appendChild(b);
   });
   function renderSel() {
-    Array.prototype.forEach.call(grid.children, function (b) { b.setAttribute('aria-checked', b.dataset.id === st.sound ? 'true' : 'false'); });
+    Array.prototype.forEach.call(grid.querySelectorAll('.snd'), function (b) { b.setAttribute('aria-checked', b.dataset.id === st.sound ? 'true' : 'false'); });
     var s = byId(st.sound);
     document.getElementById('chosen').textContent = 'いまの おと： ' + s.em + ' ' + s.name;
   }
