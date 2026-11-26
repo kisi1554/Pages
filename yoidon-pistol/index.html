@@ -166,6 +166,8 @@
     font-size: clamp(28px, 7vw, 40px); font-weight: bold; background: var(--ok); box-shadow: 0 8px 0 #1c6e33;
   }
   #doneBtn:active { transform: translateY(5px); box-shadow: 0 3px 0 #1c6e33; }
+  #doneBtn:disabled, .sbtn:disabled { opacity: .55; filter: grayscale(.6); transform: none; cursor: not-allowed; }
+  #doneBtn:disabled { box-shadow: 0 8px 0 #555; background: #7d8a80; }
   #resultMsg { font-size: clamp(22px, 5.6vw, 34px); font-weight: bold; text-align: center; }
   #resultMsg .best { display: block; color: var(--accent); font-size: .85em; margin-top: 4px; }
 
@@ -307,7 +309,7 @@
 
   /* ---------- ほぞん ---------- */
   var KEY = 'yoidon-pistol-v1';
-  var st = { sound: 'pistol', snd: true, voice: true, pace: 'normal', timer: true, subj: 'sansu', recs: [], running: null };
+  var st = { sound: 'pistol', snd: true, voice: true, pace: 'normal', timer: true, subj: 'sansu', recs: [], running: null, lockUntil: 0 };
   try {
     var saved = JSON.parse(localStorage.getItem(KEY) || 'null');
     if (saved && typeof saved === 'object') for (var k in st) if (k in saved) st[k] = saved[k];
@@ -795,6 +797,7 @@
       say('よーい', 880);
     }, p[0]);
     var wait = p[0] + p[1] + Math.random() * (p[2] - p[1]);
+    st.lockUntil = Date.now() + wait * 1000 + LOCK_MS; save(); updateLock();
     cur = byId(st.sound);
     if (cur.id === 'random') cur = SOUNDS[Math.floor(Math.random() * (SOUNDS.length - 1))];
     if (cur.pre && cur.prePlay) later(function () { if (st.snd && ensureAudio()) cur.prePlay(ac.currentTime + 0.005); }, wait - cur.pre);
@@ -822,12 +825,38 @@
     if (s.shake >= 3 && navigator.vibrate) { try { navigator.vibrate([300, 80, 400]); } catch (e) {} }
     else if (s.shake >= 2 && navigator.vibrate) { try { navigator.vibrate(200); } catch (e) {} }
     effect(s.fx, s);
+    st.lockUntil = Date.now() + LOCK_MS; save(); updateLock();
     if (st.timer) {
       later(function () { startTimer(Date.now() - 1600); }, 1.6);
     } else {
-      stopBtn.textContent = '✔ とじる';
-      later(close, 3.2);
+      later(showStudy, 1.6);
     }
+  }
+
+  /* ---------- 30びょうは とめられない ロック ---------- */
+  // あそびで スタート→とめる を くりかえさないように、ドンから 30びょうは
+  // 「やめる」「おわった！」「とじる」を おせない（ページを よみなおしても つづく）
+  var LOCK_MS = 30000;
+  function lockLeft() { return Math.max(0, (st.lockUntil || 0) - Date.now()); }
+  function updateLock() {
+    var left = lockLeft(), sec = Math.ceil(left / 1000), on = left > 0 && phase !== 'idle' && phase !== 'result';
+    stopBtn.disabled = on; doneBtn.disabled = on;
+    if (on) {
+      stopBtn.textContent = '🔒 あと ' + sec + 'びょう';
+      doneBtn.textContent = '🔒 あと ' + sec + 'びょう';
+    } else {
+      doneBtn.textContent = 'おわった！';
+      if (phase === 'timer' || phase === 'ready' || phase === 'go') stopBtn.textContent = '✖ やめる';
+      else if (phase === 'study') stopBtn.textContent = '✔ とじる';
+    }
+  }
+  setInterval(updateLock, 250);
+  function showStudy() { // タイマーを つかわない とき
+    phase = 'study';
+    stage.classList.add('on'); timerBox.classList.remove('on');
+    runner.style.display = 'none';
+    showCue('しゅくだい がんばれ！');
+    updateLock();
   }
 
   /* ---------- タイマー ---------- */
@@ -850,7 +879,7 @@
     cue.textContent = ''; cue.className = ''; runner.style.display = 'none';
     timerBox.classList.add('on'); doneBtn.style.display = ''; resultMsg.textContent = '';
     timerSub.textContent = (SUBJ[st.running.subj] || '') + ' がんばれ！';
-    stopBtn.textContent = '✖ やめる';
+    updateLock();
     keepAwake(true);
     cancelAnimationFrame(raf);
     (function tick() {
@@ -859,7 +888,7 @@
     })();
   }
   doneBtn.addEventListener('click', function () {
-    if (phase !== 'timer' || !st.running) return;
+    if (phase !== 'timer' || !st.running || lockLeft() > 0) return;
     cancelAnimationFrame(raf);
     var ms = Date.now() - st.running.t0, subj = st.running.subj;
     timerEl.textContent = fmt(ms);
@@ -869,7 +898,7 @@
     st.recs.unshift({ at: Date.now(), subj: subj, ms: ms });
     st.recs = st.recs.slice(0, 60);
     st.running = null; save(); renderRecs();
-    phase = 'result';
+    phase = 'result'; st.lockUntil = 0; save(); updateLock();
     doneBtn.style.display = 'none';
     timerSub.textContent = SUBJ[subj] || '';
     resultMsg.innerHTML = fmtJa(ms) + ' で できたね！' + (best ? '<span class="best">🏆 じこベスト！</span>' : '');
@@ -904,9 +933,10 @@
     shaker.className = ''; flashEl.className = ''; parts.length = 0;
     keepAwake(false);
     mediaMode(false);
-    phase = 'idle';
+    phase = 'idle'; st.lockUntil = 0; save(); updateLock();
   }
   stopBtn.addEventListener('click', function () {
+    if (lockLeft() > 0 && phase !== 'result') return;
     if (phase === 'timer') {
       if (!confirm('タイマーを やめる？（きろくは のこらないよ）')) return;
       st.running = null; save();
@@ -1069,6 +1099,8 @@
   // とちゅうで とじても タイマーを つづける
   if (st.running && st.running.t0 && Date.now() - st.running.t0 < 6 * 3600 * 1000) startTimer(st.running.t0, st.running.subj);
   else if (st.running) { st.running = null; save(); }
+  else if (lockLeft() > 0) { if (st.lockUntil - Date.now() > LOCK_MS + 10000) st.lockUntil = Date.now() + LOCK_MS; showStudy(); }
+  else if (st.lockUntil) { st.lockUntil = 0; save(); }
 })();
 </script>
 </body>
