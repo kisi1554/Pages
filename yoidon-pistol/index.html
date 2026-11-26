@@ -172,6 +172,9 @@
   #doneBtn:disabled { box-shadow: 0 8px 0 #555; background: #7d8a80; }
   #resultMsg { font-size: clamp(22px, 5.6vw, 34px); font-weight: bold; text-align: center; }
   #resultMsg .best { display: block; color: var(--accent); font-size: .85em; margin-top: 4px; }
+  #resultMsg .stamp { display: block; font-size: clamp(64px, 18vw, 110px); line-height: 1.1; animation: stamp .6s cubic-bezier(.2, 1.8, .4, 1); }
+  #resultMsg .praise { display: block; color: #9b2c15; font-size: clamp(22px, 6vw, 34px); line-height: 1.45; margin-top: 6px; max-width: 80vw; }
+  @keyframes stamp { from { transform: scale(3) rotate(-25deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
 
   @media (min-width: 700px) {
     .opts { grid-template-columns: 1fr 1fr; }
@@ -1069,20 +1072,126 @@
     phase = 'result'; st.lockUntil = 0; save(); updateLock();
     doneBtn.style.display = 'none';
     timerSub.textContent = SUBJ[subj] || '';
-    resultMsg.innerHTML = fmtJa(ms) + ' で できたね！' + (best ? '<span class="best">🏆 じこベスト！</span>' : '');
+    var pr = pickPraise(ms, subj, best);
+    resultMsg.innerHTML = '';
+    var stEl = document.createElement('span'); stEl.className = 'stamp'; stEl.textContent = pr.stamp;
+    var tm = document.createElement('span'); tm.textContent = fmtJa(ms) + ' で できたね！';
+    var pe = document.createElement('span'); pe.className = 'praise'; pe.textContent = pr.text;
+    resultMsg.appendChild(stEl); resultMsg.appendChild(tm);
+    if (best) { var b = document.createElement('span'); b.className = 'best'; b.textContent = '🏆 じこベスト！'; resultMsg.appendChild(b); }
+    resultMsg.appendChild(pe);
     stopBtn.textContent = '✔ とじる';
     keepAwake(false);
     fanfare(best);
-    effect('confetti');
+    var fxs = ['confetti', 'firework', 'pops', 'stars', 'hearts'];
+    var fk = best ? 'firework' : fxs[Math.floor(Math.random() * fxs.length)];
+    if (fk === 'stars') effect('emoji', { emo: ['⭐', '🌟', '✨'] });
+    else if (fk === 'hearts') effect('emoji', { emo: ['💖', '💮', '✨'] });
+    else effect(fk);
+    if (best) later(function () { effect('confetti'); }, 0.6);
+    later(function () { say(pr.text.replace(/[\u{1F000}-\u{1FFFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}\u{200D}]/gu, ''), 880); }, 1.1);
   });
+
+  /* ---------- あおちゃんを ほめる（ランダム） ---------- */
+  var NAME = 'あおちゃん';
+  var PRAISE = [
+    '{n}、すごい！ さいごまで やりきったね！',
+    '{n}、かっこいい！ しゅくだい マスターだ！',
+    'やったね {n}！ おうちの みんなも にっこりだよ！',
+    '{n}、てんさい！ あたまが ピカピカ ひかってるよ！✨',
+    '{n}の がんばり、きんメダル だね！🥇',
+    'しゅくだい かんりょう！ {n}、えらい！ はなまる！💮',
+    '{n}、ちょうしが いいね！ この ちょうしで いこう！',
+    '{n}の えんぴつ、まほうの えんぴつ みたい！🪄',
+    '{n}、しゅうちゅうりょく ばつぐん！',
+    'ロケット みたいな いきおい だったね、{n}！🚀',
+    '{n}、ヒーロー みたい！ しゅくだいに かったね！🦸',
+    '{n}の あたま、どんどん かしこく なってるよ！',
+    'コツコツ がんばる {n}、ほんとうに すてき！',
+    'きょうも やりとげた {n}、さいこう！',
+    '{n}、しゅくだい チャンピオン！🏆',
+    'すごーい！ {n}、もう おわったの！？',
+    '{n}、きょうの MVP！',
+    'かいじゅうも びっくりの がんばりだよ、{n}！🦖',
+    'でんしゃ みたいに まっすぐ ゴールまで はしったね、{n}！🚃',
+    'しんかんせん なみの いきおい！ {n}、すごい！🚄',
+    '{n}の のうみそ、いま パワーアップ ちゅう！💪',
+    'ひとつ ひとつ ていねいに できたね、{n}！',
+    '{n}、ほし みっつ！⭐⭐⭐',
+    '{n}、きのうの じぶんに かったね！',
+    '{n}の がんばり、にじいろ だよ！🌈',
+    'しゅくだいの やまを のぼりきった！ {n}、ちょうじょう とうちゃく！🏔️',
+    '{n}、ばくはつてきに すごい！💥',
+    'えらい！ えらすぎる！ {n}！',
+    '{n}は やれば できる！ ほら、できた！',
+    'くもんの せんせいも びっくり だね、{n}！',
+    '{n}、かっこよすぎて まぶしい！✨',
+    '{n}、しゅくだい ハンター！ ぜんぶ つかまえた！',
+    'ぜんぶ おわった！ {n}、ゆうしょう！🎉',
+    '{n}、きょうも 1だん レベルアップ！',
+    'すばらしい！ {n}に はくしゅ！👏👏👏',
+    'こんなに がんばれる なんて、{n} すごすぎ！',
+    '{n}、にんじゃ みたいに すばやかった！🥷',
+    '{n}の がんばりで、ちきゅうが ちょっと あかるく なったよ！🌏',
+    'しゅくだい やっつけた！ {n}、つよい！',
+    '{n}、きょうも ナイス ファイト！',
+    'ピンポンピンポーン！ {n}、だいせいかい！🛎️',
+    '{n}の がんばりパワー、まんたん！🔋',
+    'うちゅういち がんばりやさん、それは {n}！🪐',
+    '{n}、ぱちぱち〜！ よく できました！',
+    'さすが {n}！ たよりに なるね！'
+  ];
+  var PRAISE_T = [
+    '{s}、{t}で おわったね！ {n}、やるう！',
+    '{s}を やりきった {n}、かっこいい！',
+    '{t}、ずっと がんばった {n}、すごい！'
+  ];
+  var PRAISE_BEST = [
+    'じこベスト こうしん！ {n}、きろく やぶりだ！🏆',
+    'いままでで いちばん はやい！ {n}、しんきろく！',
+    '{n}、じぶんの きろくを ぬかしたよ！ すごすぎる！',
+    'しんきろく たんじょう！ {n}、レジェンドだ！👑',
+    '{n}、きろく ブレイク！ ドッカーン！💥'
+  ];
+  var STAMPS = ['💮', '🏅', '👑', '🌟', '🥇', '💯', '🌈', '🎖️', '🏆', '⭐', '🎉', '🦸'];
+  function pickPraise(ms, subj, best) {
+    var subjName = (SUBJ[subj] || '').replace(/^\S+\s/, '');
+    var hr = new Date().getHours();
+    var today = new Date().toDateString();
+    var nToday = st.recs.filter(function (r) { return new Date(r.at).toDateString() === today; }).length;
+    var pool = PRAISE.slice();
+    if (subjName && subj !== 'hoka') pool = pool.concat(PRAISE_T.slice(0, 2));
+    if (ms >= 5 * 60000) pool.push(PRAISE_T[2]);
+    if (hr < 10) pool.push('あさから しゅくだい！ {n}、えらすぎる！☀️');
+    if (hr >= 18) pool.push('よるまで よく がんばったね、{n}！ おつかれさま！🌙');
+    if (nToday >= 2) pool.push('きょう ' + nToday + 'かいめの しゅくだい！ {n}、とまらない！');
+    if (best && Math.random() < 0.8) pool = PRAISE_BEST.slice();
+    var hist = Array.isArray(st.praiseHist) ? st.praiseHist : [];
+    var fresh = pool.filter(function (x) { return hist.indexOf(x) < 0; });
+    if (!fresh.length) fresh = pool;
+    var tpl = fresh[Math.floor(Math.random() * fresh.length)];
+    hist.unshift(tpl); st.praiseHist = hist.slice(0, 12); save();
+    var text = tpl.replace(/\{n\}/g, NAME).replace(/\{s\}/g, subjName).replace(/\{t\}/g, fmtJa(ms));
+    var stamp = best ? '🏆' : STAMPS[Math.floor(Math.random() * STAMPS.length)];
+    return { text: text, stamp: stamp };
+  }
   function fanfare(big) {
     if (!st.snd || !ensureAudio()) return;
     var t = ac.currentTime + 0.05;
-    var notes = big ? [523, 659, 784, 1047, 784, 1047] : [523, 659, 784, 1047];
-    notes.forEach(function (f, i) {
+    // [おと, はじまり(びょう)] の ならび。まいかい ちがう ファンファーレ
+    var JINGLES = [
+      [[523, 0], [659, 0.13], [784, 0.26], [1047, 0.39]],
+      [[784, 0], [784, 0.12], [784, 0.24], [1047, 0.42]],                       // パンパカパーン
+      [[1047, 0], [1319, 0.08], [1568, 0.16], [2093, 0.24], [1568, 0.32], [2093, 0.42]], // ピロリロリン
+      [[523, 0], [523, 0.15], [659, 0.3], [523, 0.45], [784, 0.6], [1047, 0.8]],
+      [[392, 0], [523, 0.1], [659, 0.2], [784, 0.3], [1047, 0.4], [1319, 0.5]]
+    ];
+    var notes = big ? [[523, 0], [659, 0.13], [784, 0.26], [1047, 0.39], [784, 0.52], [1047, 0.65], [1319, 0.85]] : JINGLES[Math.floor(Math.random() * JINGLES.length)];
+    notes.forEach(function (n, i) {
       var last = i === notes.length - 1;
-      tone(t + i * 0.13, { type: 'triangle', f: f, dur: last ? 0.9 : 0.2, peak: 0.3, hold: last ? 0.3 : 0.05, rev: 0.3 });
-      tone(t + i * 0.13, { type: 'square', f: f / 2, dur: last ? 0.6 : 0.15, peak: 0.06 });
+      tone(t + n[1], { type: 'triangle', f: n[0], dur: last ? 0.9 : 0.2, peak: 0.3, hold: last ? 0.3 : 0.05, rev: 0.3 });
+      tone(t + n[1], { type: 'square', f: n[0] / 2, dur: last ? 0.6 : 0.15, peak: 0.06 });
+      if (last) [1.25, 1.5].forEach(function (m) { tone(t + n[1], { type: 'triangle', f: n[0] * m / 2, dur: 0.9, peak: 0.12, hold: 0.3 }); });
     });
   }
   function keepAwake(on) {
