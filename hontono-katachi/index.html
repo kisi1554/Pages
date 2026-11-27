@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ろせんず ほんとの かたち</title>
+<style>
+  :root { --ink:#1d3557; --sub:#4a6178; --bg:#f3f8ff; --gold:#f2b705; --ok:#2f9e44; --ng:#e8590c; --paper:#f6f1dd; }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","BIZ UDPGothic","Rounded Mplus 1c","Meiryo",sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+  button { font-family:inherit; cursor:pointer; touch-action:manipulation; color:inherit; }
+  ruby rt { font-size:.5em; letter-spacing:0; font-weight:normal; }
+  .hide { display:none !important; }
+
+  #app { position:fixed; inset:0; display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  /* ===== タイトル ===== */
+  #title { position:fixed; inset:0; overflow:auto; z-index:20; background:linear-gradient(#e7f1ff, #fff8ec);
+    display:flex; flex-direction:column; align-items:center; padding:16px 14px 30px; box-sizing:border-box; }
+  #title h1 { margin:6px 0 2px; font-size:30px; text-align:center; letter-spacing:1px; }
+  #title h1 span { display:inline-block; animation:wob 2.4s ease-in-out infinite; }
+  @keyframes wob { 0%,100% { transform:skewX(0) } 30% { transform:skewX(-10deg) scaleY(1.06) } 60% { transform:skewX(8deg) } }
+  #title .lead { font-size:17px; line-height:2; text-align:center; max-width:560px; margin:4px 0 12px; }
+  #courses { width:100%; max-width:720px; display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .course { border:4px solid var(--c); background:#fff; border-radius:22px; padding:10px 8px 8px; font-size:18px; font-weight:bold;
+    line-height:1.8; box-shadow:0 5px 0 var(--c); display:flex; flex-direction:column; align-items:center; gap:2px; min-height:150px; }
+  .course:active { transform:translateY(4px); box-shadow:0 1px 0 var(--c); }
+  .course svg { width:100%; height:62px; }
+  .course .sub { font-size:13px; color:var(--sub); font-weight:normal; line-height:1.5; }
+  .course .best { font-size:16px; letter-spacing:2px; min-height:20px; }
+  #title .row { display:flex; gap:10px; margin-top:16px; flex-wrap:wrap; justify-content:center; }
+  .pill { border:none; border-radius:999px; background:#fff; padding:10px 18px; font-size:17px; font-weight:bold; box-shadow:0 3px 0 rgba(0,0,0,.15); }
+  #title .note { font-size:12px; color:var(--sub); margin-top:14px; text-align:center; line-height:1.7; max-width:560px; }
+
+  /* ===== 上の バー ===== */
+  #top { flex:none; display:flex; align-items:center; gap:8px; padding:8px 10px 4px; }
+  .round { flex:none; width:50px; height:50px; border-radius:50%; border:3px solid #fff; background:var(--ink); color:#fff;
+    font-size:22px; padding:0; box-shadow:0 3px 0 rgba(0,0,0,.2); }
+  #cname { flex:1; min-width:0; font-weight:bold; font-size:16px; line-height:1.55; overflow:hidden; max-height:3.1em; }
+  #pips { display:flex; gap:4px; flex:none; }
+  #pips i { width:26px; height:26px; border-radius:50%; background:#e3e8ee; display:flex; align-items:center; justify-content:center;
+    font-style:normal; font-size:14px; }
+  #pips i.done { background:#ffe8a3; } #pips i.now { background:#fff; outline:3px solid var(--gold); }
+
+  /* ===== ぶたい ===== */
+  #body { flex:1; min-height:0; display:flex; flex-direction:column; }
+  #stage { flex:1; min-height:0; position:relative; margin:0 8px; border-radius:20px; overflow:hidden; background:#fff;
+    box-shadow:0 2px 10px rgba(0,0,0,.1); touch-action:none; }
+  #svg { position:absolute; inset:0; width:100%; height:100%; display:block; }
+  #mode { position:absolute; left:10px; top:8px; background:rgba(255,255,255,.9); border-radius:14px; padding:2px 10px;
+    font-weight:bold; font-size:15px; line-height:1.9; pointer-events:none; }
+  #bubble { position:absolute; left:0; top:0; background:#fff; border:3px solid var(--ink); border-radius:16px; padding:3px 10px;
+    font-weight:bold; font-size:16px; line-height:1.8; white-space:nowrap; pointer-events:none; transform:translate(-50%, -100%);
+    box-shadow:0 3px 0 rgba(0,0,0,.15); z-index:3; }
+  #bubble::after { content:""; position:absolute; left:50%; bottom:-11px; margin-left:-8px; border:8px solid transparent; border-top-color:var(--ink); border-bottom:0; }
+  #toast { position:absolute; left:50%; top:46%; transform:translate(-50%,-50%) scale(.6); opacity:0; pointer-events:none; z-index:4;
+    font-size:30px; font-weight:bold; color:#fff; background:var(--ok); padding:8px 22px; border-radius:24px; white-space:nowrap;
+    transition:transform .25s, opacity .25s; box-shadow:0 4px 0 rgba(0,0,0,.2); }
+  #toast.on { opacity:1; transform:translate(-50%,-50%) scale(1); }
+  #toast.ng { background:var(--ng); }
+
+  /* ===== した の パネル ===== */
+  #panel { flex:none; padding:8px 10px 10px; display:flex; flex-direction:column; gap:8px; }
+  #msg { background:#fff; border-radius:18px; padding:6px 14px; font-weight:bold; font-size:18px; line-height:2; box-shadow:0 2px 8px rgba(0,0,0,.08); min-height:5.6em; box-sizing:border-box; }
+  body.land #msg { min-height:0; }
+  #msg small { font-size:14px; color:var(--sub); font-weight:normal; }
+  #ctrl { display:flex; flex-direction:column; gap:8px; }
+  .btns { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .big { border:none; border-radius:18px; padding:10px 20px; font-size:20px; font-weight:bold; background:var(--gold); color:var(--ink);
+    box-shadow:0 4px 0 #b58800; min-height:56px; line-height:1.6; }
+  .big:active { transform:translateY(3px); box-shadow:0 1px 0 #b58800; }
+  .big.sec { background:#fff; box-shadow:0 4px 0 #c5ced8; }
+  .big.go { animation:go .7s infinite alternate; }
+  @keyframes go { to { transform:scale(1.06); } }
+
+  /* スライダー */
+  .slider { display:flex; align-items:center; gap:10px; }
+  .slider .lb { flex:none; font-weight:bold; font-size:15px; line-height:1.5; text-align:center; width:64px; }
+  .slider .lb b { display:block; font-size:24px; }
+  .track { flex:1; height:56px; position:relative; touch-action:none; }
+  .track::before { content:""; position:absolute; left:0; right:0; top:50%; height:14px; margin-top:-7px; border-radius:7px;
+    background:linear-gradient(90deg, #cfe2ff, #f1e3b5); box-shadow:inset 0 2px 3px rgba(0,0,0,.15); }
+  .knob { position:absolute; top:50%; width:52px; height:52px; margin:-26px 0 0 -26px; border-radius:50%; background:#fff; border:4px solid var(--ink);
+    box-sizing:border-box; display:flex; align-items:center; justify-content:center; font-size:24px; box-shadow:0 3px 0 rgba(0,0,0,.2); }
+
+  /* クイズの せんたくし */
+  .choices { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .choice { background:#fff; border:4px solid #d5dde6; border-radius:18px; padding:4px; min-height:96px; display:flex; flex-direction:column; align-items:center; }
+  .choice svg { width:100%; height:84px; }
+  .choice b { font-size:20px; }
+  .choice.ok { border-color:var(--ok); background:#ebfbee; }
+  .choice.ng { border-color:var(--ng); opacity:.55; }
+
+  /* まとめ */
+  #sum { position:absolute; inset:0; z-index:10; overflow:auto; background:rgba(243,248,255,.97); display:flex; flex-direction:column; align-items:center;
+    padding:14px 14px 24px; box-sizing:border-box; }
+  #sum h2 { margin:4px 0; font-size:26px; }
+  #sum .stars { font-size:40px; letter-spacing:6px; }
+  .cards { width:100%; max-width:640px; display:flex; flex-direction:column; gap:8px; margin:8px 0; }
+  .lcard { background:#fff; border-radius:18px; padding:8px 14px; font-size:17px; font-weight:bold; line-height:2; display:flex; gap:10px; align-items:center;
+    box-shadow:0 2px 8px rgba(0,0,0,.08); }
+  .lcard .e { font-size:32px; flex:none; }
+  #sum .point { background:#fff4cc; border-radius:16px; padding:8px 14px; font-size:17px; font-weight:bold; line-height:2; max-width:640px; }
+  #sum .next { font-size:15px; color:var(--sub); line-height:2; max-width:640px; text-align:center; }
+
+  /* よこもち タブレット: パネルを みぎに */
+  body.land #body { flex-direction:row; }
+  body.land #stage { margin:0 0 10px 10px; }
+  body.land #panel { width:min(360px, 38vw); padding:0 10px 10px; overflow:auto; }
+  body.land .choices { grid-template-columns:1fr; }
+  body.land .choice { flex-direction:row; min-height:0; gap:6px; }
+  body.land .choice svg { height:72px; flex:1; }
+  @media (max-height:520px) { #msg { font-size:16px; line-height:1.8; } .big { min-height:48px; padding:6px 16px; font-size:18px; } }
+
+  @keyframes shake { 20% { transform:translateX(-6px) } 40% { transform:translateX(6px) } 60% { transform:translateX(-4px) } 80% { transform:translateX(4px) } }
+  .shake { animation:shake .4s; }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <button class="round" id="bHome" aria-label="もどる">🏠</button>
+    <div id="cname"></div>
+    <div id="pips"></div>
+    <button class="round" id="bSnd" aria-label="おと">🔊</button>
+  </div>
+  <div id="body">
+    <div id="stage">
+      <svg id="svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="mode"></div>
+      <div id="bubble" class="hide"></div>
+      <div id="toast"></div>
+      <div id="sum" class="hide"></div>
+    </div>
+    <div id="panel">
+      <div id="msg"></div>
+      <div id="ctrl"></div>
+    </div>
+  </div>
+</div>
+
+<div id="title">
+  <h1><span>🫠</span> ろせんず ほんとの かたち</h1>
+  <p class="lead"><ruby>駅<rt>えき</rt></ruby>に はってある ろせんずは、<ruby>地図<rt>ちず</rt></ruby>を「まっすぐ」「<ruby>駅<rt>えき</rt></ruby>の あいだを おなじ ながさ」に した <ruby>絵<rt>え</rt></ruby>。<br>ぐにゃ〜っと へんしん させて、ほんとうの かたちを 見て みよう！</p>
+  <div id="courses"></div>
+  <div class="row"><button class="pill" id="bSnd2">🔊 おと オン</button></div>
+  <p class="note">駅の位置: 国土数値情報（鉄道データ N02・国土交通省）。駅の順番は各社の公式情報と照合。<br>ろせんず・電車の絵はオリジナルです（鉄道会社の路線図デザインではありません）。</p>
+</div>
+
+<script>
+'use strict';
+/* =====================================================================
+   データ（駅名・よみ・じゅんばん・ほんとうの位置は ここ 1か所だけ）
+   - 位置: 国土数値情報「鉄道」N02-24（国土交通省）の 駅の 線分の 平均。 tools/hontono-katachi/stations.py で 作成。
+   - じゅんばん: 山手線 JY01 東京→JY30 神田（そとまわり）／東海道新幹線 東京→新大阪／
+     ブルーライン B01 湘南台→B32 あざみ野／銀座線 G01 渋谷→G19 浅草／丸ノ内線 M01 荻窪→M25 池袋（方南町支線は のせない）
+   - schem: ろせんずの 形。 ellipse = だえん、 poly = 線の まがりかど（0〜1 の わりあい。ほんとうの 地図の わくの 中）。
+     ろせんずでは 駅を この 線の 上に おなじ あいだで ならべる。
+   ===================================================================== */
+const COURSES = [
+  {
+    id:'yamanote', emoji:'🟢', name:'<ruby>山手線<rt>やまのてせん</rt></ruby>', plain:'やまのてせん', c:'#3d9a1c',
+    neat:'きれいな まる（だえん）',
+    lines:[{ name:'<ruby>山手線<rt>やまのてせん</rt></ruby>', c:'#58b52e', loop:true, schem:{ ellipse:true, th0:6 },
+      big:['東京','品川','渋谷','新宿','池袋','上野'],
+      st:[
+      ['東京','とうきょう',35.68121,139.76692], ['有楽町','ゆうらくちょう',35.67504,139.76326], ['新橋','しんばし',35.66630,139.75847],
+      ['浜松町','はままつちょう',35.65541,139.75713], ['田町','たまち',35.64574,139.74761], ['高輪ゲートウェイ','たかなわゲートウェイ',35.63538,139.74064],
+      ['品川','しながわ',35.62866,139.73912], ['大崎','おおさき',35.61995,139.72825], ['五反田','ごたんだ',35.62606,139.72370],
+      ['目黒','めぐろ',35.63341,139.71573], ['恵比寿','えびす',35.64668,139.71013], ['渋谷','しぶや',35.65808,139.70172],
+      ['原宿','はらじゅく',35.67132,139.70271], ['代々木','よよぎ',35.68380,139.70221], ['新宿','しんじゅく',35.68955,139.70082],
+      ['新大久保','しんおおくぼ',35.70093,139.70025], ['高田馬場','たかだのばば',35.71331,139.70396], ['目白','めじろ',35.72039,139.70628],
+      ['池袋','いけぶくろ',35.73028,139.71108], ['大塚','おおつか',35.73179,139.72794], ['巣鴨','すがも',35.73372,139.74035],
+      ['駒込','こまごめ',35.73703,139.74840], ['田端','たばた',35.73748,139.76157], ['西日暮里','にしにっぽり',35.73217,139.76672],
+      ['日暮里','にっぽり',35.72757,139.77097], ['鶯谷','うぐいすだに',35.72145,139.77803], ['上野','うえの',35.71377,139.77678],
+      ['御徒町','おかちまち',35.70719,139.77472], ['秋葉原','あきはばら',35.69853,139.77304], ['神田','かんだ',35.69177,139.77087]
+      ]}],
+    sea:[],
+  },
+  {
+    id:'shinkansen', emoji:'🚅', name:'<ruby>東海道新幹線<rt>とうかいどうしんかんせん</rt></ruby>', plain:'とうかいどう しんかんせん', c:'#1d5fbf',
+    neat:'まっすぐな 1本の 線',
+    lines:[{ name:'<ruby>東海道新幹線<rt>とうかいどうしんかんせん</rt></ruby>', c:'#2b6fd6', schem:{ poly:[[1, .5], [0, .5]] },
+      big:['東京','新横浜','静岡','名古屋','新大阪'],
+      st:[
+      ['東京','とうきょう',35.68110,139.76788], ['品川','しながわ',35.62956,139.74007], ['新横浜','しんよこはま',35.50698,139.61719],
+      ['小田原','おだわら',35.25621,139.15476], ['熱海','あたみ',35.10441,139.07817], ['三島','みしま',35.12671,138.90969],
+      ['新富士','しんふじ',35.14207,138.66301], ['静岡','しずおか',34.97174,138.38968], ['掛川','かけがわ',34.76925,138.01600],
+      ['浜松','はままつ',34.70376,137.73538], ['豊橋','とよはし',34.76289,137.38115], ['三河安城','みかわあんじょう',34.96903,137.06030],
+      ['名古屋','なごや',35.17075,136.88096], ['岐阜羽島','ぎふはしま',35.31574,136.68576], ['米原','まいばら',35.31506,136.28952],
+      ['京都','きょうと',34.98461,135.75834], ['新大阪','しんおおさか',34.73354,135.50009]
+      ]}],
+    sea:[[35.13, 139.36], [34.80, 138.58], [34.80, 136.76]],
+  },
+  {
+    id:'blue', emoji:'🚇', name:'ブルーライン', plain:'ブルーライン', c:'#1c6fd6',
+    neat:'かくっと まがる 線',
+    lines:[{ name:'ブルーライン（<ruby>横浜市営地下鉄<rt>よこはましえいちかてつ</rt></ruby>）', c:'#2f7fd6',
+      schem:{ poly:[[0, .95], [.62, .95], [.94, .66], [.94, .32], [.62, .03]] },
+      big:['湘南台','戸塚','上大岡','関内','横浜','新横浜','あざみ野'],
+      st:[
+      ['湘南台','しょうなんだい',35.39624,139.46612], ['下飯田','しもいいだ',35.40337,139.48289], ['立場','たてば',35.41438,139.50070],
+      ['中田','なかだ',35.41116,139.51122], ['踊場','おどりば',35.40555,139.51858], ['戸塚','とつか',35.40109,139.53489],
+      ['舞岡','まいおか',35.40254,139.55127], ['下永谷','しもながや',35.40276,139.55904], ['上永谷','かみながや',35.40137,139.57279],
+      ['港南中央','こうなんちゅうおう',35.40123,139.59121], ['上大岡','かみおおおか',35.40921,139.59598], ['弘明寺','ぐみょうじ',35.42298,139.60200],
+      ['蒔田','まいた',35.43031,139.61053], ['吉野町','よしのちょう',35.43539,139.61857], ['阪東橋','ばんどうばし',35.43754,139.62497],
+      ['伊勢佐木長者町','いせざきちょうじゃまち',35.44094,139.63266], ['関内','かんない',35.44577,139.63602], ['桜木町','さくらぎちょう',35.44964,139.63074],
+      ['高島町','たかしまちょう',35.45870,139.62365], ['横浜','よこはま',35.46541,139.62014], ['三ツ沢下町','みつざわしもちょう',35.47648,139.61521],
+      ['三ツ沢上町','みつざわかみちょう',35.47642,139.60553], ['片倉町','かたくらちょう',35.49000,139.60643], ['岸根公園','きしねこうえん',35.49551,139.61655],
+      ['新横浜','しんよこはま',35.50906,139.61724], ['北新横浜','きたしんよこはま',35.51922,139.61285], ['新羽','にっぱ',35.52726,139.61205],
+      ['仲町台','なかまちだい',35.53531,139.58952], ['センター南','センターみなみ',35.54517,139.57422], ['センター北','センターきた',35.55320,139.57822],
+      ['中川','なかがわ',35.56309,139.56968], ['あざみ野','あざみの',35.56795,139.55415]
+      ]}],
+    sea:[[35.452, 139.652]],
+  },
+  {
+    id:'chika', emoji:'🚉', name:'<ruby>東京<rt>とうきょう</rt></ruby>の <ruby>地下鉄<rt>ちかてつ</rt></ruby>', plain:'とうきょうの ちかてつ', c:'#e8590c',
+    neat:'まっすぐと かどの 線',
+    lines:[
+      { name:'<ruby>銀座線<rt>ぎんざせん</rt></ruby>', c:'#f59f00', schem:{ poly:[[.44, .97], [.92, .97], [.92, .2], [1, .2]] },
+        big:['渋谷','銀座','上野','浅草'],
+        st:[
+      ['渋谷','しぶや',35.65911,139.70271], ['表参道','おもてさんどう',35.66506,139.71249], ['外苑前','がいえんまえ',35.67037,139.71783],
+      ['青山一丁目','あおやまいっちょうめ',35.67278,139.72412], ['赤坂見附','あかさかみつけ',35.67683,139.73737], ['溜池山王','ためいけさんのう',35.67155,139.74189],
+      ['虎ノ門','とらのもん',35.67016,139.75012], ['新橋','しんばし',35.66749,139.75819], ['銀座','ぎんざ',35.67141,139.76528],
+      ['京橋','きょうばし',35.67680,139.77017], ['日本橋','にほんばし',35.68190,139.77335], ['三越前','みつこしまえ',35.68715,139.77359],
+      ['神田','かんだ',35.69371,139.77089], ['末広町','すえひろちょう',35.70284,139.77177], ['上野広小路','うえのひろこうじ',35.70760,139.77297],
+      ['上野','うえの',35.71176,139.77536], ['稲荷町','いなりちょう',35.71140,139.78212], ['田原町','たわらまち',35.70991,139.79035],
+      ['浅草','あさくさ',35.71074,139.79777]
+        ]},
+      { name:'<ruby>丸ノ内線<rt>まるのうちせん</rt></ruby>', c:'#e03131', schem:{ poly:[[0, .5], [.48, .5], [.6, .78], [.8, .78], [.8, .34], [.55, .02]] },
+        big:['荻窪','新宿','東京','池袋'],
+        st:[
+      ['荻窪','おぎくぼ',35.70417,139.61976], ['南阿佐ケ谷','みなみあさがや',35.69946,139.63557], ['新高円寺','しんこうえんじ',35.69786,139.64851],
+      ['東高円寺','ひがしこうえんじ',35.69796,139.65830], ['新中野','しんなかの',35.69747,139.66951], ['中野坂上','なかのさかうえ',35.69709,139.68221],
+      ['西新宿','にししんじゅく',35.69451,139.69256], ['新宿','しんじゅく',35.69244,139.70059], ['新宿三丁目','しんじゅくさんちょうめ',35.69118,139.70421],
+      ['新宿御苑前','しんじゅくぎょえんまえ',35.68852,139.71091], ['四谷三丁目','よつやさんちょうめ',35.68783,139.71932], ['四ツ谷','よつや',35.68425,139.73004],
+      ['赤坂見附','あかさかみつけ',35.67683,139.73737], ['国会議事堂前','こっかいぎじどうまえ',35.67484,139.74534], ['霞ケ関','かすみがせき',35.67423,139.75268],
+      ['銀座','ぎんざ',35.67319,139.76390], ['東京','とうきょう',35.68193,139.76480], ['大手町','おおてまち',35.68677,139.76618],
+      ['淡路町','あわじちょう',35.69487,139.76745], ['御茶ノ水','おちゃのみず',35.70043,139.76441], ['本郷三丁目','ほんごうさんちょうめ',35.70675,139.76011],
+      ['後楽園','こうらくえん',35.70732,139.75106], ['茗荷谷','みょうがだに',35.71720,139.73690], ['新大塚','しんおおつか',35.72609,139.72941],
+      ['池袋','いけぶくろ',35.73034,139.71115]
+        ]},
+    ],
+    sea:[],
+  },
+];
+const STEPS = ['🫠', '❓', '🧩', '📏', '⭐'];
+
+/* ===== ほぞん ===== */
+const KEY = 'hontono-katachi-v1';
+let SV = { sound:true, stars:{} };
+try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j) SV = Object.assign(SV, j); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(SV)); } catch (e) {} }
+
+/* ===== おと（WebAudio の 合成音） ===== */
+let AC = null;
+function audio() {
+  if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; } }
+  if (AC && AC.state === 'suspended') AC.resume();
+  return AC;
+}
+function tone(f, d, type, vol, when, f2) {
+  if (!SV.sound || !audio()) return;
+  const t = AC.currentTime + (when || 0), o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || .18, t + .02); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + d + .05);
+}
+const SND = {
+  tap() { tone(660, .08, 'triangle', .12); },
+  ok() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, 'triangle', .16, i * .09)); },
+  ng() { tone(330, .18, 'sine', .14); tone(262, .25, 'sine', .12, .14); },
+  boing() { tone(180, .45, 'sine', .2, 0, 520); tone(520, .3, 'sine', .1, .3, 200); },
+  pyon(i) { tone(600 + (i % 8) * 60, .1, 'square', .07, 0, 900 + (i % 8) * 60); },
+  wobble() { tone(300, .5, 'sine', .08, 0, 420); },
+  fan() { [784, 988, 1175, 1568, 1319, 1568].forEach((f, i) => tone(f, .22, 'triangle', .15, i * .11)); },
+};
+
+/* ===== こまかい どうぐ ===== */
+const $ = id => document.getElementById(id);
+const R = (k, y) => `<ruby>${k}<rt>${y}</rt></ruby>`;
+const NS = 'http://www.w3.org/2000/svg';
+function el(tag, attrs, parent) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (parent) parent.appendChild(e); return e; }
+const lerp = (a, b, t) => a + (b - a) * t;
+const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+function km(a, b) {
+  const r = Math.PI / 180, p1 = a[2] * r, p2 = b[2] * r, dp = p2 - p1, dl = (b[3] - a[3]) * r;
+  return 2 * 6371 * Math.asin(Math.sqrt(Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2));
+}
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+const stName = s => R(s[0], s[1]);
+
+/* ===== かたちの けいさん =====
+   どの 形も「ほんとうの 地図の わく」を 0〜1 に した ざひょう (u, v) で もつ。 v は 下むきが ＋。 */
+function prepCourse(C) {
+  if (C.prep) return;
+  let lat0 = 0, n = 0;
+  C.lines.forEach(L => L.st.forEach(s => { lat0 += s[2]; n++; }));
+  lat0 /= n; const k = Math.cos(lat0 * Math.PI / 180);
+  let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9;
+  C.lines.forEach(L => L.st.forEach(s => { const x = s[3] * k, y = -s[2]; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }));
+  C.box = { x0, y0, w: x1 - x0, h: y1 - y0, k };
+  const toUV = (lat, lon) => [(lon * k - x0) / (x1 - x0), (-lat - y0) / (y1 - y0)];
+  C.seaUV = C.sea.map(p => toUV(p[0], p[1]));
+  C.lines.forEach(L => {
+    const n = L.st.length;
+    L.real = L.st.map(s => toUV(s[2], s[3]));
+    // ろせんずの 道すじ（おれ線）
+    let path;
+    if (L.schem.ellipse) {
+      path = [];
+      for (let i = 0; i <= 120; i++) { const th = (L.schem.th0 + i * 3) * Math.PI / 180; path.push([.5 + .5 * Math.cos(th), .5 + .5 * Math.sin(th)]); }
+    } else path = L.schem.poly;
+    // 見た目の 長さで はかる（わくの たて よこ の ひ を いれる）
+    const ar = C.box.w / C.box.h;
+    const seg = []; let tot = 0;
+    for (let i = 0; i < path.length - 1; i++) { const d = Math.hypot((path[i + 1][0] - path[i][0]) * ar, path[i + 1][1] - path[i][1]); seg.push(d); tot += d; }
+    const at = f => { let d = f * tot; for (let i = 0; i < seg.length; i++) { if (d <= seg[i] || i === seg.length - 1) { const t = seg[i] ? Math.min(1, d / seg[i]) : 0; return [lerp(path[i][0], path[i + 1][0], t), lerp(path[i][1], path[i + 1][1], t)]; } d -= seg[i]; } };
+    const div = L.loop ? n : n - 1;
+    L.schemUV = L.st.map((s, i) => at(i / div));
+    // ほんとうの 長さの わりあいで ろせんずの 線に おいた 形（パズルの とちゅう）
+    const gaps = []; let sum = 0;
+    for (let i = 0; i < (L.loop ? n : n - 1); i++) { const d = km(L.st[i], L.st[(i + 1) % n]); gaps.push(d); sum += d; }
+    L.gaps = gaps;
+    let acc = 0; L.midUV = L.st.map((s, i) => { const f = acc / sum; acc += gaps[i] || 0; return at(L.loop ? f : Math.min(1, f)); });
+    L.bigIdx = L.big.map(b => L.st.findIndex(s => s[0] === b)).filter(i => i >= 0);
+  });
+  C.prep = true;
+}
+
+/* ===== がめんの じょうたい ===== */
+let C = null, step = 0, mistakes = 0;
+const V = {
+  W: 300, H: 300, pad: 30, t: 0, tTarget: 0, tSpeed: 1.6,
+  kind: 'morph',       // morph / puzzle
+  pp: 0, ppVis: 0, spring: null, // パズル: ひっぱり
+  placed: null,        // パズル: 駅ごとの ぴょん 0〜1
+  stageB: false,
+  hl: null,            // ながい あいだ の ハイライト {li, i, c}
+  train: { on: true, s: 0, dizzy: false, say: '', sayUntil: 0 },
+  slots: false, labels: true,
+};
+let G = {};          // svg の 部品
+let onFrameHook = null;
+
+function uvToPx(uv) {
+  const B = C.box, sc = Math.min((V.W - V.pad * 2) / B.w, (V.H - V.pad * 2 - 16) / B.h);
+  const w = B.w * sc, h = B.h * sc, ox = (V.W - w) / 2, oy = (V.H - h) / 2 + 8;
+  return [ox + uv[0] * w, oy + uv[1] * h];
+}
+function center() { return [V.W / 2, V.H / 2 + 8]; }
+
+function positions(L, li) {
+  const n = L.st.length, out = [];
+  for (let i = 0; i < n; i++) {
+    let p;
+    if (V.kind === 'puzzle') {
+      const r = uvToPx(L.real[i]), m = uvToPx(L.midUV[i]);
+      const q = Math.min(1, V.ppVis), e = ease(q);
+      p = [lerp(r[0], m[0], e), lerp(r[1], m[1], e)];
+      if (V.ppVis > 1) { const c = center(), s = 1 + (V.ppVis - 1) * 3.2; p = [c[0] + (p[0] - c[0]) * s, c[1] + (p[1] - c[1]) * s]; }
+      if (V.placed && V.placed[li][i] > 0) { const s = uvToPx(L.schemUV[i]), h = ease(Math.min(1, V.placed[li][i])); p = [lerp(p[0], s[0], h), lerp(p[1], s[1], h) - Math.sin(h * Math.PI) * 26]; }
+    } else {
+      const s = uvToPx(L.schemUV[i]), r = uvToPx(L.real[i]), e = V.t;
+      p = [lerp(s[0], r[0], e), lerp(s[1], r[1], e)];
+    }
+    out.push(p);
+  }
+  return out;
+}
+
+/* ===== SVG を つくる ===== */
+function buildSvg() {
+  const svg = $('svg'); svg.innerHTML = '';
+  const r = $('stage').getBoundingClientRect(); V.W = Math.max(100, r.width); V.H = Math.max(100, r.height);
+  V.pad = Math.max(26, Math.min(V.W, V.H) * .09);
+  svg.setAttribute('viewBox', `0 0 ${V.W} ${V.H}`);
+  G = { lines: [] };
+  // 地図の かみ（ちずモードで こくなる）
+  G.paper = el('g', {}, svg);
+  el('rect', { x: 0, y: 0, width: V.W, height: V.H, fill: '#f6f1dd' }, G.paper);
+  for (let x = 0; x < V.W; x += 36) el('line', { x1: x, y1: 0, x2: x, y2: V.H, stroke: '#e6dcb8', 'stroke-width': 1 }, G.paper);
+  for (let y = 0; y < V.H; y += 36) el('line', { x1: 0, y1: y, x2: V.W, y2: y, stroke: '#e6dcb8', 'stroke-width': 1 }, G.paper);
+  C.seaUV.forEach(uv => { const p = uvToPx(uv); const t = el('text', { x: p[0], y: p[1], 'text-anchor': 'middle', 'font-size': 15, fill: '#4c8fc9', 'font-weight': 'bold' }, G.paper); t.textContent = '🌊 うみ'; });
+  // ろせんずの まど（ろせんずモードで 見える）
+  G.slotG = el('g', {}, svg);
+  C.lines.forEach((L, li) => {
+    const g = el('g', {}, svg);
+    const casing = el('path', { fill: 'none', stroke: '#fff', 'stroke-width': 13, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, g);
+    const path = el('path', { fill: 'none', stroke: L.c, 'stroke-width': 8, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }, g);
+    const hl = el('path', { fill: 'none', stroke: '#ffd43b', 'stroke-width': 16, 'stroke-linecap': 'round', opacity: 0 }, g);
+    g.insertBefore(hl, casing);
+    const dots = L.st.map((s, i) => el('circle', { r: L.bigIdx.includes(i) ? 7 : 5, fill: '#fff', stroke: L.c, 'stroke-width': 3 }, g));
+    const labs = L.bigIdx.map(i => {
+      const t = el('g', { 'pointer-events': 'none' }, g);
+      const bg = el('rect', { rx: 6, fill: 'rgba(255,255,255,.85)' }, t);
+      const y = el('text', { 'text-anchor': 'middle', 'font-size': 10, fill: '#4a6178' }, t); y.textContent = L.st[i][1];
+      const k = el('text', { 'text-anchor': 'middle', 'font-size': 15, 'font-weight': 'bold', fill: '#1d3557' }, t); k.textContent = L.st[i][0];
+      return { i, t, bg, y, k, w: Math.max(L.st[i][0].length * 15, L.st[i][1].length * 10) + 8 };
+    });
+    G.lines.push({ g, casing, path, hl, dots, labs });
+  });
+  // でんしゃ（オリジナルの え）
+  const tr = el('g', {}, svg);
+  const body = el('g', {}, tr);
+  el('rect', { x: -19, y: -13, width: 38, height: 26, rx: 9, fill: C.lines[0].c, stroke: '#1d3557', 'stroke-width': 2.5 }, body);
+  el('rect', { x: -13, y: -9, width: 26, height: 9, rx: 3, fill: '#e7f5ff', stroke: '#1d3557', 'stroke-width': 1.5 }, body);
+  const eyes = el('g', {}, body);
+  el('circle', { cx: -7, cy: -4.5, r: 2.6, fill: '#1d3557' }, eyes); el('circle', { cx: 7, cy: -4.5, r: 2.6, fill: '#1d3557' }, eyes);
+  const dz = el('g', { opacity: 0 }, body);
+  [-7, 7].forEach(cx => { const t = el('text', { x: cx, y: -1, 'text-anchor': 'middle', 'font-size': 10, 'font-weight': 'bold', fill: '#c2255c' }, dz); t.textContent = '@'; });
+  el('path', { d: 'M-5 5 Q0 9 5 5', fill: 'none', stroke: '#1d3557', 'stroke-width': 2, 'stroke-linecap': 'round' }, body);
+  el('circle', { cx: -10, cy: 13, r: 3.5, fill: '#1d3557' }, body); el('circle', { cx: 10, cy: 13, r: 3.5, fill: '#1d3557' }, body);
+  G.train = tr; G.tbody = body; G.eyes = eyes; G.dz = dz;
+}
+
+let lastTs = 0;
+function frame(ts) {
+  const dt = Math.min(.05, (ts - lastTs) / 1000 || 0); lastTs = ts;
+  if (C && G.lines) {
+    // へんしんの なめらかさ
+    if (V.t !== V.tTarget) { const d = V.tTarget - V.t, s = V.tSpeed * dt; V.t = Math.abs(d) <= s ? V.tTarget : V.t + Math.sign(d) * s; }
+    if (V.spring) { V.spring.k += dt * 3; const k = Math.min(1, V.spring.k); V.ppVis = lerp(V.spring.from, V.spring.to, 1 - Math.pow(1 - k, 3)) + Math.sin(k * Math.PI * 3) * (1 - k) * .08; if (k >= 1) { V.ppVis = V.spring.to; const cb = V.spring.cb; V.spring = null; if (cb) cb(); } }
+    if (V.placed) V.placed.forEach(a => { for (let i = 0; i < a.length; i++) if (a[i] > 0 && a[i] < 1) a[i] = Math.min(1, a[i] + dt * 3); });
+    if (onFrameHook) onFrameHook(dt);
+    G.paper.setAttribute('opacity', V.kind === 'puzzle' ? (V.stageB ? .35 : 1 - Math.min(1, V.ppVis) * .6) : V.t);
+    drawSlots();
+    const allP = [];
+    C.lines.forEach((L, li) => {
+      const P = positions(L, li); allP.push(P); const g = G.lines[li];
+      let d = 'M' + P.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join('L'); if (L.loop) d += 'Z';
+      g.path.setAttribute('d', d); g.casing.setAttribute('d', d);
+      P.forEach((p, i) => { g.dots[i].setAttribute('cx', p[0]); g.dots[i].setAttribute('cy', p[1]); });
+      if (V.hl && V.hl.li === li) { const a = P[V.hl.i], b = P[(V.hl.i + 1) % P.length]; g.hl.setAttribute('d', `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`); g.hl.setAttribute('stroke', V.hl.c); g.hl.setAttribute('opacity', 1); }
+      else g.hl.setAttribute('opacity', 0);
+      g.labs.forEach(lb => {
+        const p = P[lb.i]; let x = p[0], y = p[1] - 14;
+        const half = lb.w / 2; x = Math.max(half + 2, Math.min(V.W - half - 2, x)); if (y < 30) y = p[1] + 40;
+        lb.t.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)})`);
+        lb.bg.setAttribute('x', -half); lb.bg.setAttribute('y', -28); lb.bg.setAttribute('width', lb.w); lb.bg.setAttribute('height', 31);
+        lb.y.setAttribute('y', -16); lb.k.setAttribute('y', 0);
+        lb.t.setAttribute('display', V.labels ? '' : 'none');
+      });
+    });
+    drawTrain(dt, allP);
+  }
+  requestAnimationFrame(frame);
+}
+
+function drawSlots() {
+  const show = V.kind === 'puzzle' && V.stageB;
+  if (!show) { if (G.slotG.childNodes.length) G.slotG.innerHTML = ''; return; }
+  if (!G.slotG.childNodes.length) C.lines.forEach(L => L.schemUV.forEach(uv => { const p = uvToPx(uv); el('circle', { cx: p[0], cy: p[1], r: 9, fill: 'none', stroke: '#adb5bd', 'stroke-width': 2.5, 'stroke-dasharray': '4 3' }, G.slotG); }));
+}
+
+function drawTrain(dt, allP) {
+  const T = V.train;
+  if (!T.on) { G.train.setAttribute('display', 'none'); $('bubble').classList.add('hide'); return; }
+  G.train.setAttribute('display', '');
+  const L = C.lines[0], P = allP[0], n = P.length, span = L.loop ? n : n - 1;
+  T.s += dt * Math.max(1.2, span / 14) * (T.dir || 1);
+  if (L.loop) T.s = (T.s % n + n) % n;
+  else { if (T.s > span) { T.s = span; T.dir = -1; } if (T.s < 0) { T.s = 0; T.dir = 1; } }
+  const i = Math.min(span - 1, Math.floor(T.s)), f = T.s - i, a = P[i], b = P[(i + 1) % n];
+  const x = lerp(a[0], b[0], f), y = lerp(a[1], b[1], f) - 15;
+  const dizzy = T.dizzy;
+  const wob = dizzy ? Math.sin(performance.now() / 90) * 18 : 0;
+  const flip = b[0] < a[0] - .5 ? -1 : 1;
+  G.train.setAttribute('transform', `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${wob.toFixed(1)})`);
+  G.tbody.setAttribute('transform', `scale(${flip},1)`);
+  G.eyes.setAttribute('opacity', dizzy ? 0 : 1); G.dz.setAttribute('opacity', dizzy ? 1 : 0);
+  const bub = $('bubble');
+  if (T.say && performance.now() < T.sayUntil) {
+    bub.innerHTML = T.say; bub.classList.remove('hide');
+    const bw = bub.offsetWidth / 2 + 6;
+    bub.style.left = Math.max(bw, Math.min(V.W - bw, x)) + 'px'; bub.style.top = Math.max(bub.offsetHeight + 4, y - 22) + 'px';
+  } else bub.classList.add('hide');
+}
+function say(html, ms) { V.train.say = html; V.train.sayUntil = performance.now() + (ms || 2600); }
+
+function toast(text, ng) { const t = $('toast'); t.textContent = text; t.classList.toggle('ng', !!ng); t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('on'), 1100); }
+
+/* ===== ぶたいの しかけ ===== */
+function setMsg(h) { $('msg').innerHTML = h; }
+function setCtrl(h) { $('ctrl').innerHTML = h; }
+function setMode(h) { $('mode').innerHTML = h; $('mode').classList.toggle('hide', !h); }
+function pips() { $('pips').innerHTML = STEPS.map((e, i) => `<i class="${i < step ? 'done' : i === step ? 'now' : ''}">${e}</i>`).join(''); }
+function svgPt(ev) { const r = $('stage').getBoundingClientRect(); return [ev.clientX - r.left, ev.clientY - r.top]; }
+let stageDown = null, stageMove = null, stageUp = null;
+$('stage').addEventListener('pointerdown', ev => { if (stageDown) { $('stage').setPointerCapture(ev.pointerId); stageDown(svgPt(ev), ev); } });
+$('stage').addEventListener('pointermove', ev => { if (stageMove) stageMove(svgPt(ev), ev); });
+['pointerup', 'pointercancel'].forEach(t => $('stage').addEventListener(t, ev => { if (stageUp) stageUp(svgPt(ev), ev); }));
+function clearHandlers() { stageDown = stageMove = stageUp = null; onFrameHook = null; }
+
+function nextBtn(label, fn) {
+  const wrap = document.createElement('div'); wrap.className = 'btns';
+  wrap.innerHTML = `<button class="big go">${label || 'つぎへ ▶'}</button>`;
+  wrap.firstChild.onclick = () => { SND.tap(); fn(); };
+  $('ctrl').appendChild(wrap);
+}
+
+/* ===== ステップ 1: へんしん ===== */
+function stepHenshin() {
+  step = 0; pips(); clearHandlers(); resetView(); V.t = 0; V.tTarget = 0;
+  setMode('いまは: ろせんず');
+  setMsg(`${C.name}の ろせんずは ${C.neat}。<br>スライダーを みぎへ うごかして、ほんとうの <ruby>地図<rt>ちず</rt></ruby>の 形に へんしん！`);
+  setCtrl(`<div class="slider"><div class="lb"><b>📋</b>ろせんず</div><div class="track" id="trk"><div class="knob" id="knob">🫠</div></div><div class="lb"><b>🗺️</b>ちず</div></div>
+    <div class="btns"><button class="big sec" id="bAuto">▶ じどうで へんしん</button></div>`);
+  let reached = false, lastWob = 0;
+  const trk = $('trk'), knob = $('knob');
+  const setFromX = x => { const r = trk.getBoundingClientRect(); const v = Math.max(0, Math.min(1, (x - r.left - 26) / (r.width - 52))); V.tTarget = v; V.tSpeed = 6; };
+  trk.addEventListener('pointerdown', ev => { trk.setPointerCapture(ev.pointerId); audio(); setFromX(ev.clientX); trk.dragging = true; });
+  trk.addEventListener('pointermove', ev => { if (trk.dragging) setFromX(ev.clientX); });
+  ['pointerup', 'pointercancel'].forEach(t => trk.addEventListener(t, () => { trk.dragging = false; }));
+  $('bAuto').onclick = () => { SND.tap(); V.tSpeed = .45; V.tTarget = V.tTarget > .5 ? 0 : 1; };
+  onFrameHook = () => {
+    const r = trk.getBoundingClientRect();
+    knob.style.left = (26 + V.t * (r.width - 52)) + 'px';
+    const mid = V.t > .18 && V.t < .82;
+    V.train.dizzy = mid;
+    knob.textContent = V.t < .18 ? '📋' : V.t > .82 ? '🗺️' : '🫠';
+    if (mid && performance.now() - lastWob > 900) { lastWob = performance.now(); SND.wobble(); say('め、めが まわる〜 😵', 900); }
+    setMode(V.t < .5 ? 'いまは: ろせんず 📋' : 'いまは: ほんとうの ちず 🗺️');
+    if (!reached && V.t >= .99) {
+      reached = true; SND.ok(); toast('へんしん！');
+      setTimeout(() => say('ほんとうは こんな 形だったんだ！', 2600), 1150);
+      setMsg(`これが ${C.name}の ほんとうの 形！ ろせんずと くらべて みよう。<br><small>なんども うごかして いいよ。</small>`);
+      nextBtn('つぎへ ▶', stepQuiz);
+    }
+  };
+}
+
+/* ===== ステップ 2: クイズ ===== */
+function miniSvg(kind) {
+  // kind: real / neat / flip
+  const vb = 120, vh = 84, p = 10;
+  const B = C.box, sc = Math.min((vb - p * 2) / B.w, (vh - p * 2) / B.h), w = B.w * sc, h = B.h * sc, ox = (vb - w) / 2, oy = (vh - h) / 2;
+  let s = `<svg viewBox="0 0 ${vb} ${vh}" xmlns="${NS}">`;
+  C.lines.forEach(L => {
+    const pts = (kind === 'neat' ? L.schemUV : L.real).map(uv => [ox + uv[0] * w, oy + (kind === 'flip' ? 1 - uv[1] : uv[1]) * h]);
+    s += `<path d="M${pts.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join('L')}${L.loop ? 'Z' : ''}" fill="none" stroke="${L.c}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"/>`;
+    pts.forEach(q => { s += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="1.8" fill="#fff" stroke="${L.c}" stroke-width="1.2"/>`; });
+    // めじるし 駅（さいしょの big）
+    const bi = L.bigIdx[0], q = pts[bi];
+    s += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="4" fill="#ffd43b" stroke="#1d3557" stroke-width="1.5"/>`;
+  });
+  return s + '</svg>';
+}
+function stepQuiz() {
+  step = 1; pips(); clearHandlers(); resetView(); V.t = 0; V.tTarget = 0; V.train.on = true;
+  setMode('ろせんず 📋');
+  const L0 = C.lines[0], mark = L0.st[L0.bigIdx[0]];
+  setMsg(`ろせんずを よく 見てね。ほんとうの <ruby>地図<rt>ちず</rt></ruby>の 形は どれ？<br><small>🟡 は ${stName(mark)}。</small>`);
+  const kinds = shuffle(['real', 'neat', 'flip']);
+  setCtrl(`<div class="choices">${kinds.map((k, i) => `<button class="choice" data-k="${k}"><b>${'あいう'[i]}</b>${miniSvg(k)}</button>`).join('')}</div>`);
+  let done = false;
+  document.querySelectorAll('.choice').forEach(b => b.onclick = () => {
+    if (done || b.classList.contains('ng')) return;
+    audio();
+    const k = b.dataset.k;
+    if (k === 'real') {
+      done = true; b.classList.add('ok'); SND.ok(); toast('せいかい！');
+      V.tSpeed = .8; V.tTarget = 1; setMode('ほんとうの ちず 🗺️');
+      setMsg(`せいかい！ ほんとうの 形は でこぼこ。ろせんずは ${C.neat}に かんたんに して あるんだね。`);
+      setTimeout(() => { V.train.dizzy = false; say('ろせんずに だまされた〜！ でこぼこ だよ〜', 3200); SND.boing(); }, 1300);
+      nextBtn('つぎへ ▶', stepPuzzle);
+    } else {
+      mistakes++; b.classList.add('ng', 'shake'); SND.ng(); toast('ざんねん', true);
+      setMsg(k === 'neat'
+        ? `それは ろせんずと おなじ 形。ほんとうの <ruby>地図<rt>ちず</rt></ruby>は こんなに きれいじゃ ないよ。もういちど！`
+        : `おしい！ それは さかさま。🟡 の ${stName(mark)}は どっちに ある？ もういちど！`);
+    }
+  });
+}
+
+/* ===== ステップ 3: パズル（地図 → ろせんず） ===== */
+function stepPuzzle() {
+  step = 2; pips(); clearHandlers(); resetView();
+  V.kind = 'puzzle'; V.pp = 0; V.ppVis = 0; V.stageB = false; V.placed = null; V.train.on = false; V.labels = true;
+  setMode('ちず 🗺️ → ろせんず 📋');
+  setMsg(`こんどは ぎゃく！ この <ruby>地図<rt>ちず</rt></ruby>を ろせんずに しよう。<br>① <b>がめんを ぐい〜っと なぞって</b>、線を ${C.lines[0].loop ? 'まるく' : 'まっすぐに'} のばそう。`);
+  setCtrl('');
+  let last = null, scale = Math.min(V.W, V.H) * 1.1, laughed = false;
+  stageDown = p => { if (V.spring || V.stageB) return; audio(); last = p; };
+  stageMove = p => {
+    if (!last || V.spring || V.stageB) return;
+    const d = Math.hypot(p[0] - last[0], p[1] - last[1]); last = p;
+    V.pp = Math.min(1.55, V.pp + d / scale); V.ppVis = V.pp;
+  };
+  stageUp = () => {
+    if (!last) return; last = null;
+    if (V.stageB || V.spring) return;
+    if (V.pp > 1.08) {
+      laughed = true; SND.boing();
+      setMsg('わわっ！ のばしすぎて <ruby>線<rt>せん</rt></ruby>が がめんから はみでちゃった〜！ 😂 …ぼよよん。');
+      V.spring = { from: V.pp, to: 1, k: 0, cb: startB };
+    } else if (V.pp > .92) { V.spring = { from: V.pp, to: 1, k: 0, cb: startB }; }
+    else setMsg(`いいね！ もっと もっと なぞって！ <small>（${Math.round(V.pp * 100)}％）</small>`);
+  };
+  function startB() {
+    V.pp = 1; V.stageB = true; SND.ok(); toast(C.lines[0].loop ? 'まるく なった！' : 'まっすぐ！');
+    V.placed = C.lines.map(L => L.st.map(() => 0));
+    // もう ほとんど ばしょが あっている 駅は さいしょから OK
+    C.lines.forEach((L, li) => L.st.forEach((s, i) => { const a = uvToPx(L.midUV[i]), b = uvToPx(L.schemUV[i]); if (Math.hypot(a[0] - b[0], a[1] - b[1]) < 3) V.placed[li][i] = 1; }));
+    if (V.placed.every(a => a.every(v => v > 0))) { checkDone(); return; }
+    setTimeout(() => setMsg(`${laughed ? 'ちょうど よく なった！ ' : ''}② こんどは <ruby>駅<rt>えき</rt></ruby>を おなじ あいだに ならべよう。<br><b>○ の 駅を タップ</b>すると、てんてんの ○ へ ぴょん！`), laughed ? 1400 : 0);
+    let taps = 0;
+    stageDown = p => {
+      let best = null, bd = 40;
+      C.lines.forEach((L, li) => { const P = positions(L, li); P.forEach((q, i) => { if (V.placed[li][i] > 0) return; const d = Math.hypot(q[0] - p[0], q[1] - p[1]); if (d < bd) { bd = d; best = [li, i]; } }); });
+      if (!best) return;
+      V.placed[best[0]][best[1]] = .01; SND.pyon(taps); taps++;
+      if (taps === 3) { setCtrl(''); const w = document.createElement('div'); w.className = 'btns'; w.innerHTML = '<button class="big sec">🐇 のこり ぜんぶ ぴょん！</button>'; w.firstChild.onclick = () => { SND.tap(); allJump(); }; $('ctrl').appendChild(w); }
+      checkDone();
+    };
+    stageMove = stageUp = null;
+  }
+  function allJump() { let k = 0; V.placed.forEach(a => a.forEach((v, i) => { if (v === 0) { setTimeout(() => { a[i] = .01; SND.pyon(k++); }, k * 60); k++; } })); setTimeout(checkDone, k * 60 + 50); }
+  function checkDone() {
+    if (!V.placed.every(a => a.every(v => v > 0))) return;
+    stageDown = null; setCtrl('');
+    setTimeout(() => {
+      SND.fan(); toast('ろせんず かんせい！');
+      setMsg(`ろせんずの できあがり！ <ruby>駅<rt>えき</rt></ruby>の じゅんばんは そのまま、形と ながさを かんたんに したんだね。`);
+      V.kind = 'morph'; V.t = 0; V.tTarget = 0; V.stageB = false; V.placed = null; V.train.on = true; V.train.dizzy = false;
+      setMode('ろせんず 📋'); say('はしりやすい〜♪', 2000);
+      nextBtn('つぎへ ▶', stepNagai);
+    }, 700);
+  }
+}
+
+/* ===== ステップ 4: ほんとうに ながい あいだ ===== */
+function stepNagai() {
+  step = 3; pips(); clearHandlers(); resetView(); V.t = 1; V.tTarget = 1; V.train.on = false;
+  setMode('ほんとうの ちず 🗺️');
+  setMsg(`ろせんずでは どこも おなじ ながさ。でも <ruby>地図<rt>ちず</rt></ruby>では？<br><b><ruby>駅<rt>えき</rt></ruby>と <ruby>駅<rt>えき</rt></ruby>の あいだが いちばん ながい ところ</b>を タップ！`);
+  setCtrl('');
+  const segs = [];
+  C.lines.forEach((L, li) => L.gaps.forEach((g, i) => segs.push({ li, i, d: g })));
+  const max = Math.max(...segs.map(s => s.d));
+  const sorted = segs.slice().sort((a, b) => b.d - a.d);
+  const best = sorted[0];
+  let wrong = 0, done = false;
+  stageDown = p => {
+    if (done) return; audio();
+    let hit = null, hd = 34;
+    C.lines.forEach((L, li) => { const P = positions(L, li); L.gaps.forEach((g, i) => { const a = P[i], b = P[(i + 1) % P.length]; const d = segDist(p, a, b); if (d < hd) { hd = d; hit = segs.find(s => s.li === li && s.i === i); } }); });
+    if (!hit) return;
+    const L = C.lines[hit.li], A = L.st[hit.i], B = L.st[(hit.i + 1) % L.st.length];
+    const kmTxt = `やく ${hit.d < 10 ? hit.d.toFixed(1) : Math.round(hit.d)}キロ`;
+    if (hit.d >= max * .9) {
+      done = true; V.hl = { li: hit.li, i: hit.i, c: '#ffd43b' }; SND.ok(); toast('みつけた！');
+      const walk = Math.round(hit.d * 12.5);
+      setMsg(`${stName(A)}〜${stName(B)}！ <ruby>地図<rt>ちず</rt></ruby>の 上で ${kmTxt}。<small>（あるくと ${walk >= 120 ? 'やく ' + Math.round(walk / 60) + 'じかん' : 'やく ' + walk + 'ぷん'}）</small><br>ろせんずに もどすと…？`);
+      if (hit !== best) setTimeout(() => setMsg($('msg').innerHTML + `<br><small>（いちばんは ${stName(C.lines[best.li].st[best.i])}〜${stName(C.lines[best.li].st[(best.i + 1) % C.lines[best.li].st.length])}。ほぼ おなじ！）</small>`), 10);
+      setTimeout(() => { V.tSpeed = .7; V.tTarget = 0; setMode('ろせんず 📋'); }, 1500);
+      setTimeout(() => {
+        V.train.on = true; V.train.dizzy = false; say('ろせんずだと ほかと おなじ ながさ！', 3000);
+        setMsg(`ろせんずだと ほかの あいだと おなじ ながさ！ ほんとうの ながさは <ruby>地図<rt>ちず</rt></ruby>で 見ようね。`);
+        nextBtn('まとめへ ▶', stepSum);
+      }, 3000);
+    } else {
+      mistakes++; wrong++; SND.ng(); V.hl = { li: hit.li, i: hit.i, c: '#adb5bd' };
+      const rank = sorted.indexOf(hit);
+      toast(rank < 3 ? 'おしい！' : 'みじかい かも', true);
+      setMsg(`${stName(A)}〜${stName(B)}は ${kmTxt}。${rank < 3 ? 'おしい！ もうすこし ながい ところが あるよ。' : 'もっと <ruby>駅<rt>えき</rt></ruby>と <ruby>駅<rt>えき</rt></ruby>が はなれている ところは？'}${wrong >= 2 ? '<br><small>ヒント: きいろく ひかっている あたり！</small>' : ''}`);
+      if (wrong >= 2) hintPulse(best);
+    }
+  };
+}
+function hintPulse(best) {
+  hintPulse.last = best;
+  const g = G.lines[best.li].dots, L = C.lines[best.li], j = (best.i + 1) % L.st.length;
+  [g[best.i], g[j]].forEach(c => { c.setAttribute('fill', '#ffd43b'); c.setAttribute('r', 9); });
+}
+function segDist(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+  let t = l ? ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / l : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
+
+/* ===== ステップ 5: まとめ ===== */
+function stepSum() {
+  step = 4; pips(); clearHandlers();
+  const stars = mistakes <= 1 ? 3 : mistakes <= 3 ? 2 : 1;
+  if ((SV.stars[C.id] || 0) < stars) { SV.stars[C.id] = stars; save(); }
+  SND.fan();
+  const s = $('sum'); s.classList.remove('hide');
+  s.innerHTML = `<h2>🎉 ${C.name} クリア！</h2>
+    <div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+    <div class="cards">
+      <div class="lcard"><span class="e">📋</span><span>ろせんずは「どの <ruby>駅<rt>えき</rt></ruby>の つぎに どの <ruby>駅<rt>えき</rt></ruby>か」を 見やすく する <ruby>絵<rt>え</rt></ruby>。</span></div>
+      <div class="lcard"><span class="e">📏</span><span>ほんとうの <ruby>長<rt>なが</rt></ruby>さや <ruby>向<rt>む</rt></ruby>きは ちがう ことが あるよ。</span></div>
+      <div class="lcard"><span class="e">🧳</span><span><ruby>旅<rt>たび</rt></ruby>の けいかくは ろせんず、🚶 <ruby>歩<rt>ある</rt></ruby>く <ruby>道<rt>みち</rt></ruby>は <ruby>地図<rt>ちず</rt></ruby>。</span></div>
+    </div>
+    <div class="point">💡 ろせんずの <ruby>線<rt>せん</rt></ruby>の じゅんばんを 見ると、つぎの <ruby>駅<rt>えき</rt></ruby>が わかるよ。</div>
+    <p class="next">つぎは <a href="../tomaru-tobasu/">「とまる？ とばす？ きゅうこう えらび」</a>で、ろせんずの ◯ を 見て とまる <ruby>駅<rt>えき</rt></ruby>を しらべて みよう。</p>
+    <div class="btns"><button class="big" id="bAgain">🔁 もういちど</button><button class="big sec" id="bOther">🗺️ ほかの コース</button></div>`;
+  $('bAgain').onclick = () => { SND.tap(); startCourse(C); };
+  $('bOther').onclick = () => { SND.tap(); showTitle(); };
+  setMsg('よく できました！'); setCtrl('');
+}
+
+/* ===== すすめかた ===== */
+function resetView() {
+  hintPulse.last = null;
+  V.kind = 'morph'; V.hl = null; V.placed = null; V.stageB = false; V.spring = null; V.labels = true;
+  V.train.on = true; V.train.dizzy = false; V.train.say = ''; V.tSpeed = 1.6;
+  $('sum').classList.add('hide');
+  if (G.lines) G.lines.forEach((g, li) => g.dots.forEach((c, i) => { c.setAttribute('fill', '#fff'); c.setAttribute('r', C.lines[li].bigIdx.includes(i) ? 7 : 5); }));
+}
+function startCourse(c) {
+  C = c; prepCourse(C); mistakes = 0;
+  $('title').classList.add('hide');
+  $('cname').innerHTML = `${C.emoji} ${C.name}`;
+  layout(); buildSvg(); V.train.s = 0; V.train.dir = 1;
+  stepHenshin();
+}
+function courseIcon(c) {
+  prepCourse(c);
+  const vb = 160, vh = 62, p = 6, B = c.box, sc = Math.min((vb - p * 2) / B.w, (vh - p * 2) / B.h), w = B.w * sc, h = B.h * sc, ox = (vb - w) / 2, oy = (vh - h) / 2;
+  let s = `<svg viewBox="0 0 ${vb} ${vh}">`;
+  c.lines.forEach(L => { const pts = L.real.map(uv => [ox + uv[0] * w, oy + uv[1] * h]); s += `<path d="M${pts.map(q => q[0].toFixed(1) + ' ' + q[1].toFixed(1)).join('L')}${L.loop ? 'Z' : ''}" fill="none" stroke="${L.c}" stroke-width="4" stroke-linejoin="round"/>`; });
+  return s + '</svg>';
+}
+function showTitle() {
+  $('title').classList.remove('hide'); clearHandlers();
+  $('courses').innerHTML = COURSES.map((c, i) => `<button class="course" style="--c:${c.c}" data-i="${i}">
+      ${courseIcon(c)}<span>${c.emoji} ${c.name}</span><span class="sub">ろせんずでは ${c.neat}</span>
+      <span class="best">${SV.stars[c.id] ? '⭐'.repeat(SV.stars[c.id]) + '☆'.repeat(3 - SV.stars[c.id]) : ''}</span></button>`).join('');
+  document.querySelectorAll('.course').forEach(b => b.onclick = () => { audio(); SND.tap(); startCourse(COURSES[+b.dataset.i]); });
+}
+function layout() { document.body.classList.toggle('land', innerWidth > innerHeight && innerWidth >= 640); }
+let rsT = 0;
+addEventListener('resize', layout);
+// ぶたいの 大きさが かわったら（メッセージの 行数・ボタン・画面の 向き）SVG を つくりなおす
+function rebuild() {
+  if (!C || !$('title').classList.contains('hide')) return;
+  const r = $('stage').getBoundingClientRect();
+  if (Math.abs(r.width - V.W) < 1 && Math.abs(r.height - V.H) < 1) return;
+  buildSvg();
+  if (step === 3 && hintPulse.last) hintPulse(hintPulse.last);
+}
+if (window.ResizeObserver) new ResizeObserver(rebuild).observe($('stage')); else addEventListener('resize', () => { clearTimeout(rsT); rsT = setTimeout(rebuild, 120); });
+
+function sndBtn() { $('bSnd').textContent = SV.sound ? '🔊' : '🔇'; $('bSnd2').textContent = SV.sound ? '🔊 おと オン' : '🔇 おと オフ'; }
+function toggleSnd() { SV.sound = !SV.sound; save(); sndBtn(); if (SV.sound) { audio(); SND.tap(); } }
+$('bSnd').onclick = toggleSnd; $('bSnd2').onclick = toggleSnd;
+$('bHome').onclick = () => { SND.tap(); showTitle(); };
+
+sndBtn(); layout(); showTitle();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
