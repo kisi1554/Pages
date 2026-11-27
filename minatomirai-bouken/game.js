@@ -1667,6 +1667,46 @@ void main(){
     });
     return Object.assign(ln, { k: t.k, info, stops, yAt, li });
   }).filter((t) => t.stops.length >= 2);
+  // ================= たかしません（かもつ せん）と みつびし ドック ふみきり =================
+  // OSM の たかしません（トンネル から でて ふみきり → こうか → さくらぎちょう で ねぎしせん に つながる）。
+  // かもつ れっしゃ「ももたろう」（EF210 かんしゃ と コンテナ しゃ）が いったり きたり する。
+  const FREIGHT = (() => {
+    const RAW = [[35.4605898, 139.6249957], [35.4602456, 139.6248740], [35.4599205, 139.6248013], [35.4595766, 139.6247288], [35.4592575, 139.6246980], [35.4591372, 139.6247026], [35.4590016, 139.6247213], [35.4587456, 139.6247876], [35.4584554, 139.6249076], [35.4581656, 139.6250830], [35.4575261, 139.6255821], [35.4570717, 139.6259415], [35.4562695, 139.6265523], [35.4558524, 139.6268765], [35.4547721, 139.6277007], [35.4544340, 139.6279675], [35.4534232, 139.6287748], [35.4528157, 139.6292426]];
+    const jr = TRAINS.find((t) => t.k === 'jr'); if (!jr) return null;
+    const pts = RAW.map(([a, b]) => GEO(a, b));
+    const [jx, jz] = pts[pts.length - 1], sJ = jr.sOf(jx, jz);
+    const nF = pts.length;
+    jr.pts.forEach((p, i) => { if (jr.L[i] > sJ + 2) pts.push([p[0], p[1]]); });
+    const ln = lineOf(pts), sPortal = ln.L[4], sRamp = ln.L[14], sJunc = ln.L[nF - 1], yJ = jr.yAt(sJ);
+    const yAt = (s) => s < sPortal ? -7 * (1 - s / sPortal) : s < sRamp ? 0.06 : s < sJunc ? 0.06 + (yJ - 0.06) * (s - sRamp) / (sJunc - sRamp) : jr.yAt(sJ + (s - sJunc));
+    const [cx, cz] = GEO(35.4562695, 139.6265523), sX = ln.sOf(cx, cz), q = ln.at(sX), nx = q.uz, nz = -q.ux;
+    // トンネル の いりぐち
+    { const p = ln.at(sPortal), yaw = Math.atan2(p.ux, p.uz), ox = -p.uz, oz = p.ux;
+      G.obox([p.x, 2.2, p.z], [ox, 0, oz], [0, 1, 0], [p.ux, 0, p.uz], 3.4, 2.2, 0.6, hex('#868e96')); void yaw;
+      G.obox([p.x - p.ux * 0.7, 1.7, p.z - p.uz * 0.7], [ox, 0, oz], [0, 1, 0], [p.ux, 0, p.uz], 1.9, 1.7, 0.2, hex('#212529')); }
+    // ふみきり の みち（よこぎる ほそう）と しましま
+    G.obox([q.x, 0.03, q.z], [nx, 0, nz], [0, 1, 0], [q.ux, 0, q.uz], 9, 0.02, 1.9, hex('#868e96'));
+    for (let k = -4; k <= 4; k++) G.obox([q.x + nx * k * 0.9, 0.05, q.z + nz * k * 0.9], [nx, 0, nz], [0, 1, 0], [q.ux, 0, q.uz], 0.22, 0.02, 1.9, k % 2 ? hex('#fcc419') : hex('#212529'));
+    // けいほうき の はしら と ばってん（×）
+    const posts = [-1, 1].map((sd) => { const px = q.x + nx * sd * 3.6 + q.ux * sd * 2.4, pz = q.z + nz * sd * 3.6 + q.uz * sd * 2.4;
+      G.cyl(px, 0, pz, 0.09, 3.6, 6, hex('#f1f3f5'));
+      [[1, 1], [1, -1]].forEach(([a, b]) => G.beam([px + q.ux * 0.55 * a, 3.25 + 0.3 * b, pz + q.uz * 0.55 * a], [px - q.ux * 0.55 * a, 3.25 - 0.3 * b, pz - q.uz * 0.55 * a], 0.07, hex('#fcc419')));
+      G.box(px - 0.15, 0, pz - 0.15, px + 0.15, 1.1, pz + 0.15, hex('#343a40'));
+      addSolid({ x0: px - 0.15, y0: 0, z0: pz - 0.15, x1: px + 0.15, y1: 3.6, z1: pz + 0.15, climb: true });
+      // しゃだんき（ぼう）の あたり（しまって いる とき だけ）
+      const bars = []; for (let k = 0; k < 5; k++) { const bx = px - q.ux * sd * (0.6 + k * 0.9), bz = pz - q.uz * sd * (0.6 + k * 0.9); bars.push(addSolid({ x0: bx - 0.45, y0: -9999, z0: bz - 0.45, x1: bx + 0.45, y1: -9999, z1: bz + 0.45, climb: false })); }
+      return { x: px, z: pz, sd, bars }; });
+    const CARS = ['#b5482c', '#2b6cb0', '#3d8b5a', '#b5482c', '#868e96', '#e8590c', '#b5482c', '#2b6cb0', '#3d8b5a', '#b5482c'];
+    const spot = freeSpot(q.x + nx * 7, q.z + nz * 7);
+    return { ln, yAt, sX, q, nx, nz, posts, spot, cars: CARS, len: 7 + CARS.length * 5.8, x: q.x, z: q.z,
+      st: { s: -80, dir: 1, v: 0, wait: 8, arm: 0, bell: 0, warn: false, horn: false, said: false, stop: false, count: 0 } };
+  })();
+  // ふみきり の めじるし（ひかり の はしら・ちず の 🚦）。ボタン で ももたろう を よべる
+  if (FREIGHT) DOORS.push({ id: 'mdock', x: FREIGHT.spot.x, z: FREIGHT.spot.z, r: 2.6, label: '🚦<br>ふみきり', color: hex('#fab005'), run: () => {
+    const st = FREIGHT.st;
+    if (st.wait <= 0) banner('🚂 いま ももたろう が はしってるよ！<small>カンカン が なったら ふみきり の まえ で とまって まとう</small>', 3);
+    else { st.wait = Math.min(st.wait, 5); banner('📣 ももたろう を よんだよ！<small>もうすぐ くるよ。 ふみきり の まえ で まってね 🚦</small>', 3.5); SFX.tap(); }
+  } });
   const AKAI_OFF = { id: 'akaioff', x: 0, z: 0, label: '🚏<br>おりる', color: hex('#c92a2a'), run: () => endAkai('🚏 おりたよ') };
   // ================= そらの ぼうけんじま（どうぐ を おもいきり つかう しま。オリジナル）=================
   // りんこうパーク の うえ たかさ 150 に うかぶ しま。まんなか の ひろば から 5つ の しかけ と ボス。
@@ -1831,6 +1871,7 @@ void main(){
   const zp = (id, name, n, extra) => { const q = POI[n]; if (!q) return null; const bb = q.bb || [q.x, q.z, q.x, q.z]; return Object.assign({ id, name, x: q.x, z: q.z, r: Math.max(bb[2] - bb[0], bb[3] - bb[1]) / 2 + 6 }, extra || {}); };
   const ZONES = [
     zp('sakuragicho', 'さくらぎちょう えき', '桜木町駅'),
+    FREIGHT && { id: 'mdock', name: 'みつびし ドック ふみきり', x: FREIGHT.x, z: FREIGHT.z, r: 8, say: 'ここは みつびし ドック ふみきり。 かもつ れっしゃ「ももたろう」が とおるよ 🚂' },
     { id: 'aeon', name: 'エキニア よこはま（イーオン）', x: AEON.door.x, z: AEON.door.z, r: 6, say: 'ここの 8かい が イーオン。 どようび に えいご の レッスン だよ 🔤' },
     zp('takashimacho', 'たかしまちょう えき（ブルーライン）', '高島町（てん）', { r: 9, say: 'ブルーライン の たかしまちょう えき だよ。 よこはま まで ひとえき！ 🚇' }),
     zp('landmark', 'ランドマークタワー', '横浜ランドマークタワー'),
@@ -2432,7 +2473,7 @@ void main(){
     if (ok) { b.style.left = sp[0] + 'px'; b.style.top = sp[1] + 'px'; } else { b.style.left = ''; b.style.top = ''; }
   }
   function afterUpdate(dt) {
-    advTick(dt); secTick(dt);
+    advTick(dt); secTick(dt); freightTick(dt);
     momUpdate(dt); papaUpdate(dt); hsTick(dt); bagTick(dt); seasonTick(dt); rainTick(dt); walkersTick(dt); clockTick(dt); scheduleTick(); weatherTick(); trafficTick(); if (P.state !== 'ghost') carsTick(dt);
     // どうぶつ ずかん
     if (ZOO && P.state === 'ground') {
@@ -2825,6 +2866,7 @@ void main(){
         if (res && res.homework) { show('ovPlace', false); setPaused(); kumonHomework(); return; }
         if (res && res.stay) { window.Places.again(res.stay); return; }
         show('ovPlace', false); setPaused(); stepOut();
+        if (kind === 'home' && FREIGHT && !save.stamps.includes('mdock') && !save.mdockHint) { save.mdockHint = 1; store(); setTimeout(() => momSay('おうち の ちかく に みつびし ドック ふみきり が あるよ。 きいろい 🚦 の ひかり の ところ。 ももたろう を みに いこう！', 5), 900); }
         if (res && res.bus) startBus(res.bus);
         else if (res && res.slide) startSlide();
         if (res && res.eigo) { calDone('eigo'); momSay('Good job! えいご じょうず に なったね 🔤', 3.5); }
@@ -3326,6 +3368,10 @@ void main(){
     });
     x.font = '18px sans-serif';
     DOORS.forEach((d) => { if (d.secret) return; const ic = d.label.split('<')[0]; x.fillText(ic, px(d.x), pz(d.z) + 6); });
+    // みつびし ドック ふみきり は めだつ ように（きいろい わく と なまえ）
+    if (FREIGHT) { const fx = px(FREIGHT.x), fz = pz(FREIGHT.z), lab = '🚦 みつびしドック ふみきり'; x.save(); x.font = 'bold 15px sans-serif'; const w = x.measureText(lab).width + 14;
+      x.fillStyle = '#ffd43b'; x.strokeStyle = '#1c2b4a'; x.lineWidth = 2; x.beginPath(); x.arc(fx, fz, 9, 0, Math.PI * 2); x.fill(); x.stroke();
+      x.fillRect(fx + 12, fz - 30, w, 24); x.strokeRect(fx + 12, fz - 30, w, 24); x.fillStyle = '#1c2b4a'; x.textAlign = 'left'; x.fillText(lab, fx + 19, fz - 12); x.restore(); }
     x.font = 'bold 18px sans-serif';
     STARS.forEach((s) => {
       const got = save.stars.includes(s.id);
@@ -4440,6 +4486,80 @@ void main(){
     // へや ばんごう の まえ の あかり
     SEC.rooms.forEach((r) => { const met = SECR().met[r.no]; draw(mSphere, M(T(r.x - r.side * 0.12, SEC.Y + 2.73, r.z + 0.45), S(0.06)), met ? [0.4, 1, 0.5] : [1, 0.25, 0.25], 1); });
   }
+  // ================= かもつ れっしゃ「ももたろう」と ふみきり の うごき =================
+  function freightTick(dt) {
+    const F = FREIGHT; if (!F) return;
+    const st = F.st, ln = F.ln, run = st.wait <= 0;
+    if (!run) {
+      st.wait -= dt;
+      if (st.wait <= 0) { st.dir = st.count % 2 ? -1 : 1; st.s = st.dir > 0 ? -12 : ln.total + 12; st.v = 4; st.horn = false; st.said = false; st.passSaid = false; st.count++; }
+    }
+    const head = st.s, tail = head - st.dir * F.len;
+    if (st.wait <= 0) {
+      // あおちゃん が せんろ の うえ に いたら とまる・そば なら おしだす
+      st.stop = false;
+      const sp = ln.sOf(P.x, P.z), pq = ln.at(sp), d = Math.hypot(P.x - pq.x, P.z - pq.z), yt = F.yAt(sp);
+      if (d < 1.8 && P.y > yt - 1 && P.y < yt + 3.2) {
+        const lo = Math.min(head, tail), hi = Math.max(head, tail), ahead = (sp - head) * st.dir;
+        if (sp > lo && sp < hi) { const ox = -pq.uz, oz = pq.ux, sg = ((P.x - pq.x) * ox + (P.z - pq.z) * oz) >= 0 ? 1 : -1; P.x = pq.x + ox * sg * 1.9; P.z = pq.z + oz * sg * 1.9; }
+        else if (ahead > 0 && ahead < 14) { st.stop = true; if (!st.horn2) { st.horn2 = true; tone(440, 0.9, 'sawtooth', 0.05); tone(554, 0.9, 'sawtooth', 0.04); momSay('あぶない！ せんろ から はなれて！ 🚨', 3); } }
+      } else st.horn2 = false;
+      const want = st.stop ? 0 : 9; st.v += Math.sign(want - st.v) * Math.min(Math.abs(want - st.v), (st.stop ? 12 : 3) * dt);
+      st.s += st.dir * st.v * dt;
+      const t2 = st.s - st.dir * F.len;
+      if ((st.dir > 0 && t2 > ln.total + 5) || (st.dir < 0 && t2 < -15)) { st.wait = 22 + Math.random() * 10; }
+    }
+    // ふみきり
+    const h2 = st.s, t3 = h2 - st.dir * F.len, sX = F.sX;
+    const closed = st.wait <= 0 && (st.dir > 0 ? h2 > sX - 80 && t3 < sX + 6 : h2 < sX + 80 && t3 > sX - 6);
+    st.arm += Math.sign((closed ? 1 : 0) - st.arm) * Math.min(Math.abs((closed ? 1 : 0) - st.arm), 0.55 * dt);
+    const down = st.arm > 0.75; F.posts.forEach((p) => p.bars.forEach((b) => { b.y0 = down ? 0.4 : -9999; b.y1 = down ? 1.4 : -9999; }));
+    const dP = Math.hypot(P.x - F.x, P.z - F.z);
+    if (closed || st.arm > 0.02) {
+      st.bell -= dt;
+      if (st.bell <= 0) { st.bell = 0.43; if (dP < 110 && !paused) { const v = 0.11 * Math.max(0, 1 - dP / 110); tone(760, 0.2, 'square', v * 0.55); tone(1520, 0.12, 'sine', v * 0.35); } }
+      if (closed && !st.warn && dP < 45) momSay('カンカン なってる！ ふみきり の まえ で とまって まとうね 🚦', 3.5);
+      if (closed && !st.horn && dP < 170) { st.horn = true; setTimeout(() => { tone(392, 1.1, 'sawtooth', 0.04); tone(494, 1.1, 'sawtooth', 0.035); }, 1500); }
+    }
+    st.warn = closed;
+    // とおる とき
+    if (st.wait <= 0 && !st.passSaid && dP < 40 && (st.dir > 0 ? h2 > sX : h2 < sX)) { st.passSaid = true; momSay(`ももたろう だ！ コンテナ が ${F.cars.length}りょう も！ 🚂🍑`, 4); if (!save.momo) { save.momo = 1; store(); banner('🚂🍑 かもつ れっしゃ「ももたろう」が きた！<small>EF210 かんしゃ と コンテナ しゃ ・ たかしません</small>', 4); } }
+    if (st.wait <= 0 && st.v > 2) { const lo = Math.min(h2, t3), hi = Math.max(h2, t3); if (sX > lo && sX < hi && dP < 50) { st.rum = (st.rum || 0) - dt; if (st.rum <= 0) { st.rum = 0.36; tone(st.rk ? 62 : 74, 0.12, 'sine', 0.1 * Math.max(0, 1 - dP / 50)); st.rk = !st.rk; } } }
+  }
+  function drawFreight() {
+    const F = FREIGHT; if (!F) return;
+    const st = F.st, ln = F.ln, far = Math.hypot(P.x - F.x, P.z - F.z) > 700;
+    // ふみきり の あかり と ぼう
+    if (!far) {
+      const on = st.arm > 0.02 || st.warn, ph = Math.floor(time * 2.3) % 2;
+      F.posts.forEach((p) => {
+        [-1, 1].forEach((k, i) => { const lit = on && (i === ph); draw(mSphere, M(T(p.x + F.q.ux * k * 0.33, 2.62, p.z + F.q.uz * k * 0.33), S(0.17)), lit ? [1, 0.1, 0.1] : [0.25, 0.05, 0.05], lit ? 1 : 0); });
+        if (on) draw(mCube, M(T(p.x, 2.25, p.z), RY(Math.atan2(F.q.ux, F.q.uz)), S(0.5, 0.18, 0.06)), [0.3, 1, 0.4], 1);   // むき の ランプ
+        const a = (1 - st.arm) * 1.45, hx = -p.sd * F.q.ux, hz = -p.sd * F.q.uz, yaw = Math.atan2(hx, hz);
+        for (let k = 0; k < 5; k++) { const dd = 0.55 + k * 0.9, cx = p.x + hx * Math.cos(a) * dd, cz = p.z + hz * Math.cos(a) * dd, cy = 1.0 + Math.sin(a) * dd; draw(mCube, M(T(cx, cy, cz), RY(yaw), RX(-a), S(0.11, 0.11, 0.9)), k % 2 ? [0.12, 0.12, 0.12] : [1, 0.85, 0.15]); }
+      });
+    }
+    if (st.wait > 0) return;
+    const at = (s) => { const p = ln.at(s); return { p, y: F.yAt(s), yaw: Math.atan2(p.ux, p.uz) }; };
+    // かんしゃ EF210「ももたろう」
+    { const s = st.s - st.dir * 3.4, { p, y, yaw } = at(s); if (y > -6) {
+      const b = M(T(p.x, y, p.z), RY(yaw)), f = st.dir;
+      draw(mCube, M(b, T(0, 0.55, 0), S(2.3, 0.7, 6.2)), [0.15, 0.15, 0.17]);
+      draw(mCube, M(b, T(0, 1.75, 0), S(2.7, 2.1, 6.7)), [0.13, 0.32, 0.66]);
+      draw(mCube, M(b, T(0, 1.05, 0), S(2.72, 0.32, 6.72)), [0.78, 0.8, 0.84]);
+      draw(mCube, M(b, T(0, 2.95, 0), S(2.2, 0.3, 5.4)), [0.55, 0.57, 0.6]);
+      [-1, 1].forEach((e) => { draw(mCube, M(b, T(0, 2.25, e * 3.36), S(2.2, 0.62, 0.02)), [0.1, 0.15, 0.2]); draw(mCube, M(b, T(0, 3.35, e * 1.6), RX(e * 0.6), S(0.06, 0.06, 1.1)), [0.3, 0.3, 0.3]); });
+      [-0.75, 0.75].forEach((x) => draw(mSphere, M(b, T(x, 1.4, f * 3.37), S(0.14)), [1, 1, 0.8], 1));                    // まえ の ライト
+      [-1, 1].forEach((sd) => { draw(mSphere, M(b, T(sd * 1.37, 1.75, 0.3), S(0.05, 0.38, 0.34)), [1, 0.62, 0.68], 0.3); draw(mSphere, M(b, T(sd * 1.38, 2.1, 0.2), S(0.04, 0.1, 0.18)), [0.35, 0.7, 0.3], 0.2); });   // もも の マーク
+    } }
+    // コンテナ しゃ
+    F.cars.forEach((col, k) => { const s = st.s - st.dir * (7 + k * 5.8 + 2.9), { p, y, yaw } = at(s); if (y < -6) return;
+      const b = M(T(p.x, y, p.z), RY(yaw)), c = hex(col);
+      draw(mCube, M(b, T(0, 0.7, 0), S(2.4, 0.32, 5.5)), [0.22, 0.22, 0.24]);
+      [-1.9, 1.9].forEach((z) => draw(mCube, M(b, T(0, 0.35, z), S(2.0, 0.5, 1.1)), [0.1, 0.1, 0.1]));
+      [-1.38, 1.38].forEach((z, i) => { draw(mCube, M(b, T(0, 2.05, z), S(2.45, 2.4, 2.6)), i ? shade(c, 0.9) : c); draw(mCube, M(b, T(0, 2.05, z), S(2.47, 0.08, 2.62)), [0.85, 0.85, 0.85]); });
+    });
+  }
   function drawMonthDeco() {
     if (eventToday() === 'bday') drawBdayDeco();
     if (deco('koinobori')) DECO_SPOTS.forEach((p, i) => {   // こいのぼり
@@ -4466,7 +4586,7 @@ void main(){
     if (deco('lights') && SKn > 0.25) draw(mLights, I(), W, 1);
     if (deco('ajisai')) draw(mAjisai, I(), W);
     if (deco('himawari')) draw(mHimawari, I(), W);
-    drawMonthDeco(); drawAdv(); drawSecret();
+    drawMonthDeco(); drawAdv(); drawSecret(); drawFreight();
     if (deco('snow')) { draw(mSnowCap, I(), W); SNOWMEN.forEach((q) => { draw(mSphere, M(T(q.x, 0.7, q.z), S(0.75)), C.white); draw(mSphere, M(T(q.x, 1.7, q.z), S(0.5)), C.white); draw(mCone, M(T(q.x, 1.7, q.z + 0.45), RX(Math.PI / 2), S(0.08, 0.35, 0.08)), C.orange); [-0.17, 0.17].forEach((o) => draw(mSphere, M(T(q.x + o, 1.85, q.z + 0.44), S(0.06)), C.black)); draw(mCube, M(T(q.x, 2.25, q.z), S(0.55, 0.35, 0.55)), hex('#c92a2a')); }); }
     if (deco('xtree') && XTREE) { draw(mXTree, I(), W); draw(mStar, M(T(XTREE.x, 8.8, XTREE.z), RY(time), S(1.1)), C.gold, 1); if (SKn > 0.25 || ev === 'xmas') for (let k = 0; k < 24; k++) { const a = k * 1.9, hh = 1.2 + k * 0.28, rr = 3.3 * (1 - hh / 8.5); draw(mSphere, M(T(XTREE.x + Math.cos(a) * rr, hh, XTREE.z + Math.sin(a) * rr), S(0.16)), [[1, 0.3, 0.3], [1, 0.85, 0.3], [0.4, 0.7, 1]][k % 3], 0.5 + 0.5 * Math.sin(time * 3 + k)); } }
     if (ev === 'xmas' && SANTA) { const b = M(T(SANTA.x, 0, SANTA.z), RY(Math.atan2(P.x - SANTA.x, P.z - SANTA.z))); personAt(b, hex('#e03131'), 'stand', 0, hex('#e03131'), C.white, false); part(b, 0, 1.35, 0.2, 0.5, 0.35, 0.12, C.white); draw(mCone, M(b, T(0, 1.85, 0), S(0.3, 0.55, 0.3)), hex('#e03131')); draw(mSphere, M(b, T(0, 2.4, 0), S(0.09)), C.white); }
@@ -4672,5 +4792,5 @@ void main(){
   requestAnimationFrame(loop);
 
   // テスト用の のぞき窓（setTime の ひ が ちいさい かず の ときは 2026/9/7（げつ）から かぞえる）
-  window.__mm = { SEC, RES, openRoom, closeRoom, goSecret, secretBomb, inSecret, ISL, goIsland, advUse, nextItem, openChest, PROJ, ENE, get boss() { return boss; }, explode, hammerHit, torchHit, spawnEnemy, AITEM, kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
+  window.__mm = { FREIGHT, SEC, RES, openRoom, closeRoom, goSecret, secretBomb, inSecret, ISL, goIsland, advUse, nextItem, openChest, PROJ, ENE, get boss() { return boss; }, explode, hammerHit, torchHit, spawnEnemy, AITEM, kumonHomework, openCal, deco, dateOf, dayOfDate, setDate: (y, m, d, h) => { save.clock.day = dayOfDate(y, m, d); if (h !== undefined) save.clock.min = h * 60; }, MEGA, NPC_TALK, WALKERS, openTalk, openZukan, nearWalker, placeTag, aoAge, HODO, MPD, MINATO, MHI, HIKAWAD, eventToday, seasonNow, puddlesNear, puddleAt, rainDay, SAKURA, HANABI, XTREE, SANTA, sparks, BAG, openBag, useItem, warpTo, radarTarget, bubbles, HARAD, setDest, get mapTf() { return mapTf; }, TRAINS, PAPA, FRIENDS, friendsHere, startHS, get HS() { return HS; }, photoMode, get photos() { return photos; }, shoot: () => { shootReq = true; }, startTrain, arriveTrain, PARKS, GATES, NIKU, HIKAWA, YAMA, SHIP, KANTEI, MAZU, NMDOOR, CUPD, MARINE, AKAI, SEA, CARS, CARG, rideAkai, rideSea, weatherNow, calDone, XINGS, SIGS, onRoad, pedGreen, TR, ZOO, CLK, startErrand, skyNow, setTime: (h, d) => { save.clock.min = h * 60; if (d !== undefined) save.clock.day = d < 3000 ? dayOfDate(2026, 9, 7) + d : d; }, KONBINI, SLIDE, startSlide, BUS, BUSR, STOP, YDOOR, HOMEDOOR, startBus, openPlace, MOM, momSay, HELI, CO, GHM, GH, FW, HOSP, MAMA, GEO, startAttraction, heliEnter, hurt, look, P, get save() { return save; }, cam, STARS, solids, inp, keys, update, DOORS, POI, CAB, ZONES, START, startRide, openShop, near, set paused(v) { paused = v; } };
 })();
