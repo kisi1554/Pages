@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>とまる？ とばす？ きゅうこう えらび</title>
+<style>
+  :root {
+    --local:#2f9e44; --express:#1c6fd6; --ltd:#e03131;
+    --ink:#1d3557; --sub:#4a6178; --bg:#fff8ec; --line:#8a96a3; --gold:#f2b705;
+  }
+  html, body { margin:0; height:100%; overflow:hidden; background:var(--bg); color:var(--ink);
+    font-family:"Hiragino Maru Gothic ProN","BIZ UDPGothic","Rounded Mplus 1c","Meiryo",sans-serif;
+    -webkit-user-select:none; user-select:none; -webkit-tap-highlight-color:transparent; -webkit-touch-callout:none; }
+  button { font-family:inherit; cursor:pointer; touch-action:manipulation; color:inherit; }
+  ruby rt { font-size:.5em; letter-spacing:0; font-weight:normal; }
+
+  #app { position:fixed; inset:0; display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  /* ===== 上の バー ===== */
+  #top { flex:none; display:flex; align-items:center; gap:8px; padding:8px 10px 6px; }
+  .round { flex:none; width:50px; height:50px; border-radius:50%; border:3px solid #fff; background:var(--ink); color:#fff;
+    font-size:22px; padding:0; box-shadow:0 3px 0 rgba(0,0,0,.2); }
+  #mission { flex:1; min-width:0; background:#fff; border-radius:18px; padding:4px 12px; font-weight:bold; font-size:18px;
+    line-height:1.9; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  #mission .goal { color:#c2255c; font-size:21px; }
+  #pips { display:flex; gap:5px; justify-content:flex-start; margin:-2px 0 2px; }
+  #pips i { width:12px; height:12px; border-radius:50%; background:#e3e8ee; display:block; }
+  #pips i.done { background:var(--gold); }
+  #pips i.now { background:#ffd8a8; outline:2px solid var(--gold); }
+  #clock { flex:none; background:#fff; border-radius:16px; padding:6px 10px; font-weight:bold; font-size:18px; min-width:64px;
+    text-align:center; box-shadow:0 2px 8px rgba(0,0,0,.1); }
+  #clock small { display:block; font-size:11px; color:var(--sub); line-height:1.1; }
+
+  /* ===== ろせんず ===== */
+  #mapWrap { flex:1; min-height:0; position:relative; margin:0 8px; background:#fff; border-radius:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1); overflow:auto; -webkit-overflow-scrolling:touch; }
+  #map { position:relative; display:flex; flex-direction:column; min-height:100%; box-sizing:border-box; padding:6px 8px 10px; }
+  .st, .hd { display:flex; flex-direction:row; align-items:center; flex:1; min-height:30px; position:relative; }
+  .marks { display:flex; flex:none; }
+  .mk { width:26px; height:100%; min-height:28px; display:flex; align-items:center; justify-content:center; position:relative; }
+  .mk .o { width:16px; height:16px; border-radius:50%; background:#fff; border:4px solid currentColor; box-sizing:border-box; }
+  .mk .p { width:4px; height:100%; background:currentColor; opacity:.45; border-radius:2px; position:absolute; top:0; bottom:0; }
+  .mk.c-local { color:var(--local); } .mk.c-express { color:var(--express); } .mk.c-ltd { color:var(--ltd); } .mk.c-com { color:#9c36b5; }
+  .hd .mk { font-size:12px; font-weight:bold; flex-direction:column; line-height:1.15; }
+  .hd .mk span { width:22px; height:22px; border-radius:50%; background:currentColor; color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .trk { flex:none; width:44px; align-self:stretch; position:relative; }
+  .trk::before { content:""; position:absolute; left:50%; top:0; bottom:0; width:8px; margin-left:-4px; background:var(--line); }
+  .hd + .st .trk::before { top:50%; }
+  .st:last-child .trk::before { bottom:50%; }
+  .node { position:absolute; left:50%; top:50%; width:18px; height:18px; margin:-9px 0 0 -9px; border-radius:50%;
+    background:#fff; border:3px solid var(--ink); box-sizing:border-box; z-index:1; }
+  .nm { flex:1; min-width:0; font-size:16px; font-weight:bold; white-space:nowrap; padding-left:2px; line-height:1.5; }
+  .nm small { font-size:11px; color:var(--sub); margin-left:6px; font-weight:normal; }
+  .st.goal { background:linear-gradient(90deg, rgba(255,214,10,0) 0, rgba(255,214,10,.35) 30%, rgba(255,214,10,.35) 100%); border-radius:12px; }
+  .st.goal .node { background:var(--gold); animation:pulse .8s infinite alternate; }
+  .st.goal .nm::after { content:" ⭐"; }
+  .st.here .nm { color:#c2255c; }
+  .st.flash { animation:flash .5s; }
+  @keyframes flash { 50% { background:rgba(255,214,10,.6); } }
+  @keyframes pulse { to { transform:scale(1.35); } }
+  .st.goal.hint .mk { animation:hint .5s infinite alternate; }
+  @keyframes hint { to { transform:scale(1.35); } }
+
+  /* よこ がき（よこもち） */
+  body.land #map { flex-direction:row; padding:8px 10px 6px; min-width:100%; min-height:0; height:100%; }
+  body.land .st, body.land .hd { flex-direction:column; min-height:0; min-width:40px; }
+  body.land .marks { flex-direction:column; }
+  body.land .mk { width:100%; height:26px; min-height:0; min-width:28px; }
+  body.land .mk .p { width:100%; height:4px; left:0; right:0; top:auto; bottom:auto; }
+  body.land .hd .mk { flex-direction:row; gap:3px; justify-content:flex-end; padding-right:4px; height:26px; }
+  body.land .trk { width:auto; height:44px; align-self:stretch; }
+  body.land .trk::before { left:0; right:0; top:50%; bottom:auto; width:auto; height:8px; margin:-4px 0 0; }
+  body.land .hd + .st .trk::before { left:50%; top:50%; }
+  body.land .st:last-child .trk::before { right:50%; bottom:auto; }
+  body.land .nm { writing-mode:vertical-rl; padding:4px 0 0; flex:1; letter-spacing:1px; }
+  body.land .nm small { display:none; }
+  body.land .st.goal { background:linear-gradient(180deg, rgba(255,214,10,.35) 0, rgba(255,214,10,.35) 70%, rgba(255,214,10,0) 100%); }
+  body.land .st.goal .nm::after { content:"⭐"; }
+  body.land .hd { min-width:auto; flex:none; }
+  body.land .hd .trk::before { display:none; }
+
+  .train { position:absolute; left:0; top:0; width:40px; height:24px; margin:-12px 0 0 -20px; border-radius:8px 8px 8px 8px;
+    border:3px solid #fff; box-sizing:border-box; box-shadow:0 2px 4px rgba(0,0,0,.35); z-index:3; display:flex;
+    align-items:center; justify-content:space-evenly; transition:background .2s; pointer-events:none; }
+  .train i { width:7px; height:8px; background:#e7f5ff; border-radius:2px; display:block; }
+  .train.local { background:var(--local); } .train.express { background:var(--express); } .train.ltd { background:var(--ltd); }
+  .train.v { transform:rotate(90deg); }
+  .train.ghost { opacity:.8; z-index:2; }
+  .train.bow { animation:bow .5s 2 alternate; }
+  @keyframes bow { to { transform:rotate(90deg) rotate(-22deg); } }
+  body.land .train.bow { animation:bowh .5s 2 alternate; }
+  @keyframes bowh { to { transform:rotate(18deg); } }
+  .face { position:absolute; z-index:4; font-size:28px; pointer-events:none; transform:translate(-50%,-110%); transition:opacity .3s; }
+
+  /* ===== 下の えらぶ ところ ===== */
+  #bottom { flex:none; padding:8px 10px 10px; }
+  #ask { text-align:center; font-weight:bold; font-size:17px; line-height:1.8; margin-bottom:6px; min-height:30px; }
+  #choices { display:flex; gap:8px; justify-content:center; }
+  .ch { flex:1; max-width:260px; min-height:78px; border:4px solid #fff; border-radius:22px; color:#fff; font-weight:bold;
+    font-size:19px; line-height:1.35; padding:6px 6px; box-shadow:0 5px 0 rgba(0,0,0,.22); }
+  .ch b { display:block; font-size:13px; font-weight:bold; opacity:.95; }
+  .ch:active { transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.22); }
+  .ch.local { background:var(--local); } .ch.express { background:var(--express); } .ch.ltd { background:var(--ltd); }
+  .ch .sw { display:inline-block; width:14px; height:14px; border-radius:50%; border:2px solid #fff; vertical-align:-1px; margin:0 2px; }
+  .ch:disabled { opacity:.45; }
+  #say { position:fixed; left:0; right:0; margin:0 auto; width:fit-content; max-width:90vw; box-sizing:border-box;
+    bottom:calc(env(safe-area-inset-bottom) + 118px); background:#fff; border:3px solid var(--ink); border-radius:20px;
+    padding:6px 16px; font-size:19px; font-weight:bold; line-height:1.8; text-align:center; z-index:8;
+    box-shadow:0 6px 16px rgba(0,0,0,.25); opacity:0; transform:translateY(8px); transition:opacity .2s, transform .2s; pointer-events:none; }
+  #say.show { opacity:1; transform:none; }
+  #say.oops { background:#fff0f0; border-color:#e03131; }
+  #say.good { background:#fff6cc; }
+
+  /* ===== まど（オーバーレイ） ===== */
+  .ov { position:fixed; inset:0; display:none; align-items:center; justify-content:center; box-sizing:border-box;
+    background:rgba(20,40,70,.5); padding:calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 12px); z-index:20; }
+  .ov.show { display:flex; }
+  .panel { background:#fffdf8; border-radius:26px; padding:16px 18px; width:100%; max-width:600px; max-height:100%;
+    overflow:auto; box-sizing:border-box; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }
+  h1 { margin:4px 0 4px; font-size:28px; line-height:1.35; }
+  h1 small { display:block; font-size:15px; color:var(--sub); line-height:1.9; }
+  h2 { margin:4px 0 8px; font-size:24px; line-height:1.5; }
+  p { line-height:1.9; margin:6px 0; font-size:17px; }
+  .big { display:block; width:100%; min-height:64px; margin:8px 0; border:none; border-radius:20px; font-size:21px; font-weight:bold;
+    color:#fff; background:var(--ink); box-shadow:0 5px 0 rgba(0,0,0,.22); line-height:1.4; padding:6px 10px; }
+  .big:active { transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.22); }
+  .big.sub { background:#eef2f6; color:var(--ink); }
+  .lv { display:flex; align-items:center; gap:10px; text-align:left; }
+  .lv .t { flex:1; } .lv .t small { display:block; font-size:14px; font-weight:normal; opacity:.95; }
+  .lv .s { flex:none; font-size:20px; letter-spacing:-2px; }
+  .lv1 { background:var(--local); } .lv2 { background:var(--express); } .lv3 { background:var(--ltd); }
+  .row { display:flex; gap:8px; } .row .big { flex:1; font-size:18px; }
+  .note { font-size:13px; color:var(--sub); line-height:1.8; text-align:left; }
+  .stars { font-size:42px; letter-spacing:4px; margin:2px 0; }
+  .cmp { text-align:left; margin:8px 0; }
+  .cmp .r { display:flex; align-items:center; gap:6px; margin:6px 0; font-weight:bold; font-size:15px; }
+  .cmp .lb { flex:none; width:104px; line-height:1.35; font-size:14px; }
+  .cmp .bar { flex:1; height:26px; background:#eef2f6; border-radius:13px; position:relative; overflow:hidden; }
+  .cmp .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:13px; display:block; }
+  .cmp .bar i.back { background:repeating-linear-gradient(45deg,#ffa8a8 0 6px,#ffc9c9 6px 12px) !important; }
+  .cmp .v { flex:none; width:100px; font-size:14px; line-height:1.3; white-space:nowrap; }
+  .cmp .r.me { background:#fff3bf; border-radius:12px; padding:2px 4px; }
+  .card { text-align:left; background:#fff; border-radius:18px; padding:10px 14px; margin:10px 0; border:3px solid #e9ecef; }
+  .card h3 { margin:0 0 4px; font-size:19px; line-height:1.7; }
+  .card p { font-size:16px; margin:4px 0; }
+  .mini { display:inline-grid; grid-template-columns:auto auto auto auto; gap:2px 10px; align-items:center; font-weight:bold; font-size:15px; margin:4px 0; }
+  .mini .o { width:14px; height:14px; border-radius:50%; border:4px solid currentColor; box-sizing:border-box; justify-self:center; }
+  .mini .p { width:4px; height:22px; background:currentColor; opacity:.45; justify-self:center; }
+  .tg { display:inline-block; padding:0 8px; border-radius:10px; color:#fff; font-weight:bold; }
+  .tg.local { background:var(--local); } .tg.express { background:var(--express); } .tg.ltd { background:var(--ltd); } .tg.com { background:#9c36b5; }
+
+  #confetti { position:fixed; inset:0; pointer-events:none; z-index:30; overflow:hidden; }
+  #confetti i { position:absolute; top:-20px; width:10px; height:14px; display:block; animation:fall 1.8s linear forwards; }
+  @keyframes fall { to { transform:translateY(110vh) rotate(720deg); } }
+
+  @media (max-height:600px) {
+    #top { padding:4px 8px 3px; } .round { width:44px; height:44px; font-size:19px; }
+    #mission { font-size:16px; line-height:1.7; } #mission .goal { font-size:18px; }
+    .ch { min-height:60px; font-size:17px; } #ask { font-size:15px; margin-bottom:3px; min-height:0; }
+    #bottom { padding:4px 8px 6px; } #say { bottom:calc(env(safe-area-inset-bottom) + 84px); font-size:17px; }
+  }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <button class="round" id="bHome" aria-label="メニュー">🏠</button>
+    <div id="mission"><div id="pips"></div><div id="mText"></div></div>
+    <div id="clock"><small>じかん</small><span id="clk">0</span>ふん</div>
+    <button class="round" id="bSnd" aria-label="おと">🔊</button>
+  </div>
+  <div id="mapWrap"><div id="map"></div></div>
+  <div id="bottom">
+    <div id="ask"></div>
+    <div id="choices"></div>
+  </div>
+</div>
+<div id="say"></div>
+<div id="confetti"></div>
+
+<!-- タイトル -->
+<div class="ov show" id="ovTitle"><div class="panel">
+  <h1>⏩ とまる？ とばす？<br>きゅうこう えらび
+    <small>おなじ せんろでも、でんしゃに よって とまる <ruby>駅<rt>えき</rt></ruby>が ちがうよ</small></h1>
+  <p style="font-size:15px"><ruby>東急<rt>とうきゅう</rt></ruby> <ruby>東横線<rt>とうよこせん</rt></ruby>（<ruby>渋谷<rt>しぶや</rt></ruby>〜<ruby>横浜<rt>よこはま</rt></ruby>）で おつかい！</p>
+  <button class="big lv lv1" data-lv="1"><span class="t">レベル1<small>かくてい と きゅうこう</small></span><span class="s" id="s1"></span></button>
+  <button class="big lv lv2" data-lv="2"><span class="t">レベル2<small>とっきゅう も くるよ</small></span><span class="s" id="s2"></span></button>
+  <button class="big lv lv3" data-lv="3"><span class="t">レベル3<small>とちゅうで のりかえて はやく つこう</small></span><span class="s" id="s3"></span></button>
+  <div class="row">
+    <button class="big sub" id="bCards">📖 まなび カード</button>
+    <button class="big sub" id="bSnd2">🔊 おと オン</button>
+  </div>
+  <p class="note">※ <ruby>駅<rt>えき</rt></ruby>の じゅんばんは <ruby>東急電鉄<rt>とうきゅうでんてつ</rt></ruby>の <ruby>公式<rt>こうしき</rt></ruby>の ろせんずで たしかめました。とまる <ruby>駅<rt>えき</rt></ruby>は 2026ねん11がつ に しらべた もので、ダイヤが かわると かわる ことが あります。<ruby>時間<rt>じかん</rt></ruby>は「1<ruby>駅<rt>えき</rt></ruby> はしる＝だいたい 1ぷん、1かい とまる＝1ぷん」の めやすです。でんしゃや ろせんずの 絵は オリジナルです。</p>
+</div></div>
+
+<!-- けっか -->
+<div class="ov" id="ovRes"><div class="panel" id="resBody"></div></div>
+<!-- レベル おわり -->
+<div class="ov" id="ovEnd"><div class="panel" id="endBody"></div></div>
+<!-- まなび カード -->
+<div class="ov" id="ovCards"><div class="panel" id="cardsBody"></div></div>
+
+<script>
+'use strict';
+const R = (k, y) => `<ruby>${k}<rt>${y}</rt></ruby>`;
+const $ = id => document.getElementById(id);
+
+// =====================================================================
+//  データ（ここ 1か所に まとめる）
+//  東急東横線 渋谷〜横浜 全21駅。
+//  - 駅の じゅんばん・駅番号: 東急電鉄 公式「東横線 路線図」 https://www.tokyu.co.jp/railway/ty/
+//    で 確認（2026-11-27）。
+//  - 種別ごとの 停車駅: 2026-11-27 に 確認（2023-03-18 ダイヤ改正〈東急新横浜線 開業〉以降の 停車駅。
+//    公式サイトでは 一覧表を とれなかったため 路線図サイト rosen-zu.net の 東横線 停車駅 と 照合）。
+//      急行   : 渋谷・中目黒・学芸大学・自由が丘・田園調布・多摩川・武蔵小杉・日吉・綱島・菊名・横浜
+//      通勤特急: 渋谷・中目黒・自由が丘・武蔵小杉・日吉・菊名・横浜（ゲームでは つかわず、カードで しょうかい）
+//      特急   : 渋谷・中目黒・自由が丘・武蔵小杉・菊名・横浜
+//  ダイヤ改正で かわったら、この STOPS を なおすだけで よい。
+// =====================================================================
+const STATIONS = [
+  ['渋谷','しぶや'], ['代官山','だいかんやま'], ['中目黒','なかめぐろ'], ['祐天寺','ゆうてんじ'],
+  ['学芸大学','がくげいだいがく'], ['都立大学','とりつだいがく'], ['自由が丘','じゆうがおか'], ['田園調布','でんえんちょうふ'],
+  ['多摩川','たまがわ'], ['新丸子','しんまるこ'], ['武蔵小杉','むさしこすぎ'], ['元住吉','もとすみよし'],
+  ['日吉','ひよし'], ['綱島','つなしま'], ['大倉山','おおくらやま'], ['菊名','きくな'],
+  ['妙蓮寺','みょうれんじ'], ['白楽','はくらく'], ['東白楽','ひがしはくらく'], ['反町','たんまち'], ['横浜','よこはま'],
+];
+const N = STATIONS.length;
+const ALL = STATIONS.map((_, i) => i);
+const STOPS = {
+  local:   ALL,
+  express: [0, 2, 4, 6, 7, 8, 10, 12, 13, 15, 20],
+  com:     [0, 2, 6, 10, 12, 15, 20],
+  ltd:     [0, 2, 6, 10, 15, 20],
+};
+const TYPES = {
+  local:   { name:'かくえきていしゃ', short:'かくてい', mark:'か', face:'🐢' },
+  express: { name:'きゅうこう', short:'きゅうこう', mark:'きゅ', face:'🐰' },
+  ltd:     { name:'とっきゅう', short:'とっきゅう', mark:'とっ', face:'🦝' },
+};
+// 時間の めやす（ふん）
+const RUN = 1, DWELL = 1, XFER = 1, BACKWAIT = 4;   // もどる ときは はんたいの ホームへ いって まつ
+
+// レベル ごとの おつかい
+const LEVELS = {
+  1: { types:['local','express'], first:4,
+       pools:[[4, 10, 13, 2, 12, 15], [3, 5, 9, 11, 17, 19]], pick:[1, 2] },
+  2: { types:['local','express','ltd'], first:6,
+       pools:[[6, 10, 15], [12, 13, 4, 8], [5, 11, 16, 18]], pick:[0, 1, 1] },
+  3: { types:['local','express','ltd'], first:16, xfer:true,
+       pools:[[5, 9, 11, 14, 17, 18, 19]], pick:[3] },
+};
+const ROUNDS = 4;
+
+// ===== 保存 =====
+const KEY = 'tomaru-tobasu.v1';
+let SV = { sound:true, stars:{}, seenCards:false };
+try { const j = JSON.parse(localStorage.getItem(KEY) || 'null'); if (j) SV = Object.assign(SV, j); } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(SV)); } catch (e) {} }
+
+// ===== 音（WebAudio の 合成音のみ） =====
+let AC = null;
+function audio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return AC; }
+  try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { AC = null; }
+  return AC;
+}
+function tone(freq, t0, dur, type, vol, to) {
+  if (!SV.sound || !audio()) return;
+  const t = AC.currentTime + t0, o = AC.createOscillator(), g = AC.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t);
+  if (to) o.frequency.exponentialRampToValueAtTime(to, t + dur);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol || .2, t + .01);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + .05);
+}
+function noise(t0, dur, vol, fq, fq2) {
+  if (!SV.sound || !audio()) return;
+  const n = Math.floor(AC.sampleRate * dur), b = AC.createBuffer(1, n, AC.sampleRate), d = b.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.sin(Math.PI * i / n);
+  const s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain(), t = AC.currentTime + t0;
+  s.buffer = b; f.type = 'bandpass'; f.Q.value = 2; f.frequency.setValueAtTime(fq || 1500, t);
+  if (fq2) f.frequency.exponentialRampToValueAtTime(fq2, t + dur);
+  g.gain.value = vol || .2; s.connect(f); f.connect(g); g.connect(AC.destination); s.start(t);
+}
+const SND = {
+  tap() { tone(660, 0, .08, 'triangle', .12); },
+  whoosh() { noise(0, .35, .22, 600, 3000); },
+  stop() { tone(880, 0, .25, 'sine', .12); tone(660, .22, .35, 'sine', .12); },
+  door() { noise(0, .35, .1, 900); },
+  oops() { tone(620, 0, .18, 'square', .07, 420); tone(440, .2, .35, 'square', .07, 260); },
+  bow() { tone(392, 0, .15, 'triangle', .12); tone(330, .16, .2, 'triangle', .12); },
+  good() { [523, 659, 784, 1047].forEach((f, i) => tone(f, i * .09, .25, 'triangle', .15)); },
+  clear() { [523, 659, 784, 659, 784, 1047].forEach((f, i) => tone(f, i * .13, .3, 'triangle', .18)); },
+};
+
+// ===== しくみ（時間の 計算） =====
+// stopsBetween: a と b の あいだ（a,b を のぞく）で その 電車が とまる かず
+function stopsBetween(type, a, b) {
+  const lo = Math.min(a, b), hi = Math.max(a, b);
+  return STOPS[type].filter(i => i > lo && i < hi).length;
+}
+function ride(type, a, b) { return Math.abs(b - a) * RUN + stopsBetween(type, a, b) * DWELL; }
+// のりかた（plan）: { type, xfer:駅 or null }
+function planFor(type, target, useXfer) {
+  if (STOPS[type].includes(target) || !useXfer || type === 'local') return { type, xfer:null };
+  const x = Math.max(...STOPS[type].filter(i => i < target));
+  return { type, xfer:x };
+}
+function simulate(plan, t) {
+  const { type, xfer } = plan;
+  if (xfer != null) {
+    const time = ride(type, 0, xfer) + XFER + ride('local', xfer, t);
+    return { time, stops: stopsBetween(type, 0, xfer) + 1 + stopsBetween('local', xfer, t), over:null };
+  }
+  if (STOPS[type].includes(t)) return { time: ride(type, 0, t), stops: stopsBetween(type, 0, t), over:null };
+  const s = STOPS[type].find(i => i > t);
+  const time = ride(type, 0, s) + BACKWAIT + ride('local', s, t);
+  return { time, stops: stopsBetween(type, 0, s) + 1 + stopsBetween('local', s, t), over:s, back: BACKWAIT + ride('local', s, t) };
+}
+
+// ===== ろせんず を つくる =====
+const map = $('map'), mapWrap = $('mapWrap');
+let LAND = false, curTypes = ['local','express','ltd'];
+function buildMap() {
+  let h = `<div class="hd"><div class="marks">` +
+    curTypes.map(k => `<div class="mk c-${k}"><span>${TYPES[k].mark}</span></div>`).join('') +
+    `</div><div class="trk"></div><div class="nm" style="font-size:12px;color:var(--sub)">◯ とまる　｜ とばす</div></div>`;
+  STATIONS.forEach(([k, y], i) => {
+    h += `<div class="st" data-i="${i}"><div class="marks">` +
+      curTypes.map(t => `<div class="mk c-${t}">${STOPS[t].includes(i) ? '<span class="o"></span>' : '<span class="p"></span>'}</div>`).join('') +
+      `</div><div class="trk"><span class="node"></span></div><div class="nm">${R(k, y)}</div></div>`;
+  });
+  map.innerHTML = h;
+  if (LAND) map.querySelector('.hd .nm').innerHTML = '';
+}
+function stEl(i) { return map.querySelector(`.st[data-i="${i}"]`); }
+function nodePos(i) {
+  const n = stEl(i).querySelector('.node'), r = n.getBoundingClientRect(), m = map.getBoundingClientRect();
+  return { x: r.left + r.width / 2 - m.left, y: r.top + r.height / 2 - m.top };
+}
+function posAt(f) {
+  const a = Math.max(0, Math.min(N - 1, Math.floor(f))), b = Math.min(N - 1, a + 1), u = f - a;
+  const p = nodePos(a), q = nodePos(b);
+  return { x: p.x + (q.x - p.x) * u, y: p.y + (q.y - p.y) * u };
+}
+
+// でんしゃの こま
+class Train {
+  constructor(type, f, ghost) {
+    this.el = document.createElement('div');
+    this.el.innerHTML = '<i></i><i></i><i></i>';
+    this.f = f; this.setType(type); if (ghost) this.el.classList.add('ghost');
+    map.appendChild(this.el); this.place();
+  }
+  setType(t) { this.type = t; this.el.className = 'train ' + t + (LAND ? '' : ' v') + (this.el.classList.contains('ghost') ? ' ghost' : ''); }
+  place() {
+    const p = posAt(this.f); this.el.style.left = p.x + 'px'; this.el.style.top = p.y + 'px';
+    this.el.classList.toggle('v', !LAND);
+  }
+  remove() { this.el.remove(); }
+}
+let trains = [];
+function clearTrains() { trains.forEach(t => t.remove()); trains = []; document.querySelectorAll('.face').forEach(e => e.remove()); }
+function face(f, emoji, ms) {
+  const e = document.createElement('div'); e.className = 'face'; e.textContent = emoji;
+  const p = posAt(f); e.style.left = p.x + 'px'; e.style.top = p.y + 'px'; map.appendChild(e);
+  if (ms) setTimeout(() => { e.style.opacity = 0; setTimeout(() => e.remove(), 300); }, ms);
+  return e;
+}
+
+// ===== うごき =====
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+let token = 0;              // とちゅうで やめたら ふえる
+function tween(tr, from, to, ms, onT) {
+  const my = token;
+  return new Promise(res => {
+    const t0 = performance.now();
+    function step(now) {
+      if (my !== token) return res(false);
+      const u = Math.min(1, (now - t0) / ms), e = u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;
+      tr.f = from + (to - from) * e; tr.place(); follow(tr);
+      if (onT) onT(tr.f);
+      if (u < 1) requestAnimationFrame(step); else res(true);
+    }
+    requestAnimationFrame(step);
+  });
+}
+function follow(tr) {
+  const p = posAt(tr.f), W = mapWrap.clientWidth, H = mapWrap.clientHeight;
+  if (LAND) { if (p.x < mapWrap.scrollLeft + 40 || p.x > mapWrap.scrollLeft + W - 40) mapWrap.scrollLeft = p.x - W / 2; }
+  else if (p.y < mapWrap.scrollTop + 40 || p.y > mapWrap.scrollTop + H - 40) mapWrap.scrollTop = p.y - H / 2;
+}
+let minutes = 0;
+function setClock(m) { minutes = m; $('clk').textContent = Math.round(m); }
+let sayT = 0;
+function say(html, cls, ms) {
+  const s = $('say'); s.innerHTML = html; s.className = 'show ' + (cls || '');
+  clearTimeout(sayT); if (ms) sayT = setTimeout(() => s.className = '', ms);
+}
+function hush() { $('say').className = ''; }
+function mark(i, cls) { const e = stEl(i); e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); }
+
+// a → b を type で はしる。とまる 駅で とまる・とばす 駅は ぴゅーん
+async function run(tr, a, b, opts) {
+  opts = opts || {};
+  const dir = b > a ? 1 : -1;
+  const ok = () => opts.my === token;
+  for (let i = a; i !== b; i += dir) {
+    const nx = i + dir, stop = STOPS[tr.type].includes(nx) || nx === b;
+    const passing = !stop;
+    if (passing) SND.whoosh();
+    await tween(tr, i, nx, passing ? 330 : 520, null);
+    if (!ok()) return false;
+    setClock(minutes + RUN);
+    if (opts.onPass && passing) { const r = await opts.onPass(nx); if (!ok()) return false; if (r === 'pause') {} }
+    if (stop) {
+      document.querySelectorAll('.st.here').forEach(e => e.classList.remove('here'));
+      stEl(nx).classList.add('here');
+      if (nx !== b) { SND.stop(); mark(nx, 'flash'); await sleep(380); if (!ok()) return false; setClock(minutes + DWELL); }
+    }
+  }
+  return true;
+}
+
+// ===== ゲームの すすみ =====
+let LV = 1, round = 0, missions = [], target = 0, results = [], busy = false;
+function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+function makeMissions(lv) {
+  const L = LEVELS[lv], out = [L.first];
+  L.pools.forEach((p, k) => shuffle(p.filter(x => x !== L.first)).slice(0, L.pick[k]).forEach(x => out.push(x)));
+  const rest = shuffle(out.slice(1)).filter((x, i, a) => a.indexOf(x) === i);
+  return [L.first].concat(rest).slice(0, ROUNDS);
+}
+function plansOf() {
+  const L = LEVELS[LV];
+  return L.types.map(t => planFor(t, target, !!L.xfer));
+}
+function planLabel(p, short) {
+  const T = TYPES[p.type];
+  if (p.xfer == null) return short ? T.short : `${T.short}<b>${p.type === 'local' ? 'ぜんぶの えきに とまる' : 'えきを とばす'}</b>`;
+  const [k, y] = STATIONS[p.xfer];
+  return short ? `${T.short}→${R(k, y)}→かくてい`
+    : `${T.short}<b>→ ${R(k, y)}で かくていに のりかえ</b>`;
+}
+
+function startLevel(lv) {
+  LV = lv; round = 0; results = []; missions = makeMissions(lv);
+  curTypes = LEVELS[lv].types;
+  hideAll(); buildMap(); startRound();
+}
+function pips() {
+  $('pips').innerHTML = missions.map((_, i) => `<i class="${i < round ? 'done' : i === round ? 'now' : ''}"></i>`).join('');
+}
+function startRound() {
+  token++; busy = false; clearTrains(); hush();
+  target = missions[round];
+  document.querySelectorAll('.st').forEach(e => e.classList.remove('goal', 'here', 'hint'));
+  stEl(target).classList.add('goal'); stEl(0).classList.add('here');
+  pips();
+  const [k, y] = STATIONS[target];
+  $('mText').innerHTML = `🎒 <span class="goal">${R(k, y)}</span> へ <span style="white-space:nowrap">${R('行', 'い')}きたい！</span>`;
+  setClock(0);
+  trains = [new Train('local', 0)];
+  trains[0].el.style.opacity = 0;
+  mapWrap.scrollTop = 0; mapWrap.scrollLeft = 0;
+  const L = LEVELS[LV];
+  $('ask').innerHTML = L.xfer
+    ? `${R('渋谷', 'しぶや')}から。いちばん はやく つく のりかたは どれ？`
+    : `${R('渋谷', 'しぶや')}の ホームに きた でんしゃ。<span style="color:#c2255c">⭐の ${R('駅', 'えき')}に ◯</span>が ある でんしゃは どれ？`;
+  const ps = plansOf();
+  $('choices').innerHTML = ps.map((p, i) => `<button class="ch ${p.type}" data-i="${i}">${planLabel(p)}</button>`).join('');
+  $('choices').querySelectorAll('.ch').forEach(b => b.onclick = () => choose(ps[+b.dataset.i]));
+  setTimeout(() => { if (!busy) follow({ f: target, place(){} }); }, 50);
+}
+
+async function choose(plan) {
+  if (busy) return; busy = true; SND.tap();
+  const my = ++token;
+  $('choices').querySelectorAll('.ch').forEach(b => b.disabled = true);
+  const T = TYPES[plan.type];
+  $('ask').innerHTML = `<span class="tg ${plan.type}">${T.short}</span> に のったよ！`;
+  clearTrains(); setClock(0); mapWrap.scrollTop = 0; mapWrap.scrollLeft = 0;
+  const tr = new Train(plan.type, 0); trains.push(tr);
+  SND.door(); await sleep(450); if (my !== token) return;
+  if (plan.type === 'local') say(`🐢「のんびり いこう〜。ぜんぶの ${R('駅', 'えき')}に とまるよ」`, '', 2200);
+  else if (plan.type === 'ltd') say(`💨「とっきゅう、しゅっぱつ！ ぴゅーん！」`, '', 1800);
+  else say(`💨「きゅうこう、しゅっぱつ！」`, '', 1600);
+
+  const res = simulate(plan, target);
+  if (plan.xfer != null) {
+    // とちゅうで のりかえ（まちあわせ）
+    const x = plan.xfer;
+    if (!await run(tr, 0, x, { my })) return;
+    SND.stop(); await sleep(250);
+    const loc = new Train('local', x, true); trains.push(loc);
+    loc.el.style.marginLeft = LAND ? '-20px' : '6px'; loc.el.style.marginTop = LAND ? '6px' : '-12px';
+    say(`まちあわせ！ かくていが まってたよ。<br>🐢「おさきに どうぞ」<small>（ぺこり）</small>`, 'good');
+    SND.bow(); loc.el.classList.add('bow');
+    await sleep(1500); if (my !== token) return;
+    setClock(minutes + XFER);
+    say(`ホームの むかいがわへ のりかえ！`, '', 1400);
+    tr.setType('local'); tr.f = x; tr.place();
+    loc.setType(plan.type); loc.el.classList.remove('bow');
+    // さきに いく とっきゅう・きゅうこう
+    const goAway = tween(loc, x, Math.min(N - 1, x + 2.5), 900).then(() => { loc.el.style.transition = 'opacity .4s'; loc.el.style.opacity = 0; });
+    SND.whoosh(); await goAway; await sleep(300); if (my !== token) return;
+    loc.remove(); SND.door();
+    if (!await run(tr, x, target, { my })) return;
+  } else if (res.over == null) {
+    if (!await run(tr, 0, target, { my })) return;
+  } else {
+    // とばして しまう
+    let shown = false;
+    const onPass = async (i) => {
+      if (i !== target || shown) return;
+      shown = true; SND.oops();
+      face(target, '🦝', 2600);
+      say(`あっ！ ${R(STATIONS[target][0], STATIONS[target][1])}を とばしちゃった！<br>🦝「おりたかった〜」<small>（まどに ぺたっ）</small>`, 'oops');
+      await sleep(1600);
+    };
+    if (!await run(tr, 0, res.over, { my, onPass })) return;
+    SND.stop(); await sleep(300);
+    say(`つぎの ${R('駅', 'えき')}で おりて、かくていで もどろう…`, 'oops');
+    await sleep(1400); if (my !== token) return;
+    setClock(minutes + BACKWAIT);
+    tr.setType('local'); SND.door(); await sleep(300);
+    if (!await run(tr, res.over, target, { my })) return;
+  }
+  // ついた！
+  SND.stop(); hush();
+  document.querySelectorAll('.st.here').forEach(e => e.classList.remove('here'));
+  stEl(target).classList.add('here');
+  setClock(res.time);
+  await sleep(700); if (my !== token) return;
+  showResult(plan, res);
+}
+
+function showResult(plan, res) {
+  const ps = plansOf(), all = ps.map(p => ({ p, r: simulate(p, target) }));
+  const best = Math.min(...all.filter(a => a.r.over == null).map(a => a.r.time));
+  const mine = res.time;
+  let stars = res.over != null ? 1 : mine <= best ? 3 : 2;
+  results[round] = Math.max(results[round] || 0, stars);
+  const [k, y] = STATIONS[target];
+  let head, msg;
+  if (stars === 3) { head = `🎉 いちばん はやい！`; msg = `${R(k, y)}に やく ${Math.round(mine)}ぷんで ついたよ。`; SND.good(); confetti(30); }
+  else if (stars === 2) {
+    const b = all.find(a => a.r.time === best && a.r.over == null);
+    head = `👍 ちゃんと ついたね！`;
+    msg = `でも <span class="tg ${b.p.type}">${planLabel(b.p, true)}</span> なら もっと はやかったよ。`;
+    SND.good();
+  } else {
+    head = `😵 とおりすぎちゃった…`;
+    msg = `${R(k, y)}は <span class="tg ${plan.type}">${TYPES[plan.type].short}</span> の とばす ${R('駅', 'えき')}（｜）だったね。もどったぶん おそく なったよ。`;
+  }
+  const max = Math.max(...all.map(a => a.r.time));
+  const rows = all.map(a => {
+    const me = a.p.type === plan.type && a.p.xfer === plan.xfer;
+    const w = a.r.time / max * 100, bw = a.r.back ? a.r.back / max * 100 : 0;
+    const crown = a.r.over != null ? '↩️' : a.r.time === best ? '👑' : '';
+    return `<div class="r ${me ? 'me' : ''}"><span class="lb"><span class="tg ${a.p.type}">${TYPES[a.p.type].short}</span>${a.p.xfer != null ? `<br><small>→${R(STATIONS[a.p.xfer][0], STATIONS[a.p.xfer][1])}で のりかえ</small>` : ''}</span>
+      <span class="bar"><i style="width:${w - bw}%;background:var(--${a.p.type})"></i>${bw ? `<i class="back" style="left:${w - bw}%;width:${bw}%"></i>` : ''}</span>
+      <span class="v">${crown}やく${Math.round(a.r.time)}ぷん<br><small>とまる ${a.r.stops}かい</small></span></div>`;
+  }).join('');
+  $('resBody').innerHTML = `<h2>${head}</h2><div class="stars">${'⭐'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+    <p>${msg}</p>
+    <div class="cmp">${rows}</div>
+    <p class="note">とまる かずが すくない ほど はやく つくよ。でも、とばす ${R('駅', 'えき')}には おりられない！（↩️ ＝ とおりすぎて もどった ぶん）</p>
+    <div class="row"><button class="big sub" id="bRetry">🔁 もういちど</button><button class="big" id="bNext">${round + 1 < missions.length ? 'つぎの おつかい ▶' : 'おしまい ▶'}</button></div>`;
+  show('ovRes');
+  $('bRetry').onclick = () => { SND.tap(); hideAll(); startRound(); };
+  $('bNext').onclick = () => { SND.tap(); hideAll(); round++; if (round < missions.length) startRound(); else endLevel(); };
+}
+
+function endLevel() {
+  token++;
+  const got = results.reduce((s, x) => s + (x || 0), 0), maxS = missions.length * 3;
+  const prev = SV.stars[LV] || 0; if (got > prev) { SV.stars[LV] = got; save(); }
+  SND.clear(); confetti(70);
+  const praise = got >= maxS - 1 ? 'すごい！ しゅべつ はかせ だ！' : got >= maxS - 4 ? 'よく できました！' : 'さいごまで できたね！';
+  $('endBody').innerHTML = `<h2>🏁 レベル${LV} クリア！</h2>
+    <div class="stars">⭐ ${got} / ${maxS}</div>
+    <p style="font-size:20px;font-weight:bold">${praise}</p>
+    <div class="card"><p>🗺️ <b>ろせんずの「◯」と「｜」を ${R('見', 'み')}ると、その でんしゃが とまるか とばすか わかるよ！</b></p>
+    <p style="font-size:14px;color:var(--sub)">つぎは「ちょくつう ぶらり」で、ほかの ${R('線', 'せん')}へ そのまま はいって いく でんしゃを しらべて みよう。</p></div>
+    ${LV < 3 ? `<button class="big lv lv${LV + 1}" id="bNextLv">レベル${LV + 1}へ ▶</button>` : ''}
+    <div class="row"><button class="big sub" id="bAgain">🔁 もういちど</button><button class="big sub" id="bMenu">🏠 メニュー</button></div>`;
+  show('ovEnd');
+  if ($('bNextLv')) $('bNextLv').onclick = () => { SND.tap(); startLevel(LV + 1); };
+  $('bAgain').onclick = () => { SND.tap(); startLevel(LV); };
+  $('bMenu').onclick = () => { SND.tap(); goTitle(); };
+}
+
+// ===== まなび カード =====
+function cards() {
+  const tbl = (rows) => `<div class="mini">` + rows.map(r => r.map((c, j) => j === 0 ? `<span>${c}</span>` : `<span class="${c === 1 ? 'o' : 'p'}" style="color:var(--${['', 'local', 'express', 'ltd'][j]})"></span>`).join('')).join('') + `</div>`;
+  $('cardsBody').innerHTML = `<h2>📖 まなび カード</h2>
+  <div class="card"><h3>① しゅべつ（でんしゃの しゅるい）</h3>
+    <p><span class="tg local">かくえきていしゃ</span> ぜんぶの ${R('駅', 'えき')}に とまる。ゆっくり だけど、どの ${R('駅', 'えき')}にも おりられる。</p>
+    <p><span class="tg express">きゅうこう</span> ${R('大', 'おお')}きな ${R('駅', 'えき')}だけ とまって、ほかは とばす。</p>
+    <p><span class="tg ltd">とっきゅう</span> もっと ${R('少', 'すく')}ない ${R('駅', 'えき')}だけ。いちばん はやい。</p>
+    <p style="font-size:14px">${R('東横線', 'とうよこせん')}には ほかに <span class="tg com">つうきんとっきゅう</span>（あさ・ゆうがたの とっきゅう。${R('日吉', 'ひよし')}にも とまる）も あるよ。</p></div>
+  <div class="card"><h3>② ていしゃえきの ${R('表', 'ひょう')}の よみかた</h3>
+    <p>${R('駅', 'えき')}の よこの <b>◯</b> は「とまる」、<b>｜</b>（たての せん）は「とおりすぎる（とばす）」。</p>
+    ${tbl([[R('渋谷', 'しぶや'), 1, 1, 1], [R('代官山', 'だいかんやま'), 1, 0, 0], [R('中目黒', 'なかめぐろ'), 1, 1, 1], [R('祐天寺', 'ゆうてんじ'), 1, 0, 0], [R('学芸大学', 'がくげいだいがく'), 1, 1, 0]])}
+    <p>${R('学芸大学', 'がくげいだいがく')}に いきたい ときは、◯が ある <span class="tg local">かくてい</span> か <span class="tg express">きゅうこう</span>。<span class="tg ltd">とっきゅう</span> は ｜ だから とまらない！</p></div>
+  <div class="card"><h3>③ まちあわせ・おいこし</h3>
+    <p>はやい でんしゃが うしろから きた とき、かくていは ${R('駅', 'えき')}で まって「おさきに どうぞ」と さきに いかせるよ。これが <b>おいこし</b>。</p>
+    <p>おなじ ${R('駅', 'えき')}で のりかえ できるように まって いるのが <b>まちあわせ</b>。とおくの ちいさな ${R('駅', 'えき')}へは、とっきゅうで ちかくまで いって かくていに のりかえると はやい ことが あるよ。</p></div>
+  <button class="big" id="bCardsClose">とじる</button>`;
+  show('ovCards');
+  $('bCardsClose').onclick = () => { SND.tap(); hide('ovCards'); };
+}
+
+// ===== がめん =====
+function show(id) { $(id).classList.add('show'); }
+function hide(id) { $(id).classList.remove('show'); }
+function hideAll() { ['ovTitle', 'ovRes', 'ovEnd', 'ovCards'].forEach(hide); }
+function goTitle() {
+  token++; busy = false; clearTrains(); hush(); hideAll();
+  [1, 2, 3].forEach(l => { const s = SV.stars[l] || 0; $('s' + l).textContent = s ? `⭐${s}` : ''; });
+  show('ovTitle');
+}
+function sndBtn() { $('bSnd').textContent = SV.sound ? '🔊' : '🔇'; $('bSnd2').textContent = SV.sound ? '🔊 おと オン' : '🔇 おと オフ'; }
+function toggleSnd() { SV.sound = !SV.sound; save(); sndBtn(); if (SV.sound) { audio(); SND.tap(); } }
+$('bSnd').onclick = toggleSnd; $('bSnd2').onclick = toggleSnd;
+$('bHome').onclick = () => { SND.tap(); goTitle(); };
+$('bCards').onclick = () => { SND.tap(); cards(); };
+document.querySelectorAll('[data-lv]').forEach(b => b.onclick = () => { audio(); SND.tap(); startLevel(+b.dataset.lv); });
+
+function confetti(n) {
+  const box = $('confetti'), cols = ['#e03131', '#1c6fd6', '#2f9e44', '#f2b705', '#ae3ec9'];
+  for (let i = 0; i < n; i++) {
+    const e = document.createElement('i'); e.style.left = Math.random() * 100 + 'vw';
+    e.style.background = cols[i % cols.length]; e.style.animationDelay = Math.random() * .6 + 's';
+    e.style.animationDuration = 1.4 + Math.random() + 's'; box.appendChild(e);
+    setTimeout(() => e.remove(), 3200);
+  }
+}
+
+function layout() {
+  const was = LAND;
+  LAND = innerWidth > innerHeight * 1.05;
+  document.body.classList.toggle('land', LAND);
+  if (was !== LAND) {
+    const tg = map.querySelector('.st.goal') ? target : null;
+    const here = map.querySelector('.st.here');
+    const hi = here ? +here.dataset.i : null;
+    const saved = trains.map(t => ({ type: t.type, f: t.f, ghost: t.el.classList.contains('ghost'), op: t.el.style.opacity }));
+    buildMap(); trains = [];
+    saved.forEach(s => { const t = new Train(s.type, s.f, s.ghost); t.el.style.opacity = s.op; trains.push(t); });
+    if (tg != null) stEl(tg).classList.add('goal');
+    if (hi != null) stEl(hi).classList.add('here');
+  }
+  trains.forEach(t => t.place());
+}
+addEventListener('resize', layout);
+LAND = innerWidth > innerHeight * 1.05; document.body.classList.toggle('land', LAND);
+buildMap(); sndBtn(); goTitle();
+</script>
+</body>
+</html>
