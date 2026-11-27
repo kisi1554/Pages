@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>ちょくつう ぶらり でんしゃ</title>
+<style>
+  :root {
+    --bg: #f1f6ff; --ink: #1f2a44; --sub: #5a6b8a; --mc: #6741d9; --mc2: #5f3dc4;
+    --ok: #2f9e44; --ng: #e03131; --card: #fff; --shadow: 0 4px 0 rgba(31,42,68,.16);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--bg);
+    background-image: radial-gradient(circle at 1px 1px, rgba(103,65,217,.10) 1.5px, transparent 2px);
+    background-size: 22px 22px; color: var(--ink);
+    font-family: "Hiragino Maru Gothic ProN", "Hiragino Sans", "BIZ UDPGothic", "Meiryo", system-ui, sans-serif;
+    overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  }
+  button { font: inherit; color: inherit; cursor: pointer; border: none; }
+  ruby rt { font-size: .5em; font-weight: normal; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center;
+    padding: max(8px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)); }
+  .screen.on { display: flex; }
+  .ibtn { min-width: 54px; height: 54px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 26px; display: inline-flex; align-items: center; justify-content: center; padding: 0 8px; flex: none; }
+  .ibtn:active, .big:active, .ccard:active, .opt:active, .chip:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,.16); }
+
+  /* ---- タイトル ---- */
+  #title { overflow-y: auto; justify-content: flex-start; }
+  #title > * { flex: none; }
+  .tbar { width: 100%; max-width: 900px; display: flex; justify-content: flex-end; gap: 8px; }
+  .logo { font-size: clamp(28px, 7.5vw, 48px); margin: 0; color: var(--mc2); text-align: center; letter-spacing: .04em;
+    text-shadow: 0 3px 0 #fff, 0 5px 0 rgba(0,0,0,.08); }
+  .nw { display: inline-block; }
+  .lead { margin: 6px 0 4px; font-size: 18px; color: var(--sub); text-align: center; line-height: 1.9; max-width: 640px; }
+  .hero { display: flex; align-items: flex-end; gap: 4px; margin: 6px 0; }
+  .hero svg { width: 150px; height: 84px; }
+  .tabs { display: flex; gap: 8px; margin: 8px 0; flex-wrap: wrap; justify-content: center; }
+  .tab { padding: 10px 16px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 18px; font-weight: bold; color: var(--sub); border: 3px solid transparent; min-height: 54px; }
+  .tab.on { border-color: var(--lc); color: var(--lc); }
+  .tnote { font-size: 16px; color: var(--sub); margin: 0 0 8px; text-align: center; line-height: 1.8; max-width: 640px; }
+  .cgrid { width: 100%; max-width: 900px; display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 12px; padding-bottom: 12px; }
+  .ccard { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 12px 14px;
+    display: flex; align-items: center; gap: 12px; text-align: left; border-left: 10px solid var(--lc); min-height: 100px; }
+  .ccard .em { font-size: 44px; flex: none; }
+  .ccard .ct { font-size: 19px; font-weight: bold; line-height: 1.8; }
+  .ccard .cs { font-size: 15px; color: var(--sub); line-height: 1.7; }
+  .ccard .st { font-size: 20px; letter-spacing: 2px; }
+  .tfoot { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding-bottom: 24px; }
+  .tfoot .big { flex: 0 1 260px; }
+
+  /* ---- あそぶ ---- */
+  #play { padding-left: 8px; padding-right: 8px; }
+  .pwrap { width: 100%; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "side" "map" "opts"; gap: 6px; min-height: 0; max-width: 1200px; }
+  .side { grid-area: side; display: flex; flex-direction: column; gap: 6px; min-height: 0; }
+  .mapbox { grid-area: map; } #opts { grid-area: opts; }
+  .bar { display: flex; align-items: center; gap: 8px; } .bar .sp { flex: 1; }
+  .sign { background: #1b1f2e; border-radius: 14px; padding: 6px 12px; display: flex; align-items: center; gap: 10px;
+    box-shadow: inset 0 0 0 3px #3a4160, var(--shadow); min-height: 64px; }
+  .sign .lb { color: #9aa3c7; font-size: 14px; flex: none; line-height: 1.3; text-align: center; }
+  .flap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #ffb52e; min-width: 0;
+    text-shadow: 0 0 8px rgba(255,170,40,.55); perspective: 300px; }
+  .flap .fk { font-size: 26px; font-weight: bold; letter-spacing: .08em; line-height: 1.2; white-space: nowrap; }
+  .flap .fr { font-size: 13px; color: #ffd591; line-height: 1.3; white-space: nowrap; }
+  .flap.flip { animation: flip .09s linear; }
+  @keyframes flip { 50% { transform: rotateX(80deg); } }
+  .flap.done { animation: glow .6s ease-in-out 3; }
+  @keyframes glow { 50% { color: #fff3bf; text-shadow: 0 0 16px #ffd43b; } }
+  .msg { background: var(--card); border-radius: 18px; box-shadow: var(--shadow); padding: 8px 12px; font-size: 18px; line-height: 1.8;
+    font-weight: bold; border: 3px solid #d0bfff; min-height: 56px; }
+  .msg .ng { color: var(--ng); }
+  .msg .okc { color: var(--ok); }
+  .mapbox { position: relative; min-height: 0; background: #fbfcff; border-radius: 20px;
+    box-shadow: inset 0 0 0 3px #dcd3fb, var(--shadow); overflow: hidden; }
+  #map { width: 100%; height: 100%; display: block; }
+  #map .halo { paint-order: stroke; stroke: #fbfcff; stroke-width: 6px; stroke-linejoin: round; }
+  #map .hit { cursor: pointer; }
+  .opts { display: flex; flex-direction: column; gap: 8px; flex: none; }
+  .opt { width: 100%; min-height: 60px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 18px; font-weight: bold; padding: 8px 12px; text-align: left; display: flex; align-items: center; gap: 10px;
+    border: 4px solid transparent; line-height: 1.6; }
+  .opt .sw { width: 34px; height: 16px; border-radius: 8px; flex: none; }
+  .opt .sw.dash { background-image: repeating-linear-gradient(90deg, currentColor 0 8px, transparent 8px 14px) !important; }
+  .opt.bad { opacity: .45; animation: shake .4s; }
+  .opt.good { border-color: var(--ok); background: #ebfbee; }
+  @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { flex: 1 1 150px; min-height: 58px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); padding: 6px 10px;
+    font-size: 16px; font-weight: bold; text-align: left; display: flex; align-items: center; gap: 8px; border: 4px solid transparent; line-height: 1.5; }
+  .chip .sw { width: 26px; height: 26px; border-radius: 8px; flex: none; }
+  .chip.used { border-color: var(--ok); opacity: .6; }
+  .chip.bad { animation: shake .4s; }
+  .chip .no { font-size: 18px; color: var(--ok); }
+  .big { min-height: 58px; white-space: nowrap; border-radius: 18px; background: var(--card); box-shadow: var(--shadow);
+    font-size: 18px; font-weight: bold; padding: 6px 12px; }
+  .big.go { background: var(--ok); color: #fff; }
+  .toast { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); background: #fff; border-radius: 18px; padding: 6px 12px;
+    box-shadow: 0 4px 0 rgba(0,0,0,.18); display: none; align-items: center; gap: 6px; font-size: 16px; font-weight: bold; max-width: 94%; z-index: 2; }
+  .toast.on { display: flex; animation: pop .35s; }
+  .toast svg { width: 64px; height: 64px; flex: none; }
+  .toast .tt { line-height: 1.6; }
+  .toast .five { font-size: 30px; animation: five .5s ease-in-out 2; }
+  @keyframes five { 50% { transform: scale(1.5) rotate(-15deg); } }
+
+  @media (orientation: landscape) and (min-width: 700px) {
+    .pwrap { grid-template-columns: 380px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr);
+      grid-template-areas: "side map" "opts map"; }
+    #opts { align-self: start; overflow-y: auto; max-height: 100%; }
+  }
+  @media (orientation: landscape) and (max-height: 520px) {
+    .msg { font-size: 16px; } .opt { min-height: 52px; font-size: 16px; } .flap .fk { font-size: 22px; }
+  }
+
+  /* ---- けっか・カード ---- */
+  .ov { position: fixed; inset: 0; background: rgba(20,30,50,.45); display: none; align-items: center; justify-content: center; padding: 12px; z-index: 10; }
+  .ov.on { display: flex; }
+  .res { background: var(--card); border-radius: 26px; box-shadow: 0 8px 0 rgba(0,0,0,.2); padding: 16px 18px; width: min(560px, 100%);
+    max-height: 100%; overflow-y: auto; text-align: center; animation: pop .35s; }
+  @keyframes pop { from { transform: scale(.7); opacity: 0; } }
+  .stars { font-size: 52px; letter-spacing: 6px; }
+  .stars span { display: inline-block; animation: starIn .4s backwards; }
+  .stars span.off { filter: grayscale(1); opacity: .3; }
+  @keyframes starIn { from { transform: scale(0) rotate(-90deg); } }
+  .rmsg { font-size: 22px; font-weight: bold; margin: 4px 0; line-height: 1.8; }
+  .rsub { font-size: 17px; color: var(--sub); line-height: 1.9; }
+  .omake { margin: 10px 0 6px; background: #fff9db; border-radius: 18px; padding: 10px; display: flex; align-items: center; gap: 10px; text-align: left; animation: pop .4s; }
+  .omake svg { width: 96px; height: 80px; flex: none; }
+  .omake .ot { font-size: 18px; line-height: 1.7; font-weight: bold; }
+  .omake svg.wake { animation: wob .5s ease-in-out 4; }
+  .omake svg.sag { animation: sag 1.2s ease-in-out 2; transform-origin: bottom center; }
+  @keyframes wob { 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+  @keyframes sag { 50% { transform: scaleY(.86); } }
+  .lcard { margin: 10px 0; border-radius: 18px; padding: 10px 12px; text-align: left; border: 3px dashed var(--mc); background: #f3f0ff; }
+  .lcard h3 { margin: 0 0 4px; font-size: 18px; color: var(--mc2); }
+  .lcard p { margin: 0; font-size: 16px; line-height: 1.9; }
+  .lcard.new h3::after { content: " NEW!"; color: #e8590c; }
+  .lcard.lock { border-color: #ced4da; background: #f8f9fa; color: #adb5bd; }
+  .wrap { margin: 10px 0 4px; font-size: 16px; line-height: 1.9; background: #e7f5ff; border-radius: 16px; padding: 8px 12px; text-align: left; }
+  .rbtns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .rbtns .big { flex: 1 1 140px; }
+  .blink { animation: bl 0.8s ease-in-out infinite; }
+  @keyframes bl { 50% { opacity: .2; } }
+</style>
+<!-- NO-ZOOM:start（tools/no-zoom.py が かきかえる。てで なおさない） -->
+<style>
+  html { touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  * { touch-action: manipulation; }
+  a, button, input, select, textarea, label, summary { touch-action: manipulation; }
+</style>
+<script>
+(function () {
+  function stop(e) { if (e.cancelable) e.preventDefault(); }
+  // ピンチ（iOS は user-scalable=no を むしするので JS でも とめる）
+  ["gesturestart", "gesturechange", "gestureend"].forEach(function (ev) {
+    document.addEventListener(ev, stop, { passive: false });
+  });
+  document.addEventListener("touchmove", function (e) {
+    if ((e.touches && e.touches.length > 1) || (typeof e.scale === "number" && e.scale !== 1)) stop(e);
+  }, { passive: false });
+  window.addEventListener("wheel", function (e) { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+  // ダブルタップ: 2かいめの タップを とめて、かわりに click を おこす（れんだを とりこぼさない）
+  var lastT = 0, lastX = 0, lastY = 0;
+  document.addEventListener("touchend", function (e) {
+    var t = e.changedTouches && e.changedTouches[0];
+    if (!t) return;
+    var now = Date.now();
+    var quick = now - lastT < 400 && Math.abs(t.clientX - lastX) < 50 && Math.abs(t.clientY - lastY) < 50;
+    lastT = now; lastX = t.clientX; lastY = t.clientY;
+    if (!quick || !e.cancelable || e.defaultPrevented || (e.touches && e.touches.length)) return;
+    var el = e.target && e.target.nodeType === 1 ? e.target : e.target && e.target.parentElement;
+    // ボタン・リンク・入力欄は touch-action で ズームしないので、ほんものの タップの まま とおす
+    if (!el || !el.closest || el.closest("a, button, label, summary, input, textarea, select, [contenteditable], [role=button]")) return;
+    e.preventDefault();
+    el.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: window,
+      clientX: t.clientX, clientY: t.clientY, screenX: t.screenX, screenY: t.screenY }));
+  }, { passive: false });
+  document.addEventListener("dblclick", stop, { passive: false });
+  // それでも ズームして しまったら、もとの おおきさに もどす
+  var vp = document.querySelector('meta[name="viewport"]');
+  var vv = window.visualViewport;
+  if (vp && vv) {
+    var base = vp.content, fixing = false;
+    var reset = function () {
+      if (fixing || vv.scale <= 1.01) return;
+      fixing = true;
+      vp.content = base + ", minimum-scale=1";
+      setTimeout(function () { vp.content = base; fixing = false; }, 300);
+    };
+    vv.addEventListener("resize", reset);
+    vv.addEventListener("scroll", reset);
+  }
+})();
+</script>
+<!-- NO-ZOOM:end -->
+</head>
+<body>
+
+<!-- ===== タイトル ===== -->
+<section id="title" class="screen on">
+  <div class="tbar"><button class="ibtn" id="sndT" aria-label="おと">🔊</button></div>
+  <h1 class="logo"><span class="nw">ちょくつう ぶらり</span> <span class="nw">でんしゃ</span></h1>
+  <div class="hero" id="hero"></div>
+  <p class="lead">1つの でんしゃが、べつの <ruby>会社<rt>かいしゃ</rt></ruby>の せんろに そのまま はいって はしる。<br>
+    それが「ちょくつう うんてん」。どこまで いくかな？</p>
+  <div class="tabs" id="tabs"></div>
+  <p class="tnote" id="tnote"></p>
+  <div class="cgrid" id="cgrid"></div>
+  <div class="tfoot"><button class="big" id="cardsBtn">🃏 まなび カード</button></div>
+</section>
+
+<!-- ===== あそぶ ===== -->
+<section id="play" class="screen">
+  <div class="pwrap">
+    <div class="side">
+      <div class="bar">
+        <button class="ibtn" id="back" aria-label="メニュー">🏠</button>
+        <button class="ibtn" id="speak" aria-label="よみあげ">🗣️</button>
+        <button class="ibtn" id="whole" aria-label="ぜんたい">🗺️</button>
+        <span class="sp"></span>
+        <button class="ibtn" id="sndP" aria-label="おと">🔊</button>
+      </div>
+      <div class="sign"><div class="lb">いきさき<br>ひょうじ</div>
+        <div class="flap" id="flap"><div class="fk" id="fk">？？？</div><div class="fr" id="fr">ゆき</div></div></div>
+      <div class="msg" id="msg"></div>
+    </div>
+    <div class="mapbox"><svg id="map" aria-label="ろせんず"></svg>
+      <div class="toast" id="toast"></div></div>
+    <div class="opts" id="opts"></div>
+  </div>
+</section>
+
+<!-- ===== けっか ===== -->
+<div class="ov" id="ov"><div class="res" id="res"></div></div>
+<!-- ===== まなび カード ===== -->
+<div class="ov" id="cov"><div class="res" id="cres"></div></div>
+
+<script>
+"use strict";
+/* =====================================================================
+   データ（駅・路線・ちょくつう・コース）は ここ 1か所。
+   駅の じゅんばん・会社の さかいめ・ちょくつう先は ja.wikipedia
+   （みなとみらい線／東急東横線／東京メトロ副都心線／西武有楽町線／西武池袋線／
+   東武東上本線／相鉄新横浜線／東急新横浜線）で 2026-11 に たしかめた。
+   行き先（小川町・飯能・新宿方面 など）は ダイヤで かわるので「たとえば」として あつかう。
+   ゲームでは 駅を しぼって いる。とちゅうの 駅は gaps（駅の かず）で ちいさな ○。
+   ===================================================================== */
+/*DATA-START*/
+const ST = {
+  // id: { k: 漢字, r: よみ, x, y, l: [ラベル dx, dy, よせ], g: main / bonus / both }
+  ogawa:      { k: "小川町",       r: "おがわまち",       x: 70,  y: 70,   l: [22, 6, "start"],  g: "main" },
+  kawagoeshi: { k: "川越市",       r: "かわごえし",       x: 120, y: 190,  l: [22, 6, "start"],  g: "main" },
+  shiki:      { k: "志木",         r: "しき",             x: 170, y: 265,  l: [22, 6, "start"],  g: "main" },
+  wakoshi:    { k: "和光市",       r: "わこうし",         x: 220, y: 330,  l: [-22, 6, "end"],   g: "main" },
+  hanno:      { k: "飯能",         r: "はんのう",         x: 580, y: 90,   l: [-22, 6, "end"],   g: "main" },
+  tokorozawa: { k: "所沢",         r: "ところざわ",       x: 530, y: 200,  l: [-22, 6, "end"],   g: "main" },
+  shakujii:   { k: "石神井公園",   r: "しゃくじいこうえん", x: 480, y: 290, l: [-22, 6, "end"],   g: "main" },
+  nerima:     { k: "練馬",         r: "ねりま",           x: 440, y: 360,  l: [22, 6, "start"],  g: "main" },
+  kotake:     { k: "小竹向原",     r: "こたけむかいはら", x: 330, y: 410,  l: [-24, 6, "end"],   g: "main" },
+  ikebukuro:  { k: "池袋",         r: "いけぶくろ",       x: 345, y: 500,  l: [-22, 6, "end"],   g: "main" },
+  shinjuku3:  { k: "新宿三丁目",   r: "しんじゅくさんちょうめ", x: 355, y: 590, l: [-22, 6, "end"], g: "main" },
+  shibuya:    { k: "渋谷",         r: "しぶや",           x: 365, y: 680,  l: [-26, -4, "end"],  g: "both" },
+  jiyugaoka:  { k: "自由が丘",     r: "じゆうがおか",     x: 370, y: 765,  l: [22, 6, "start"],  g: "both" },
+  kosugi:     { k: "武蔵小杉",     r: "むさしこすぎ",     x: 375, y: 835,  l: [22, 6, "start"],  g: "both" },
+  hiyoshi:    { k: "日吉",         r: "ひよし",           x: 385, y: 905,  l: [22, 6, "start"],  g: "both" },
+  kikuna:     { k: "菊名",         r: "きくな",           x: 400, y: 965,  l: [22, 6, "start"],  g: "main" },
+  yokohama:   { k: "横浜",         r: "よこはま",         x: 425, y: 1040, l: [24, -10, "start"], g: "main" },
+  minatomirai:{ k: "みなとみらい", r: "",                 x: 475, y: 1100, l: [22, 6, "start"],  g: "main" },
+  chukagai:   { k: "元町・中華街", r: "もとまち・ちゅうかがい", x: 545, y: 1160, l: [0, 44, "middle"], g: "main" },
+  // ボーナス（相鉄）
+  ebina:      { k: "海老名",       r: "えびな",           x: 50,  y: 1120, l: [0, 44, "middle"], g: "bonus" },
+  futamata:   { k: "二俣川",       r: "ふたまたがわ",     x: 120, y: 1090, l: [0, 44, "middle"], g: "bonus" },
+  nishiya:    { k: "西谷",         r: "にしや",           x: 200, y: 1060, l: [0, 44, "middle"], g: "bonus" },
+  hazawa:     { k: "羽沢横浜国大", r: "はざわよこはまこくだい", x: 225, y: 985, l: [20, 34, "start"], g: "bonus" },
+  shinyoko:   { k: "新横浜",       r: "しんよこはま",     x: 300, y: 935,  l: [-4, 44, "middle"], g: "bonus" },
+  jrend:      { k: "しんじゅく ほうめん", r: "", x: 150, y: 820, l: [0, -16, "middle"], g: "bonus", ghost: true },
+  meguroend:  { k: "めぐろ ほうめん",     r: "", x: 470, y: 820, l: [0, -16, "middle"], g: "bonus", ghost: true }
+};
+
+// co: 会社（さかいめで 線の いろが かわる）
+const LINES = {
+  mm:      { h: "みなとみらい<ruby>線<rt>せん</rt></ruby>", s: "みなとみらいせん", co: "よこはま こうそく てつどう", c: "#7048e8",
+             stations: ["chukagai", "minatomirai", "yokohama"], gaps: [2, 1], tag: [0, .5, 26], g: "main" },
+             // 元町・中華街-みなとみらい: 日本大通り・馬車道 / みなとみらい-横浜: 新高島
+  toyoko:  { h: "<ruby>東急<rt>とうきゅう</rt></ruby> <ruby>東横線<rt>とうよこせん</rt></ruby>", s: "とうよこせん", co: "とうきゅう", c: "#f06595",
+             stations: ["yokohama", "kikuna", "hiyoshi", "kosugi", "jiyugaoka", "shibuya"], gaps: [4, 2, 1, 3, 5], tag: [3, .5, 30], g: "both" },
+             // 横浜-菊名: 反町・東白楽・白楽・妙蓮寺 / 菊名-日吉: 大倉山・綱島 / 日吉-武蔵小杉: 元住吉
+             // 武蔵小杉-自由が丘: 新丸子・多摩川・田園調布 / 自由が丘-渋谷: 都立大学・学芸大学・祐天寺・中目黒・代官山
+  fuku:    { h: "<ruby>東京<rt>とうきょう</rt></ruby>メトロ <ruby>副都心線<rt>ふくとしんせん</rt></ruby>", s: "ふくとしんせん", co: "とうきょうメトロ", c: "#b0602a",
+             stations: ["shibuya", "shinjuku3", "ikebukuro", "kotake", "wakoshi"], gaps: [2, 3, 2, 4], tag: [1, .5, 30], g: "main" },
+             // 渋谷-新宿三丁目: 明治神宮前〈原宿〉・北参道 / 新宿三丁目-池袋: 東新宿・西早稲田・雑司が谷 / 池袋-小竹向原: 要町・千川
+             // 小竹向原-和光市: 氷川台・平和台・地下鉄赤塚・地下鉄成増（ここは 有楽町線と おなじ せんろ。あんないでは 副都心線 和光市〜渋谷）
+  tojo:    { h: "<ruby>東武<rt>とうぶ</rt></ruby> <ruby>東上線<rt>とうじょうせん</rt></ruby>", s: "とうぶ とうじょうせん", co: "とうぶ", c: "#1c7ed6",
+             stations: ["wakoshi", "shiki", "kawagoeshi", "ogawa"], gaps: [2, 7, 10], tag: [1, .45, 30], g: "main" },
+             // 和光市-志木: 朝霞・朝霞台 / 志木-川越市: 柳瀬川・みずほ台・鶴瀬・ふじみ野・上福岡・新河岸・川越
+             // 川越市-小川町: 霞ヶ関・鶴ヶ島・若葉・坂戸・北坂戸・高坂・東松山・森林公園・つきのわ・武蔵嵐山
+  syuraku: { h: "<ruby>西武<rt>せいぶ</rt></ruby> <ruby>有楽町線<rt>ゆうらくちょうせん</rt></ruby>", s: "せいぶ ゆうらくちょうせん", co: "せいぶ", c: "#e8a200",
+             stations: ["kotake", "nerima"], gaps: [1], tag: [0, .3, 30], g: "main" },   // 新桜台
+  sike:    { h: "<ruby>西武<rt>せいぶ</rt></ruby> <ruby>池袋線<rt>いけぶくろせん</rt></ruby>", s: "せいぶ いけぶくろせん", co: "せいぶ", c: "#f2c200",
+             stations: ["nerima", "shakujii", "tokorozawa", "hanno"], gaps: [3, 6, 8], tag: [1, .5, 34], g: "main" },
+             // 練馬-石神井公園: 中村橋・富士見台・練馬高野台 / 石神井公園-所沢: 大泉学園・保谷・ひばりヶ丘・東久留米・清瀬・秋津
+             // 所沢-飯能: 西所沢・小手指・狭山ヶ丘・武蔵藤沢・稲荷山公園・入間市・仏子・元加治
+  sotetsu: { h: "<ruby>相鉄<rt>そうてつ</rt></ruby> <ruby>本線<rt>ほんせん</rt></ruby>", s: "そうてつ ほんせん", co: "そうてつ", c: "#1b2a6b",
+             stations: ["ebina", "futamata", "nishiya"], gaps: [7, 1], tag: [0, .5, -28], g: "bonus" },
+             // 海老名-二俣川: かしわ台・さがみ野・相模大塚・大和・瀬谷・三ツ境・希望ヶ丘 / 二俣川-西谷: 鶴ヶ峰
+  sotetsuY:{ h: "<ruby>相鉄<rt>そうてつ</rt></ruby> <ruby>本線<rt>ほんせん</rt></ruby>（<ruby>横浜<rt>よこはま</rt></ruby>ほうめん）", s: "", co: "そうてつ", c: "#1b2a6b",
+             stations: ["nishiya", "yokohama"], gaps: [6], tag: null, g: "bonus" },
+             // 西谷-横浜: 上星川・和田町・星川・天王町・西横浜・平沼橋
+  stshin:  { h: "<ruby>相鉄<rt>そうてつ</rt></ruby> <ruby>新横浜線<rt>しんよこはません</rt></ruby>", s: "そうてつ しんよこはません", co: "そうてつ", c: "#3b5bdb",
+             stations: ["nishiya", "hazawa", "shinyoko"], gaps: [0, 0], tag: null, g: "bonus" },
+  tkshin:  { h: "<ruby>東急<rt>とうきゅう</rt></ruby> <ruby>新横浜線<rt>しんよこはません</rt></ruby>", s: "とうきゅう しんよこはません", co: "とうきゅう", c: "#f59f00",
+             stations: ["shinyoko", "hiyoshi"], gaps: [1], tag: null, g: "bonus" },   // 新綱島
+  jr:      { h: "JR<ruby>線<rt>せん</rt></ruby>（そうてつ・JR ちょくつう）", s: "JR", co: "JR", c: "#2b8a3e",
+             stations: ["hazawa", "jrend"], gaps: [0], tag: [0, .45, -22], g: "bonus" },
+  meguro:  { h: "<ruby>東急<rt>とうきゅう</rt></ruby> <ruby>目黒線<rt>めぐろせん</rt></ruby>", s: "めぐろせん", co: "とうきゅう", c: "#15aabf",
+             stations: ["hiyoshi", "meguroend"], gaps: [0], tag: [0, .5, 26], g: "bonus" }
+};
+
+// せんろが つながって いない ほかの 線（のりかえが いる）。ちずでは てんせんで かく
+const STUBS = {
+  jrYoko:   { at: "yokohama", to: [600, 1020], c: "#868e96", t: "JR せん", h: "JR<ruby>線<rt>せん</rt></ruby>", g: "main" },
+  keikyu:   { at: "yokohama", to: [330, 1120], c: "#c92a2a", t: "けいきゅうせん", h: "<ruby>京急線<rt>けいきゅうせん</rt></ruby>", g: "main" },
+  stYoko:   { at: "yokohama", to: [270, 1060], c: "#1b2a6b", t: "そうてつせん", h: "<ruby>相鉄線<rt>そうてつせん</rt></ruby>", g: "main" },
+  yamanote: { at: "shibuya",  to: [490, 700],  c: "#94d82d", t: "JR やまのてせん", h: "JR <ruby>山手線<rt>やまのてせん</rt></ruby>", g: "main" },
+  ginza:    { at: "shibuya",  to: [240, 700],  c: "#fab005", t: "ぎんざせん", h: "<ruby>東京<rt>とうきょう</rt></ruby>メトロ <ruby>銀座線<rt>ぎんざせん</rt></ruby>", g: "main" },
+  yokosen:  { at: "shinyoko", to: [330, 860],  c: "#74b816", t: "JR よこはません", h: "JR <ruby>横浜線<rt>よこはません</rt></ruby>", g: "bonus" },
+  blue:     { at: "shinyoko", to: [250, 880],  c: "#1971c2", t: "ブルーライン", h: "ブルーライン", g: "bonus" }
+};
+
+// 会社の さかいめ（ちょくつう）。crew: 運転士さんの こうたい えんしゅつを 出す（出典で たしかめられた ところ）
+const BORDERS = [
+  { at: "yokohama", a: "mm", b: "toyoko", note: "みなとみらいせんの うんてんは とうきゅうに まかせて いるので、よこはまでは こうたい しないよ。" },
+  { at: "shibuya",  a: "toyoko", b: "fuku", crew: true },
+  { at: "kotake",   a: "fuku", b: "syuraku", crew: true },
+  { at: "wakoshi",  a: "fuku", b: "tojo", crew: true },
+  { at: "shinyoko", a: "stshin", b: "tkshin" },
+  { at: "hazawa",   a: "stshin", b: "jr" },
+  { at: "hiyoshi",  a: "tkshin", b: "toyoko" }
+];
+
+/* コース。route: とおる 駅。qs: とまって きく しつもん。
+   type line: どの 線に はいる？（ただしいのは せんろが つながった 線）
+   type point: ポイント（せんろの きりかえ）を みて、どっちへ いく？
+   type final: さいごは どこに つく？ → こたえると 行き先表示が パタパタ かわる */
+const COURSES = [
+  { id: "c1", mode: "main", em: "🚃", name: "コース1", dest: { k: "小川町", r: "おがわまち", em: "🌄" }, funny: ["sheep", "hungry"],
+    route: ["chukagai", "minatomirai", "yokohama", "kikuna", "hiyoshi", "kosugi", "jiyugaoka", "shibuya", "shinjuku3", "ikebukuro", "kotake", "wakoshi", "shiki", "kawagoeshi", "ogawa"],
+    qs: [
+      { at: "yokohama", type: "line", q: "みなとみらいせんは ここ <ruby>横浜<rt>よこはま</rt></ruby>まで。でんしゃは どの せんに はいる？",
+        opts: [{ line: "toyoko", ok: true }, { stub: "jrYoko" }, { stub: "keikyu" }] },
+      { at: "shibuya", type: "line", q: "とうよこせんは ここ <ruby>渋谷<rt>しぶや</rt></ruby>まで。つぎは どの せん？",
+        opts: [{ stub: "yamanote" }, { line: "fuku", ok: true }, { stub: "ginza" }] },
+      { at: "kotake", type: "point", q: "<ruby>小竹向原<rt>こたけむかいはら</rt></ruby>で せんろが 2つに わかれるよ。ポイント（せんろの きりかえ）の やじるしを みて。どっちへ いく？",
+        opts: [{ line: "fuku", next: "wakoshi", lab: "まっすぐ <ruby>和光市<rt>わこうし</rt></ruby>・<ruby>東武<rt>とうぶ</rt></ruby>の ほう", ok: true },
+               { line: "syuraku", next: "nerima", lab: "<ruby>練馬<rt>ねりま</rt></ruby>・<ruby>西武<rt>せいぶ</rt></ruby>の ほう" }] },
+      { at: "wakoshi", type: "final", q: "<ruby>和光市<rt>わこうし</rt></ruby>から とうぶ とうじょうせん！ さいごは どこに つく？ ろせんずの はしっこを みてね。",
+        opts: [{ st: "ogawa", ok: true }, { st: "hanno", why: "<ruby>飯能<rt>はんのう</rt></ruby>は せいぶ いけぶくろせんの えき。この でんしゃは とうじょうせんに はいったよ。" },
+               { st: "shibuya", why: "<ruby>渋谷<rt>しぶや</rt></ruby>は もう とおりすぎた えきだよ。" }] }
+    ] },
+  { id: "c2", mode: "main", em: "🚃", name: "コース2", dest: { k: "飯能", r: "はんのう", em: "🌲" }, funny: ["hungry", "sheep"],
+    route: ["chukagai", "minatomirai", "yokohama", "kikuna", "hiyoshi", "kosugi", "jiyugaoka", "shibuya", "shinjuku3", "ikebukuro", "kotake", "nerima", "shakujii", "tokorozawa", "hanno"],
+    qs: [
+      { at: "yokohama", type: "line", q: "<ruby>横浜<rt>よこはま</rt></ruby>に ついたよ。せんろが つながって いるのは どの せん？",
+        opts: [{ stub: "keikyu" }, { stub: "jrYoko" }, { line: "toyoko", ok: true }] },
+      { at: "shibuya", type: "line", q: "<ruby>渋谷<rt>しぶや</rt></ruby>。でんしゃは のりかえ なしで どの せんへ？",
+        opts: [{ line: "fuku", ok: true }, { stub: "ginza" }, { stub: "yamanote" }] },
+      { at: "kotake", type: "point", q: "<ruby>小竹向原<rt>こたけむかいはら</rt></ruby>の ポイント。きょうは どっちを むいてる？",
+        opts: [{ line: "fuku", next: "wakoshi", lab: "まっすぐ <ruby>和光市<rt>わこうし</rt></ruby>・<ruby>東武<rt>とうぶ</rt></ruby>の ほう" },
+               { line: "syuraku", next: "nerima", lab: "<ruby>練馬<rt>ねりま</rt></ruby>・<ruby>西武<rt>せいぶ</rt></ruby>の ほう", ok: true }] },
+      { at: "nerima", type: "final", q: "<ruby>練馬<rt>ねりま</rt></ruby>から せいぶ いけぶくろせん！ さいごは どこに つく？",
+        opts: [{ st: "ikebukuro", why: "<ruby>池袋<rt>いけぶくろ</rt></ruby>は もう とおった えき。" }, { st: "hanno", ok: true },
+               { st: "ogawa", why: "<ruby>小川町<rt>おがわまち</rt></ruby>は とうぶ とうじょうせんの えき。この でんしゃは せいぶの せんろに はいったよ。" }] }
+    ] },
+  { id: "b1", mode: "bonus", em: "🎁", name: "ボーナス1", dest: { k: "新宿", r: "しんじゅく", em: "🏙️", ho: true }, funny: ["sheep"],
+    route: ["ebina", "futamata", "nishiya", "hazawa", "jrend"],
+    qs: [
+      { at: "nishiya", type: "point", q: "<ruby>西谷<rt>にしや</rt></ruby>で せんろが わかれるよ。ポイントの やじるしは どっち？",
+        opts: [{ line: "sotetsuY", next: "yokohama", lab: "<ruby>横浜<rt>よこはま</rt></ruby>の ほう（そうてつ ほんせん）" },
+               { line: "stshin", next: "hazawa", lab: "<ruby>羽沢横浜国大<rt>はざわよこはまこくだい</rt></ruby>の ほう（そうてつ しんよこはません）", ok: true }] },
+      { at: "hazawa", type: "point", q: "<ruby>羽沢横浜国大<rt>はざわよこはまこくだい</rt></ruby>。ここから JRの せんろにも つながって いるよ。ポイントは どっち？",
+        opts: [{ line: "stshin", next: "shinyoko", lab: "<ruby>新横浜<rt>しんよこはま</rt></ruby>の ほう" },
+               { line: "jr", next: "jrend", lab: "JRの せんろへ", ok: true }] },
+      { at: "hazawa", type: "final", q: "JRの せんろに はいったよ！ どっちの ほうへ いく？",
+        opts: [{ ho: "しんじゅく ほうめん", ok: true }, { ho: "めぐろ ほうめん", why: "めぐろせんは <ruby>日吉<rt>ひよし</rt></ruby>から。この でんしゃは JRに はいったよ。" },
+               { ho: "<ruby>横浜<rt>よこはま</rt></ruby> ほうめん", why: "<ruby>横浜<rt>よこはま</rt></ruby>へ いく せんろには はいらなかったよ。" }] }
+    ] },
+  { id: "b2", mode: "bonus", em: "🎁", name: "ボーナス2", dest: { k: "渋谷", r: "しぶや", em: "🗼", ho: true }, funny: ["sheep", "hungry"],
+    after: "この あと ふくとしんせんに はいって、とうぶ とうじょうせんの ほうまで いく でんしゃも あるよ。",
+    route: ["ebina", "futamata", "nishiya", "hazawa", "shinyoko", "hiyoshi", "kosugi", "jiyugaoka", "shibuya"],
+    qs: [
+      { at: "nishiya", type: "point", q: "<ruby>西谷<rt>にしや</rt></ruby>の ポイント。どっちへ いく？",
+        opts: [{ line: "stshin", next: "hazawa", lab: "<ruby>羽沢横浜国大<rt>はざわよこはまこくだい</rt></ruby>の ほう", ok: true },
+               { line: "sotetsuY", next: "yokohama", lab: "<ruby>横浜<rt>よこはま</rt></ruby>の ほう" }] },
+      { at: "hazawa", type: "point", q: "<ruby>羽沢横浜国大<rt>はざわよこはまこくだい</rt></ruby>の ポイント。きょうは どっち？",
+        opts: [{ line: "jr", next: "jrend", lab: "JRの せんろへ" }, { line: "stshin", next: "shinyoko", lab: "<ruby>新横浜<rt>しんよこはま</rt></ruby>の ほう", ok: true }] },
+      { at: "shinyoko", type: "line", q: "<ruby>新横浜<rt>しんよこはま</rt></ruby>。そうてつは ここまで。せんろが つながって いるのは どの せん？",
+        opts: [{ stub: "yokosen" }, { line: "tkshin", ok: true }, { stub: "blue" }] },
+      { at: "hiyoshi", type: "point", q: "<ruby>日吉<rt>ひよし</rt></ruby>で とうよこせんと めぐろせんに わかれるよ。ポイントは どっち？",
+        opts: [{ line: "meguro", next: "meguroend", lab: "めぐろせん（めぐろの ほう）" }, { line: "toyoko", next: "kosugi", lab: "とうよこせん（しぶやの ほう）", ok: true }] },
+      { at: "hiyoshi", type: "final", q: "とうよこせんに はいったよ！ どっちの ほうへ いく？",
+        opts: [{ ho: "しんじゅく ほうめん", why: "しんじゅく ほうめんは JRの せんろ。この でんしゃは とうよこせんだよ。" },
+               { ho: "めぐろ ほうめん", why: "めぐろせんには はいらなかったよ。" }, { ho: "しぶや ほうめん", ok: true }] }
+    ] }
+];
+
+// ぎゃく モード: 行き先表示を みて、とおる 線を じゅんばんに タッチ
+const REVERSE = [
+  { id: "r1", g: "main", em: "🔄", dest: { k: "小川町", r: "おがわまち" }, route: COURSES[0].route, decoys: ["sike", "jrYoko", "yamanote"] },
+  { id: "r2", g: "main", em: "🔄", dest: { k: "飯能", r: "はんのう" }, route: COURSES[1].route, decoys: ["tojo", "keikyu", "ginza"] },
+  { id: "r3", g: "main", em: "🔄", dest: { k: "元町・中華街", r: "もとまち・ちゅうかがい" }, route: COURSES[1].route.slice().reverse(), decoys: ["tojo", "jrYoko", "yamanote"] },
+  { id: "r4", g: "bonus", em: "🔄", dest: { k: "新宿", r: "しんじゅく", ho: true }, route: COURSES[2].route, decoys: ["tkshin", "sotetsuY", "meguro"] }
+];
+/*DATA-END*/
+
+const MODES = {
+  main:  { name: "🚃 たどって あてる", c: "#6741d9", note: "<ruby>元町<rt>もとまち</rt></ruby>・<ruby>中華街<rt>ちゅうかがい</rt></ruby>を しゅっぱつ。<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby>は ？？？。<ruby>会社<rt>かいしゃ</rt></ruby>の さかいめで つぎの せんを えらんで、さいごに どこに つくか あてよう。" },
+  rev:   { name: "🔄 ぎゃく モード", c: "#e8590c", note: "<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby><ruby>表示<rt>ひょうじ</rt></ruby>を みて、でんしゃが とおる せんを じゅんばんに タッチ。ろせんずで たどって みよう。" },
+  bonus: { name: "🎁 ボーナス そうてつ", c: "#1b2a6b", note: "<ruby>海老名<rt>えびな</rt></ruby>から しゅっぱつ。そうてつの でんしゃは JRにも とうきゅうにも ちょくつう するよ。" }
+};
+
+const CARDS = {
+  k1: { t: "ちょくつう うんてん（のりいれ）", p: "1つの でんしゃが、とちゅうの えきから べつの <ruby>会社<rt>かいしゃ</rt></ruby>の せんろに そのまま はいって はしること。のりかえ しなくても とおくまで いけるよ。ろせんずでは、いろの ちがう せんが とぎれずに つながって かいてあるよ。" },
+  k2: { t: "さかいめの えきで こうたい", p: "<ruby>会社<rt>かいしゃ</rt></ruby>の さかいめの えきでは、うんてんしさん・しゃしょうさんが こうたい する ことが おおいよ（たとえば <ruby>小竹向原<rt>こたけむかいはら</rt></ruby>）。でも みなとみらいせんの ように、<ruby>横浜<rt>よこはま</rt></ruby>で こうたい しない ところも あるよ。" },
+  k3: { t: "<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby><ruby>表示<rt>ひょうじ</rt></ruby>の よみかた", p: "でんしゃの まえや よこの <ruby>表示<rt>ひょうじ</rt></ruby>を みると、さいごに どこに つくか わかるよ。とちゅうで せんの なまえが かわっても、<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby>は かわらない。「<ruby>小川町<rt>おがわまち</rt></ruby> ゆき」なら、ろせんずを たどった はしっこが <ruby>小川町<rt>おがわまち</rt></ruby>。" }
+};
+
+/* ---------- 保存 ---------- */
+const KEY = "chokutsu-burari-v1";
+let save = { stars: {}, cards: {}, sound: true, mode: "main" };
+try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) save = Object.assign(save, s); } catch (e) {}
+function store() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
+
+/* ---------- グラフ ---------- */
+const EDGE = {};      // "a|b" -> lineId
+function ek(a, b) { return a < b ? a + "|" + b : b + "|" + a; }
+for (const lid in LINES) { const s = LINES[lid].stations; for (let i = 0; i + 1 < s.length; i++) EDGE[ek(s[i], s[i + 1])] = lid; }
+function lineOf(a, b) { return EDGE[ek(a, b)]; }
+function plain(h) { return String(h).replace(/<rt>.*?<\/rt>/g, "").replace(/<[^>]+>/g, ""); }
+function yomi(h) { return String(h).replace(/<ruby>(.*?)<rt>(.*?)<\/rt><\/ruby>/g, "$2").replace(/<[^>]+>/g, ""); }
+function stH(id) { const s = ST[id]; return s.r ? `<ruby>${s.k}<rt>${s.r}</rt></ruby>` : s.k; }
+
+/* ---------- おと ---------- */
+let ac = null;
+function actx() {
+  if (!save.sound) return null;
+  try { if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)(); if (ac.state === "suspended") ac.resume(); } catch (e) { return null; }
+  return ac;
+}
+function tone(f, d, type = "sine", v = .16, t0 = 0, f2) {
+  const c = actx(); if (!c) return;
+  const t = c.currentTime + t0, o = c.createOscillator(), g = c.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(v, t + .01); g.gain.exponentialRampToValueAtTime(.001, t + d);
+  o.connect(g); g.connect(c.destination); o.start(t); o.stop(t + d + .05);
+}
+const SFX = {
+  tap() { tone(660, .08, "triangle", .14); },
+  ok() { tone(784, .12, "triangle", .16); tone(1047, .18, "triangle", .16, .1); },
+  ng() { tone(300, .2, "sawtooth", .07, 0, 200); },
+  clack() { tone(120, .05, "square", .05); tone(95, .05, "square", .05, .1); },
+  flap() { tone(1800 + Math.random() * 600, .02, "square", .05); },
+  five() { tone(1400, .05, "square", .12); tone(2200, .08, "triangle", .1, .03); },
+  point() { tone(500, .06, "square", .08); tone(700, .06, "square", .08, .08); },
+  arrive() { [523, 659, 784, 1047].forEach((f, i) => tone(f, .28, "triangle", .16, i * .13)); },
+  yawn() { tone(500, .6, "sine", .14, 0, 260); tone(700, .4, "sine", .1, .6, 900); },
+  growl() { tone(90, .35, "sawtooth", .1, 0, 60); tone(70, .45, "sawtooth", .1, .35, 50); }
+};
+function speak(text) {
+  if (!save.sound || !("speechSynthesis" in window)) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = "ja-JP"; u.rate = .95; u.pitch = 1.1;
+    const v = speechSynthesis.getVoices().find(v => /ja/i.test(v.lang)); if (v) u.voice = v;
+    speechSynthesis.speak(u);
+  } catch (e) {}
+}
+function refreshSnd() { for (const id of ["sndT", "sndP"]) document.getElementById(id).textContent = save.sound ? "🔊" : "🔇"; }
+for (const id of ["sndT", "sndP"]) document.getElementById(id).onclick = () => {
+  save.sound = !save.sound; store(); refreshSnd(); if (save.sound) SFX.tap(); else try { speechSynthesis.cancel(); } catch (e) {}
+};
+
+/* ---------- え（オリジナル） ---------- */
+function sheep(mode) {   // ひつじ: sleep / wake
+  const eyes = mode === "sleep"
+    ? '<path d="M38 52 q5 4 10 0 M56 52 q5 4 10 0" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round"/>'
+    : '<circle cx="43" cy="52" r="5" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="61" cy="52" r="5" fill="#fff" stroke="#333" stroke-width="2"/><circle cx="44" cy="53" r="2.4" fill="#333"/><circle cx="62" cy="53" r="2.4" fill="#333"/>';
+  const mouth = mode === "sleep" ? '<ellipse cx="52" cy="66" rx="3" ry="2" fill="#a05"/>' : '<ellipse cx="52" cy="67" rx="5" ry="6" fill="#a05"/>';
+  return '<g>' + [[30, 30], [50, 22], [70, 30], [78, 50], [26, 50], [36, 74], [68, 74]].map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="15" fill="#f8f9fa" stroke="#ced4da" stroke-width="2"/>`).join("") +
+    '<ellipse cx="52" cy="58" rx="20" ry="17" fill="#ffe8cc"/><ellipse cx="30" cy="50" rx="8" ry="5" fill="#ffd8a8" transform="rotate(-25 30 50)"/><ellipse cx="74" cy="50" rx="8" ry="5" fill="#ffd8a8" transform="rotate(25 74 50)"/>' +
+    eyes + mouth + '<circle cx="37" cy="62" r="4" fill="#ffa8a8" opacity=".7"/><circle cx="67" cy="62" r="4" fill="#ffa8a8" opacity=".7"/></g>';
+}
+function trainSVG(face) {    // よこから 見た でんしゃ（おなじ でんしゃが ずっと はしる）
+  const f = face === "hungry"
+    ? '<path d="M24 30 l8 3 M24 34 l8 -3" stroke="#333" stroke-width="2.5" stroke-linecap="round"/><path d="M14 44 q6 -5 12 0" stroke="#333" stroke-width="2.5" fill="none" stroke-linecap="round"/>'
+    : face === "happy" ? '<path d="M22 32 q4 -5 8 0" stroke="#333" stroke-width="2.5" fill="none"/><path d="M14 42 q6 6 12 0" stroke="#333" stroke-width="2.5" fill="none"/>' : "";
+  return '<rect x="6" y="14" width="138" height="44" rx="14" fill="#fff" stroke="#495057" stroke-width="3"/>' +
+    '<path d="M6 34 Q6 14 30 14 L40 14 L40 58 L18 58 Q6 58 6 46 Z" fill="#e9ecef" stroke="#495057" stroke-width="3"/>' +
+    '<rect x="8" y="44" width="134" height="6" fill="#7048e8" opacity=".8"/>' +
+    '<rect x="50" y="20" width="22" height="18" rx="4" fill="#d0ebff"/><rect x="80" y="20" width="22" height="18" rx="4" fill="#d0ebff"/><rect x="110" y="20" width="22" height="18" rx="4" fill="#d0ebff"/>' +
+    f + '<circle cx="34" cy="62" r="7" fill="#495057"/><circle cx="116" cy="62" r="7" fill="#495057"/>';
+}
+function heroSVG() {
+  return '<svg viewBox="0 0 150 84">' + trainSVG("happy") + '<g transform="translate(78 16) scale(.24)">' + sheep("sleep") + '</g>' +
+    '<text x="112" y="12" font-size="14" fill="#7048e8" font-weight="bold">Zz</text></svg>';
+}
+function driver(cap, mood) {
+  return '<svg viewBox="0 0 64 64"><circle cx="32" cy="36" r="18" fill="#ffe0bd"/>' +
+    `<path d="M12 30 Q32 6 52 30 Z" fill="${cap}"/><rect x="10" y="28" width="44" height="6" rx="3" fill="${cap}"/><rect x="28" y="16" width="8" height="6" fill="#ffd43b"/>` +
+    '<circle cx="26" cy="40" r="2.5" fill="#333"/><circle cx="38" cy="40" r="2.5" fill="#333"/>' +
+    (mood ? '<path d="M25 47 q7 6 14 0" stroke="#c0392b" stroke-width="2.5" fill="none" stroke-linecap="round"/>' : '<path d="M26 48 h12" stroke="#c0392b" stroke-width="2.5" stroke-linecap="round"/>') + '</svg>';
+}
+document.getElementById("hero").innerHTML = heroSVG();
+
+/* ---------- ちず ---------- */
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("map");
+function el(tag, attrs, parent) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+let G = "main";          // いま かく グループ
+let L_hl, L_mark, L_train, trainG, sheepZ;
+function inG(g) { return g === "both" || g === G; }
+function drawMap() {
+  svg.innerHTML = "";
+  const st = el("style", {}, svg); st.textContent = "";
+  L_hl = el("g", {}, svg);
+  const L_line = el("g", {}, svg);
+  // ほかの 線（てんせん）
+  for (const id in STUBS) {
+    const sb = STUBS[id]; if (!inG(sb.g)) continue;
+    const s = ST[sb.at];
+    el("line", { x1: s.x, y1: s.y, x2: sb.to[0], y2: sb.to[1], stroke: sb.c, "stroke-width": 8, "stroke-dasharray": "6 10", "stroke-linecap": "round", opacity: .7, "data-stub": id }, L_line);
+    const t = el("text", { x: sb.to[0], y: sb.to[1] + (sb.to[1] < s.y ? -10 : 26), "font-size": 17, fill: "#5a6b8a", "text-anchor": "middle", class: "halo" }, L_line);
+    t.textContent = sb.t;
+  }
+  // 線
+  for (const lid in LINES) {
+    const Ln = LINES[lid]; if (!inG(Ln.g)) continue;
+    const s = Ln.stations;
+    for (let i = 0; i + 1 < s.length; i++) {
+      const A = ST[s[i]], B = ST[s[i + 1]];
+      el("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: Ln.c, "stroke-width": 12, "stroke-linecap": "round", "data-line": lid }, L_line);
+      const n = Ln.gaps[i];
+      for (let k = 1; k <= n; k++) { const f = k / (n + 1);
+        el("circle", { cx: A.x + (B.x - A.x) * f, cy: A.y + (B.y - A.y) * f, r: 3.4, fill: "#fff", stroke: Ln.c, "stroke-width": 1.5 }, L_line); }
+      // タップ用（ぎゃく モード）
+      const hit = el("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: "transparent", "stroke-width": 40, class: "hit", "data-hit": lid }, L_line);
+      hit.addEventListener("click", () => onLineTap(lid));
+    }
+    if (Ln.tag && Ln.s) {
+      const [i, f, off] = Ln.tag, A = ST[s[i]], B = ST[s[i + 1]];
+      const x = A.x + (B.x - A.x) * f, y = A.y + (B.y - A.y) * f;
+      const t = el("text", { x: x + off, y: y + 6, "font-size": 17, "font-weight": "bold", fill: Ln.c, "text-anchor": off < 0 ? "end" : "start", class: "halo" }, L_line);
+      t.textContent = Ln.s;
+    }
+  }
+  // 駅
+  const used = {};
+  for (const lid in LINES) if (inG(LINES[lid].g)) for (const s of LINES[lid].stations) used[s] = true;
+  for (const id in used) {
+    const s = ST[id];
+    if (s.ghost) {
+      const t = el("text", { x: s.x + s.l[0], y: s.y + s.l[1], "font-size": 19, "font-weight": "bold", fill: "#1f2a44", "text-anchor": s.l[2], class: "halo" }, svg);
+      t.textContent = "▲ " + s.k; continue;
+    }
+    const bd = BORDERS.find(b => b.at === id && inG(LINES[b.a].g) && inG(LINES[b.b].g));
+    if (bd) {   // 会社の さかいめ: 2いろの わ
+      el("circle", { cx: s.x, cy: s.y, r: 17, fill: LINES[bd.a].c }, svg);
+      el("path", { d: `M${s.x} ${s.y - 17} A17 17 0 0 1 ${s.x} ${s.y + 17} Z`, fill: LINES[bd.b].c }, svg);
+      el("circle", { cx: s.x, cy: s.y, r: 10, fill: "#fff" }, svg);
+    } else el("circle", { cx: s.x, cy: s.y, r: 11, fill: "#fff", stroke: "#1f2a44", "stroke-width": 4 }, svg);
+    const [dx, dy, anc] = s.l;
+    const t = el("text", { x: s.x + dx, y: s.y + dy - (s.r ? 4 : 0), "font-size": 23, "font-weight": "bold", fill: "#1f2a44", "text-anchor": anc, class: "halo" }, svg);
+    t.textContent = s.k;
+    if (s.r) { const t2 = el("text", { x: s.x + dx, y: s.y + dy + 15, "font-size": 15, fill: "#5a6b8a", "text-anchor": anc, class: "halo" }, svg); t2.textContent = s.r; }
+  }
+  st.textContent = "#map .halo{paint-order:stroke;stroke:#fbfcff;stroke-width:6px;stroke-linejoin:round}";
+  L_train = el("g", {}, svg);
+  trainG = el("g", {}, L_train);
+  trainG.innerHTML = '<g transform="translate(-42 -84) scale(.56)">' + trainSVG() + '<g transform="translate(78 14) scale(.24)">' + sheep("sleep") + '</g></g>';
+  sheepZ = el("text", { x: 22, y: -82, "font-size": 18, "font-weight": "bold", fill: "#7048e8" }, trainG); sheepZ.textContent = "Zz";
+  sheepZ.setAttribute("class", "blink");
+  L_mark = el("g", {}, svg);
+}
+function bounds() {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const add = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  for (const lid in LINES) if (inG(LINES[lid].g)) for (const s of LINES[lid].stations) add(ST[s].x, ST[s].y);
+  for (const id in STUBS) if (inG(STUBS[id].g)) add(STUBS[id].to[0], STUBS[id].to[1]);
+  return [x0 - 150, y0 - 70, x1 + 130, y1 + 70];
+}
+function hlLine(lid, from, to, color) {     // とおった ところを ふとく
+  const s = LINES[lid].stations;
+  let i0 = s.indexOf(from), i1 = s.indexOf(to); if (i0 > i1) [i0, i1] = [i1, i0];
+  for (let i = i0; i < i1; i++) {
+    const A = ST[s[i]], B = ST[s[i + 1]];
+    el("line", { x1: A.x, y1: A.y, x2: B.x, y2: B.y, stroke: color || "#ffd43b", "stroke-width": 28, "stroke-linecap": "round", opacity: .6 }, L_hl);
+  }
+}
+function flashEl(sel) {
+  const e = svg.querySelector(sel); if (!e) return;
+  e.animate([{ opacity: 1 }, { opacity: .15 }, { opacity: 1 }, { opacity: .15 }, { opacity: 1 }], { duration: 900 });
+}
+function pointArrow(at, next) {      // ポイントの やじるし
+  L_mark.innerHTML = "";
+  const A = ST[at], B = ST[next];
+  const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+  const px = A.x + ux * 52, py = A.y + uy * 52;
+  const g = el("g", { class: "blink" }, L_mark);
+  el("circle", { cx: px, cy: py, r: 22, fill: "#fff", stroke: "#e8590c", "stroke-width": 4 }, g);
+  const ang = Math.atan2(uy, ux) * 180 / Math.PI;
+  el("path", { d: "M-11 -9 L9 0 L-11 9 Z", fill: "#e8590c", transform: `translate(${px} ${py}) rotate(${ang})` }, g);
+}
+
+/* ---------- カメラ（でんしゃを おいかける） ---------- */
+let cam = null, camMode = { t: "follow" }, tpos = { x: 0, y: 0 };
+function boxSize() { const r = svg.getBoundingClientRect(); return [Math.max(r.width, 50), Math.max(r.height, 50)]; }
+function camTarget() {
+  const [bw, bh] = boxSize();
+  let cx, cy, s;
+  if (camMode.t === "fit") {
+    const [x0, y0, x1, y1] = camMode.b;
+    s = Math.min(bw / (x1 - x0), bh / (y1 - y0), 1.3);
+    cx = (x0 + x1) / 2; cy = (y0 + y1) / 2;
+  } else {
+    s = Math.max(.7, Math.min(1.3, Math.min(bw, bh) / 430));
+    cx = tpos.x; cy = tpos.y - 20;
+  }
+  const w = bw / s, h = bh / s;
+  const [X0, Y0, X1, Y1] = bounds();
+  if (w < X1 - X0) cx = Math.max(X0 + w / 2, Math.min(X1 - w / 2, cx)); else cx = (X0 + X1) / 2;
+  if (h < Y1 - Y0) cy = Math.max(Y0 + h / 2, Math.min(Y1 - h / 2, cy)); else cy = (Y0 + Y1) / 2;
+  return { x: cx - w / 2, y: cy - h / 2, w, h };
+}
+function fitStations(ids, extra) {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  const add = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  for (const id of ids) add(ST[id].x, ST[id].y);
+  for (const p of extra || []) add(p[0], p[1]);
+  camMode = { t: "fit", b: [x0 - 110, y0 - 90, x1 + 110, y1 + 80] };
+}
+let lastT = 0;
+function frame(t) {
+  const dt = Math.min(.05, (t - lastT) / 1000 || 0); lastT = t;
+  if (document.getElementById("play").classList.contains("on")) {
+    const tg = camTarget();
+    if (!cam) cam = tg;
+    const k = Math.min(1, dt * 3.5);
+    for (const p of ["x", "y", "w", "h"]) cam[p] += (tg[p] - cam[p]) * k;
+    svg.setAttribute("viewBox", `${cam.x} ${cam.y} ${cam.w} ${cam.h}`);
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+/* ---------- でんしゃを はしらせる ---------- */
+let gen = 0;
+function placeTrain(x, y) { tpos = { x, y }; trainG.setAttribute("transform", `translate(${x} ${y})`); }
+function runTo(route, from, to, my) {     // route[from] → route[to] まで
+  return new Promise(res => {
+    let i = from, d = 0, prev = performance.now(), clack = 0;
+    camMode = { t: "follow" };
+    function step(now) {
+      if (my !== gen) return;
+      const dt = Math.min(.05, (now - prev) / 1000); prev = now;
+      if (i >= to) { res(); return; }
+      const A = ST[route[i]], B = ST[route[i + 1]], len = Math.hypot(B.x - A.x, B.y - A.y);
+      d += 230 * dt; clack += dt; if (clack > .45) { clack = 0; SFX.clack(); }
+      if (d >= len) { d -= len; i++; if (i >= to) { placeTrain(B.x, B.y); res(); return; } }
+      else { const f = d / len; placeTrain(A.x + (B.x - A.x) * f, A.y + (B.y - A.y) * f); }
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  });
+}
+const wait = (ms, my) => new Promise(r => setTimeout(() => { if (my === gen) r(); }, ms));
+
+/* ---------- 画面 ---------- */
+const $ = id => document.getElementById(id);
+function show(id) { for (const s of document.querySelectorAll(".screen")) s.classList.toggle("on", s.id === id); }
+let sayText = "";
+function setMsg(html) { $("msg").innerHTML = html; sayText = yomi(html); }
+$("speak").onclick = () => speak(sayText);
+$("whole").onclick = () => { SFX.tap(); camMode = { t: "fit", b: bounds() }; };
+$("back").onclick = () => { gen++; SFX.tap(); try { speechSynthesis.cancel(); } catch (e) {} $("toast").classList.remove("on"); renderTitle(); show("title"); };
+
+function setSign(k, r) { $("fk").textContent = k; $("fr").textContent = r; }
+function flapTo(dest, my) {
+  return new Promise(res => {
+    const names = ["渋谷", "池袋", "和光市", "飯能", "小川町", "新宿", "横浜", "所沢", "練馬", "日吉"];
+    let n = 0; const f = $("flap"); f.classList.remove("done");
+    const tm = setInterval(() => {
+      if (my !== gen) { clearInterval(tm); return; }
+      f.classList.remove("flip"); void f.offsetWidth; f.classList.add("flip"); SFX.flap();
+      if (++n < 14) setSign(names[(Math.random() * names.length) | 0], "…");
+      else { clearInterval(tm); setSign(dest.k + (dest.ho ? " ほうめん" : ""), (dest.r ? dest.r : "") + (dest.ho ? "" : " ゆき")); if (!dest.ho) $("fk").textContent = dest.k + " 行"; f.classList.add("done"); res(); }
+    }, 85);
+  });
+}
+
+/* ---------- タイトル ---------- */
+function starStr(n) { return n ? "⭐".repeat(n) + "☆".repeat(3 - n) : "☆☆☆"; }
+function renderTitle() {
+  const tabs = $("tabs"); tabs.innerHTML = "";
+  for (const m in MODES) {
+    const b = document.createElement("button"); b.className = "tab" + (save.mode === m ? " on" : ""); b.style.setProperty("--lc", MODES[m].c);
+    b.textContent = MODES[m].name; b.onclick = () => { SFX.tap(); save.mode = m; store(); renderTitle(); }; tabs.appendChild(b);
+  }
+  $("tnote").innerHTML = MODES[save.mode].note;
+  const grid = $("cgrid"); grid.innerHTML = "";
+  const items = save.mode === "rev" ? REVERSE : COURSES.filter(c => c.mode === save.mode);
+  for (const c of items) {
+    const b = document.createElement("button"); b.className = "ccard"; b.style.setProperty("--lc", MODES[save.mode].c);
+    const st = save.stars[c.id] || 0;
+    let title, sub;
+    if (save.mode === "rev") {
+      title = `「${c.dest.r ? `<ruby>${c.dest.k}<rt>${c.dest.r}</rt></ruby>` : c.dest.k}${c.dest.ho ? " ほうめん" : " ゆき"}」`;
+      sub = stH(c.route[0]) + " から。どの せんを とおる？";
+    } else {
+      const known = st > 0;
+      title = c.name + "　" + (known ? `<ruby>${c.dest.k}<rt>${c.dest.r}</rt></ruby>${c.dest.ho ? " ほうめん" : " ゆき"}` : "？？？ ゆき");
+      sub = stH(c.route[0]) + " から しゅっぱつ";
+    }
+    b.innerHTML = `<span class="em">${st && c.dest.em ? c.dest.em : c.em}</span><span><div class="ct">${title}</div><div class="cs">${sub}</div><div class="st">${starStr(st)}</div></span>`;
+    b.onclick = () => { SFX.tap(); save.mode === "rev" ? startRev(c) : startCourse(c); };
+    grid.appendChild(b);
+  }
+}
+$("cardsBtn").onclick = () => {
+  SFX.tap();
+  let h = '<div class="rmsg">🃏 まなび カード</div>';
+  for (const k in CARDS) h += save.cards[k] ? `<div class="lcard"><h3>${CARDS[k].t}</h3><p>${CARDS[k].p}</p></div>` : `<div class="lcard lock"><h3>？？？</h3><p>あそぶと もらえるよ</p></div>`;
+  h += '<div class="rbtns"><button class="big go" id="cClose">とじる</button></div>';
+  $("cres").innerHTML = h; $("cov").classList.add("on");
+  $("cClose").onclick = () => { SFX.tap(); $("cov").classList.remove("on"); };
+};
+
+/* ---------- コース（たどって あてる・ボーナス） ---------- */
+let miss = 0, gotCards = [], cur = null;
+function giveCard(k) { if (!save.cards[k]) { save.cards[k] = true; store(); gotCards.push(k); } }
+function optHTML(o) {
+  if (o.st) return stH(o.st);
+  if (o.ho) return o.ho;
+  if (o.lab) return `<span class="sw" style="background:${LINES[o.line].c}"></span>${o.lab}`;
+  if (o.line) return `<span class="sw" style="background:${LINES[o.line].c}"></span>${LINES[o.line].h}`;
+  const sb = STUBS[o.stub]; return `<span class="sw dash" style="color:${sb.c}"></span>${sb.h}`;
+}
+function ask(q, c, my) {
+  return new Promise(res => {
+    setMsg(q.q); speak(sayText);
+    trainG.setAttribute("opacity", ".3");
+    const box = $("opts"); box.innerHTML = "";
+    if (q.type === "point") { const ok = q.opts.find(o => o.ok); pointArrow(q.at, ok.next); SFX.point();
+      fitStations([q.at, ...q.opts.map(o => o.next)]); }
+    else if (q.type === "line") fitStations([q.at], q.opts.map(o => o.stub ? STUBS[o.stub].to : [ST[LINES[o.line].stations[LINES[o.line].stations.indexOf(q.at) + 1] || q.at].x, ST[LINES[o.line].stations[LINES[o.line].stations.indexOf(q.at) + 1] || q.at].y]));
+    else if (q.type === "final") { const ends = q.opts.filter(o => o.st).map(o => o.st); fitStations([q.at, ...(ends.length ? ends : [c.route[c.route.length - 1]])]); }
+    for (const o of q.opts) {
+      const b = document.createElement("button"); b.className = "opt"; b.innerHTML = optHTML(o);
+      b.onclick = () => {
+        if (my !== gen || b.classList.contains("bad") || b.classList.contains("good")) return;
+        if (o.ok) {
+          SFX.ok(); b.classList.add("good");
+          for (const x of box.children) x.disabled = true;
+          L_mark.innerHTML = ""; trainG.setAttribute("opacity", "1");
+          res();
+        } else {
+          miss++; SFX.ng(); b.classList.add("bad");
+          let why = o.why;
+          if (!why && o.stub) { why = `${STUBS[o.stub].h}は せんろが つながって いないよ（てんせん）。のるには のりかえが いるね。`; flashEl(`[data-stub="${o.stub}"]`); }
+          if (!why && q.type === "point") why = "ポイントの やじるしを よく みてね。";
+          setMsg(`<span class="ng">${why}</span><br>${q.q}`);
+        }
+      };
+      box.appendChild(b);
+    }
+  });
+}
+async function crewShow(bd, my) {
+  const t = $("toast");
+  t.innerHTML = driver(LINES[bd.a].c, true) + '<span class="five">🙌</span>' + driver(LINES[bd.b].c, true) +
+    `<div class="tt">パチン！「よろしく〜！」「まかせて〜！」<br><small>${LINES[bd.a].co} → ${LINES[bd.b].co}の うんてんしさんに こうたい</small></div>`;
+  t.classList.add("on"); SFX.five(); giveCard("k2");
+  await wait(2300, my); t.classList.remove("on");
+}
+async function startCourse(c) {
+  const my = ++gen; cur = c; miss = 0; gotCards = [];
+  G = c.mode === "bonus" ? "bonus" : "main";
+  show("play"); drawMap(); cam = null;
+  const r = c.route; placeTrain(ST[r[0]].x, ST[r[0]].y);
+  setSign("？？？", "ゆき"); $("flap").classList.remove("done"); $("opts").innerHTML = "";
+  setMsg(`${stH(r[0])}を しゅっぱつ！ <ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby>は ？？？。ひつじさんは もう ねむっちゃった…`);
+  camMode = { t: "follow" };
+  await wait(1400, my);
+  let idx = 0;
+  const done = new Set();
+  const hl = (k) => { const key = r[k] + "|" + r[k + 1]; if (k < 0 || k >= r.length - 1 || done.has(key)) return; done.add(key); hlLine(lineOf(r[k], r[k + 1]), r[k], r[k + 1]); };
+  const stops = [...new Set(c.qs.map(q => r.indexOf(q.at)))].sort((a, b) => a - b);
+  for (const si of stops) {
+    $("opts").innerHTML = "";
+    setMsg("ガタン ゴトン…");
+    await runTo(r, idx, si, my);
+    for (let k = idx; k < si; k++) hl(k);
+    idx = si;
+    const at = r[si], qs = c.qs.filter(q => q.at === at);
+    const lp = lineOf(r[si - 1], at), ln = lineOf(at, r[si + 1]);
+    if (!qs.some(q => q.type !== "final") && lp && ln && LINES[lp].co !== LINES[ln].co) {
+      // しつもん なしで とおる さかいめ（和光市 など）
+      setMsg(`${stH(at)}から ${LINES[ln].h}へ ちょくつう！ せんろの いろが かわっても、おなじ でんしゃの まま。`);
+      speak(sayText); giveCard("k1");
+      const bd = BORDERS.find(b => b.at === at);
+      if (bd && bd.crew) await crewShow(bd, my); else await wait(1800, my);
+    }
+    for (const q of qs) {
+      await ask(q, c, my);
+      if (q.type === "final") { await flapTo(c.dest, my); setMsg(`<span class="okc">せいかい！</span> <ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby><ruby>表示<rt>ひょうじ</rt></ruby>が かわったよ！`); speak(sayText); await wait(1200, my); continue; }
+      const lineNext = lineOf(at, r[si + 1]);
+      if (lineNext && lp && LINES[lineNext].co !== LINES[lp].co) {
+        setMsg(`<span class="okc">せいかい！</span> ${LINES[lp].h} から ${LINES[lineNext].h} へ。せんろの いろが かわっても、おなじ でんしゃの まま！ これが ちょくつう。`);
+        speak(sayText); giveCard("k1");
+        const bd = BORDERS.find(b => b.at === at);
+        if (bd && bd.crew) await crewShow(bd, my);
+        else if (bd && bd.note) { setMsg($("msg").innerHTML + "<br><small>" + bd.note + "</small>"); speak(sayText); await wait(3800, my); }
+        else await wait(2200, my);
+      } else { setMsg(`<span class="okc">せいかい！</span> ${LINES[lineNext].h}に すすむよ。`); speak(sayText); await wait(1500, my); }
+    }
+  }
+  // のこり（とちゅうの さかいめでは こうたい えんしゅつ）
+  $("opts").innerHTML = "";
+  while (idx < r.length - 1) {
+    let nx = idx + 1;
+    while (nx < r.length - 1 && !BORDERS.some(b => b.at === r[nx] && b.crew && LINES[lineOf(r[nx - 1], r[nx])].co !== LINES[lineOf(r[nx], r[nx + 1])].co)) nx++;
+    setMsg(`${c.dest.k}${c.dest.ho ? " ほうめん" : " ゆき"}、はしる はしる…`);
+    await runTo(r, idx, nx, my);
+    for (let k = idx; k < nx; k++) hl(k);
+    idx = nx;
+    if (idx < r.length - 1) { const bd = BORDERS.find(b => b.at === r[idx]); if (bd) await crewShow(bd, my); }
+  }
+  for (let k = 0; k < r.length - 1; k++) hl(k);
+  SFX.arrive(); giveCard("k3");
+  setMsg(`🎉 ${c.dest.ho ? c.dest.k + "の ほうに" : stH(r[r.length - 1]) + "に"} ついたよ！ のりかえ なしで ここまで きた！`);
+  camMode = { t: "fit", b: bounds() };
+  await wait(1700, my);
+  finish(c, c.funny, c.after);
+}
+
+/* ---------- ぎゃく モード ---------- */
+let revState = null;
+function segsOf(route) {      // 線ごとの ひとまとまり
+  const out = [];
+  for (let i = 0; i + 1 < route.length; i++) {
+    const l = lineOf(route[i], route[i + 1]);
+    if (out.length && out[out.length - 1].line === l) out[out.length - 1].to = i + 1;
+    else out.push({ line: l, from: i, to: i + 1 });
+  }
+  return out;
+}
+function startRev(rv) {
+  const my = ++gen; cur = rv; miss = 0; gotCards = [];
+  G = rv.g; show("play"); drawMap(); cam = null;
+  const r = rv.route; placeTrain(ST[r[0]].x, ST[r[0]].y);
+  setSign(rv.dest.k + (rv.dest.ho ? " ほうめん" : " 行"), rv.dest.r + (rv.dest.ho ? "" : " ゆき")); $("flap").classList.add("done");
+  const segs = segsOf(r);
+  revState = { rv, segs, k: 0, my, busy: false };
+  setMsg(`<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby><ruby>表示<rt>ひょうじ</rt></ruby>は「${rv.dest.r ? `<ruby>${rv.dest.k}<rt>${rv.dest.r}</rt></ruby>` : rv.dest.k}${rv.dest.ho ? " ほうめん" : " ゆき"}」。${stH(r[0])}から、どの せんを とおる？ じゅんばんに タッチ！（ろせんずの せんも タッチ できるよ）`);
+  speak(sayText);
+  camMode = { t: "fit", b: bounds() };
+  const ids = [...new Set(segs.map(s => s.line))].map(l => ({ line: l })).concat(rv.decoys.map(d => LINES[d] ? { line: d } : { stub: d }));
+  for (let i = ids.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [ids[i], ids[j]] = [ids[j], ids[i]]; }
+  const box = $("opts"); box.innerHTML = '<div class="chips" id="chips"></div>';
+  for (const o of ids) {
+    const b = document.createElement("button"); b.className = "chip";
+    const c = o.line ? LINES[o.line].c : STUBS[o.stub].c;
+    b.innerHTML = `<span class="sw" style="background:${c}"></span><span>${o.line ? LINES[o.line].h : STUBS[o.stub].h}</span>`;
+    b.dataset.id = o.line || o.stub;
+    b.onclick = () => onPick(o.line || o.stub, b);
+    $("chips").appendChild(b);
+  }
+}
+function onLineTap(lid) { if (revState && revState.my === gen && document.getElementById("play").classList.contains("on")) onPick(lid, document.querySelector(`.chip[data-id="${lid}"]`)); }
+async function onPick(id, btn) {
+  const S = revState; if (!S || S.my !== gen || S.busy || S.k >= S.segs.length) return;
+  if (btn && btn.classList.contains("used")) return;
+  const seg = S.segs[S.k], r = S.rv.route;
+  if (id !== seg.line) {
+    miss++; SFX.ng(); if (btn) { btn.classList.remove("bad"); void btn.offsetWidth; btn.classList.add("bad"); }
+    const nm = LINES[id] ? LINES[id].h : STUBS[id].h;
+    setMsg(`<span class="ng">${nm}は ${S.k === 0 ? "ここからは のれないよ" : "いまの せんろと つながって いないよ"}。</span> ${stH(r[seg.from])}から つづく せんを さがしてね。`);
+    if (STUBS[id]) flashEl(`[data-stub="${id}"]`);
+    return;
+  }
+  S.busy = true; SFX.ok();
+  if (btn) { btn.classList.add("used"); btn.insertAdjacentHTML("afterbegin", `<span class="no">${S.k + 1}</span>`); }
+  hlLine(seg.line, r[seg.from], r[seg.to]);
+  setMsg(`<span class="okc">${S.k + 1}. ${LINES[seg.line].h}</span>、はしる はしる…`);
+  await runTo(r, seg.from, seg.to, S.my);
+  S.k++; S.busy = false;
+  if (S.k >= S.segs.length) {
+    SFX.arrive(); giveCard("k1"); giveCard("k3");
+    setMsg(`🎉 ${S.rv.dest.k}${S.rv.dest.ho ? "の ほう" : ""}に ついた！ ${S.segs.length}つの せんを のりかえ なしで とおったよ。`);
+    camMode = { t: "fit", b: bounds() };
+    await wait(1600, S.my);
+    finish(S.rv, ["sheep"]);
+  } else {
+    const at = r[seg.to], bd = BORDERS.find(b => b.at === at);
+    const nx = LINES[S.segs[S.k].line];
+    if (LINES[seg.line].co !== nx.co) {
+      setMsg(`${stH(at)}は <ruby>会社<rt>かいしゃ</rt></ruby>の さかいめ。つぎは どの せん？`);
+      if (bd && bd.crew) { S.busy = true; await crewShow(bd, S.my); S.busy = false; }
+    } else setMsg(`${stH(at)}で せんの なまえが かわるよ。つぎは どの せん？`);
+    camMode = { t: "follow" };
+  }
+}
+
+/* ---------- けっか ---------- */
+function finish(c, funny, after) {
+  const stars = miss === 0 ? 3 : miss <= 2 ? 2 : 1;
+  if ((save.stars[c.id] || 0) < stars) save.stars[c.id] = stars;
+  store();
+  const dest = c.dest, isRev = !!REVERSE.find(x => x === c);
+  const fun = funny[(Math.random() * funny.length) | 0];
+  const om = fun === "sheep"
+    ? `<div class="omake"><svg viewBox="0 0 104 100" class="wake">${sheep("wake")}</svg><div class="ot">ひつじさんが めを さました。<br>「ふぁ〜… ここ どこ〜？ ${dest.k}！？ ねてる あいだに こんなに とおくまで！」</div></div>`
+    : `<div class="omake"><svg viewBox="0 0 150 76" class="sag">${trainSVG("hungry")}</svg><div class="ot">でんしゃ「とおくまで はしりすぎて… おなか ぺこぺこ〜」<br>ぐぅ〜〜。 しゃこで ひとやすみ してね。</div></div>`;
+  const cards = gotCards.map(k => `<div class="lcard new"><h3>${CARDS[k].t}</h3><p>${CARDS[k].p}</p></div>`).join("");
+  const list = isRev ? REVERSE : COURSES.filter(x => x.mode === c.mode);
+  const nextC = list[list.indexOf(c) + 1];
+  $("res").innerHTML =
+    `<div class="stars">${[0, 1, 2].map(i => `<span class="${i < stars ? "" : "off"}" style="animation-delay:${i * .15}s">⭐</span>`).join("")}</div>` +
+    `<div class="rmsg">${stars === 3 ? "すごい！ ちょくつう はかせ！" : stars === 2 ? "よく できました！" : "さいごまで いけたね！"}</div>` +
+    `<div class="rsub">${isRev ? "<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby><ruby>表示<rt>ひょうじ</rt></ruby>から とおる せんを たどれたね。" : `<ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby>は「${dest.r ? `<ruby>${dest.k}<rt>${dest.r}</rt></ruby>` : dest.k}${dest.ho ? " ほうめん" : " ゆき"}」でした（たとえば の <ruby>行<rt>い</rt></ruby>き<ruby>先<rt>さき</rt></ruby>だよ。じかんで かわるよ）。`}${after ? "<br>" + after : ""}</div>` +
+    om + cards +
+    `<div class="wrap">💡 ろせんずで、いろの ちがう せんが とぎれずに つながって いたら、ちょくつうで のりかえ なしで いけるよ。<br>🚉 つぎは「のぼり・くだり」で、でんしゃの むきと ホームを しらべよう！</div>` +
+    `<div class="rbtns"><button class="big" id="rRetry">🔁 もういちど</button>${nextC ? '<button class="big go" id="rNext">つぎへ ▶</button>' : ""}<button class="big" id="rMenu">🏠 メニュー</button></div>`;
+  $("ov").classList.add("on");
+  if (fun === "sheep") SFX.yawn(); else SFX.growl();
+  $("rRetry").onclick = () => { SFX.tap(); $("ov").classList.remove("on"); isRev ? startRev(c) : startCourse(c); };
+  if (nextC) $("rNext").onclick = () => { SFX.tap(); $("ov").classList.remove("on"); isRev ? startRev(nextC) : startCourse(nextC); };
+  $("rMenu").onclick = () => { SFX.tap(); $("ov").classList.remove("on"); gen++; renderTitle(); show("title"); };
+}
+
+refreshSnd();
+renderTitle();
+</script>
+</body>
+</html>
