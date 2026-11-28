@@ -10,6 +10,8 @@
   let K = { level: '3A', passed: [], done: {}, tests: [], water: 0 };
   try { const s = JSON.parse(localStorage.getItem(KEY)); if (s && typeof s === 'object') K = Object.assign(K, s); } catch (e) { /* つかえない */ }
   function store() { try { localStorage.setItem(KEY, JSON.stringify(K)); } catch (e) { /* つかえない */ } }
+  // 3A は ごうかく ずみ（おうち の ひと の きぼう）。きょうざい は 2A から
+  if (!K.passed.includes('3A')) { K.passed.push('3A'); if (K.level === '3A') K.level = '2A'; store(); }
 
   const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
   const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];

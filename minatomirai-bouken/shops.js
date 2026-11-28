@@ -156,6 +156,7 @@
           root.appendChild(btn('🧸 おみせに もどる', 'sbig', list)); root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
         }, list);
       }));
+      if (cart.length) row.appendChild(btn('🗑️ かご を からっぽ に する', 'sbig sub', () => { cart.length = 0; sfx('tap'); toast('かご を からっぽ に したよ'); list(); }));
       root.appendChild(row);
       root.appendChild(btn('🚪 そとに でる', 'sout', () => api.onClose()));
     };
