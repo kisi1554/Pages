@@ -1,7 +1,7 @@
 'use strict';
 /* くもん みなとみらい きょうしつ（みなとみらいミッドスクエア 3かい）
    さんすうの プリント と しゅうりょうテスト。
-   さんすう 3A → 2A → A（ひきざん）。テストに ごうかく（90てん いじょう）すると つぎが できる。
+   さんすう 3A → 2A → A（ひきざん）→ B（2けた・3けた）→ C（かけざん・わりざん）。B・C は いつでも えらべる。テストに ごうかく（90てん いじょう）すると つぎが できる。
    こくご（ひらがな）・えいご は いつでも できる（えらんで タップ する プリント）。
    もんだいは この アプリの オリジナル（きょうざいの はんいを まねた れんしゅう）。 */
 (function () {
@@ -25,6 +25,12 @@
   };
   const add = (lo, hi, bs) => () => { const a = rnd(lo, hi), b = pick(bs); return { t: [a, '+', b, '=', BOX], a: a + b }; };
   const mix = (...gs) => () => pick(gs)();
+  // B・C きょうざい よう（2けた・3けた の たしざん ひきざん、かけざん、わりざん）
+  const addN = (a0, a1, b0, b1, carry) => () => { let a, b, g = 0; do { a = rnd(a0, a1); b = rnd(b0, b1); } while (g++ < 60 && carry === false && (a % 10) + (b % 10) >= 10); return { t: [a, '+', b, '=', BOX], a: a + b }; };
+  const subN = (a0, a1, b0, b1) => () => { const a = rnd(a0, a1), b = rnd(b0, Math.min(b1, a)); return { t: [a, '−', b, '=', BOX], a: a - b }; };
+  const mulK = (dans) => () => { const a = pick(dans), b = rnd(1, 9); return { t: [a, '×', b, '=', BOX], a: a * b }; };
+  const mulN = (a0, a1, bs) => () => { const a = rnd(a0, a1), b = pick(bs); return { t: [a, '×', b, '=', BOX], a: a * b }; };
+  const divK = (bs, qmax) => () => { const b = pick(bs), q = rnd(1, qmax); return { t: [b * q, '÷', b, '=', BOX], a: q }; };
   const sub = (hi, bs) => () => { const b = pick(bs), a = rnd(b, Math.max(b, hi)); return { t: [a, '−', b, '=', BOX], a: a - b }; };
   // えらぶ もんだい（こくご・えいご）: c = えらぶ ことば、a = こたえ
   const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -79,6 +85,33 @@
         { id: 'A-4', title: 'たしざん と ひきざん', gen: mix(add(1, 10, [1, 2, 3, 4, 5]), sub(10, [1, 2, 3, 4, 5])) },
       ],
       test: [[10, sub(12, [1, 2, 3, 4, 5, 6])], [10, mix(add(1, 10, [1, 2, 3, 4, 5, 6, 7, 8, 9]), sub(15, [6, 7, 8, 9, 10]))]],
+      next: 'B',
+    },
+    'B': {
+      desc: 'たしざん・ひきざん（2けた・3けた）',
+      prints: [
+        { id: 'B-1', title: '2けた ＋ 1けた（くりあがり なし）', gen: addN(10, 89, 1, 9, false) },
+        { id: 'B-2', title: '2けた ＋ 1けた（くりあがり あり）', gen: addN(11, 89, 2, 9, true) },
+        { id: 'B-3', title: '2けた ＋ 2けた', gen: addN(10, 89, 10, 89, true) },
+        { id: 'B-4', title: '2けた − 1けた', gen: subN(10, 99, 1, 9) },
+        { id: 'B-5', title: '2けた − 2けた', gen: subN(20, 99, 10, 90) },
+        { id: 'B-6', title: '3けた の たしざん・ひきざん', gen: mix(addN(100, 899, 10, 99, true), subN(100, 999, 10, 99)) },
+      ],
+      test: [[10, addN(10, 89, 10, 89, true)], [10, subN(20, 99, 10, 90)]],
+      next: 'C',
+    },
+    'C': {
+      desc: 'かけざん（九九）と わりざん',
+      prints: [
+        { id: 'C-1', title: 'かけざん 2・5 の だん', gen: mulK([2, 5]) },
+        { id: 'C-2', title: 'かけざん 3・4 の だん', gen: mulK([3, 4]) },
+        { id: 'C-3', title: 'かけざん 6・7 の だん', gen: mulK([6, 7]) },
+        { id: 'C-4', title: 'かけざん 8・9・1 の だん', gen: mulK([8, 9, 1]) },
+        { id: 'C-5', title: 'くく ぜんぶ まぜて', gen: mulK([1, 2, 3, 4, 5, 6, 7, 8, 9]) },
+        { id: 'C-6', title: '2けた × 1けた', gen: mulN(11, 49, [2, 3, 4, 5]) },
+        { id: 'C-7', title: 'わりざん（わりきれる）', gen: divK([2, 3, 4, 5, 6, 7, 8, 9], 9) },
+      ],
+      test: [[10, mulK([1, 2, 3, 4, 5, 6, 7, 8, 9])], [10, divK([2, 3, 4, 5, 6, 7, 8, 9], 9)]],
       next: null,
     },
     'こくご': {
@@ -99,9 +132,10 @@
       ],
     },
   };
-  const ORDER = ['3A', '2A', 'A'];
+  const ORDER = ['3A', '2A', 'A', 'B', 'C'];
+  const FREE = ['B', 'C'];   // B・C は いつでも じゆう に えらべる（おうち の ひと の きぼう）
   const EXTRA = ['こくご', 'えいご'];
-  function unlocked(lv) { if (EXTRA.includes(lv)) return true; const i = ORDER.indexOf(lv); return i === 0 || K.passed.includes(ORDER[i - 1]); }
+  function unlocked(lv) { if (EXTRA.includes(lv) || FREE.includes(lv)) return true; const i = ORDER.indexOf(lv); return i === 0 || K.passed.includes(ORDER[i - 1]); }
   function hundreds(lv) { return LEVELS[lv].prints.reduce((s, p) => s + (K.done[p.id] || 0), 0); }
 
   function makeSet(gens, n) {
@@ -171,7 +205,7 @@
     tb.addEventListener('click', () => { if (canTest) startTest(lv); else renderRoom(`テストの まえに、プリントで 100てんを あと ${NEED - h}かい とろうね。`); });
     root.appendChild(tb);
     }
-    if (K.passed.includes(lv)) root.appendChild(el('div', 'kdesc', `🏅 ${lv} ごうかく ずみ！` + (lv === ORDER[ORDER.length - 1] ? ' さんすうは ここまで クリア！ つぎの B きょうざいは じゅんびちゅう…' : '')));
+    if (K.passed.includes(lv)) root.appendChild(el('div', 'kdesc', `🏅 ${lv} ごうかく ずみ！` + (lv === ORDER[ORDER.length - 1] ? ' さんすうは C まで ぜんぶ クリア！ すごい！' : '')));
     const out = el('button', 'kout', '🚪 そとに でる');
     out.addEventListener('click', () => { close(); });
     root.appendChild(out);
@@ -250,7 +284,7 @@
     const q = cur.items[cur.sel]; if (!q || !editable(cur.sel)) return;
     if (k === '←') q.v = q.v.slice(0, -1);
     else if (k === 'つぎ▶') { moveNext(); return; }
-    else if (q.v.length < 3) { q.v = (q.v === '0' ? '' : q.v) + k; if (q.mark === 'ng') q.mark = 'fix'; }
+    else if (q.v.length < 4) { q.v = (q.v === '0' ? '' : q.v) + k; if (q.mark === 'ng') q.mark = 'fix'; }
     sfx('tap'); renderSheet();
   }
   function moveNext() {
@@ -310,7 +344,7 @@
       const gift = first && opts.onReward ? opts.onReward({ type: 'test', level: lv }) : '';
       msg = `<div class="kbig">🏅 ごうかく！</div><p>${lv} しゅうりょう テスト <b>${score}てん</b>（${fmt(timer)}）</p>` +
         (first && LEVELS[nx] ? `<p class="kup">🎉 きょうから <b>${nx} きょうざい</b>！<br>${LEVELS[nx].desc}</p>` : '') +
-        (first && !LEVELS[nx] ? '<p>A まで ぜんぶ クリア！ つぎの B きょうざいは じゅんびちゅう だよ。</p>' : '') +
+        (first && !LEVELS[nx] ? '<p>C まで ぜんぶ クリア！ すごい！</p>' : '') +
         (gift ? `<p>🎁 ${gift}</p>` : '');
       showMarked(msg, [[first && LEVELS[nx] ? `▶ ${nx} を はじめる` : '📚 もどる', () => renderRoom(first && LEVELS[nx] ? `${nx} の プリントだよ。がんばろうね！` : 'すごいね！')]]);
     } else {
